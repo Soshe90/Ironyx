@@ -1,0 +1,70 @@
+name: fittrack
+description: "Offline-first workout tracker."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State
+  flutter_riverpod: ^3.4.2
+  riverpod_annotation: ^4.0.6
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Persistence (wired up in M2)
+  drift: ^2.34.3
+  drift_flutter: ^0.3.1
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path_provider: ^2.1.3
+  shared_preferences: ^2.2.3
+
+  # Models
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.9.0
+  uuid: ^4.4.0
+  collection: ^1.18.0
+
+  # Feature packages (wired up in M4 / M5)
+  fl_chart: ^0.68.0
+  flutter_local_notifications: ^17.1.2
+  timezone: ^0.9.4
+  wakelock_plus: ^1.2.5
+  just_audio: ^0.9.38
+  audio_session: ^0.1.25
+
+  intl: ^0.19.0
+  url_launcher: ^6.3.2
+  meta: ^1.19.0
+  file_picker: ^12.0.0
+  excel: ^4.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  build_runner: ^2.16.0
+  riverpod_generator: ^4.0.8
+
+
+  drift_dev: ^2.34.5
+  freezed: 4.0.0-dev.3
+  json_serializable: ^6.8.0
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.4
+  sqlite3: ^3.5.1
+
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/
+    - assets/audio/
+    - assets/images/exercises/

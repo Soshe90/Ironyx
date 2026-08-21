@@ -1,0 +1,4095 @@
+{
+  "seedVersion": 7,
+  "muscles": [
+    {
+      "id": "chest",
+      "name": "chest",
+      "displayName": "Chest",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "back",
+      "name": "back",
+      "displayName": "Back",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "shoulders",
+      "name": "shoulders",
+      "displayName": "Shoulders",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "arms",
+      "name": "arms",
+      "displayName": "Arms",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "legs",
+      "name": "legs",
+      "displayName": "Legs",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "glutes",
+      "name": "glutes",
+      "displayName": "Glutes",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "core",
+      "name": "core",
+      "displayName": "Core",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "calves",
+      "name": "calves",
+      "displayName": "Calves",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "forearms",
+      "name": "forearms",
+      "displayName": "Forearms",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "traps",
+      "name": "traps",
+      "displayName": "Traps",
+      "region": null,
+      "parentId": null
+    },
+    {
+      "id": "neck",
+      "name": "neck",
+      "displayName": "Neck",
+      "region": null,
+      "parentId": null
+    }
+  ],
+  "equipment": [
+    {
+      "id": "barbell",
+      "name": "Barbell",
+      "category": null
+    },
+    {
+      "id": "dumbbell",
+      "name": "Dumbbell",
+      "category": null
+    },
+    {
+      "id": "machine",
+      "name": "Machine",
+      "category": null
+    },
+    {
+      "id": "cable",
+      "name": "Cable",
+      "category": null
+    },
+    {
+      "id": "bodyweight",
+      "name": "Bodyweight",
+      "category": null
+    },
+    {
+      "id": "kettlebell",
+      "name": "Kettlebell",
+      "category": null
+    },
+    {
+      "id": "band",
+      "name": "Band",
+      "category": null
+    },
+    {
+      "id": "plate",
+      "name": "Plate",
+      "category": null
+    },
+    {
+      "id": "sled",
+      "name": "Sled",
+      "category": null
+    },
+    {
+      "id": "other",
+      "name": "Other",
+      "category": null
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex_001",
+      "slug": "barbell-bench-press",
+      "name": "Barbell Bench Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie on a flat bench with feet planted. Grip the bar slightly wider than shoulder-width. Unrack and lower to mid-chest with control. Press up explosively. Keep shoulders retracted throughout."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Barbell Bench Press.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=rT7DgCr-3pg",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/barbell-bench-press/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_002",
+      "slug": "dumbbell-bench-press",
+      "name": "Dumbbell Bench Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie on a flat bench with a dumbbell in each hand. Start with arms extended above chest. Lower with control until upper arms are parallel to floor. Press up, bringing dumbbells together at top."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Dumbbell Bench Press.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=vmY1JBOYw8w",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/dumbbell-bench-press/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_003",
+      "slug": "incline-barbell-bench-press",
+      "name": "Incline Barbell Bench Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Set bench to 30-45 degree incline. Grip bar slightly wider than shoulders. Lower to upper chest, press up. Keep shoulder blades pinned to bench."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Barbell Incline Bench Press.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=SRk6O7U8Vi4",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_004",
+      "slug": "push-up",
+      "name": "Push-Up",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Start in plank position, hands slightly wider than shoulders. Lower body until chest nearly touches floor. Push back up. Keep core tight, body in straight line."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Push-ups.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=IODxDxX7oi4",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/push-up-m/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_005",
+      "slug": "dip",
+      "name": "Dip",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Support body on parallel bars with arms straight. Lean forward slightly. Lower until upper arms are parallel to floor. Press back up. Keep elbows tucked."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Chest Dips.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=2z8JmcrW-As",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_006",
+      "slug": "cable-fly",
+      "name": "Cable Fly",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Set cables at chest height. Step forward with slight bend in elbows. Bring hands together in front of chest in wide arc. Squeeze chest at peak contraction."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/cable-standing-fly.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=9_20x9tM8hI",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_007",
+      "slug": "pull-up",
+      "name": "Pull-Up",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hang from bar with hands slightly wider than shoulders, palms facing away. Pull chest to bar. Lower with control. Avoid kipping."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Pull-up (wide front grip).png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=eGo4IYlbE5g",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_008",
+      "slug": "chin-up",
+      "name": "Chin-Up",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hang from bar with hands shoulder-width, palms facing you. Pull chin over bar. Lower with control. Greater biceps involvement than pull-up."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/chin-up.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=heWxv8kQfH8",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/chin-up/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_009",
+      "slug": "barbell-row",
+      "name": "Barbell Row",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hinge at hips, back flat, bar hanging at arm's length. Pull bar to lower ribs/upper abs. Squeeze shoulder blades together. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Barbell Bent-over Row (over-grip).png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=5bZ2tYqLJ1E",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_010",
+      "slug": "dumbbell-row",
+      "name": "Dumbbell Row",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Support one knee and hand on bench. Pull dumbbell to hip, keeping elbow close to body. Squeeze lat at top. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Dumbbell Bent-over Row.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=YxJmKf9E3dE",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_011",
+      "slug": "lat-pulldown",
+      "name": "Lat Pulldown",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit at machine, grip bar wide. Lean back slightly. Pull bar to upper chest. Squeeze lats. Return with control. Don't pull behind neck."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Cable Pulldown.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=CAwf7n6Luuc",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_012",
+      "slug": "seated-cable-row",
+      "name": "Seated Cable Row",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit with feet on platform, knees slightly bent. Pull handle to lower ribs. Squeeze shoulder blades together. Return with control, getting full stretch."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Cable Seated Row (normal grip).png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=GZbfZ033f74",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_013",
+      "slug": "face-pull",
+      "name": "Face Pull",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Set cable at face height with rope attachment. Pull rope toward face, separating hands. Squeeze rear delts and external rotators. Great for shoulder health."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/cable-standing-face-pull.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=rep-qVOkqgk",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_014",
+      "slug": "overhead-press",
+      "name": "Overhead Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "traps",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand with bar at shoulder level, hands just outside shoulders. Press overhead until arms locked out. Head moves through 'window' at top. Lower to shoulders."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-standing-military-press.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=2yjwXTZQDDI",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_015",
+      "slug": "dumbbell-overhead-press",
+      "name": "Dumbbell Overhead Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "traps",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand or sit with dumbbells at shoulder height. Press overhead. Can use neutral grip (palms facing) for shoulder comfort."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-standing-overhead-press.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=B-aVuyhvLHU",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_016",
+      "slug": "lateral-raise",
+      "name": "Lateral Raise",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand with dumbbells at sides. Raise arms out to sides until parallel to floor. Slight bend in elbows. Lead with elbows, not hands. Control the negative."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-lateral-raise.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=3VcKaXpzqRo",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_017",
+      "slug": "rear-delt-fly-bent-over-dumbbell",
+      "name": "Rear Delt Fly (Bent-Over Dumbbell)",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hinge at hips, chest toward floor. Raise dumbbells out to sides, squeezing rear delts. Keep slight bend in elbows. Don't shrug traps."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-rear-delt-fly.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=qK6kGKZbZ7s",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/dumbbell-rear-delt-fly/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_018",
+      "slug": "pike-push-up",
+      "name": "Pike Push-Up",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "chest",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Start in downward dog position. Lower head toward floor between hands. Push back up. Progress to handstand push-up."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/pike-push-up.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=6ZQ6m3xwXz8",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_019",
+      "slug": "barbell-curl",
+      "name": "Barbell Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand with barbell, supinated grip. Curl bar to shoulders. Keep elbows pinned to sides. Don't swing. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Barbell Curl.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=ykJmrZ5v0Oo",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/barbell-curl/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_020",
+      "slug": "dumbbell-curl",
+      "name": "Dumbbell Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand with dumbbells at sides, palms forward. Curl to shoulders. Can alternate or do both together. Supinate at top for peak contraction."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Dumbbell Biceps Curl.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=tw8WeDVKcPg",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_021",
+      "slug": "hammer-curl",
+      "name": "Hammer Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand with dumbbells at sides, neutral grip (palms facing). Curl to shoulders. Targets brachialis and brachioradialis."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-hammer-curl.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=zC3nLlEvin4",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/dumbbell-hammer-curl/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_022",
+      "slug": "tricep-dip",
+      "name": "Tricep Dip",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "chest",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Support body on parallel bars or bench. Keep torso upright. Lower until upper arms parallel to floor. Press up. Elbows back, not flared."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/triceps-dip.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=0326dy_-CzM",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_023",
+      "slug": "overhead-tricep-extension",
+      "name": "Overhead Tricep Extension",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold one dumbbell overhead with both hands. Lower behind head by bending elbows. Extend back up. Keep upper arms stationary."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Dumbbell Seated Triceps Extension.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=ZP9G86mYRQ0",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_024",
+      "slug": "tricep-pushdown",
+      "name": "Tricep Pushdown",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand at cable with rope or straight bar. Keep elbows pinned to sides. Push down until arms straight. Squeeze triceps. Control the negative."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Cable Triceps Pushdown.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=2-LAMcpzODU",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_025",
+      "slug": "back-squat",
+      "name": "Back Squat",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Bar on upper traps. Feet shoulder-width, toes slightly out. Brace core, sit back and down. Drive through heels to stand. Hit parallel or below."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-squat.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=ultWZbUL-MM",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_026",
+      "slug": "front-squat",
+      "name": "Front Squat",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Bar on front delts, elbows high. Sit down and back. More upright torso than back squat. Greater quad emphasis."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-front-squat.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=wheR5z3Vx7c",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_027",
+      "slug": "goblet-squat",
+      "name": "Goblet Squat",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold dumbbell at chest, elbows down. Squat between legs. Elbows track inside knees. Great for learning squat pattern."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-goblet-squat.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=5Q4vXZJzY4U",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/dumbbell-goblet-squat/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_028",
+      "slug": "bulgarian-split-squat",
+      "name": "Bulgarian Split Squat",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Rear foot elevated on bench. Front foot forward. Lower until back knee near floor. Drive through front heel. Unilateral quad/glute builder."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/bulgarian-split-squat.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=2C-uNgKwPLE",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_029",
+      "slug": "lunge",
+      "name": "Lunge",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Step forward, lower until both knees at 90°. Front knee over ankle. Push back to start. Alternate legs or do all reps one side."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Barbell Lunge.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=QOVaHwm-Q6U",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/lunge/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_030",
+      "slug": "romanian-deadlift",
+      "name": "Romanian Deadlift",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Bar at hip level, slight knee bend. Hinge at hips, push butt back. Lower until stretch in hamstrings. Squeeze glutes to return. Back flat throughout."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-romanian-deadlift.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=jEy_czb3RKA",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/barbell-romanian-deadlift/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_031",
+      "slug": "deadlift",
+      "name": "Deadlift",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "traps",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Bar over mid-foot. Hinge down, grip bar. Pull slack out. Drive floor away, extend hips and knees together. Bar stays close to body."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Dumbbell Deadlift.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=op9kVnSso6Q",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_032",
+      "slug": "hip-thrust",
+      "name": "Hip Thrust",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Upper back on bench, bar on hips. Drive through heels, squeeze glutes at top. Chin tucked. Don't hyperextend lower back."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-hip-thrust.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=qpNc1L9CXpU",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/barbell-hip-thrust/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_033",
+      "slug": "glute-bridge",
+      "name": "Glute Bridge",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie on back, knees bent, feet flat. Drive through heels, squeeze glutes at top. Hold briefly. Progress to single-leg or weighted."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/butt-bridge.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=BQqTmE4Y6z0",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_034",
+      "slug": "leg-press",
+      "name": "Leg Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit in machine, feet shoulder-width on platform. Lower until knees at 90°. Press through heels. Don't lock out knees at top."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Smith Leg Press.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=IZxyjW7MPJQ",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_035",
+      "slug": "leg-extension",
+      "name": "Leg Extension",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit with pad on shins. Extend knees fully. Squeeze quads at top. Control the negative. Good for isolation/volume."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Lever Leg Extension.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=YyvSfVjQeL0",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_036",
+      "slug": "leg-curl",
+      "name": "Leg Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie/seat with pad on heels. Curl heels toward glutes. Squeeze hamstrings. Control the negative. Seated or lying variations."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Lever Lying Leg Curl.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=1Tq3QdYUu1s",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_037",
+      "slug": "calf-raise",
+      "name": "Calf Raise",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "calves",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Balls of feet on platform, heels hanging. Lower heels for stretch. Raise up onto toes. Squeeze at top. Straight and bent knee versions."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Smith Calf Raise.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=Q8Z1kV7rJ5E",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_038",
+      "slug": "plank",
+      "name": "Plank",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "antiRotation",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Forearms on floor, body in straight line. Brace core, squeeze glutes. Don't let hips sag or pike. Breathe normally."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/front-plank.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=pSHjTRCQxIw",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_039",
+      "slug": "hanging-leg-raise",
+      "name": "Hanging Leg Raise",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hang from bar. Raise legs to parallel (or higher). Control the negative. Don't swing. Can do knee raises as regression."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/hanging-leg-raise.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=6z2KwBPL3n8",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/hanging-leg-raise/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_040",
+      "slug": "ab-wheel-rollout",
+      "name": "Ab Wheel Rollout",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "antiRotation",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "other",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Kneel with ab wheel. Roll forward, extending arms. Keep core braced, back flat. Pull back with abs. Don't let hips sag."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/ab-roller-crunch.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=3bD0Z7Y8Q7k",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_041",
+      "slug": "russian-twist",
+      "name": "Russian Twist",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "rotation",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit, lean back slightly, feet off floor. Rotate torso side to side. Touch floor each side. Can hold weight for progression."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/russian-twist.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=wkD8rjkodUI",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_042",
+      "slug": "farmers-walk",
+      "name": "Farmer's Walk",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "carry",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "forearms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "traps",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold heavy dumbbells at sides. Walk with tall posture. Shoulders back, core braced. Great for grip, traps, and full-body stability."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/farmers-walk.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=5QkQ0z3Y8rE",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/farmers-walk/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_043",
+      "slug": "shrug",
+      "name": "Shrug",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "traps",
+          "role": "primary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold dumbbells at sides. Shrug shoulders straight up toward ears. Squeeze at top. Don't roll shoulders. Heavy loads work well."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Dumbbell Shrug.png"
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=D7e_NIZ3fZk",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_044",
+      "slug": "wrist-curl",
+      "name": "Wrist Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "forearms",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Forearms on bench, wrists hanging off. Curl wrist up (palms up) or down (palms down). Full range of motion. High reps."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2026/05/dumbbell-over-bench-wrist-curl.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=7G5wQ6vVYzI",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_045",
+      "slug": "kettlebell-swing",
+      "name": "Kettlebell Swing",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "kettlebell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hinge at hips, swing KB between legs. Drive hips forward, swing to chest height. Arms just guide. Explosive hip hinge."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/kettlebell-swing.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=E8CkK5bVXJI",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/kettlebell-swing/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_046",
+      "slug": "turkish-get-up",
+      "name": "Turkish Get-Up",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "kettlebell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie down, KB pressed up. Roll to elbow, then hand. Bridge hips, sweep leg through. Stand up. Reverse. Complex but high carryover."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=wG3iQYQ7X8k",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_047",
+      "slug": "battle-rope-waves",
+      "name": "Battle Rope Waves",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "other",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Anchor rope. Alternate arms creating waves. Keep core tight. High-intensity conditioning. Can do double waves, slams, circles."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/battling-ropes-high-waves.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=rrJ4J9Q6V5U",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_048",
+      "slug": "sled-push",
+      "name": "Sled Push",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "core",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "sled",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Load sled. Hands on posts, arms straight. Drive legs, push forward. Low position = more quad. High = more glute. Great finisher."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/power-sled-push.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=8K5QwQ8Z9xE",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_049",
+      "slug": "band-pull-apart",
+      "name": "Band Pull-Apart",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "band",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold band at shoulder width. Pull apart, squeezing shoulder blades. Great warm-up/prehab. High reps (15-20+)."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/band-pull-apart.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=RTYzQ4W8V6k",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": []
+    },
+    {
+      "id": "ex_050",
+      "slug": "plate-pinch",
+      "name": "Plate Pinch",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "forearms",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "plate",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Pinch two plates together smooth-side out. Hold for time. Builds pinch grip strength. Can do farmer's walk with pinch."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/plate-pinch.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/watch?v=9K8wQ7Z5V3E",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/plate-pinch/",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_051",
+      "slug": "rear-delt-fly-machine",
+      "name": "Rear Delt Fly (Machine)",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit facing the pad on a reverse pec-deck machine, chest against the pad. Grip the handles with a slight bend in the elbows. Sweep arms out and back, squeezing rear delts and shoulder blades together. Return with control; don't let the weight stack slam."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/lever-seated-reverse-fly.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/shorts/O2J8Qs7Wl3U",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "user_provided",
+          "sourceUrl": "https://www.youtube.com/shorts/O2J8Qs7Wl3U",
+          "license": null,
+          "attribution": null,
+          "usedFor": "video"
+        }
+      ]
+    },
+    {
+      "id": "ex_052",
+      "slug": "rear-delt-fly-incline-bench",
+      "name": "Rear Delt Fly (Incline Bench)",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie face-down on an incline bench set to 30-45 degrees, a dumbbell in each hand hanging straight down. Keeping a slight bend in the elbows, raise the dumbbells out to the sides until arms are roughly level with the torso, squeezing rear delts at the top. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-incline-rear-fly.jpg",
+          "sortOrder": 0
+        },
+        {
+          "type": "video",
+          "url": "https://www.youtube.com/shorts/ttFX-IeSjAY",
+          "sortOrder": 1
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "user_provided",
+          "sourceUrl": "https://www.youtube.com/shorts/ttFX-IeSjAY",
+          "license": null,
+          "attribution": null,
+          "usedFor": "video"
+        }
+      ]
+    },
+    {
+      "id": "ex_053",
+      "slug": "neck-curl",
+      "name": "Neck Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "neck",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "plate",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie on back, head off end of bench, plate held against forehead. Curl neck up, chin to chest. Lower with control. Light weight, high reps."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/weighted-lying-neck-flexion.webp",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/weighted-lying-neck-flexion.webp",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_054",
+      "slug": "neck-extension",
+      "name": "Neck Extension",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "neck",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "plate",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie face down, head off end of bench, plate held against back of head. Extend neck up. Lower with control. Light weight, high reps."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2026/05/weighted-lying-neck-extension.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2026/05/weighted-lying-neck-extension.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_055",
+      "slug": "seated-calf-raise",
+      "name": "Seated Calf Raise",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "calves",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit at machine, pads on knees, balls of feet on platform. Lower heels for a stretch. Press up onto toes. Squeeze at top. Targets soleus more than standing variations."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Smith Calf Raise.png"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "mybodycreator",
+          "sourceUrl": "https://mybodycreator.com/content/files/2023/05/25/218_M.png",
+          "license": null,
+          "attribution": "MyBodyCreator",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_056",
+      "slug": "standing-barbell-calf-raise",
+      "name": "Standing Calf Raise (Barbell)",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "calves",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Bar on upper traps as in a squat. Balls of feet on a raised platform, heels hanging. Lower heels for a stretch, then rise onto toes. Squeeze at the top."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-standing-calf-raise.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-standing-calf-raise.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_057",
+      "slug": "t-bar-row",
+      "name": "T-Bar Row",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Straddle the bar, chest against the pad if available. Hinge forward, grip the handles. Pull the bar to your torso, squeezing shoulder blades together. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Lever T-bar Row.png"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2026/05/lever-lying-t-bar-row.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_058",
+      "slug": "machine-chest-press",
+      "name": "Chest Press Machine",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit with back against pad, handles at chest height. Press forward until arms are extended. Return with control, keeping tension on the chest."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Lever Chest Press.png"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/lever-chest-press.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_059",
+      "slug": "pec-deck-fly",
+      "name": "Pec Deck Fly",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit with back against pad, arms on the pads or gripping handles at chest height. Bring arms together in front of chest in an arc. Squeeze chest at peak contraction. Return with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Lever Pec Deck Fly.png"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/lever-pec-deck-fly.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_060",
+      "slug": "preacher-curl",
+      "name": "Preacher Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Rest upper arms on a preacher bench pad, bar hanging at arm's length. Curl the bar toward shoulders. Lower with control, stopping just short of full lockout to keep tension."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Lever Preacher Curl.png"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-preacher-curl.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_061",
+      "slug": "concentration-curl",
+      "name": "Concentration Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": true,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit on a bench, elbow braced against inner thigh, dumbbell hanging. Curl the weight to the shoulder, squeezing the bicep. Lower with control. One arm at a time."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Dumbbell Concentration Curl.png"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-concentration-curl.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_062",
+      "slug": "skull-crusher",
+      "name": "Skull Crusher",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie on a bench, bar held over chest with straight arms. Keeping upper arms stationary, lower the bar toward the forehead by bending elbows. Extend back up."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-lying-extension.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-lying-extension.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_063",
+      "slug": "close-grip-bench-press",
+      "name": "Close-Grip Bench Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "chest",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Grip the bar shoulder-width or slightly narrower. Lower to the lower chest, keeping elbows tucked close to the body. Press back up, emphasizing the triceps."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-close-grip-bench-press.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-close-grip-bench-press.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_064",
+      "slug": "hack-squat",
+      "name": "Hack Squat",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Back and shoulders against the pads, feet shoulder-width on the platform. Lower until knees reach roughly 90 degrees. Press through heels to stand. Don't lock out knees hard at the top."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "sortOrder": 0,
+          "localAsset": "assets/images/exercises/Sled Hack Squat.png"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/sled-hack-squat.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_065",
+      "slug": "dumbbell-step-up",
+      "name": "Step-Up",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "kneeDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": true,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold dumbbells at sides. Step onto a bench or box with one foot, drive through the heel to stand fully on top. Step back down with control. Alternate legs."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-step-up.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-step-up.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_066",
+      "slug": "good-morning",
+      "name": "Good Morning",
+      "description": "",
+      "category": "strength",
+      "difficulty": "advanced",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "legs",
+          "role": "primary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Bar on upper traps as in a squat. Keeping a slight knee bend and flat back, hinge forward at the hips until torso is near parallel to the floor. Drive hips forward to stand back up."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-good-morning.webp",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-good-morning.webp",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_067",
+      "slug": "sumo-deadlift",
+      "name": "Sumo Deadlift",
+      "description": "",
+      "category": "strength",
+      "difficulty": "advanced",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Wide stance, toes turned out, bar over mid-foot. Grip inside the knees. Chest up, drive through the floor and extend hips and knees together. More upright torso and greater quad/adductor involvement than a conventional pull."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-sumo-deadlift.webp",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-sumo-deadlift.webp",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_068",
+      "slug": "cable-crunch",
+      "name": "Cable Crunch",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Kneel below a high cable with a rope attachment, hands by the head. Crunch down, rounding the spine and bringing elbows toward knees. Squeeze abs. Return with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/cable-kneeling-crunch.webp",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/cable-kneeling-crunch.webp",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_069",
+      "slug": "side-plank",
+      "name": "Side Plank",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "antiRotation",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": true,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Lie on your side, forearm on the floor under the shoulder. Lift hips until body forms a straight line. Hold, keeping hips high and core braced. Switch sides."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/side-plank.webp",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/side-plank.webp",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_070",
+      "slug": "mountain-climbers",
+      "name": "Mountain Climbers",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": null,
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "core",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "bodyweight",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Start in a high plank. Drive one knee toward the chest, then quickly switch legs in a running motion. Keep hips low and core braced throughout."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/mountain-climber.webp",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/mountain-climber.webp",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_071",
+      "slug": "landmine-press",
+      "name": "Landmine Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": true,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "chest",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "One end of a barbell anchored in a landmine attachment (or a corner). Hold the other end at shoulder height with one hand. Press up and slightly forward along the natural arc. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/landmine-press.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/landmine-press.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_072",
+      "slug": "arnold-press",
+      "name": "Arnold Press",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPush",
+      "forceType": "push",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "arms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Start seated with dumbbells in front of shoulders, palms facing you. Press up while rotating palms to face forward. Reverse the rotation on the way down."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-arnold-press.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-arnold-press.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_073",
+      "slug": "upright-row",
+      "name": "Upright Row",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPull",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "traps",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold a bar with a shoulder-width overhand grip in front of thighs. Pull straight up along the body, leading with elbows, to about chest height. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-upright-row.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-upright-row.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_074",
+      "slug": "cable-lateral-raise",
+      "name": "Cable Lateral Raise",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "verticalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": true,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand side-on to a low cable pulley, handle in the far hand. Raise the arm out to the side until parallel to the floor, leading with the elbow. Lower with control. Constant tension throughout, unlike dumbbells."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/cable-lateral-raise.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/cable-lateral-raise.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_075",
+      "slug": "reverse-curl",
+      "name": "Reverse Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "barbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold a bar with an overhand (palms-down) grip. Curl to the shoulders without rotating the wrists. Lower with control. Targets brachialis and forearms more than a standard curl."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-reverse-curl.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/barbell-reverse-curl.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_076",
+      "slug": "zottman-curl",
+      "name": "Zottman Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "other",
+      "forceType": null,
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Curl dumbbells up with palms facing up, as in a standard curl. At the top, rotate palms to face down. Lower slowly in this reversed grip. Rotate back to palms-up at the bottom."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-zottman-curl.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/dumbbell-zottman-curl.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_077",
+      "slug": "back-extension",
+      "name": "Back Extension",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": true,
+      "muscles": [
+        {
+          "muscleId": "back",
+          "role": "primary"
+        },
+        {
+          "muscleId": "glutes",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "machine",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hips on the pad of a hyperextension bench, ankles secured, torso hinged down. Raise torso until body forms a straight line. Avoid hyperextending at the top. Lower with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/hyperextension.webp",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/hyperextension.webp",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_078",
+      "slug": "cable-pull-through",
+      "name": "Cable Pull-Through",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": null,
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Stand facing away from a low cable, rope between the legs. Hinge at the hips, letting the rope pull back between the knees. Drive hips forward to stand, squeezing glutes at the top."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "url": "https://liftmanual.com/wp-content/uploads/2023/04/cable-pull-through.jpg",
+          "sortOrder": 0
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "liftmanual",
+          "sourceUrl": "https://liftmanual.com/wp-content/uploads/2023/04/cable-pull-through.jpg",
+          "license": null,
+          "attribution": "LiftManual",
+          "usedFor": "image"
+        }
+      ]
+    }
+  ]
+}

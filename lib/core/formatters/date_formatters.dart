@@ -1,0 +1,35 @@
+import 'package:intl/intl.dart';
+
+abstract final class DateFormatters {
+  static final DateFormat _dayMonth = DateFormat('d MMM');
+  static final DateFormat _dayMonthYear = DateFormat('d MMM yyyy');
+  static final DateFormat _weekday = DateFormat('EEEE');
+  static final DateFormat _time = DateFormat.jm();
+
+  /// `Today`, `Yesterday`, `Tuesday` within the last week, then a date.
+  static String relativeDay(DateTime date, {DateTime? now}) {
+    final DateTime reference = now ?? DateTime.now();
+    final int days = _dateOnly(reference).difference(_dateOnly(date)).inDays;
+
+    return switch (days) {
+      0 => 'Today',
+      1 => 'Yesterday',
+      >= 2 && < 7 => _weekday.format(date),
+      _ when date.year == reference.year => _dayMonth.format(date),
+      _ => _dayMonthYear.format(date),
+    };
+  }
+
+  static String time(DateTime date) =>
+      _time.format(date).replaceAll('\u202f', ' ');
+
+  static String full(DateTime date) => _dayMonthYear.format(date);
+
+  /// Monday-based week start, used for weekly volume buckets (M5).
+  static DateTime startOfWeek(DateTime date) {
+    final DateTime d = _dateOnly(date);
+    return d.subtract(Duration(days: d.weekday - DateTime.monday));
+  }
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+}
