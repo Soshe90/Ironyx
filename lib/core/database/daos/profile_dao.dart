@@ -15,17 +15,17 @@ class ProfileDao extends DatabaseAccessor<AppDatabase> with _$ProfileDaoMixin {
   ProfileDao(super.db);
 
   /// The profile, or null before anything has ever been saved.
-  Future<Profile?> get() => (select(profilesTable)
-        ..where((t) => t.id.equals(Profile.singletonId)))
-      .getSingleOrNull()
-      .then((row) => row == null ? null : Profile.fromDrift(row));
+  Future<Profile?> get() =>
+      (select(profilesTable)..where((t) => t.id.equals(Profile.singletonId)))
+          .getSingleOrNull()
+          .then((row) => row == null ? null : Profile.fromDrift(row));
 
   /// Watches the profile so the Settings and Personal Details screens
   /// refresh themselves after a save, rather than needing invalidation.
-  Stream<Profile?> watch() => (select(profilesTable)
-        ..where((t) => t.id.equals(Profile.singletonId)))
-      .watchSingleOrNull()
-      .map((row) => row == null ? null : Profile.fromDrift(row));
+  Stream<Profile?> watch() =>
+      (select(profilesTable)..where((t) => t.id.equals(Profile.singletonId)))
+          .watchSingleOrNull()
+          .map((row) => row == null ? null : Profile.fromDrift(row));
 
   /// Applies [changes] to the profile, creating the row on first write.
   ///

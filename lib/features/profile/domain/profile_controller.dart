@@ -76,8 +76,9 @@ class ProfileController extends _$ProfileController {
 
   void setDateOfBirth(DateTime? value) => _update(
         (d) => d.copyWith(
-          dateOfBirth: () =>
-              value == null ? null : DateTime.utc(value.year, value.month, value.day),
+          dateOfBirth: () => value == null
+              ? null
+              : DateTime.utc(value.year, value.month, value.day),
         ),
       );
 

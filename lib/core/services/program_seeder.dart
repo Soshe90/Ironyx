@@ -52,11 +52,16 @@ class ProgramSeeder extends _$ProgramSeeder {
     // copy is the one they'd rather keep anyway.
     final Set<String> taken = await dao.allProgramNames();
 
-    for (final (id, name, splitType, dayCount, days) in <
-        (String, String, String, int, List<_SeedDay>)>[
+    for (final (id, name, splitType, dayCount, days)
+        in <(String, String, String, int, List<_SeedDay>)>[
       ('builtin_full_body', 'Full Body', 'fullBody', 3, _fullBodyDays()),
-      ('builtin_upper_lower', 'Upper / Lower', 'upperLower', 4,
-          _upperLowerDays()),
+      (
+        'builtin_upper_lower',
+        'Upper / Lower',
+        'upperLower',
+        4,
+        _upperLowerDays()
+      ),
       ('builtin_ppl', 'Push / Pull / Legs', 'ppl', 3, _pplDays()),
     ]) {
       if (taken.contains(name)) continue;

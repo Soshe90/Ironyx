@@ -85,12 +85,14 @@ void main() {
 
     // The pre-existing rows must be untouched.
     final workout = await db
-        .customSelect("SELECT total_volume_kg FROM workouts_table WHERE id = 'w1'")
+        .customSelect(
+            "SELECT total_volume_kg FROM workouts_table WHERE id = 'w1'")
         .getSingle();
     expect(workout.data['total_volume_kg'], 4200.5);
 
     final metric = await db
-        .customSelect("SELECT weight_kg FROM body_metrics_table WHERE id = 'b1'")
+        .customSelect(
+            "SELECT weight_kg FROM body_metrics_table WHERE id = 'b1'")
         .getSingle();
     expect(metric.data['weight_kg'], 94.0);
   });

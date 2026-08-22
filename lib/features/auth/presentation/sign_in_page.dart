@@ -61,7 +61,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
             labelText: 'Password',
             suffixIcon: IconButton(
               icon: Icon(
-                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                _obscure
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
               ),
               tooltip: _obscure ? 'Show password' : 'Hide password',
               onPressed: () => setState(() => _obscure = !_obscure),
@@ -85,8 +87,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
           ),
           const SizedBox(height: AppSpacing.xs),
           TextButton(
-            onPressed:
-                _busy ? null : () => context.pushReplacementNamed(Routes.signUpName),
+            onPressed: _busy
+                ? null
+                : () => context.pushReplacementNamed(Routes.signUpName),
             child: const Text('No account? Create one'),
           ),
         ],
@@ -103,10 +106,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     });
 
     try {
-      final AuthUser user = await ref.read(authControllerProvider.notifier).signIn(
-            email: _email.text,
-            password: _password.text,
-          );
+      final AuthUser user =
+          await ref.read(authControllerProvider.notifier).signIn(
+                email: _email.text,
+                password: _password.text,
+              );
       // Attach the account to the profile that already holds this device's
       // history, rather than starting a second one.
       await ref

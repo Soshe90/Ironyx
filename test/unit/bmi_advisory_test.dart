@@ -29,8 +29,8 @@ void main() {
           BmiBand.underweight); // 16.3
       expect(BmiAdvisory.band(weightKg: 57, heightCm: 175.5),
           BmiBand.healthy); // 18.5
-      expect(
-          BmiAdvisory.band(weightKg: 70, heightCm: 175), BmiBand.healthy); // 22.9
+      expect(BmiAdvisory.band(weightKg: 70, heightCm: 175),
+          BmiBand.healthy); // 22.9
       expect(BmiAdvisory.band(weightKg: 80, heightCm: 175),
           BmiBand.overweight); // 26.1
       expect(BmiAdvisory.band(weightKg: 94, heightCm: 172), BmiBand.obese);

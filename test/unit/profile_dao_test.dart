@@ -22,8 +22,7 @@ void main() {
     expect(await dao.get(), isNull);
   });
 
-  test('the first upsert creates the row and stamps both timestamps',
-      () async {
+  test('the first upsert creates the row and stamps both timestamps', () async {
     await dao.upsert(
       const ProfilesTableCompanion(
         displayName: Value('Mustafa Salih'),

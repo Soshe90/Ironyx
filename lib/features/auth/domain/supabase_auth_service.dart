@@ -148,9 +148,11 @@ class SupabaseAuthService implements AuthService {
     // enum omits `invalid_credentials`, which is the single most common
     // failure there is.
     return switch (error.code) {
-      'invalid_credentials' || 'user_not_found' =>
+      'invalid_credentials' ||
+      'user_not_found' =>
         AuthFailureKind.wrongCredentials,
-      'email_exists' || 'user_already_exists' =>
+      'email_exists' ||
+      'user_already_exists' =>
         AuthFailureKind.emailAlreadyRegistered,
       'weak_password' => AuthFailureKind.weakPassword,
       'email_not_confirmed' => AuthFailureKind.emailNotConfirmed,

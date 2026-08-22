@@ -41,7 +41,8 @@ abstract final class BmiAdvisory {
       BmiBand.underweight =>
         'The entered values show some degree of underweight. Please check '
             'your weight and height input data for errors and confirm.',
-      BmiBand.overweight || BmiBand.obese =>
+      BmiBand.overweight ||
+      BmiBand.obese =>
         'The entered values show some degree of overweight. Please check '
             'your weight and height input data for errors and confirm.',
     };

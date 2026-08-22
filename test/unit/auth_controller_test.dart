@@ -39,11 +39,11 @@ void main() {
 
     // Synchronous on purpose: a cold *offline* launch must resolve the
     // session without awaiting anything, or the app is unusable on a plane.
-    expect(containerWith(restored).read(authControllerProvider)?.email, 'a@b.co');
+    expect(
+        containerWith(restored).read(authControllerProvider)?.email, 'a@b.co');
   });
 
-  test('sign-up signs the user in when confirmation is not required',
-      () async {
+  test('sign-up signs the user in when confirmation is not required', () async {
     final outcome = await container
         .read(authControllerProvider.notifier)
         .signUp(email: 'new@example.com', password: 'hunter22');
@@ -189,8 +189,8 @@ void main() {
     });
 
     test('sign-out is a no-op rather than an error', () {
-      expect(disabled.read(authControllerProvider.notifier).signOut(),
-          completes);
+      expect(
+          disabled.read(authControllerProvider.notifier).signOut(), completes);
     });
   });
 }

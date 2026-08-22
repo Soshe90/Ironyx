@@ -304,9 +304,7 @@ class _NumberInputDialog extends StatefulWidget {
 class _NumberInputDialogState extends State<_NumberInputDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _controller = TextEditingController(
-    text: widget.initial == null
-        ? ''
-        : UnitFormatters.plain(widget.initial!),
+    text: widget.initial == null ? '' : UnitFormatters.plain(widget.initial!),
   );
 
   @override

@@ -198,9 +198,10 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
   /// UNIQUE, so the seeder checks this before re-inserting a built-in whose
   /// name a user-owned program may have taken over.
   Future<Set<String>> allProgramNames() async {
-    final rows = await (selectOnly(programsTable)..addColumns([
-          programsTable.name,
-        ]))
+    final rows = await (selectOnly(programsTable)
+          ..addColumns([
+            programsTable.name,
+          ]))
         .get();
     return rows.map((r) => r.read(programsTable.name)!).toSet();
   }
