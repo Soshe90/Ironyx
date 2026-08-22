@@ -3,8 +3,8 @@ tags:
   # relative labels like "Today", so it can never be a stable assertion —
   # it exists to be looked at, not to gate CI.
   #
-  #   flutter test --tags golden --update-goldens
+  #   flutter test --tags golden --update-goldens --run-skipped
   #
   # then open test/golden/*.png.
   golden:
-    skip: "Review harness. Run: flutter test --tags golden --update-goldens"
+    skip: "Review harness. Run: flutter test --tags golden --update-goldens --run-skipped"

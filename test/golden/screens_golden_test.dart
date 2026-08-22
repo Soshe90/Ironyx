@@ -20,10 +20,16 @@ import '../helpers/pump_app.dart';
 
 /// Renders each screen against seeded data and writes a PNG per screen.
 ///
-/// This is a review harness, not an assertion suite: run it with
-/// `--update-goldens` to refresh `test/golden/*.png` and look at the
-/// output. Without real fonts every glyph would render as a filled box,
-/// so Roboto and MaterialIcons are loaded from the Flutter cache first.
+/// This is a review harness, not an assertion suite. It is skipped by
+/// default (see dart_test.yaml); refresh the PNGs with:
+///
+///   flutter test --tags golden --update-goldens --run-skipped
+///
+/// The `--run-skipped` is required: selecting a tag does not override the
+/// skip configured for it.
+///
+/// Without real fonts every glyph renders as a filled box, so Roboto and
+/// MaterialIcons are loaded from the Flutter cache before anything pumps.
 void main() {
   setUpAll(_loadFonts);
 
