@@ -70,3 +70,6 @@ coverage/
 
 # OS
 .DS_Store
+
+# Local IDE/agent settings
+.claude/
