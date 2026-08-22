@@ -310,11 +310,15 @@ class _SessionTotals extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
+    // Counts working sets only, matching the rule
+    // `ActiveWorkoutNotifier.save` uses for the persisted
+    // `totalVolumeKg`. If this counted warm-ups, the total shown while
+    // training would not match the total on the saved workout.
     int completedSets = 0;
     double volumeKg = 0;
     for (final DraftExercise exercise in draft.exercises) {
       for (final DraftSet set in exercise.sets) {
-        if (!set.isCompleted) continue;
+        if (!set.isCompleted || set.isWarmup || exercise.isWarmup) continue;
         completedSets++;
         volumeKg += set.weightKg * set.reps;
       }

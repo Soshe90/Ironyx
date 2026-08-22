@@ -53,8 +53,13 @@ class ExerciseDraftCard extends ConsumerWidget {
 
     final int completed =
         exercise.sets.where((DraftSet s) => s.isCompleted).length;
+    // Working volume only. Must use the same rule as
+    // `ActiveWorkoutNotifier.save`, which excludes warm-ups from the
+    // persisted `totalVolumeKg` — otherwise this figure and the saved
+    // workout's disagree for anyone who logs warm-up sets.
     final double volumeKg = exercise.sets
-        .where((DraftSet s) => s.isCompleted)
+        .where((DraftSet s) =>
+            s.isCompleted && !s.isWarmup && !exercise.isWarmup)
         .fold<double>(0, (double t, DraftSet s) => t + s.weightKg * s.reps);
 
     return Padding(

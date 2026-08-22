@@ -185,8 +185,12 @@ class _ExerciseBreakdown extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
 
+    // Working volume only, so these per-exercise figures add up to the
+    // workout's stored `totalVolumeKg` in the header. `save` folds an
+    // exercise-level warm-up flag into each set's, so the set flag alone
+    // is enough here.
     final double volumeKg = sets
-        .where((WorkoutSet s) => s.isCompleted)
+        .where((WorkoutSet s) => s.isCompleted && !s.isWarmup)
         .fold<double>(0, (double t, WorkoutSet s) => t + s.weightKg * s.reps);
 
     return Padding(
