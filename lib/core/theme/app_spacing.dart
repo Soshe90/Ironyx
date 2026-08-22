@@ -34,5 +34,12 @@ abstract final class AppDuration {
   static const Duration inputDebounce = Duration(milliseconds: 300);
 
   /// Window during which a discarded workout can be undone.
-  static const Duration undoWindow = Duration(seconds: 5);
+  ///
+  /// Longer than a normal snackbar on purpose. Discarding a workout throws
+  /// away logged sets, and five seconds is not enough to notice the bar,
+  /// read it, and reach the action — especially mid-session with a phone
+  /// in one hand. The snackbar's visible duration and the timer that
+  /// actually deletes the draft both read this value, so they cannot drift
+  /// apart and offer an Undo that no longer works.
+  static const Duration undoWindow = Duration(seconds: 12);
 }

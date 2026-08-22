@@ -121,7 +121,9 @@ void main() {
       );
 
       notifier.cancelScheduledDiscard();
-      await Future<void>.delayed(AppDuration.undoWindow * 1.5);
+      await Future<void>.delayed(
+          AppDuration.undoWindow + const Duration(seconds: 1),
+        );
       expect(
         container.read(activeWorkoutProvider),
         isNotNull,
@@ -136,11 +138,14 @@ void main() {
         await notifier.start();
 
         notifier.scheduleDiscard();
-        await Future<void>.delayed(AppDuration.undoWindow * 1.5);
+        await Future<void>.delayed(
+          AppDuration.undoWindow + const Duration(seconds: 1),
+        );
 
         expect(container.read(activeWorkoutProvider), isNull);
       },
-      timeout: const Timeout(Duration(seconds: 10)),
+      // Must exceed the undo window plus the buffer above.
+      timeout: const Timeout(Duration(seconds: 30)),
     );
 
     test('persists and restores a draft', () async {
