@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,12 +15,14 @@ import '../../../core/database/tables/muscles.dart';
 
 import '../../../core/formatters/youtube.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/filter_chip_group.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/sheet_handle.dart';
 
 /// A curated image wins; a linked video is turned into a thumbnail
 /// (already just a picture fallback — see `Youtube.searchUrl` for why a
@@ -58,15 +62,37 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   String? _selectedEquipmentId;
   MovementPattern? _selectedPattern;
 
+  /// Committed search term. Separate from the controller's text so that
+  /// typing does not re-run the query on every keystroke — each one would
+  /// otherwise swap the watched provider and start a new database stream.
+  String _query = '';
+  Timer? _debounce;
+
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
+  void _onSearchChanged(String value) {
+    // Rebuild immediately so the clear affordance tracks the field, but
+    // hold the query itself until typing settles.
+    setState(() {});
+    _debounce?.cancel();
+    _debounce = Timer(AppDuration.inputDebounce, () {
+      if (mounted) setState(() => _query = value.trim());
+    });
+  }
+
+  void _commitSearch(String value) {
+    _debounce?.cancel();
+    setState(() => _query = value.trim());
+  }
+
   @override
   Widget build(BuildContext context) {
-    final searchQuery = _searchController.text;
+    final searchQuery = _query;
 
     final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
       searchQuery.isNotEmpty
@@ -114,13 +140,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         tooltip: 'Clear search',
                         onPressed: () {
                           _searchController.clear();
-                          setState(() {});
+                          _commitSearch('');
                         },
                       )
                     : null,
               ),
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => setState(() {}),
+              onChanged: _onSearchChanged,
+              onSubmitted: _commitSearch,
             ),
           ),
 
@@ -133,6 +159,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               data: (exercises) => _ExerciseList(
                 exercises: exercises,
                 onExerciseTap: _showExerciseDetail,
+                hasActiveFilters: _hasActiveFilters,
+                onClearFilters: _clearFilters,
               ),
               loading: () => _buildLoadingGrid(),
               error: (error, _) => ErrorView(
@@ -151,11 +179,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       _selectedMuscleId != null ||
       _selectedEquipmentId != null ||
       _selectedPattern != null ||
-      _searchController.text.isNotEmpty;
+      _query.isNotEmpty;
 
   void _clearFilters() {
+    _debounce?.cancel();
     setState(() {
       _searchController.clear();
+      _query = '';
       _selectedMuscleId = null;
       _selectedEquipmentId = null;
       _selectedPattern = null;
@@ -227,41 +257,195 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 }
 
-/// Exercise list with grid layout.
+/// Aspect ratio of a grid card: portrait, to fit a 16:9 thumbnail plus
+/// three lines of metadata without clipping.
+const double _cardAspectRatio = 0.75;
+
+/// Exercise results.
+///
+/// A phone gets a dense list rather than a one-column grid: at the card
+/// aspect ratio above, a single column shows barely one and a half
+/// exercises per screen, which makes browsing a 400-entry catalogue
+/// unusable. Wider layouts have the room for the richer card, so they keep
+/// the grid.
 class _ExerciseList extends StatelessWidget {
-  const _ExerciseList({required this.exercises, required this.onExerciseTap});
+  const _ExerciseList({
+    required this.exercises,
+    required this.onExerciseTap,
+    required this.hasActiveFilters,
+    required this.onClearFilters,
+  });
 
   final List<ExerciseSummary> exercises;
   final void Function(ExerciseSummary) onExerciseTap;
+  final bool hasActiveFilters;
+  final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
     if (exercises.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.search_off,
         title: 'No exercises found',
         message: 'Try adjusting your search or filters.',
+        actionLabel: hasActiveFilters ? 'Clear filters' : null,
+        onAction: hasActiveFilters ? onClearFilters : null,
       );
     }
 
-    final columns = context.gridColumns;
+    final ThemeData theme = Theme.of(context);
+    final bool compact = context.breakpoint == Breakpoint.compact;
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        mainAxisSpacing: AppSpacing.md,
-        crossAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.75,
+    final Widget countLabel = Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.sm,
       ),
-      itemCount: exercises.length,
-      itemBuilder: (context, index) => _ExerciseCard(
-        summary: exercises[index],
-        onTap: () => onExerciseTap(exercises[index]),
+      child: Text(
+        '${exercises.length} exercise${exercises.length == 1 ? '' : 's'}',
+        style: AppTypography.eyebrow(theme),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        countLabel,
+        Expanded(
+          child: compact
+              ? ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  itemCount: exercises.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) => _ExerciseRow(
+                    summary: exercises[index],
+                    onTap: () => onExerciseTap(exercises[index]),
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: context.gridColumns,
+                    mainAxisSpacing: AppSpacing.md,
+                    crossAxisSpacing: AppSpacing.md,
+                    childAspectRatio: _cardAspectRatio,
+                  ),
+                  itemCount: exercises.length,
+                  itemBuilder: (context, index) => _ExerciseCard(
+                    summary: exercises[index],
+                    onTap: () => onExerciseTap(exercises[index]),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Dense one-line-per-exercise row used on phones.
+class _ExerciseRow extends StatelessWidget {
+  const _ExerciseRow({required this.summary, required this.onTap});
+
+  final ExerciseSummary summary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final exercise = summary.exercise;
+    final String equipmentLabel = summary.equipmentNames.join(', ');
+    final String? muscle = summary.primaryMuscle?.displayName;
+    final String? thumbnailUrl = _pictureUrl(summary.media);
+    final IconData fallbackIcon = summary.equipmentNames.isEmpty
+        ? Icons.fitness_center
+        : _equipmentIcon(summary.equipmentNames.first);
+
+    final String meta = <String>[
+      if (muscle != null) muscle,
+      if (equipmentLabel.isNotEmpty) equipmentLabel,
+      exercise.movementPattern.label,
+    ].join(' · ');
+
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      semanticLabel: '${exercise.name}, $meta',
+      child: Row(
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: SizedBox(
+              width: _rowThumbnailSize,
+              height: _rowThumbnailSize,
+              child: thumbnailUrl == null
+                  ? ColoredBox(
+                      color: scheme.surfaceContainerHighest,
+                      child: Icon(
+                        fallbackIcon,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    )
+                  : _ExerciseThumbnail(
+                      url: thumbnailUrl,
+                      fallbackUrl: _pictureUrl(summary.fallbackMedia),
+                      fallbackIcon: fallbackIcon,
+                    ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  exercise.name,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  meta,
+                  style: AppTypography.caption(theme),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (exercise.isBodyweight) ...<Widget>[
+            const SizedBox(width: AppSpacing.sm),
+            Icon(
+              Icons.accessibility_new,
+              size: 16,
+              color: scheme.primary,
+              semanticLabel: 'Bodyweight',
+            ),
+          ],
+        ],
       ),
     );
   }
 }
+
+/// Square thumbnail edge for the compact row.
+const double _rowThumbnailSize = 56;
 
 /// Individual exercise card.
 class _ExerciseCard extends StatelessWidget {
@@ -488,17 +672,7 @@ class _ExerciseDetailBody extends StatelessWidget {
       controller: scrollController,
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        // Handle bar
-        Center(
-          child: Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: scheme.onSurfaceVariant.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
+        const SheetHandle(),
         const SizedBox(height: AppSpacing.lg),
 
         ClipRRect(

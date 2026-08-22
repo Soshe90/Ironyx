@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/page_body.dart';
 import '../domain/timer_controller.dart';
 import '../domain/timer_engine.dart';
 import '../domain/timer_preset.dart';
@@ -45,34 +45,31 @@ class ActiveTimerPage extends ConsumerWidget {
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: context.contentMaxWidth),
-            child: Column(
-              children: [
-                if (denied) const _PermissionDeniedBanner(),
-                const Spacer(),
-                _CountdownRing(snapshot: snapshot),
-                const SizedBox(height: AppSpacing.xl),
-                _PhaseLabel(snapshot: snapshot),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  _intervalLabel(snapshot, controller.preset),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-                const Spacer(),
-                _Controls(
-                  isRunning: snapshot.isRunning,
-                  onPause: controller.pause,
-                  onResume: controller.resume,
-                  onSkip: controller.skip,
-                  onEnd: controller.stop,
-                ),
-                const SizedBox(height: AppSpacing.xl),
-              ],
-            ),
+        child: PageBody(
+          child: Column(
+            children: [
+              if (denied) const _PermissionDeniedBanner(),
+              // The interval counter is context for the countdown, so it
+              // reads above it as an eyebrow rather than as a footnote.
+              const Spacer(),
+              Text(
+                _intervalLabel(snapshot, controller.preset).toUpperCase(),
+                style: AppTypography.eyebrow(Theme.of(context)),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Flexible(child: _CountdownRing(snapshot: snapshot)),
+              const SizedBox(height: AppSpacing.xl),
+              _PhaseLabel(snapshot: snapshot),
+              const Spacer(),
+              _Controls(
+                isRunning: snapshot.isRunning,
+                onPause: controller.pause,
+                onResume: controller.resume,
+                onSkip: controller.skip,
+                onEnd: controller.stop,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
           ),
         ),
       ),
@@ -86,6 +83,16 @@ class ActiveTimerPage extends ConsumerWidget {
   }
 }
 
+/// Bounds for the countdown ring. It scales with the shorter screen axis so
+/// the timer stays glanceable on a phone and does not look lost on a
+/// tablet, but never grows past the point where the digits outrun the ring.
+const double _ringMinDiameter = 200;
+const double _ringMaxDiameter = 360;
+const double _ringStrokeWidth = 10;
+
+/// Fraction of the ring's diameter given to the countdown digits.
+const double _countdownScale = 0.26;
+
 class _CountdownRing extends StatelessWidget {
   const _CountdownRing({required this.snapshot});
 
@@ -96,26 +103,39 @@ class _CountdownRing extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final String countdown = UnitFormatters.duration(snapshot.remaining);
 
-    return SizedBox(
-      width: 260,
-      height: 260,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox.expand(
-            child: CircularProgressIndicator(
-              value: snapshot.progress,
-              strokeWidth: 10,
-              strokeCap: StrokeCap.round,
-              backgroundColor: scheme.surfaceContainerHighest,
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double available = constraints.biggest.shortestSide;
+        final double diameter =
+            available.clamp(_ringMinDiameter, _ringMaxDiameter);
+
+        return Center(
+          child: SizedBox(
+            width: diameter,
+            height: diameter,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    value: snapshot.progress,
+                    strokeWidth: _ringStrokeWidth,
+                    strokeCap: StrokeCap.round,
+                    backgroundColor: scheme.surfaceContainerHighest,
+                  ),
+                ),
+                Text(
+                  countdown,
+                  style: AppTypography.countdown(
+                    scheme,
+                    size: diameter * _countdownScale,
+                  ),
+                ),
+              ],
             ),
           ),
-          Text(
-            countdown,
-            style: AppTypography.countdown(scheme),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -136,6 +156,11 @@ class _PhaseLabel extends StatelessWidget {
     );
   }
 }
+
+/// Pause/resume is the control reached for mid-set, often without looking,
+/// so it is deliberately far larger than the accessibility floor.
+const double _primaryControlSize = 96;
+const double _primaryControlIconSize = 40;
 
 class _Controls extends StatelessWidget {
   const _Controls({
@@ -169,12 +194,12 @@ class _Controls extends StatelessWidget {
           child: FilledButton(
             onPressed: isRunning ? onPause : onResume,
             style: FilledButton.styleFrom(
-              minimumSize: const Size(96, 96),
+              minimumSize: const Size(_primaryControlSize, _primaryControlSize),
               shape: const CircleBorder(),
             ),
             child: Icon(
               isRunning ? Icons.pause : Icons.play_arrow,
-              size: 40,
+              size: _primaryControlIconSize,
             ),
           ),
         ),

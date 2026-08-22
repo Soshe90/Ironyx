@@ -10,8 +10,13 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/pr_badge.dart';
+import '../../../core/widgets/stat_strip.dart';
 
 /// Read-only summary of a saved workout, with edit and delete actions.
 class WorkoutDetailPage extends ConsumerWidget {
@@ -51,7 +56,7 @@ class WorkoutDetailPage extends ConsumerWidget {
               message: 'It may have already been deleted.',
             );
           }
-          return _WorkoutDetailBody(details: details);
+          return _WorkoutDetailBody(details: details, workoutId: workoutId);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
@@ -89,42 +94,53 @@ class WorkoutDetailPage extends ConsumerWidget {
 }
 
 class _WorkoutDetailBody extends ConsumerWidget {
-  const _WorkoutDetailBody({required this.details});
+  const _WorkoutDetailBody({required this.details, required this.workoutId});
 
   final WorkoutWithDetails details;
+  final String workoutId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
     final workout = details.workout;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final bool isPr = ref
+            .watch(personalRecordWorkoutIdsProvider)
+            .value
+            ?.contains(workoutId) ??
+        false;
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      children: [
-        Text(
-          DateFormatters.full(workout.startedAt),
-          style: theme.textTheme.titleLarge,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          DateFormatters.time(workout.startedAt),
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurfaceVariant,
+    return PageBody(
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  DateFormatters.relativeDay(workout.startedAt),
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (isPr) const PrBadge(),
+            ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Row(
-          children: [
-            Expanded(
-              child: _StatTile(
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            '${DateFormatters.full(workout.startedAt)} · '
+            '${DateFormatters.time(workout.startedAt)}',
+            style: AppTypography.caption(theme),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          StatStrip(
+            stats: <Stat>[
+              Stat(
                 label: 'Volume',
                 value: UnitFormatters.volume(workout.totalVolumeKg, unit),
+                emphasis: true,
               ),
-            ),
-            Expanded(
-              child: _StatTile(
+              Stat(
                 label: 'Duration',
                 value: workout.durationSeconds == null
                     ? '—'
@@ -132,98 +148,139 @@ class _WorkoutDetailBody extends ConsumerWidget {
                         Duration(seconds: workout.durationSeconds!),
                       ),
               ),
-            ),
-            Expanded(
-              child: _StatTile(
+              Stat(
                 label: 'Exercises',
                 value: '${details.exercises.length}',
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        for (final exercise in details.exercises)
-          Card(
-            margin: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    details.exerciseNames[exercise.id] ?? 'Unknown exercise',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  for (final set in details.setsByExercise[exercise.id] ??
-                      const <WorkoutSet>[])
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.xxs,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            set.isCompleted
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked,
-                            size: 18,
-                            color: set.isCompleted
-                                ? scheme.primary
-                                : scheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            '${UnitFormatters.weight(set.weightKg, unit)} '
-                            '× ${set.reps}',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          if (set.isWarmup) ...[
-                            const SizedBox(width: AppSpacing.sm),
-                            Text(
-                              'warm-up',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            ],
           ),
-      ],
+          const SizedBox(height: AppSpacing.xl),
+          for (final exercise in details.exercises)
+            _ExerciseBreakdown(
+              name: details.exerciseNames[exercise.id] ?? 'Unknown exercise',
+              sets: details.setsByExercise[exercise.id] ??
+                  const <WorkoutSet>[],
+              unit: unit,
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
+/// One exercise's logged sets, as a compact numbered table.
+class _ExerciseBreakdown extends StatelessWidget {
+  const _ExerciseBreakdown({
+    required this.name,
+    required this.sets,
+    required this.unit,
+  });
 
-  final String label;
-  final String value;
+  final String name;
+  final List<WorkoutSet> sets;
+  final WeightUnit unit;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+    final ColorScheme scheme = theme.colorScheme;
+
+    final double volumeKg = sets
+        .where((WorkoutSet s) => s.isCompleted)
+        .fold<double>(0, (double t, WorkoutSet s) => t + s.weightKg * s.reps);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    name,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text(
+                  UnitFormatters.volume(volumeKg, unit),
+                  style: AppTypography.cardMetric(
+                    scheme,
+                    size: AppTypography.metricSizeSm,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            for (int i = 0; i < sets.length; i++)
+              _SetLine(index: i + 1, set: sets[i], unit: unit),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SetLine extends StatelessWidget {
+  const _SetLine({
+    required this.index,
+    required this.set,
+    required this.unit,
+  });
+
+  final int index;
+  final WorkoutSet set;
+  final WeightUnit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool done = set.isCompleted;
+
+    return Semantics(
+      label: 'Set $index, ${UnitFormatters.weight(set.weightKg, unit)} '
+          'for ${set.reps} reps${done ? ', completed' : ', not completed'}'
+          '${set.isWarmup ? ', warm-up' : ''}',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: AppSpacing.xl,
+                child: Text(
+                  '$index',
+                  style: AppTypography.numeric(
+                    theme.textTheme.bodyMedium ?? const TextStyle(),
+                  ).copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Icon(
+                done ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 16,
+                color: done ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${UnitFormatters.weight(set.weightKg, unit)} × ${set.reps}',
+                style: AppTypography.numeric(
+                  theme.textTheme.bodyMedium ?? const TextStyle(),
+                ),
+              ),
+              if (set.isWarmup) ...<Widget>[
+                const SizedBox(width: AppSpacing.sm),
+                Text('warm-up', style: AppTypography.eyebrow(theme)),
+              ],
+            ],
           ),
         ),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

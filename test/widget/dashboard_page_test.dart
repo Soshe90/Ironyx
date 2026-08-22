@@ -76,7 +76,7 @@ void main() {
       await database.close();
     }
 
-    testWidgets('renders live values for the last-workout and library cards',
+    testWidgets('renders live values for the week and last-workout blocks',
         (tester) async {
       await pumpApp(
         tester,
@@ -85,17 +85,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Shows in both the last-workout card and the weekly-volume hero card
-      // (the seeded workout is this week's only one, so both agree).
+      // Shows in both the last-workout row and the "this week" card (the
+      // seeded workout is this week's only one, so both agree).
       expect(find.text('300 kg'), findsWidgets);
-      // Exercises card: 1 exercise seeded.
+      // "This week" derives its session count from the frequency query.
+      expect(find.text('SESSIONS'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
-      expect(find.text('Latest: Bench Press'), findsOneWidget);
+      // With no draft persisted, the primary action offers a fresh session.
+      expect(find.text('Start workout'), findsOneWidget);
 
       await disposeApp(tester);
     });
 
-    testWidgets('one card failing to load does not blank the others',
+    testWidgets('one block failing to load does not blank the others',
         (tester) async {
       await pumpApp(
         tester,
@@ -109,10 +111,21 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The failing card shows its error state...
+      // The "this week" card sits above the fold and renders live data...
+      expect(find.text('300 kg'), findsOneWidget);
+      expect(find.text('SESSIONS'), findsOneWidget);
+
+      // ...while the failing row, further down the page, shows its own
+      // error state. Recent activity is lazily built, so scroll it in.
+      await tester.drag(
+        find.byType(CustomScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
       expect(find.text('Could not load'), findsOneWidget);
-      // ...while the unrelated Library card still renders live data.
-      expect(find.text('Latest: Bench Press'), findsOneWidget);
+      // The rest of the page survived the one failure.
+      expect(find.text('Last timer'), findsOneWidget);
 
       await disposeApp(tester);
     });

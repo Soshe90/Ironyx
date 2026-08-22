@@ -5,12 +5,19 @@ import 'package:go_router/go_router.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/theme_mode_controller.dart';
-import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../timer/domain/timer_settings_controller.dart';
 import 'widgets/data_management_section.dart';
 
 /// Root-level route (ADR-3): full screen, bottom bar hidden.
+///
+/// Grouped into titled cards rather than one flat list separated by rules:
+/// the settings here fall into four unrelated concerns, and a card per
+/// concern makes that structure visible without extra chrome.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -31,131 +38,137 @@ class SettingsPage extends ConsumerWidget {
           tooltip: 'Back',
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: context.contentMaxWidth),
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            children: <Widget>[
-              const _SectionHeader('Appearance'),
-              _ThemeOption(
-                label: 'Match system',
-                value: ThemeMode.system,
-                selected: mode,
+      body: PageBody(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+          children: <Widget>[
+            const SectionHeader(
+              title: 'Appearance',
+              subtitle: 'Dark mode is a first-class theme, not an inversion',
+            ),
+            AppCard(
+              child: SegmentedButton<ThemeMode>(
+                segments: const <ButtonSegment<ThemeMode>>[
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.system,
+                    label: Text('System'),
+                    icon: Icon(Icons.brightness_auto_outlined),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.light,
+                    label: Text('Light'),
+                    icon: Icon(Icons.light_mode_outlined),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.dark,
+                    label: Text('Dark'),
+                    icon: Icon(Icons.dark_mode_outlined),
+                  ),
+                ],
+                selected: <ThemeMode>{mode},
+                showSelectedIcon: false,
+                onSelectionChanged: (Set<ThemeMode> selection) async {
+                  await ref
+                      .read(themeModeControllerProvider.notifier)
+                      .set(selection.first);
+                },
               ),
-              _ThemeOption(
-                label: 'Light',
-                value: ThemeMode.light,
-                selected: mode,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(
+              title: 'Units',
+              subtitle: 'Applies everywhere weights are shown or entered',
+            ),
+            AppCard(
+              child: SegmentedButton<WeightUnit>(
+                segments: <ButtonSegment<WeightUnit>>[
+                  for (final WeightUnit option in WeightUnit.values)
+                    ButtonSegment<WeightUnit>(
+                      value: option,
+                      label: Text(
+                        option == WeightUnit.kg
+                            ? 'Kilograms (kg)'
+                            : 'Pounds (lb)',
+                      ),
+                    ),
+                ],
+                selected: <WeightUnit>{unit},
+                showSelectedIcon: false,
+                onSelectionChanged: (Set<WeightUnit> selection) async {
+                  await ref
+                      .read(weightUnitControllerProvider.notifier)
+                      .set(selection.first);
+                },
               ),
-              _ThemeOption(
-                label: 'Dark',
-                value: ThemeMode.dark,
-                selected: mode,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(
+              title: 'Feedback',
+              subtitle: 'Cues when a timer phase ends',
+            ),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: <Widget>[
+                  SwitchListTile(
+                    title: const Text('Sound cues'),
+                    subtitle: const Text('Play a tone on phase change'),
+                    value: feedback.soundEnabled,
+                    onChanged: feedbackController.setSoundEnabled,
+                  ),
+                  SwitchListTile(
+                    title: const Text('Haptics'),
+                    subtitle: const Text('Vibrate on phase change'),
+                    value: feedback.hapticsEnabled,
+                    onChanged: feedbackController.setHapticsEnabled,
+                  ),
+                ],
               ),
-              const Divider(),
-              const _SectionHeader('Units'),
-              for (final option in WeightUnit.values)
-                _UnitOption(unit: option, selected: unit),
-              const Divider(),
-              const _SectionHeader('Feedback'),
-              SwitchListTile(
-                title: const Text('Sound cues'),
-                value: feedback.soundEnabled,
-                onChanged: feedbackController.setSoundEnabled,
-              ),
-              SwitchListTile(
-                title: const Text('Haptics'),
-                value: feedback.hapticsEnabled,
-                onChanged: feedbackController.setHapticsEnabled,
-              ),
-              const Divider(),
-              const _SectionHeader('Data'),
-              const DataManagementSection(),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(
+              title: 'Data',
+              subtitle: 'FitTrack stores everything on this device',
+            ),
+            const AppCard(
+              padding: EdgeInsets.zero,
+              child: DataManagementSection(),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const _StorageNote(),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ThemeOption extends ConsumerWidget {
-  const _ThemeOption({
-    required this.label,
-    required this.value,
-    required this.selected,
-  });
-
-  final String label;
-  final ThemeMode value;
-  final ThemeMode selected;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bool isSelected = value == selected;
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-
-    return ListTile(
-      title: Text(label),
-      trailing: isSelected
-          ? Icon(Icons.check, color: scheme.primary)
-          : const SizedBox(width: 24),
-      selected: isSelected,
-      onTap: () async {
-        await ref.read(themeModeControllerProvider.notifier).set(value);
-      },
-    );
-  }
-}
-
-class _UnitOption extends ConsumerWidget {
-  const _UnitOption({required this.unit, required this.selected});
-
-  final WeightUnit unit;
-  final WeightUnit selected;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bool isSelected = unit == selected;
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-
-    return ListTile(
-      title: Text(unit == WeightUnit.kg ? 'Kilograms (kg)' : 'Pounds (lb)'),
-      trailing: isSelected
-          ? Icon(Icons.check, color: scheme.primary)
-          : const SizedBox(width: 24),
-      selected: isSelected,
-      onTap: () async {
-        await ref.read(weightUnitControllerProvider.notifier).set(unit);
-      },
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-
-  final String label;
+/// Closes the page with the one thing a user is most likely to worry about
+/// on a settings screen: where their data actually lives.
+class _StorageNote extends StatelessWidget {
+  const _StorageNote();
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.sm,
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.primary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w700,
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Icon(
+          Icons.lock_outline,
+          size: 16,
+          color: theme.colorScheme.onSurfaceVariant,
         ),
-      ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            'Your training data never leaves this device unless you export '
+            'it yourself.',
+            style: AppTypography.caption(theme),
+          ),
+        ),
+      ],
     );
   }
 }

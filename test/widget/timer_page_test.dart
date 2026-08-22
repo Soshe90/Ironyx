@@ -30,7 +30,7 @@ void main() {
       expect(find.text('Tabata'), findsOneWidget);
       expect(find.text('HIIT'), findsOneWidget);
       expect(find.text('Strength'), findsOneWidget);
-      expect(find.text('CUSTOM'), findsOneWidget);
+      expect(find.text('Custom'), findsOneWidget);
       expect(find.text('Work (s)'), findsOneWidget);
       expect(find.text('Sound cues'), findsOneWidget);
       expect(find.text('Haptics'), findsOneWidget);

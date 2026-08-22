@@ -1,74 +1,245 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/formatters/unit_formatters.dart';
+import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../timer/domain/timer_engine.dart';
 import '../../../timer/domain/timer_preset.dart';
 import '../../domain/draft_editor_controller.dart';
 import '../../domain/workout_draft.dart';
 
+/// Largest weight, in kilograms, a set row will accept. Guards against a
+/// fat-fingered entry silently poisoning volume totals.
+const double _maxWeightKg = 1000;
+const int _maxReps = 100;
+
 /// One exercise within a draft, with its sets. Shared by the active-session
 /// screen and the edit screen — both back it with a [DraftEditorController].
-class ExerciseDraftCard extends StatelessWidget {
+///
+/// Laid out as a small table: a header row names the columns once, so the
+/// set rows below carry no per-field labels and stay scannable mid-set.
+class ExerciseDraftCard extends ConsumerWidget {
   const ExerciseDraftCard({
     required this.exercise,
     required this.controller,
+    this.position,
+    this.dragHandleIndex,
     super.key,
   });
 
   final DraftExercise exercise;
   final DraftEditorController controller;
 
+  /// 1-based index shown in the leading chip. Null hides the chip.
+  final int? position;
+
+  /// 0-based index within the enclosing reorderable list. Non-null renders
+  /// an explicit drag handle — preferred over a whole-card long-press,
+  /// which is invisible to a screen reader and easy to trigger by accident
+  /// while reaching for a set field.
+  final int? dragHandleIndex;
+
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+
+    final int completed =
+        exercise.sets.where((DraftSet s) => s.isCompleted).length;
+    final double volumeKg = exercise.sets
+        .where((DraftSet s) => s.isCompleted)
+        .fold<double>(0, (double t, DraftSet s) => t + s.weightKg * s.reps);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          children: <Widget>[
             Row(
-              children: [
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                if (position != null) ...<Widget>[
+                  _PositionChip(position: position!),
+                  const SizedBox(width: AppSpacing.md),
+                ],
                 Expanded(
-                  child: Text(
-                    exercise.name,
-                    style: Theme.of(context).textTheme.titleMedium,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        exercise.name,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        _summary(completed, exercise.sets.length, volumeKg,
+                            unit),
+                        style: AppTypography.caption(theme),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
                   onPressed: () => controller.removeExercise(exercise.id),
-                  icon: const Icon(Icons.delete_outline),
-                  tooltip: 'Remove exercise',
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Remove ${exercise.name}',
+                  visualDensity: VisualDensity.compact,
                 ),
+                if (dragHandleIndex != null)
+                  ReorderableDragStartListener(
+                    index: dragHandleIndex!,
+                    child: Tooltip(
+                      message: 'Reorder ${exercise.name}',
+                      child: Icon(
+                        Icons.drag_indicator,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
               ],
             ),
-            for (var index = 0; index < exercise.sets.length; index++) ...[
-              DraftSetRow(
-                key: ValueKey(exercise.sets[index].id),
-                exerciseId: exercise.id,
-                set: exercise.sets[index],
-                controller: controller,
-              ),
-              if (index < exercise.sets.length - 1) const InlineRestTimer(),
+            if (exercise.sets.isNotEmpty) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              _SetTableHeader(unit: unit),
+              const SizedBox(height: AppSpacing.xs),
+              for (int i = 0; i < exercise.sets.length; i++)
+                DraftSetRow(
+                  key: ValueKey<String>(exercise.sets[i].id),
+                  exerciseId: exercise.id,
+                  set: exercise.sets[i],
+                  index: i + 1,
+                  controller: controller,
+                ),
             ],
-            TextButton.icon(
-              onPressed: () => controller.addSet(exercise.id),
-              icon: const Icon(Icons.add),
-              label: const Text('Add set'),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => controller.addSet(exercise.id),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add set'),
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: AppSpacing.xl,
+                  color: scheme.outlineVariant,
+                ),
+                const Expanded(child: InlineRestTimer()),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
+  String _summary(int completed, int total, double volumeKg, WeightUnit unit) {
+    if (total == 0) {
+      return 'No sets yet';
+    }
+    final String sets = '$completed/$total sets';
+    return completed == 0
+        ? sets
+        : '$sets · ${UnitFormatters.volume(volumeKg, unit)}';
+  }
 }
 
-/// A compact, local rest countdown shown between set rows.
+/// The exercise's ordinal within the workout.
+class _PositionChip extends StatelessWidget {
+  const _PositionChip({required this.position});
+
+  final int position;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
+    return ExcludeSemantics(
+      child: Container(
+        width: AppSpacing.xl,
+        height: AppSpacing.xl,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Text(
+          '$position',
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Names the set-row columns once, so each row can drop its field labels.
+class _SetTableHeader extends StatelessWidget {
+  const _SetTableHeader({required this.unit});
+
+  final WeightUnit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    Widget label(String text, {TextAlign align = TextAlign.start}) => Text(
+          text,
+          textAlign: align,
+          style: AppTypography.eyebrow(theme),
+        );
+
+    return ExcludeSemantics(
+      child: Row(
+        children: <Widget>[
+          SizedBox(width: _setNumberWidth, child: label('SET')),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: label(unit.label.toUpperCase())),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: label('REPS')),
+          const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: AppSpacing.minTapTarget,
+            child: label('DONE', align: TextAlign.center),
+          ),
+          const SizedBox(width: _rowMenuWidth),
+        ],
+      ),
+    );
+  }
+}
+
+/// Column widths shared by the header and the rows so they stay aligned.
+const double _setNumberWidth = AppSpacing.xxl;
+const double _rowMenuWidth = AppSpacing.minTapTarget;
+
+/// A compact, local rest countdown.
 ///
 /// It reuses the platform-independent [TimerEngine] but deliberately does not
 /// create a saved timer session or use notifications, audio, or wakelock.
+///
+/// Rendered once per exercise rather than between every pair of sets: the
+/// old placement repeated an identical control up to a dozen times per card
+/// and made the set list hard to read.
 class InlineRestTimer extends StatefulWidget {
   const InlineRestTimer({this.duration = 60, super.key});
 
@@ -91,43 +262,54 @@ class _InlineRestTimerState extends State<InlineRestTimer> {
 
   @override
   Widget build(BuildContext context) {
-    final snapshot = _snapshot;
-    final running = snapshot?.isRunning ?? false;
-    final complete = snapshot?.isComplete ?? false;
-    final label = snapshot == null
-        ? 'Rest'
-        : complete
-            ? 'Rest complete'
-            : _format(snapshot.remaining);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final TimerSnapshot? snapshot = _snapshot;
+    final bool running = snapshot?.isRunning ?? false;
+    final bool complete = snapshot?.isComplete ?? false;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: [
-          const Icon(Icons.timer_outlined, size: 18),
-          const SizedBox(width: AppSpacing.sm),
-          Text(label),
-          const Spacer(),
-          if (snapshot != null && !complete)
-            IconButton(
-              onPressed: running ? _pause : _resume,
-              icon: Icon(running ? Icons.pause : Icons.play_arrow),
-              tooltip: running ? 'Pause rest' : 'Resume rest',
-              visualDensity: VisualDensity.compact,
-            ),
-          TextButton(
-            onPressed: complete || snapshot == null ? _start : _reset,
-            child: Text(snapshot == null || complete ? 'Start' : 'Reset'),
+    if (snapshot == null) {
+      return TextButton.icon(
+        onPressed: _start,
+        icon: const Icon(Icons.timer_outlined, size: 18),
+        label: const Text('Rest'),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Flexible(
+          child: Text(
+            complete ? 'Done' : UnitFormatters.duration(snapshot.remaining),
+            style: AppTypography.cardMetric(
+              scheme,
+              size: AppTypography.metricSizeSm,
+            ).copyWith(color: complete ? scheme.primary : scheme.onSurface),
+            overflow: TextOverflow.ellipsis,
           ),
-        ],
-      ),
+        ),
+        if (!complete)
+          IconButton(
+            onPressed: running ? _pause : _resume,
+            icon: Icon(running ? Icons.pause : Icons.play_arrow),
+            tooltip: running ? 'Pause rest' : 'Resume rest',
+            visualDensity: VisualDensity.compact,
+          ),
+        IconButton(
+          onPressed: complete ? _start : _reset,
+          icon: Icon(complete ? Icons.refresh : Icons.stop),
+          tooltip: complete ? 'Restart rest' : 'Stop rest',
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
     );
   }
 
   void _start() {
     _ticker?.cancel();
     _engine = TimerEngine(
-      phases: [
+      phases: <TimerPhase>[
         TimerPhase(type: TimerPhaseType.rest, durationSeconds: widget.duration),
       ],
     )..start();
@@ -155,59 +337,66 @@ class _InlineRestTimerState extends State<InlineRestTimer> {
   }
 
   void _tick() {
-    final engine = _engine;
+    final TimerEngine? engine = _engine;
     if (engine == null || !mounted) return;
-    final snapshot = engine.snapshot();
+    final TimerSnapshot snapshot = engine.snapshot();
     if (snapshot.isComplete) {
       _ticker?.cancel();
       _ticker = null;
     }
     setState(() => _snapshot = snapshot);
   }
-
-  String _format(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
 }
 
 /// A single set row. Owns and disposes its own controllers (ADR-5) and
 /// pushes changes up to whichever [DraftEditorController] it was given.
-class DraftSetRow extends StatefulWidget {
+///
+/// Weights are entered in the user's display unit and converted to
+/// kilograms here — ADR-1's boundary. A pound value never reaches the
+/// controller.
+class DraftSetRow extends ConsumerStatefulWidget {
   const DraftSetRow({
     required this.exerciseId,
     required this.set,
+    required this.index,
     required this.controller,
     super.key,
   });
 
   final String exerciseId;
   final DraftSet set;
+
+  /// 1-based position within the exercise, shown in the leading column and
+  /// used in the row's semantic labels.
+  final int index;
   final DraftEditorController controller;
 
   @override
-  State<DraftSetRow> createState() => _DraftSetRowState();
+  ConsumerState<DraftSetRow> createState() => _DraftSetRowState();
 }
 
-class _DraftSetRowState extends State<DraftSetRow> {
+class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   late final TextEditingController _weightController;
   late final TextEditingController _repsController;
+
+  /// The unit the text field currently holds a value in. When the user
+  /// switches kg/lb mid-workout the displayed number has to be rewritten,
+  /// otherwise a 100 entered as kg would silently be re-read as 100 lb.
+  WeightUnit? _renderedUnit;
 
   @override
   void initState() {
     super.initState();
-    _weightController =
-        TextEditingController(text: _format(widget.set.weightKg));
-    _repsController = TextEditingController(text: '${widget.set.reps}');
+    _weightController = TextEditingController();
+    _repsController = TextEditingController(text: _repsText(widget.set.reps));
   }
 
   @override
   void didUpdateWidget(covariant DraftSetRow oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.set.id != widget.set.id) return;
-    _sync(_weightController, _format(widget.set.weightKg));
-    _sync(_repsController, '${widget.set.reps}');
+    _sync(_weightController, _weightText(widget.set.weightKg, _renderedUnit));
+    _sync(_repsController, _repsText(widget.set.reps));
   }
 
   @override
@@ -219,69 +408,113 @@ class _DraftSetRowState extends State<DraftSetRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 86,
-          child: TextField(
-            controller: _weightController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'kg'),
-            onChanged: (value) {
-              final weight = double.tryParse(value);
-              if (weight != null &&
-                  weight.isFinite &&
-                  weight >= 0 &&
-                  weight <= 1000) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+
+    if (_renderedUnit != unit) {
+      _renderedUnit = unit;
+      _weightController.text = _weightText(widget.set.weightKg, unit);
+    }
+
+    final bool done = widget.set.isCompleted;
+    final int index = widget.index;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Row(
+        children: <Widget>[
+          SizedBox(
+            width: _setNumberWidth,
+            child: Text(
+              '$index',
+              style: AppTypography.numeric(
+                theme.textTheme.titleSmall ?? const TextStyle(),
+              ).copyWith(
+                color: done ? scheme.primary : scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _NumberField(
+              controller: _weightController,
+              semanticLabel: 'Set $index weight in ${unit.label}',
+              decimal: true,
+              onChanged: (String value) {
+                final double? entered = double.tryParse(value);
+                if (entered == null || !entered.isFinite || entered < 0) return;
+                final double kg = UnitFormatters.toKg(entered, unit);
+                if (kg > _maxWeightKg) return;
                 widget.controller.updateSet(
                   widget.exerciseId,
                   widget.set.id,
-                  weightKg: weight,
+                  weightKg: kg,
                 );
-              }
-            },
+              },
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        SizedBox(
-          width: 70,
-          child: TextField(
-            controller: _repsController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'reps'),
-            onChanged: (value) {
-              final reps = int.tryParse(value);
-              if (reps != null && reps >= 0 && reps <= 100) {
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _NumberField(
+              controller: _repsController,
+              semanticLabel: 'Set $index reps',
+              onChanged: (String value) {
+                final int? reps = int.tryParse(value);
+                if (reps == null || reps < 0 || reps > _maxReps) return;
                 widget.controller.updateSet(
                   widget.exerciseId,
                   widget.set.id,
                   reps: reps,
                 );
-              }
-            },
+              },
+            ),
           ),
-        ),
-        Checkbox(
-          value: widget.set.isCompleted,
-          onChanged: (value) => widget.controller.updateSet(
-            widget.exerciseId,
-            widget.set.id,
-            isCompleted: value ?? false,
+          const SizedBox(width: AppSpacing.sm),
+          _SetDoneButton(
+            done: done,
+            index: index,
+            onChanged: (bool value) => widget.controller.updateSet(
+              widget.exerciseId,
+              widget.set.id,
+              isCompleted: value,
+            ),
           ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.copy_outlined),
-          tooltip: 'Duplicate set',
-          onPressed: () =>
-              widget.controller.duplicateSet(widget.exerciseId, widget.set.id),
-        ),
-        IconButton(
-          icon: const Icon(Icons.remove_circle_outline),
-          tooltip: 'Remove set',
-          onPressed: () =>
-              widget.controller.removeSet(widget.exerciseId, widget.set.id),
-        ),
-      ],
+          SizedBox(
+            width: _rowMenuWidth,
+            child: PopupMenuButton<_SetAction>(
+              tooltip: 'Set $index options',
+              icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+              padding: EdgeInsets.zero,
+              onSelected: (_SetAction action) => switch (action) {
+                _SetAction.duplicate => widget.controller
+                    .duplicateSet(widget.exerciseId, widget.set.id),
+                _SetAction.remove => widget.controller
+                    .removeSet(widget.exerciseId, widget.set.id),
+              },
+              itemBuilder: (_) => const <PopupMenuEntry<_SetAction>>[
+                PopupMenuItem<_SetAction>(
+                  value: _SetAction.duplicate,
+                  child: ListTile(
+                    leading: Icon(Icons.copy_outlined),
+                    title: Text('Duplicate set'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem<_SetAction>(
+                  value: _SetAction.remove,
+                  child: ListTile(
+                    leading: Icon(Icons.remove_circle_outline),
+                    title: Text('Remove set'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -291,5 +524,114 @@ class _DraftSetRowState extends State<DraftSetRow> {
     }
   }
 
-  String _format(double value) => value == 0 ? '' : value.toString();
+  static String _repsText(int reps) => reps == 0 ? '' : '$reps';
+
+  static String _weightText(double kg, WeightUnit? unit) {
+    if (kg == 0) return '';
+    final double display =
+        unit == null ? kg : UnitFormatters.fromKg(kg, unit);
+    return UnitFormatters.plain(display);
+  }
 }
+
+enum _SetAction { duplicate, remove }
+
+/// Bare numeric field sized for a table cell.
+///
+/// Labels live in the column header, so the field itself carries only a
+/// semantic label for screen readers.
+class _NumberField extends StatelessWidget {
+  const _NumberField({
+    required this.controller,
+    required this.semanticLabel,
+    required this.onChanged,
+    this.decimal = false,
+  });
+
+  final TextEditingController controller;
+  final String semanticLabel;
+  final ValueChanged<String> onChanged;
+  final bool decimal;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    // The visible label is the column header, so the field carries the
+    // full description for screen readers instead. Semantics merges into
+    // the field's own node rather than replacing it, which keeps the
+    // editing actions intact.
+    return Semantics(
+      label: semanticLabel,
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.numberWithOptions(decimal: decimal),
+        textAlign: TextAlign.center,
+        style: AppTypography.numeric(
+          theme.textTheme.titleMedium ?? const TextStyle(),
+        ),
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.allow(
+            decimal ? RegExp(r'[0-9.]') : RegExp(r'[0-9]'),
+          ),
+        ],
+        decoration: const InputDecoration(
+          hintText: '0',
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.md,
+          ),
+        ),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+/// Large, unmistakable "set complete" toggle.
+///
+/// The primary interaction on this screen, so it gets a full tap target and
+/// signals state with a fill *and* an icon — never colour alone.
+class _SetDoneButton extends StatelessWidget {
+  const _SetDoneButton({
+    required this.done,
+    required this.index,
+    required this.onChanged,
+  });
+
+  final bool done;
+  final int index;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+
+    // State is carried by the fill, not by hue alone: an unlogged set is a
+    // hollow tonal square, a logged one is a solid primary square.
+    return Semantics(
+      label: 'Set $index complete',
+      toggled: done,
+      container: true,
+      child: Material(
+        color: done ? scheme.primary : scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: InkWell(
+          onTap: () => onChanged(!done),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: SizedBox(
+            width: AppSpacing.minTapTarget,
+            height: AppSpacing.minTapTarget,
+            child: Icon(
+              Icons.check,
+              size: 20,
+              color: done ? scheme.onPrimary : scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

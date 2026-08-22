@@ -4,7 +4,11 @@ abstract final class DateFormatters {
   static final DateFormat _dayMonth = DateFormat('d MMM');
   static final DateFormat _dayMonthYear = DateFormat('d MMM yyyy');
   static final DateFormat _weekday = DateFormat('EEEE');
+  static final DateFormat _weekdayDayMonth = DateFormat('EEEE, d MMM');
   static final DateFormat _time = DateFormat.jm();
+
+  /// `Monday, 21 Aug` — the dateline above the dashboard's primary action.
+  static String dayHeadline(DateTime date) => _weekdayDayMonth.format(date);
 
   /// `Today`, `Yesterday`, `Tuesday` within the last week, then a date.
   static String relativeDay(DateTime date, {DateTime? now}) {

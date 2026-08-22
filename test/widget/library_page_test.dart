@@ -3,6 +3,7 @@ import 'package:fittrack/core/database/daos/equipment_dao.dart';
 import 'package:fittrack/core/database/daos/exercise_dao.dart';
 import 'package:fittrack/core/database/daos/muscle_dao.dart';
 import 'package:fittrack/core/database/database_providers.dart';
+import 'package:fittrack/core/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -157,8 +158,10 @@ void main() {
     testWidgets('search filters exercises', (tester) async {
       await pumpLibrary(tester);
 
-      // Search for "bench"
+      // Search for "bench". Search is debounced, and a pending Timer is not
+      // an animation, so pumpAndSettle alone would return before it fires.
       await tester.enterText(find.byType(TextField), 'bench');
+      await tester.pump(AppDuration.inputDebounce);
       await tester.pumpAndSettle();
 
       expect(find.text('Barbell Bench Press'), findsOneWidget);
@@ -211,6 +214,7 @@ void main() {
 
       // Search for something that doesn't exist
       await tester.enterText(find.byType(TextField), 'nonexistent');
+      await tester.pump(AppDuration.inputDebounce);
       await tester.pumpAndSettle();
 
       expect(find.text('No exercises found'), findsOneWidget);

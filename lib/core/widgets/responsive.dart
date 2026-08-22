@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../theme/app_spacing.dart';
+
 /// Layout breakpoints.
 ///
 /// Verified at 360dp (phone), 768dp (tablet) and 1440dp (desktop web).
@@ -40,5 +42,21 @@ extension BreakpointContext on BuildContext {
         Breakpoint.compact => double.infinity,
         Breakpoint.medium => 900,
         Breakpoint.expanded => 1100,
+      };
+
+  /// Column count for secondary metric tiles. Two fit a phone comfortably
+  /// at this tile size, which is why it differs from [gridColumns].
+  int get metricColumns => switch (breakpoint) {
+        Breakpoint.compact => 2,
+        Breakpoint.medium => 3,
+        Breakpoint.expanded => 4,
+      };
+
+  /// Horizontal page gutter. Wider screens get more breathing room rather
+  /// than just a longer line length.
+  double get pageGutter => switch (breakpoint) {
+        Breakpoint.compact => AppSpacing.lg,
+        Breakpoint.medium => AppSpacing.xl,
+        Breakpoint.expanded => AppSpacing.xl,
       };
 }

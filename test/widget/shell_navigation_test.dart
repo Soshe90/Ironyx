@@ -1,6 +1,8 @@
 import 'package:fittrack/core/database/app_database.dart';
 import 'package:fittrack/core/database/database_providers.dart';
 import 'package:fittrack/core/router/scaffold_with_nav_bar.dart';
+import 'package:fittrack/features/dashboard/presentation/dashboard_page.dart';
+import 'package:fittrack/features/tracker/presentation/active_workout_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,7 +43,7 @@ void main() {
 
     testWidgets('starts on the dashboard', (tester) async {
       await pumpApp(tester, overrides: overrides());
-      expect(find.text('FitTrack'), findsOneWidget);
+      expect(find.byType(DashboardPage), findsOneWidget);
       expect(find.byType(NavigationBar), findsOneWidget);
       await disposeApp(tester);
     });
@@ -74,7 +76,7 @@ void main() {
       await tester.tap(find.text('Start workout'));
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(AppBar, 'Active workout'), findsOneWidget);
+      expect(find.byType(ActiveWorkoutPage), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
       await disposeApp(tester);
     });
@@ -90,7 +92,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.text('FitTrack'), findsOneWidget);
+      expect(find.byType(DashboardPage), findsOneWidget);
       await disposeApp(tester);
     });
 

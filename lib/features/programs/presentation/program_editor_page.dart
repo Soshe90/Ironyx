@@ -4,11 +4,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../library/presentation/exercise_picker_sheet.dart';
 import '../domain/program_draft.dart';
 import '../domain/program_editor_controller.dart';
+
+/// Upper bound on a day-template's target sets. Guards a typo turning one
+/// exercise into a hundred preloaded set rows.
+const int _maxTargetSets = 20;
+
+enum _DayAction { moveUp, moveDown, remove }
+
+enum _ExerciseAction { moveUp, moveDown, remove }
 
 /// Create/edit screen for a custom (non-built-in) program: name, days, and
 /// each day's exercises with target sets/reps.
@@ -154,43 +165,59 @@ class _EditorBodyState extends ConsumerState<_EditorBody> {
   Widget build(BuildContext context) {
     final ProgramDraft draft = widget.draft;
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      children: <Widget>[
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(labelText: 'Program name'),
-          onChanged: _notifier.setName,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TextField(
-          controller: _descriptionController,
-          decoration: const InputDecoration(
-            labelText: 'Description (optional)',
-          ),
-          onChanged: (value) =>
-              _notifier.setDescription(value.isEmpty ? null : value),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Text('Days', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        for (var i = 0; i < draft.days.length; i++)
-          Padding(
-            key: ValueKey(draft.days[i].id),
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: _DayEditorCard(
-              programId: widget.programId,
-              day: draft.days[i],
-              canMoveUp: i > 0,
-              canMoveDown: i < draft.days.length - 1,
+    return PageBody(
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        children: <Widget>[
+          const SectionHeader(title: 'Details'),
+          AppCard(
+            child: Column(
+              children: <Widget>[
+                TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Program name'),
+                  onChanged: _notifier.setName,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                  ),
+                  onChanged: (value) =>
+                      _notifier.setDescription(value.isEmpty ? null : value),
+                ),
+              ],
             ),
           ),
-        OutlinedButton.icon(
-          onPressed: _notifier.addDay,
-          icon: const Icon(Icons.add),
-          label: const Text('Add day'),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.xl),
+          SectionHeader(
+            title: 'Days',
+            subtitle: draft.days.isEmpty
+                ? 'A program needs at least one day to be saved'
+                : '${draft.days.length} day'
+                    '${draft.days.length == 1 ? '' : 's'}',
+          ),
+          for (var i = 0; i < draft.days.length; i++)
+            Padding(
+              key: ValueKey<String>(draft.days[i].id),
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: _DayEditorCard(
+                programId: widget.programId,
+                day: draft.days[i],
+                position: i + 1,
+                canMoveUp: i > 0,
+                canMoveDown: i < draft.days.length - 1,
+              ),
+            ),
+          OutlinedButton.icon(
+            onPressed: _notifier.addDay,
+            icon: const Icon(Icons.add),
+            label: const Text('Add day'),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ],
+      ),
     );
   }
 }
@@ -199,12 +226,16 @@ class _DayEditorCard extends ConsumerStatefulWidget {
   const _DayEditorCard({
     required this.programId,
     required this.day,
+    required this.position,
     required this.canMoveUp,
     required this.canMoveDown,
   });
 
   final String? programId;
   final ProgramDraftDay day;
+
+  /// 1-based ordinal shown in the card header.
+  final int position;
   final bool canMoveUp;
   final bool canMoveDown;
 
@@ -241,36 +272,60 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // Reorder and delete collapse into one menu: three icon buttons
+          // alongside the name field left it barely wider than the label.
           Row(
             children: <Widget>[
-              Expanded(
-                child: TextField(
-                  controller: _dayNameController,
-                  decoration: const InputDecoration(labelText: 'Day name'),
-                  onChanged: (value) => _notifier.renameDay(widget.day.id, value),
-                ),
+              Text(
+                'DAY ${widget.position}',
+                style: AppTypography.eyebrow(Theme.of(context)),
               ),
-              IconButton(
-                icon: const Icon(Icons.arrow_upward),
-                tooltip: 'Move day up',
-                onPressed: widget.canMoveUp
-                    ? () => _notifier.moveDay(widget.day.id, -1)
-                    : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_downward),
-                tooltip: 'Move day down',
-                onPressed: widget.canMoveDown
-                    ? () => _notifier.moveDay(widget.day.id, 1)
-                    : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                tooltip: 'Remove day',
-                onPressed: () => _notifier.removeDay(widget.day.id),
+              const Spacer(),
+              PopupMenuButton<_DayAction>(
+                tooltip: 'Day ${widget.position} options',
+                icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                onSelected: (_DayAction action) => switch (action) {
+                  _DayAction.moveUp => _notifier.moveDay(widget.day.id, -1),
+                  _DayAction.moveDown => _notifier.moveDay(widget.day.id, 1),
+                  _DayAction.remove => _notifier.removeDay(widget.day.id),
+                },
+                itemBuilder: (_) => <PopupMenuEntry<_DayAction>>[
+                  PopupMenuItem<_DayAction>(
+                    value: _DayAction.moveUp,
+                    enabled: widget.canMoveUp,
+                    child: const ListTile(
+                      leading: Icon(Icons.arrow_upward),
+                      title: Text('Move up'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem<_DayAction>(
+                    value: _DayAction.moveDown,
+                    enabled: widget.canMoveDown,
+                    child: const ListTile(
+                      leading: Icon(Icons.arrow_downward),
+                      title: Text('Move down'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem<_DayAction>(
+                    value: _DayAction.remove,
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('Remove day'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          TextField(
+            controller: _dayNameController,
+            decoration: const InputDecoration(labelText: 'Day name'),
+            onChanged: (value) => _notifier.renameDay(widget.day.id, value),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           for (var i = 0; i < widget.day.exercises.length; i++)
             _ExerciseEditorRow(
               key: ValueKey(widget.day.exercises[i].id),
@@ -372,70 +427,106 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
+    // Name and controls on one line, the two target fields on the next.
+    // Fitting all five across a phone left the fields ~56dp wide, which is
+    // not enough for a label and a two-digit value.
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Expanded(
-            child: Text(
-              widget.exercise.name,
-              style: Theme.of(context).textTheme.bodyMedium,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  widget.exercise.name,
+                  style: theme.textTheme.bodyLarge,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              PopupMenuButton<_ExerciseAction>(
+                tooltip: '${widget.exercise.name} options',
+                icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                onSelected: (_ExerciseAction action) => switch (action) {
+                  _ExerciseAction.moveUp => _notifier.moveExercise(
+                      widget.dayId, widget.exercise.id, -1),
+                  _ExerciseAction.moveDown => _notifier.moveExercise(
+                      widget.dayId, widget.exercise.id, 1),
+                  _ExerciseAction.remove => _notifier.removeExercise(
+                      widget.dayId, widget.exercise.id),
+                },
+                itemBuilder: (_) => <PopupMenuEntry<_ExerciseAction>>[
+                  PopupMenuItem<_ExerciseAction>(
+                    value: _ExerciseAction.moveUp,
+                    enabled: widget.canMoveUp,
+                    child: const ListTile(
+                      leading: Icon(Icons.arrow_upward),
+                      title: Text('Move up'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem<_ExerciseAction>(
+                    value: _ExerciseAction.moveDown,
+                    enabled: widget.canMoveDown,
+                    child: const ListTile(
+                      leading: Icon(Icons.arrow_downward),
+                      title: Text('Move down'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem<_ExerciseAction>(
+                    value: _ExerciseAction.remove,
+                    child: ListTile(
+                      leading: Icon(Icons.close),
+                      title: Text('Remove exercise'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          SizedBox(
-            width: 56,
-            child: TextField(
-              controller: _setsController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'sets'),
-              onChanged: (value) {
-                final sets = int.tryParse(value);
-                if (sets != null && sets > 0 && sets <= 20) {
-                  _notifier.setExerciseTargetSets(
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _setsController,
+                  keyboardType: TextInputType.number,
+                  style: AppTypography.numeric(
+                    theme.textTheme.bodyLarge ?? const TextStyle(),
+                  ),
+                  decoration: const InputDecoration(labelText: 'sets'),
+                  onChanged: (value) {
+                    final sets = int.tryParse(value);
+                    if (sets != null && sets > 0 && sets <= _maxTargetSets) {
+                      _notifier.setExerciseTargetSets(
+                        widget.dayId,
+                        widget.exercise.id,
+                        sets,
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  controller: _repsController,
+                  style: AppTypography.numeric(
+                    theme.textTheme.bodyLarge ?? const TextStyle(),
+                  ),
+                  decoration: const InputDecoration(labelText: 'reps'),
+                  onChanged: (value) => _notifier.setExerciseTargetReps(
                     widget.dayId,
                     widget.exercise.id,
-                    sets,
-                  );
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          SizedBox(
-            width: 64,
-            child: TextField(
-              controller: _repsController,
-              decoration: const InputDecoration(labelText: 'reps'),
-              onChanged: (value) => _notifier.setExerciseTargetReps(
-                widget.dayId,
-                widget.exercise.id,
-                value.isEmpty ? null : value,
+                    value.isEmpty ? null : value,
+                  ),
+                ),
               ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.arrow_upward, size: 18),
-            tooltip: 'Move exercise up',
-            onPressed: widget.canMoveUp
-                ? () =>
-                    _notifier.moveExercise(widget.dayId, widget.exercise.id, -1)
-                : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.arrow_downward, size: 18),
-            tooltip: 'Move exercise down',
-            onPressed: widget.canMoveDown
-                ? () =>
-                    _notifier.moveExercise(widget.dayId, widget.exercise.id, 1)
-                : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 18),
-            tooltip: 'Remove exercise',
-            onPressed: () =>
-                _notifier.removeExercise(widget.dayId, widget.exercise.id),
+            ],
           ),
         ],
       ),

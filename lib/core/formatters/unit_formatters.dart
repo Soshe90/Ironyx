@@ -17,6 +17,12 @@ enum WeightUnit {
 abstract final class UnitFormatters {
   static final NumberFormat _weight = NumberFormat('#,##0.##');
   static final NumberFormat _volume = NumberFormat('#,##0');
+  static final NumberFormat _plain = NumberFormat('0.##');
+
+  /// Editable representation of a number: no grouping separators, so the
+  /// result can be parsed straight back out of a text field. `_weight`'s
+  /// thousands separator would not survive a `double.tryParse` round trip.
+  static String plain(double value) => _plain.format(value);
 
   /// Converts from stored kilograms into the display unit.
   static double fromKg(double kg, WeightUnit unit) => kg * unit.perKilogram;

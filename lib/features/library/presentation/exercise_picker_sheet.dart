@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,11 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/filter_chip_group.dart';
+import '../../../core/widgets/loading_shimmer.dart';
+import '../../../core/widgets/sheet_handle.dart';
+
+/// Placeholder rows shown while the catalogue query resolves.
+const int _skeletonRows = 6;
 
 /// Bottom sheet for picking an exercise from the Library.
 ///
@@ -27,15 +34,34 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
   final TextEditingController _searchController = TextEditingController();
   String? _selectedMuscleId;
 
+  /// Committed search term — see [LibraryPage] for why this is held apart
+  /// from the controller's text.
+  String _query = '';
+  Timer? _debounce;
+
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
+  void _onSearchChanged(String value) {
+    setState(() {});
+    _debounce?.cancel();
+    _debounce = Timer(AppDuration.inputDebounce, () {
+      if (mounted) setState(() => _query = value.trim());
+    });
+  }
+
+  void _commitSearch(String value) {
+    _debounce?.cancel();
+    setState(() => _query = value.trim());
+  }
+
   @override
   Widget build(BuildContext context) {
-    final searchQuery = _searchController.text;
+    final searchQuery = _query;
 
     final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
       searchQuery.isNotEmpty
@@ -53,20 +79,7 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
       expand: false,
       builder: (context, scrollController) => Column(
         children: [
-          const SizedBox(height: AppSpacing.sm),
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color:
-                    Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.3,
-                        ),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          const SheetHandle(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -91,11 +104,15 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         tooltip: 'Clear search',
-                        onPressed: () => setState(_searchController.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _commitSearch('');
+                        },
                       )
                     : null,
               ),
-              onChanged: (_) => setState(() {}),
+              onChanged: _onSearchChanged,
+              onSubmitted: _commitSearch,
             ),
           ),
           Padding(
@@ -140,12 +157,35 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                     return ListTile(
                       title: Text(summary.exercise.name),
                       subtitle: subtitle.isEmpty ? null : Text(subtitle),
+                      trailing: Icon(
+                        Icons.add_circle_outline,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                       onTap: () => Navigator.of(context).pop(summary.exercise),
                     );
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                ),
+                children: <Widget>[
+                  for (int i = 0; i < _skeletonRows; i++)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          LoadingShimmer(width: 180, height: 16),
+                          SizedBox(height: AppSpacing.sm),
+                          LoadingShimmer(width: 120, height: 12),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
               error: (error, _) => ErrorView(
                 title: 'Failed to load exercises',
                 details: error.toString(),

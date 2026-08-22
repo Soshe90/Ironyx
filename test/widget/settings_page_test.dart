@@ -50,6 +50,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Data is the last group on the page and sits below the fold at the
+      // test surface size.
+      await tester.ensureVisible(find.text('Delete all data'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Delete all data'));
       await tester.pumpAndSettle();
 

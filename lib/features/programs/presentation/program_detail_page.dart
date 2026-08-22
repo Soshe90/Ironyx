@@ -7,9 +7,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/daos/program_dao.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/stat_strip.dart';
 import '../../tracker/domain/active_workout_notifier.dart';
 import '../../tracker/domain/workout_draft.dart';
 import '../domain/program_providers.dart';
@@ -102,26 +106,63 @@ class _ProgramDetailBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final program = detail.program;
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      children: [
-        Text(program.name, style: Theme.of(context).textTheme.headlineSmall),
-        if (program.description case final description?)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.xs),
-            child: Text(
-              description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
+    final ThemeData theme = Theme.of(context);
+    final int totalExercises = detail.days.fold<int>(
+      0,
+      (int sum, ProgramDay d) => sum + d.exercises.length,
+    );
+
+    return PageBody(
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        children: [
+          Text(
+            program.name,
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
-        const SizedBox(height: AppSpacing.lg),
-        for (final day in detail.days) ...[
-          _DayCard(day: day, onStart: () => _startDay(context, ref, day)),
-          const SizedBox(height: AppSpacing.md),
+          if (program.description case final description?)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(description, style: AppTypography.caption(theme)),
+            ),
+          const SizedBox(height: AppSpacing.xl),
+          StatStrip(
+            stats: <Stat>[
+              Stat(
+                label: 'Days',
+                value: '${detail.days.length}',
+                emphasis: true,
+              ),
+              Stat(label: 'Exercises', value: '$totalExercises'),
+              Stat(
+                label: 'Type',
+                value: program.isBuiltIn ? 'Built-in' : 'Custom',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const SectionHeader(
+            title: 'Days',
+            subtitle: 'Starting a day preloads its exercises and target sets',
+          ),
+          if (detail.days.isEmpty)
+            const EmptyState(
+              icon: Icons.event_busy,
+              title: 'No days yet',
+              message: 'Edit this program to add a training day.',
+            )
+          else
+            for (int i = 0; i < detail.days.length; i++) ...[
+              _DayCard(
+                day: detail.days[i],
+                position: i + 1,
+                onStart: () => _startDay(context, ref, detail.days[i]),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
         ],
-      ],
+      ),
     );
   }
 
@@ -170,29 +211,71 @@ class _ProgramDetailBody extends ConsumerWidget {
   }
 }
 
+/// Minimum width for a content-sized button sitting next to Row siblings.
+const double _inlineButtonMinWidth = 64;
+
 class _DayCard extends StatelessWidget {
-  const _DayCard({required this.day, required this.onStart});
+  const _DayCard({
+    required this.day,
+    required this.position,
+    required this.onStart,
+  });
 
   final ProgramDay day;
+
+  /// 1-based ordinal shown in the leading chip.
+  final int position;
   final VoidCallback onStart;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final ThemeData theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  day.dayName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+              ExcludeSemantics(
+                child: Container(
+                  width: AppSpacing.xl,
+                  height: AppSpacing.xl,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Text(
+                    '$position',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      day.dayName,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      '${day.exercises.length} '
+                      'exercise${day.exercises.length == 1 ? '' : 's'}',
+                      style: AppTypography.caption(theme),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               FilledButton.tonal(
                 // `AppTheme`'s filledButtonTheme sets `minimumSize:
                 // Size.fromHeight(...)` — i.e. an *infinite*-width
@@ -205,38 +288,50 @@ class _DayCard extends StatelessWidget {
                 // content-sized button next to other Row siblings needs
                 // this override, not just full-width ones.
                 style: FilledButton.styleFrom(
-                  minimumSize: const Size(64, AppSpacing.minTapTarget),
+                  minimumSize: const Size(
+                    _inlineButtonMinWidth,
+                    AppSpacing.minTapTarget,
+                  ),
                 ),
-                onPressed: onStart,
+                onPressed:
+                    day.exercises.isEmpty ? null : onStart,
                 child: const Text('Start'),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          for (final exercise in day.exercises)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.fitness_center,
-                      size: 16, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      exercise.exerciseName,
-                      style: Theme.of(context).textTheme.bodyMedium,
+          if (day.exercises.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            Divider(height: 1, color: scheme.outlineVariant),
+            const SizedBox(height: AppSpacing.md),
+            for (final exercise in day.exercises)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.fitness_center,
+                      size: 16,
+                      color: scheme.onSurfaceVariant,
                     ),
-                  ),
-                  Text(
-                    _targetLabel(exercise),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        exercise.exerciseName,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      _targetLabel(exercise),
+                      style: AppTypography.numeric(
+                        theme.textTheme.bodySmall ?? const TextStyle(),
+                      ).copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
               ),
-            ),
+          ],
         ],
       ),
     );

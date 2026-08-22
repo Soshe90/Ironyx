@@ -53,7 +53,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithIcon(IconButton, Icons.add));
+      // The Programs section header carries a labelled "New" action.
+      await tester.tap(find.widgetWithText(TextButton, 'New'));
       await tester.pumpAndSettle();
       expect(find.text('New program'), findsOneWidget);
 

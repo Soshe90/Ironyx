@@ -6,6 +6,8 @@ import '../../../core/database/tables/exercises.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/sticky_action_bar.dart';
 import '../../library/presentation/exercise_picker_sheet.dart';
 import '../domain/edit_workout_notifier.dart';
 import '../domain/workout_draft.dart';
@@ -46,48 +48,72 @@ class _EditWorkoutBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      children: [
-        if (draft.exercises.isEmpty)
-          const EmptyState(
-            icon: Icons.fitness_center_outlined,
-            title: 'No exercises left',
-            message: 'Add at least one exercise before saving.',
-          )
-        else
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: true,
-            itemCount: draft.exercises.length,
-            onReorderItem: (oldIndex, newIndex) {
-              notifier.reorderExercise(
-                draft.exercises[oldIndex].id,
-                newIndex,
-              );
-            },
-            itemBuilder: (context, index) {
-              final exercise = draft.exercises[index];
-              return ExerciseDraftCard(
-                key: ValueKey(exercise.id),
-                exercise: exercise,
-                controller: notifier,
-              );
-            },
+    final bool hasExercises = draft.exercises.isNotEmpty;
+
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: PageBody(
+            gutter: false,
+            child: CustomScrollView(
+              slivers: <Widget>[
+                if (!hasExercises)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: EmptyState(
+                      icon: Icons.fitness_center_outlined,
+                      title: 'No exercises left',
+                      message: 'Add at least one exercise before saving.',
+                      actionLabel: 'Add exercise',
+                      onAction: () => _addExercise(context, notifier),
+                    ),
+                  )
+                else ...<Widget>[
+                  SliverPadding(
+                    padding: context.sliverGutter
+                        .copyWith(top: AppSpacing.lg),
+                    sliver: SliverReorderableList(
+                      itemCount: draft.exercises.length,
+                      onReorderItem: (int oldIndex, int newIndex) {
+                        notifier.reorderExercise(
+                          draft.exercises[oldIndex].id,
+                          newIndex,
+                        );
+                      },
+                      itemBuilder: (context, index) {
+                        final exercise = draft.exercises[index];
+                        return ExerciseDraftCard(
+                          key: ValueKey<String>(exercise.id),
+                          exercise: exercise,
+                          controller: notifier,
+                          position: index + 1,
+                          dragHandleIndex: index,
+                        );
+                      },
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: context.sliverGutter
+                        .copyWith(bottom: AppSpacing.xl),
+                    sliver: SliverToBoxAdapter(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _addExercise(context, notifier),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add exercise'),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        const SizedBox(height: AppSpacing.lg),
-        OutlinedButton.icon(
-          onPressed: () => _addExercise(context, notifier),
-          icon: const Icon(Icons.add),
-          label: const Text('Add exercise'),
         ),
-        const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(
-          onPressed:
-              draft.exercises.isEmpty ? null : () => _save(context, notifier),
-          icon: const Icon(Icons.check),
-          label: const Text('Save changes'),
+        StickyActionBar(
+          child: FilledButton.icon(
+            onPressed: hasExercises ? () => _save(context, notifier) : null,
+            icon: const Icon(Icons.check),
+            label: const Text('Save changes'),
+          ),
         ),
       ],
     );

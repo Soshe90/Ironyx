@@ -9,9 +9,13 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/pr_badge.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../programs/domain/program_providers.dart';
 import '../../programs/presentation/program_import_action.dart';
 import '../domain/active_workout_notifier.dart';
@@ -43,202 +47,183 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tracker')),
-      body: CustomScrollView(
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            sliver: SliverToBoxAdapter(
-              child: draft == null
-                  ? FilledButton.icon(
-                      onPressed: () =>
-                          context.pushNamed(Routes.activeWorkoutName),
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Start workout'),
-                    )
-                  : _ResumeWorkoutBanner(exerciseCount: draft.exercises.length),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              0,
-              AppSpacing.sm,
-              AppSpacing.sm,
-            ),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Programs',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    tooltip: 'New program',
-                    onPressed: () => context.pushNamed(Routes.programNewName),
-                  ),
-                  const ProgramImportAction(),
-                ],
+      body: PageBody(
+        gutter: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: context.sliverGutter.copyWith(
+                top: AppSpacing.sm,
+                bottom: AppSpacing.xl,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: draft == null
+                    ? FilledButton.icon(
+                        onPressed: () =>
+                            context.pushNamed(Routes.activeWorkoutName),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Start workout'),
+                      )
+                    : _ResumeWorkoutBanner(
+                        exerciseCount: draft.exercises.length,
+                      ),
               ),
             ),
-          ),
-          programsAsync.when(
-            data: (programs) => programs.isEmpty
-                ? const SliverToBoxAdapter(child: SizedBox.shrink())
-                : SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      0,
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                    ),
-                    sliver: SliverList.builder(
-                      itemCount: programs.length,
-                      itemBuilder: (context, index) {
-                        final summary = programs[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: AppCard(
-                            onTap: () => _openProgram(
-                              context,
-                              ref,
-                              summary.program.id,
-                            ),
-                            semanticLabel:
-                                '${summary.program.name}, ${summary.dayCount} days',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.event_note),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        summary.program.name,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall,
-                                      ),
-                                      if (summary.program.description
-                                          case final d?)
-                                        Text(
-                                          d,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
-                                              ),
-                                        ),
-                                    ],
+            SliverPadding(
+              padding: context.sliverGutter,
+              sliver: SliverToBoxAdapter(
+                child: SectionHeader(
+                  title: 'Programs',
+                  subtitle: 'Reusable day templates to start a session from',
+                  actionLabel: 'New',
+                  onAction: () => context.pushNamed(Routes.programNewName),
+                ),
+              ),
+            ),
+            programsAsync.when(
+              data: (programs) => programs.isEmpty
+                  ? SliverPadding(
+                      padding: context.sliverGutter
+                          .copyWith(bottom: AppSpacing.xl),
+                      sliver: SliverToBoxAdapter(
+                        child: AppCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'No programs yet',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'Build a program to preload a workout with '
+                                'its exercises and target sets.',
+                                style: AppTypography.caption(
+                                  Theme.of(context),
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              // The button theme sets a full-width minimum,
+                              // so it needs an Expanded to sit in a Row.
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => context
+                                          .pushNamed(Routes.programNewName),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('New program'),
+                                    ),
                                   ),
-                                ),
-                                Icon(
-                                  Icons.chevron_right,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                              ],
-                            ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  const ProgramImportAction(),
+                                ],
+                              ),
+                            ],
                           ),
-                        );
-                      },
+                        ),
+                      ),
+                    )
+                  : SliverPadding(
+                      padding: context.sliverGutter
+                          .copyWith(bottom: AppSpacing.xl),
+                      sliver: SliverList.builder(
+                        itemCount: programs.length,
+                        itemBuilder: (context, index) {
+                          final summary = programs[index];
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: _ProgramTile(
+                              name: summary.program.name,
+                              description: summary.program.description,
+                              dayCount: summary.dayCount,
+                              onTap: () => _openProgram(
+                                context,
+                                ref,
+                                summary.program.id,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-            loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-            error: (_, __) =>
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'History',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  const WorkoutXlsxImportAction(),
-                ],
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              error: (_, __) =>
+                  const SliverToBoxAdapter(child: SizedBox.shrink()),
+            ),
+            SliverPadding(
+              padding: context.sliverGutter,
+              sliver: const SliverToBoxAdapter(
+                child: Row(
+                  children: [
+                    Expanded(child: SectionHeader(title: 'History')),
+                    WorkoutXlsxImportAction(),
+                  ],
+                ),
               ),
             ),
-          ),
-          historyAsync.when(
-            data: (workouts) => workouts.isEmpty
-                ? const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: EmptyState(
-                      icon: Icons.history,
-                      title: 'No workouts yet',
-                      message: 'Finish a workout and it will show up here.',
-                    ),
-                  )
-                : SliverMainAxisGroup(
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          0,
-                          AppSpacing.lg,
-                          AppSpacing.md,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: AppCard(
-                            child: HistoryCalendar(
-                              visibleMonth: _visibleMonth,
-                              markedDates: {
-                                for (final workout in workouts)
-                                  _dateOnly(workout.startedAt),
-                              },
-                              onMonthChanged: (month) => setState(() {
-                                _visibleMonth = _monthOnly(month);
-                              }),
-                              onDayTap: (date) => _openWorkoutForDay(
-                                context,
-                                workouts,
-                                date,
+            historyAsync.when(
+              data: (workouts) => workouts.isEmpty
+                  ? const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: EmptyState(
+                        icon: Icons.history,
+                        title: 'No workouts yet',
+                        message: 'Finish a workout and it will show up here, '
+                            'with your volume and any personal records.',
+                      ),
+                    )
+                  : SliverMainAxisGroup(
+                      slivers: [
+                        SliverPadding(
+                          padding: context.sliverGutter
+                              .copyWith(bottom: AppSpacing.lg),
+                          sliver: SliverToBoxAdapter(
+                            child: AppCard(
+                              child: HistoryCalendar(
+                                visibleMonth: _visibleMonth,
+                                markedDates: {
+                                  for (final workout in workouts)
+                                    _dateOnly(workout.startedAt),
+                                },
+                                onMonthChanged: (month) => setState(() {
+                                  _visibleMonth = _monthOnly(month);
+                                }),
+                                onDayTap: (date) => _openWorkoutForDay(
+                                  context,
+                                  workouts,
+                                  date,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          0,
-                          AppSpacing.lg,
-                          AppSpacing.lg,
+                        SliverPadding(
+                          padding: context.sliverGutter
+                              .copyWith(bottom: AppSpacing.xl),
+                          sliver: _HistorySliverList(
+                            workouts: workouts,
+                            prWorkoutIds: prWorkoutIds,
+                          ),
                         ),
-                        sliver: _HistorySliverList(
-                          workouts: workouts,
-                          prWorkoutIds: prWorkoutIds,
-                        ),
-                      ),
-                    ],
-                  ),
-            loading: () => const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (error, _) => SliverFillRemaining(
-              hasScrollBody: false,
-              child: ErrorView(
-                title: 'Failed to load history',
-                details: error.toString(),
-                onRetry: () => ref.invalidate(workoutHistoryStreamProvider),
+                      ],
+                    ),
+              loading: () => const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (error, _) => SliverFillRemaining(
+                hasScrollBody: false,
+                child: ErrorView(
+                  title: 'Failed to load history',
+                  details: error.toString(),
+                  onRetry: () => ref.invalidate(workoutHistoryStreamProvider),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -282,6 +267,59 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
   }
 }
 
+class _ProgramTile extends StatelessWidget {
+  const _ProgramTile({
+    required this.name,
+    required this.description,
+    required this.dayCount,
+    required this.onTap,
+  });
+
+  final String name;
+  final String? description;
+  final int dayCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      semanticLabel: '$name, $dayCount '
+          'day${dayCount == 1 ? '' : 's'}',
+      child: Row(
+        children: [
+          Icon(Icons.event_note_outlined, color: scheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(name, style: theme.textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  description ?? '$dayCount day${dayCount == 1 ? '' : 's'}',
+                  style: AppTypography.caption(theme),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+        ],
+      ),
+    );
+  }
+}
+
 class _ResumeWorkoutBanner extends StatelessWidget {
   const _ResumeWorkoutBanner({required this.exerciseCount});
 
@@ -289,7 +327,9 @@ class _ResumeWorkoutBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
     return AppCard(
       onTap: () => context.pushNamed(Routes.activeWorkoutName),
       semanticLabel: 'Resume in-progress workout',
@@ -300,18 +340,19 @@ class _ResumeWorkoutBanner extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Workout in progress',
-                  style: Theme.of(context).textTheme.titleSmall,
+                  style: theme.textTheme.titleSmall,
                 ),
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
                   exerciseCount == 0
                       ? 'Tap to resume'
-                      : '$exerciseCount exercise${exerciseCount == 1 ? '' : 's'} logged · tap to resume',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      : '$exerciseCount exercise'
+                          '${exerciseCount == 1 ? '' : 's'} logged · tap to resume',
+                  style: AppTypography.caption(theme),
                 ),
               ],
             ),
@@ -348,14 +389,12 @@ class _HistorySliverList extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(
                     top: AppSpacing.sm,
-                    bottom: AppSpacing.xs,
+                    bottom: AppSpacing.sm,
                   ),
                   child: Text(
-                    DateFormatters.relativeDay(workout.startedAt),
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    DateFormatters.relativeDay(workout.startedAt)
+                        .toUpperCase(),
+                    style: AppTypography.eyebrow(Theme.of(context)),
                   ),
                 ),
               _WorkoutHistoryTile(
@@ -390,6 +429,10 @@ class _WorkoutHistoryTile extends ConsumerWidget {
         Routes.workoutDetailName,
         pathParameters: {'id': workout.id},
       ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       semanticLabel: 'Workout on ${DateFormatters.full(workout.startedAt)}, '
           '${UnitFormatters.volume(workout.totalVolumeKg, unit)} volume'
           '${isPersonalRecord ? ', personal record' : ''}',
@@ -398,6 +441,7 @@ class _WorkoutHistoryTile extends ConsumerWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
@@ -406,60 +450,33 @@ class _WorkoutHistoryTile extends ConsumerWidget {
                       style: theme.textTheme.titleSmall,
                     ),
                     if (isPersonalRecord) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      const _PrBadge(),
+                      const SizedBox(width: AppSpacing.sm),
+                      const PrBadge(),
                     ],
                   ],
                 ),
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
                   workout.durationSeconds == null
-                      ? UnitFormatters.volume(
-                          workout.totalVolumeKg,
-                          unit,
-                        )
-                      : '${UnitFormatters.volume(workout.totalVolumeKg, unit)} · '
-                          '${UnitFormatters.durationShort(Duration(seconds: workout.durationSeconds!))}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+                      ? 'No duration recorded'
+                      : UnitFormatters.durationShort(
+                          Duration(seconds: workout.durationSeconds!),
+                        ),
+                  style: AppTypography.caption(theme),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-        ],
-      ),
-    );
-  }
-}
-
-/// Badge shown on a history entry that set a new estimated-1RM personal
-/// record for at least one exercise (see `WorkoutDao.watchPersonalRecordWorkoutIds`).
-class _PrBadge extends StatelessWidget {
-  const _PrBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.military_tech,
-              size: 12, color: scheme.onTertiaryContainer),
-          const SizedBox(width: 2),
+          const SizedBox(width: AppSpacing.md),
           Text(
-            'PR',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onTertiaryContainer,
-                  fontWeight: FontWeight.w700,
-                ),
+            UnitFormatters.volume(workout.totalVolumeKg, unit),
+            style: AppTypography.cardMetric(
+              scheme,
+              size: AppTypography.metricSizeSm,
+            ),
           ),
+          const SizedBox(width: AppSpacing.xs),
+          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
         ],
       ),
     );

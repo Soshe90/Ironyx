@@ -17,9 +17,25 @@ abstract final class AppTypography {
   static TextStyle numeric(TextStyle style) =>
       style.copyWith(fontFeatures: _tabular);
 
+  /// The metric ramp. Fitness numbers carry the hierarchy in this app, so
+  /// their sizes are tokens rather than per-screen `fontSize:` overrides.
+  ///
+  /// Every step is tabular: all four render values that change in place.
+  static const double metricSizeSm = 20;
+  static const double metricSizeMd = 24;
+  static const double metricSizeLg = 32;
+  static const double metricSizeXl = 44;
+
+  /// Default size of the timer countdown, when the caller does not scale it
+  /// to the available space.
+  static const double countdownSize = 64;
+
   /// Large countdown display. Used by the Timer module (M4).
-  static TextStyle countdown(ColorScheme scheme) => TextStyle(
-        fontSize: 64,
+  ///
+  /// [size] lets the active-timer screen scale the digits with its ring
+  /// rather than pinning them at a phone-sized 64pt on a tablet.
+  static TextStyle countdown(ColorScheme scheme, {double? size}) => TextStyle(
+        fontSize: size ?? countdownSize,
         fontWeight: FontWeight.w300,
         height: 1,
         letterSpacing: -1,
@@ -28,13 +44,32 @@ abstract final class AppTypography {
       );
 
   /// Headline number on a dashboard card.
-  static TextStyle cardMetric(ColorScheme scheme) => TextStyle(
-        fontSize: 28,
+  ///
+  /// [size] picks a step off the metric ramp; it defaults to the tile-sized
+  /// step so existing call sites keep their weight.
+  static TextStyle cardMetric(ColorScheme scheme, {double? size}) => TextStyle(
+        fontSize: size ?? 28,
         fontWeight: FontWeight.w600,
         height: 1.1,
+        letterSpacing: -0.5,
         color: scheme.onSurface,
         fontFeatures: _tabular,
       );
+
+  /// The small uppercase label that sits above a metric.
+  ///
+  /// Repeated verbatim in five places before this existed; every copy had
+  /// to remember the weight and the letter spacing.
+  static TextStyle eyebrow(ThemeData theme, {Color? color}) =>
+      theme.textTheme.labelSmall!.copyWith(
+        color: color ?? theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.4,
+      );
+
+  /// Secondary text under a metric or list row.
+  static TextStyle caption(ThemeData theme) => theme.textTheme.bodySmall!
+      .copyWith(color: theme.colorScheme.onSurfaceVariant);
 
   static TextTheme apply(TextTheme base) => base.copyWith(
         displayLarge: numeric(base.displayLarge ?? const TextStyle()),

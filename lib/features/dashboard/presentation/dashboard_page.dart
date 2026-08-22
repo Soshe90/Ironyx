@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/database/tables/timer_sessions.dart';
@@ -16,35 +15,29 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
-import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/sparkline.dart';
+import '../../../core/widgets/stat_strip.dart';
 import '../../../core/widgets/trend_badge.dart';
+import '../../tracker/domain/active_workout_notifier.dart';
 import '../domain/dashboard_providers.dart';
 import 'widgets/summary_card.dart';
 
 /// Central hub. Branch index 0 and the app's start destination.
 ///
-/// Each card is its own [ConsumerWidget] watching its own stream provider
-/// (`dashboard_providers.dart`), so one card failing to load never blanks
-/// the rest of the dashboard.
+/// Laid out in descending priority rather than as a uniform grid: the
+/// primary action first, this week's training status second, progress
+/// signals third, recent activity last. Cards still own their own async
+/// state, so one failing query degrades a single block instead of the page.
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final int columns = context.gridColumns;
-
-    const List<Widget> cards = <Widget>[
-      _LastWorkoutCard(),
-      _LastTimerCard(),
-      _LibraryCard(),
-      _OneRmCard(),
-      _BodyWeightCard(),
-    ];
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FitTrack'),
+        title: const _Greeting(),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -54,52 +47,33 @@ class DashboardPage extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: context.contentMaxWidth),
-            child: CustomScrollView(
-              slivers: <Widget>[
-                const SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  sliver: SliverToBoxAdapter(child: _StartWorkoutBanner()),
+        child: PageBody(
+          gutter: false,
+          child: CustomScrollView(
+            slivers: <Widget>[
+              SliverPadding(
+                padding: context.sliverGutter.copyWith(
+                  top: AppSpacing.sm,
+                  bottom: AppSpacing.xl,
                 ),
-                const SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    0,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  sliver: SliverToBoxAdapter(child: _WeeklyVolumeHeroCard()),
+                sliver: const SliverToBoxAdapter(child: _TodayCard()),
+              ),
+              SliverPadding(
+                padding: context.sliverGutter,
+                sliver: const SliverToBoxAdapter(child: _ThisWeekSection()),
+              ),
+              SliverPadding(
+                padding: context.sliverGutter.copyWith(top: AppSpacing.xl),
+                sliver: const SliverToBoxAdapter(child: _ProgressSection()),
+              ),
+              SliverPadding(
+                padding: context.sliverGutter.copyWith(
+                  top: AppSpacing.xl,
+                  bottom: AppSpacing.xl,
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                  ),
-                  sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      mainAxisSpacing: AppSpacing.md,
-                      crossAxisSpacing: AppSpacing.md,
-                      mainAxisExtent: 160,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => cards[index],
-                      childCount: cards.length,
-                    ),
-                  ),
-                ),
-                const SliverPadding(
-                  padding: EdgeInsets.only(bottom: AppSpacing.lg),
-                  sliver: SliverToBoxAdapter(child: SizedBox.shrink()),
-                ),
-              ],
-            ),
+                sliver: const SliverToBoxAdapter(child: _RecentSection()),
+              ),
+            ],
           ),
         ),
       ),
@@ -107,147 +81,428 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
-class _StartWorkoutBanner extends StatelessWidget {
-  const _StartWorkoutBanner();
+/// Time-of-day greeting. Orients the user faster than a static wordmark,
+/// which they already know — they just opened the app.
+class _Greeting extends StatelessWidget {
+  const _Greeting();
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: () => context.pushNamed(Routes.activeWorkoutName),
-      icon: const Icon(Icons.play_arrow),
-      label: const Text('Start workout'),
-    );
+    final int hour = DateTime.now().hour;
+    final String greeting = switch (hour) {
+      < 12 => 'Good morning',
+      < 18 => 'Good afternoon',
+      _ => 'Good evening',
+    };
+    return Text(greeting);
   }
 }
 
-/// Hero card: this week's training volume, its trend against the prior
-/// week, and a sparkline over the last 8 weeks. Wider and denser than the
-/// grid tiles below it, so it reads as the dashboard's headline stat.
-class _WeeklyVolumeHeroCard extends ConsumerWidget {
-  const _WeeklyVolumeHeroCard();
+/// Priority one: today's session. Resumes an in-progress draft when there
+/// is one, otherwise starts a new workout.
+///
+/// A draft left open is the single most important thing the dashboard can
+/// tell the user, so it takes over this card entirely rather than appearing
+/// as a separate banner they might scroll past.
+class _TodayCard extends ConsumerWidget {
+  const _TodayCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<WeeklyVolume>> volumeAsync =
-        ref.watch(dashboardWeeklyVolumeProvider);
+    final draft = ref.watch(activeWorkoutProvider);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool inProgress = draft != null;
+
+    final int loggedSets = draft == null
+        ? 0
+        : draft.exercises.fold<int>(
+            0,
+            (int total, e) =>
+                total + e.sets.where((s) => s.isCompleted).length,
+          );
+
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  DateFormatters.dayHeadline(DateTime.now()).toUpperCase(),
+                  style: AppTypography.eyebrow(theme),
+                ),
+              ),
+              if (inProgress)
+                // Status is carried by the label, not the dot alone.
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      Icons.fiber_manual_record,
+                      size: 10,
+                      color: scheme.primary,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      'IN PROGRESS',
+                      style: AppTypography.eyebrow(theme, color: scheme.primary),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            inProgress ? 'Workout in progress' : 'Ready to train',
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            inProgress
+                ? _draftSummary(draft.exercises.length, loggedSets)
+                : 'Start a session and log your sets as you go.',
+            style: AppTypography.caption(theme),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          FilledButton.icon(
+            onPressed: () => context.pushNamed(Routes.activeWorkoutName),
+            icon: Icon(inProgress ? Icons.play_arrow : Icons.add),
+            label: Text(inProgress ? 'Resume workout' : 'Start workout'),
+          ),
+          if (!inProgress) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: () => context.goNamed(Routes.trackerName),
+              icon: const Icon(Icons.event_note_outlined),
+              label: const Text('Start from a program'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _draftSummary(int exercises, int sets) {
+    if (exercises == 0) return 'No exercises added yet.';
+    final String e = '$exercises exercise${exercises == 1 ? '' : 's'}';
+    final String s = '$sets set${sets == 1 ? '' : 's'} logged';
+    return '$e · $s';
+  }
+}
+
+/// Priority two: am I on track this week?
+class _ThisWeekSection extends ConsumerWidget {
+  const _ThisWeekSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<WeekSnapshot> snapshotAsync =
+        ref.watch(dashboardWeekSnapshotProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
 
-    // Computed for every branch (not just `data`) so `AppCard`'s Semantics
-    // node is always present — a semantics node that appears only in one
-    // async branch and disappears in others (loading/error) is a real
-    // crash trigger (`!semantics.parentDataDirty`) once a child with its
-    // own semantics, like fl_chart's `LineChart` here, is involved.
-    final String semanticLabel = volumeAsync.when(
-      loading: () => 'This week\'s volume, loading',
-      error: (error, _) => 'This week\'s volume, failed to load',
-      data: (weeks) => 'This week\'s volume, '
-          '${weeks.isEmpty ? 'no data' : UnitFormatters.volume(weeks.last.totalVolumeKg, unit)}',
+    // Resolved for every branch so the card's Semantics node exists in all
+    // of them. A semantics node that appears only in `data` — alongside a
+    // child that has its own, like fl_chart's LineChart — trips
+    // `!semantics.parentDataDirty` when the branch switches.
+    final String semanticLabel = snapshotAsync.when(
+      loading: () => 'This week, loading',
+      error: (_, __) => 'This week, failed to load',
+      data: (s) => 'This week, ${UnitFormatters.volume(s.volumeKg, unit)}, '
+          '${s.sessions} session${s.sessions == 1 ? '' : 's'}',
     );
 
-    return AppCard(
-      onTap: () => context.pushNamed(Routes.progressName),
-      semanticLabel: semanticLabel,
-      child: volumeAsync.when(
-        loading: () => const SizedBox(
-          height: 96,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SectionHeader(
+          title: 'This week',
+          actionLabel: 'Progress',
+          onAction: () => context.goNamed(Routes.progressName),
+        ),
+        AppCard(
+          onTap: () => context.goNamed(Routes.progressName),
+          semanticLabel: semanticLabel,
+          child: snapshotAsync.when(
+            loading: () => const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                LoadingShimmer(width: 160, height: AppTypography.metricSizeLg),
+                SizedBox(height: AppSpacing.sm),
+                LoadingShimmer(width: 110, height: 12),
+              ],
+            ),
+            error: (error, _) => ErrorView(
+              title: 'Could not load this week',
+              details: error.toString(),
+              compact: true,
+            ),
+            data: (s) => _WeekBody(snapshot: s, unit: unit, scheme: scheme),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WeekBody extends StatelessWidget {
+  const _WeekBody({
+    required this.snapshot,
+    required this.unit,
+    required this.scheme,
+  });
+
+  final WeekSnapshot snapshot;
+  final WeightUnit unit;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    if (!snapshot.hasHistory) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'No training logged yet',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Finish your first workout and your weekly volume, streak and '
+            'trends will appear here.',
+            style: AppTypography.caption(theme),
+          ),
+        ],
+      );
+    }
+
+    final double previous = snapshot.previousVolumeKg;
+    final TrendDirection? trend = previous == 0
+        ? null
+        : snapshot.volumeKg > previous
+            ? TrendDirection.up
+            : snapshot.volumeKg < previous
+                ? TrendDirection.down
+                : TrendDirection.flat;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text('VOLUME', style: AppTypography.eyebrow(theme)),
+                  const SizedBox(height: AppSpacing.xs),
+                  Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          UnitFormatters.volume(snapshot.volumeKg, unit),
+                          style: AppTypography.cardMetric(
+                            scheme,
+                            size: AppTypography.metricSizeLg,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (trend != null) ...<Widget>[
+                        const SizedBox(width: AppSpacing.sm),
+                        TrendBadge(
+                          direction: trend,
+                          label: _deltaLabel(snapshot.volumeKg, previous),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (snapshot.volumeSeries.length >= 2) ...<Widget>[
+              const SizedBox(width: AppSpacing.md),
+              SizedBox(
+                width: 96,
+                child: Sparkline(
+                  values: snapshot.volumeSeries,
+                  color: scheme.primary,
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Divider(height: 1, color: scheme.outlineVariant),
+        const SizedBox(height: AppSpacing.lg),
+        StatStrip(
+          stats: <Stat>[
+            Stat(label: 'Sessions', value: '${snapshot.sessions}'),
+            Stat(
+              label: 'Streak',
+              value: snapshot.streakWeeks == 0
+                  ? '—'
+                  : '${snapshot.streakWeeks} wk',
+            ),
+            Stat(
+              label: 'Last week',
+              value: previous == 0
+                  ? '—'
+                  : UnitFormatters.volume(previous, unit),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Percentage change against last week, which is the number a lifter
+  /// actually reasons about — the raw kilo delta means little without it.
+  String _deltaLabel(double current, double previous) {
+    final double pct = ((current - previous) / previous) * 100;
+    return '${pct.abs().round()}%';
+  }
+}
+
+/// Priority three: the two progress signals worth surfacing off-screen.
+class _ProgressSection extends StatelessWidget {
+  const _ProgressSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SectionHeader(title: 'Progress'),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              LoadingShimmer(width: 140, height: 32),
-              SizedBox(height: AppSpacing.sm),
-              LoadingShimmer(width: 100, height: 12),
+              Expanded(child: _OneRmCard()),
+              SizedBox(width: AppSpacing.md),
+              Expanded(child: _BodyWeightCard()),
             ],
           ),
         ),
-        error: (error, _) => ErrorView(
-          title: 'Could not load weekly volume',
-          details: error.toString(),
-          compact: true,
-        ),
-        data: (weeks) {
-          final double current = weeks.isEmpty ? 0 : weeks.last.totalVolumeKg;
-          final double? previous =
-              weeks.length < 2 ? null : weeks[weeks.length - 2].totalVolumeKg;
-          final TrendDirection? trend = previous == null
-              ? null
-              : current > previous
-                  ? TrendDirection.up
-                  : current < previous
-                      ? TrendDirection.down
-                      : TrendDirection.flat;
+      ],
+    );
+  }
+}
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'THIS WEEK\'S VOLUME',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Flexible(
-                          child: Text(
-                            weeks.isEmpty
-                                ? '—'
-                                : UnitFormatters.volume(current, unit),
-                            style: AppTypography.cardMetric(scheme)
-                                .copyWith(fontSize: 32),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (trend != null) ...<Widget>[
-                          const SizedBox(width: AppSpacing.sm),
-                          TrendBadge(direction: trend),
-                        ],
-                      ],
-                    ),
+/// Priority four: what happened most recently. Compact rows, not tiles —
+/// these are navigation affordances with a value attached, not metrics to
+/// compare at a glance.
+class _RecentSection extends StatelessWidget {
+  const _RecentSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SectionHeader(title: 'Recent'),
+        _LastWorkoutRow(),
+        SizedBox(height: AppSpacing.sm),
+        _LastTimerRow(),
+      ],
+    );
+  }
+}
+
+/// Shared shape for the two "recent activity" rows.
+class _ActivityRow extends StatelessWidget {
+  const _ActivityRow({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.value,
+    this.caption,
+    this.isLoading = false,
+    this.error,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final String? value;
+  final String? caption;
+  final bool isLoading;
+  final Object? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      semanticLabel: error != null
+          ? '$title, failed to load'
+          : isLoading
+              ? '$title, loading'
+              : '$title, ${value ?? 'no data'}, ${caption ?? ''}',
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 20, color: scheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(title, style: theme.textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.xxs),
+                if (error != null)
+                  Text(
+                    'Could not load',
+                    style: AppTypography.caption(theme)
+                        .copyWith(color: scheme.error),
+                  )
+                else if (isLoading)
+                  const LoadingShimmer(width: 120, height: 12)
+                else
+                  Text(
+                    caption ?? 'Nothing yet',
+                    style: AppTypography.caption(theme),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (weeks.length >= 2) ...<Widget>[
-                    const SizedBox(width: AppSpacing.md),
-                    SizedBox(
-                      width: 96,
-                      child: Sparkline(
-                        values: <double>[
-                          for (final w in weeks) w.totalVolumeKg,
-                        ],
-                        color: scheme.primary,
-                      ),
-                    ),
-                  ],
-                ],
+              ],
+            ),
+          ),
+          if (!isLoading && error == null && value != null) ...<Widget>[
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              value!,
+              style: AppTypography.cardMetric(
+                scheme,
+                size: AppTypography.metricSizeSm,
               ),
-              if (weeks.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Text(
-                    'No completed workouts yet',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ),
-            ],
-          );
-        },
+            ),
+          ],
+          const SizedBox(width: AppSpacing.xs),
+          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+        ],
       ),
     );
   }
 }
 
-class _LastWorkoutCard extends ConsumerWidget {
-  const _LastWorkoutCard();
+class _LastWorkoutRow extends ConsumerWidget {
+  const _LastWorkoutRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -255,102 +510,46 @@ class _LastWorkoutCard extends ConsumerWidget {
         ref.watch(dashboardLastWorkoutProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
-    return workoutAsync.when(
-      loading: () => SummaryCard(
-        title: 'Last workout',
-        icon: Icons.add_box_outlined,
-        isLoading: true,
-        onTap: () => context.goNamed(Routes.trackerName),
-      ),
-      error: (error, _) => SummaryCard(
-        title: 'Last workout',
-        icon: Icons.add_box_outlined,
-        error: error,
-        onTap: () => context.goNamed(Routes.trackerName),
-      ),
-      data: (workout) => SummaryCard(
-        title: 'Last workout',
-        icon: Icons.add_box_outlined,
-        onTap: () => context.goNamed(Routes.trackerName),
-        metric: workout == null
-            ? null
-            : UnitFormatters.volume(workout.totalVolumeKg, unit),
-        caption: workout == null
-            ? null
-            : '${DateFormatters.relativeDay(workout.startedAt)}'
-                '${workout.durationSeconds == null ? '' : ' · ${UnitFormatters.durationShort(Duration(seconds: workout.durationSeconds!))}'}',
-      ),
+    return _ActivityRow(
+      icon: Icons.fitness_center_outlined,
+      title: 'Last workout',
+      onTap: () => context.goNamed(Routes.trackerName),
+      isLoading: workoutAsync.isLoading,
+      error: workoutAsync.error,
+      value: workoutAsync.value == null
+          ? null
+          : UnitFormatters.volume(workoutAsync.value!.totalVolumeKg, unit),
+      caption: workoutAsync.value == null
+          ? null
+          : '${DateFormatters.relativeDay(workoutAsync.value!.startedAt)}'
+              '${workoutAsync.value!.durationSeconds == null ? '' : ' · ${UnitFormatters.durationShort(Duration(seconds: workoutAsync.value!.durationSeconds!))}'}',
     );
   }
 }
 
-class _LastTimerCard extends ConsumerWidget {
-  const _LastTimerCard();
+class _LastTimerRow extends ConsumerWidget {
+  const _LastTimerRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<TimerSession?> sessionAsync =
         ref.watch(dashboardLastTimerSessionProvider);
 
-    return sessionAsync.when(
-      loading: () => SummaryCard(
-        title: 'Last timer',
-        icon: Icons.timer_outlined,
-        isLoading: true,
-        onTap: () => context.goNamed(Routes.timerName),
-      ),
-      error: (error, _) => SummaryCard(
-        title: 'Last timer',
-        icon: Icons.timer_outlined,
-        error: error,
-        onTap: () => context.goNamed(Routes.timerName),
-      ),
-      data: (session) => SummaryCard(
-        title: 'Last timer',
-        icon: Icons.timer_outlined,
-        onTap: () => context.goNamed(Routes.timerName),
-        metric: session?.presetName,
-        caption: session == null
-            ? null
-            : DateFormatters.relativeDay(session.startedAt) +
-                (session.actualDurationSeconds == null
-                    ? ''
-                    : ' · ${UnitFormatters.durationShort(Duration(seconds: session.actualDurationSeconds!))}'),
-      ),
-    );
-  }
-}
-
-class _LibraryCard extends ConsumerWidget {
-  const _LibraryCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<LibrarySummary> summaryAsync =
-        ref.watch(dashboardLibrarySummaryProvider);
-
-    return summaryAsync.when(
-      loading: () => SummaryCard(
-        title: 'Exercises',
-        icon: Icons.fitness_center_outlined,
-        isLoading: true,
-        onTap: () => context.goNamed(Routes.libraryName),
-      ),
-      error: (error, _) => SummaryCard(
-        title: 'Exercises',
-        icon: Icons.fitness_center_outlined,
-        error: error,
-        onTap: () => context.goNamed(Routes.libraryName),
-      ),
-      data: (summary) => SummaryCard(
-        title: 'Exercises',
-        icon: Icons.fitness_center_outlined,
-        onTap: () => context.goNamed(Routes.libraryName),
-        metric: summary.count == 0 ? null : '${summary.count}',
-        caption: summary.mostRecentName == null
-            ? null
-            : 'Latest: ${summary.mostRecentName}',
-      ),
+    return _ActivityRow(
+      icon: Icons.timer_outlined,
+      title: 'Last timer',
+      onTap: () => context.goNamed(Routes.timerName),
+      isLoading: sessionAsync.isLoading,
+      error: sessionAsync.error,
+      caption: sessionAsync.value == null
+          ? null
+          : '${sessionAsync.value!.presetName} · '
+              '${DateFormatters.relativeDay(sessionAsync.value!.startedAt)}',
+      value: sessionAsync.value?.actualDurationSeconds == null
+          ? null
+          : UnitFormatters.durationShort(
+              Duration(seconds: sessionAsync.value!.actualDurationSeconds!),
+            ),
     );
   }
 }
@@ -364,28 +563,20 @@ class _OneRmCard extends ConsumerWidget {
         ref.watch(dashboardMostLoggedOneRMProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
-    return oneRmAsync.when(
-      loading: () => SummaryCard(
-        title: 'Est. 1RM',
-        icon: Icons.insights_outlined,
-        isLoading: true,
-        onTap: () => context.goNamed(Routes.progressName),
-      ),
-      error: (error, _) => SummaryCard(
-        title: 'Est. 1RM',
-        icon: Icons.insights_outlined,
-        error: error,
-        onTap: () => context.goNamed(Routes.progressName),
-      ),
-      data: (oneRm) => SummaryCard(
-        title: 'Est. 1RM',
-        icon: Icons.insights_outlined,
-        onTap: () => context.goNamed(Routes.progressName),
-        metric:
-            oneRm == null ? null : UnitFormatters.weight(oneRm.currentKg, unit),
-        caption: oneRm?.exerciseName,
-        trend: oneRm == null ? null : _trendDirection(oneRm.trend),
-      ),
+    return SummaryCard(
+      title: 'Est. 1RM',
+      icon: Icons.trending_up,
+      onTap: () => context.goNamed(Routes.progressName),
+      isLoading: oneRmAsync.isLoading,
+      error: oneRmAsync.error,
+      metric: oneRmAsync.value == null
+          ? null
+          : UnitFormatters.weight(oneRmAsync.value!.currentKg, unit),
+      caption: oneRmAsync.value?.exerciseName,
+      emptyCaption: 'Log a lift to see this',
+      trend: oneRmAsync.value == null
+          ? null
+          : _trendDirection(oneRmAsync.value!.trend),
     );
   }
 
@@ -405,29 +596,19 @@ class _BodyWeightCard extends ConsumerWidget {
         ref.watch(dashboardLatestBodyMetricsProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
-    return metricsAsync.when(
-      loading: () => SummaryCard(
-        title: 'Body weight',
-        icon: Icons.monitor_weight_outlined,
-        isLoading: true,
-        onTap: () => context.goNamed(Routes.progressName),
-      ),
-      error: (error, _) => SummaryCard(
-        title: 'Body weight',
-        icon: Icons.monitor_weight_outlined,
-        error: error,
-        onTap: () => context.goNamed(Routes.progressName),
-      ),
-      data: (metrics) => SummaryCard(
-        title: 'Body weight',
-        icon: Icons.monitor_weight_outlined,
-        onTap: () => context.goNamed(Routes.progressName),
-        metric: metrics == null
-            ? null
-            : UnitFormatters.weight(metrics.weightKg, unit),
-        caption:
-            metrics == null ? null : DateFormatters.relativeDay(metrics.date),
-      ),
+    return SummaryCard(
+      title: 'Body weight',
+      icon: Icons.monitor_weight_outlined,
+      onTap: () => context.goNamed(Routes.progressName),
+      isLoading: metricsAsync.isLoading,
+      error: metricsAsync.error,
+      metric: metricsAsync.value == null
+          ? null
+          : UnitFormatters.weight(metricsAsync.value!.weightKg, unit),
+      caption: metricsAsync.value == null
+          ? null
+          : DateFormatters.relativeDay(metricsAsync.value!.date),
+      emptyCaption: 'Not recorded',
     );
   }
 }
