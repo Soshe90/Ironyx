@@ -266,17 +266,20 @@ class _WeekBody extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
 
     if (!snapshot.hasHistory) {
+      // The series only covers the hero window, so an empty one means
+      // "nothing recent" — not "never trained". Saying the latter to a
+      // user with years of history behind them reads as data loss.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'No training logged yet',
+            'No training in the last $dashboardHeroWeeks weeks',
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Finish your first workout and your weekly volume, streak and '
-            'trends will appear here.',
+            'Log a workout and your weekly volume, streak and trends will '
+            'appear here. Older history is on the Progress tab.',
             style: AppTypography.caption(theme),
           ),
         ],

@@ -61,6 +61,9 @@ Stream<List<WorkoutFrequency>> dashboardWeeklyFrequency(Ref ref) =>
 /// Window backing the dashboard's "this week" card and its sparkline.
 const int _heroWeeks = 8;
 
+/// Same window, for copy that has to name it.
+const int dashboardHeroWeeks = _heroWeeks;
+
 /// Everything the "this week" hero card needs, resolved as one async value.
 ///
 /// Volume and frequency come from two separate queries; combining them here
@@ -142,8 +145,9 @@ class WeekSnapshot {
   final int streakWeeks;
   final List<double> volumeSeries;
 
-  /// False for a brand-new account, which gets an onboarding empty state
-  /// rather than a wall of zeroes.
+  /// Whether anything was logged inside the hero window. False both for a
+  /// brand-new account and for a lapsed one, so copy keyed off this must
+  /// talk about the window — not claim the user has never trained.
   final bool hasHistory;
 
   static bool _sameDay(DateTime a, DateTime b) =>
