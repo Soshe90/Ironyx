@@ -35,6 +35,15 @@ abstract final class UnitFormatters {
     return withUnit ? '$n ${unit.label}' : n;
   }
 
+  /// A derived, approximate weight — an estimated 1RM above all.
+  ///
+  /// Rounded to whole units on purpose: Epley is a rough model, so
+  /// rendering "138.83 kg" claims a precision the number does not have.
+  static String estimate(double kg, WeightUnit unit, {bool withUnit = true}) {
+    final String n = _volume.format(fromKg(kg, unit));
+    return withUnit ? '$n ${unit.label}' : n;
+  }
+
   static String volume(double kg, WeightUnit unit, {bool withUnit = true}) {
     final String n = _volume.format(fromKg(kg, unit));
     return withUnit ? '$n ${unit.label}' : n;

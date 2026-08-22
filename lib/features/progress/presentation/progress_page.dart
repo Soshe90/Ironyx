@@ -59,6 +59,12 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
           children: [
             _RangeSelector(range: range),
             const SizedBox(height: AppSpacing.xl),
+            SectionHeader(
+              title: 'Strength change',
+              subtitle: _strengthSubtitle(range),
+            ),
+            _StrengthChangeSection(range: range),
+            const SizedBox(height: AppSpacing.xl),
             const SectionHeader(
               title: 'Estimated 1RM',
               subtitle: 'Epley estimate from your heaviest logged sets',
@@ -86,6 +92,130 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
             const _BodyMetricsSection(),
             const SizedBox(height: AppSpacing.xl),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+String _strengthSubtitle(ProgressRange range) => switch (range) {
+      ProgressRange.month => 'Best lift this month vs the month before',
+      ProgressRange.quarter => 'Best lift this quarter vs the quarter before',
+      ProgressRange.year => 'Best lift this year vs the year before',
+      ProgressRange.all => 'Your best lift ever, per exercise',
+    };
+
+/// Per-lift strength comparison: the question "am I improving" answered
+/// directly, rather than inferred from a volume figure.
+class _StrengthChangeSection extends ConsumerWidget {
+  const _StrengthChangeSection({required this.range});
+
+  final ProgressRange range;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<StrengthChange>> async =
+        ref.watch(strengthChangeProvider(range));
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+
+    return async.when(
+      loading: () => const _ChartLoading(),
+      error: (error, _) => _ChartError(
+        error: error,
+        onRetry: () => ref.invalidate(strengthChangeProvider(range)),
+      ),
+      data: (rows) {
+        if (rows.isEmpty) {
+          return const _ChartEmpty(
+            icon: Icons.trending_up,
+            message: 'Log some working sets to see how each lift is moving.',
+          );
+        }
+        return AppCard(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            children: <Widget>[
+              for (final StrengthChange row in rows)
+                _StrengthRow(row: row, unit: unit),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StrengthRow extends StatelessWidget {
+  const _StrengthRow({required this.row, required this.unit});
+
+  final StrengthChange row;
+  final WeightUnit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final double? change = row.change;
+
+    final TrendDirection? trend = change == null
+        ? null
+        : change > 0
+            ? TrendDirection.up
+            : change < 0
+                ? TrendDirection.down
+                : TrendDirection.flat;
+
+    return Semantics(
+      label: '${row.exerciseName}, '
+          '${UnitFormatters.estimate(row.currentBestKg, unit)}'
+          '${change == null ? '' : ', ${change > 0 ? 'up' : 'down'} '
+              '${(change.abs() * 100).round()} percent'}',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      row.exerciseName,
+                      style: theme.textTheme.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      row.isNew
+                          ? 'New this period'
+                          : 'was ${UnitFormatters.estimate(row.previousBestKg!, unit)}',
+                      style: AppTypography.caption(theme),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text(
+                UnitFormatters.estimate(row.currentBestKg, unit),
+                style: AppTypography.cardMetric(
+                  scheme,
+                  size: AppTypography.metricSizeSm,
+                ),
+              ),
+              if (trend != null) ...<Widget>[
+                const SizedBox(width: AppSpacing.sm),
+                TrendBadge(
+                  direction: trend,
+                  label: '${(change!.abs() * 100).round()}%',
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -317,10 +447,10 @@ class _OneRmSection extends ConsumerWidget {
 
             return _ChartCard(
               header: picker,
-              headline: UnitFormatters.weight(current, unit),
+              headline: UnitFormatters.estimate(current, unit),
               caption: ordered.length == 1
                   ? 'One data point in this range'
-                  : 'From ${UnitFormatters.weight(first, unit)} over '
+                  : 'From ${UnitFormatters.estimate(first, unit)} over '
                       '${ordered.length} sessions',
               trend: ordered.length == 1 ? null : trend,
               child: _OneRmChart(ordered: ordered, unit: unit),

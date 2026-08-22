@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +18,8 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/pr_badge.dart';
 import '../../../core/widgets/stat_strip.dart';
+import '../../../core/widgets/trend_badge.dart';
+import '../../progress/domain/progress_providers.dart';
 
 /// Read-only summary of a saved workout, with edit and delete actions.
 class WorkoutDetailPage extends ConsumerWidget {
@@ -157,6 +160,8 @@ class _WorkoutDetailBody extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xl),
           for (final exercise in details.exercises)
             _ExerciseBreakdown(
+              exerciseId: exercise.exerciseId,
+              workoutId: workoutId,
               name: details.exerciseNames[exercise.id] ?? 'Unknown exercise',
               sets: details.setsByExercise[exercise.id] ??
                   const <WorkoutSet>[],
@@ -168,20 +173,29 @@ class _WorkoutDetailBody extends ConsumerWidget {
   }
 }
 
-/// One exercise's logged sets, as a compact numbered table.
-class _ExerciseBreakdown extends StatelessWidget {
+/// One exercise's logged sets, led by its best set and how that compares
+/// to the best the user had managed before this workout.
+///
+/// Volume is kept but demoted: it measures work done, not performance, so
+/// it cannot answer "am I improving" — the top set and its estimated 1RM
+/// can, and that is what a lifter actually tracks.
+class _ExerciseBreakdown extends ConsumerWidget {
   const _ExerciseBreakdown({
+    required this.exerciseId,
+    required this.workoutId,
     required this.name,
     required this.sets,
     required this.unit,
   });
 
+  final String exerciseId;
+  final String workoutId;
   final String name;
   final List<WorkoutSet> sets;
   final WeightUnit unit;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
 
@@ -193,6 +207,12 @@ class _ExerciseBreakdown extends StatelessWidget {
         .where((WorkoutSet s) => s.isCompleted && !s.isWarmup)
         .fold<double>(0, (double t, WorkoutSet s) => t + s.weightKg * s.reps);
 
+    final ExercisePerformance? performance = ref
+        .watch(workoutPerformanceProvider(workoutId))
+        .value
+        ?.where((ExercisePerformance p) => p.exerciseId == exerciseId)
+        .firstOrNull;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: AppCard(
@@ -200,6 +220,7 @@ class _ExerciseBreakdown extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Expanded(
                   child: Text(
@@ -208,21 +229,92 @@ class _ExerciseBreakdown extends StatelessWidget {
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
-                Text(
-                  UnitFormatters.volume(volumeKg, unit),
-                  style: AppTypography.cardMetric(
-                    scheme,
-                    size: AppTypography.metricSizeSm,
-                  ),
-                ),
+                if (performance != null && performance.isPersonalRecord)
+                  const PrBadge(),
               ],
             ),
+            if (performance != null) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              _TopSet(performance: performance, unit: unit),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Divider(height: 1, color: scheme.outlineVariant),
             const SizedBox(height: AppSpacing.md),
             for (int i = 0; i < sets.length; i++)
               _SetLine(index: i + 1, set: sets[i], unit: unit),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Volume ${UnitFormatters.volume(volumeKg, unit)}',
+              style: AppTypography.caption(theme),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Headline performance for one exercise: the best set, its estimated 1RM,
+/// and the change against the lift's previous best.
+class _TopSet extends StatelessWidget {
+  const _TopSet({required this.performance, required this.unit});
+
+  final ExercisePerformance performance;
+  final WeightUnit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final double? change = performance.change;
+
+    final TrendDirection? trend = change == null
+        ? null
+        : change > 0
+            ? TrendDirection.up
+            : change < 0
+                ? TrendDirection.down
+                : TrendDirection.flat;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('TOP SET', style: AppTypography.eyebrow(theme)),
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: <Widget>[
+            Flexible(
+              child: Text(
+                '${UnitFormatters.weight(performance.bestWeightKg, unit)}'
+                ' × ${performance.bestReps}',
+                style: AppTypography.cardMetric(
+                  scheme,
+                  size: AppTypography.metricSizeMd,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (trend != null) ...<Widget>[
+              const SizedBox(width: AppSpacing.sm),
+              TrendBadge(
+                direction: trend,
+                label: '${(change!.abs() * 100).round()}%',
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          performance.isFirstTime
+              ? 'First time logged · est. 1RM '
+                  '${UnitFormatters.estimate(performance.bestOneRmKg, unit)}'
+              : 'Est. 1RM '
+                  '${UnitFormatters.estimate(performance.bestOneRmKg, unit)}'
+                  ' · previous best '
+                  '${UnitFormatters.estimate(performance.previousBestKg!, unit)}',
+          style: AppTypography.caption(theme),
+        ),
+      ],
     );
   }
 }

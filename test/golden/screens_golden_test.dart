@@ -242,12 +242,20 @@ Future<void> _seed(AppDatabase db) async {
   for (var i = 0; i < 8; i++) {
     final DateTime started = now.subtract(Duration(days: i * 3));
     final String wid = 'w${i + 1}';
+    // Derived from the sets below, exactly as `save` does. A made-up
+    // total here would put a figure on the detail screen that its own
+    // per-exercise rows contradict.
+    var totalVolumeKg = 0.0;
+    for (var s = 0; s < 3; s++) {
+      totalVolumeKg += (80 + s * 5 - i) * (8 - s);
+      totalVolumeKg += (100 + s * 10 - i) * 5;
+    }
     await workouts.insertWorkout(
       WorkoutsTableCompanion.insert(
         id: wid,
         startedAt: started,
         endedAt: Value(started.add(const Duration(minutes: 58))),
-        totalVolumeKg: Value(4200 - i * 180),
+        totalVolumeKg: Value(totalVolumeKg),
         durationSeconds: const Value(3480),
       ),
       <WorkoutExercisesTableCompanion>[
@@ -280,6 +288,62 @@ Future<void> _seed(AppDatabase db) async {
             workoutExerciseId: '${wid}_e2',
             setIndex: s,
             weightKg: 100 + s * 10 - i.toDouble(),
+            reps: 5,
+            isCompleted: const Value(true),
+          ),
+      ],
+    );
+  }
+
+  // A handful of lighter sessions in the *previous* quarter, so the
+  // strength-change section has something to compare the current window
+  // against instead of reporting every lift as new.
+  for (var i = 0; i < 4; i++) {
+    final DateTime started = now.subtract(Duration(days: 120 + i * 7));
+    final String wid = 'old${i + 1}';
+    var totalVolumeKg = 0.0;
+    for (var s = 0; s < 3; s++) {
+      totalVolumeKg += (65 + s * 5) * (8 - s);
+      totalVolumeKg += (85 + s * 10) * 5;
+    }
+    await workouts.insertWorkout(
+      WorkoutsTableCompanion.insert(
+        id: wid,
+        startedAt: started,
+        endedAt: Value(started.add(const Duration(minutes: 55))),
+        totalVolumeKg: Value(totalVolumeKg),
+        durationSeconds: const Value(3300),
+      ),
+      <WorkoutExercisesTableCompanion>[
+        WorkoutExercisesTableCompanion.insert(
+          id: '${wid}_e1',
+          workoutId: wid,
+          exerciseId: 'bench',
+          orderIndex: 0,
+        ),
+        WorkoutExercisesTableCompanion.insert(
+          id: '${wid}_e2',
+          workoutId: wid,
+          exerciseId: 'squat',
+          orderIndex: 1,
+        ),
+      ],
+      <WorkoutSetsTableCompanion>[
+        for (var s = 0; s < 3; s++)
+          WorkoutSetsTableCompanion.insert(
+            id: '${wid}_e1_s$s',
+            workoutExerciseId: '${wid}_e1',
+            setIndex: s,
+            weightKg: 65 + s * 5,
+            reps: 8 - s,
+            isCompleted: const Value(true),
+          ),
+        for (var s = 0; s < 3; s++)
+          WorkoutSetsTableCompanion.insert(
+            id: '${wid}_e2_s$s',
+            workoutExerciseId: '${wid}_e2',
+            setIndex: s,
+            weightKg: 85 + s * 10,
             reps: 5,
             isCompleted: const Value(true),
           ),

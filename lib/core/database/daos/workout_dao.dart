@@ -221,6 +221,159 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         );
   }
 
+  /// Best estimated 1RM per exercise in a window, next to the same figure
+  /// for the window immediately before it.
+  ///
+  /// This is the "am I getting stronger" query. Volume answers how much
+  /// work was done, which moves when you add a set and barely moves when
+  /// you add weight — the opposite of what a progress readout needs.
+  ///
+  /// [since] null means all-time, in which case there is no preceding
+  /// window and [StrengthChange.previousBestKg] is null for every row.
+  Stream<List<StrengthChange>> watchStrengthChange({DateTime? since}) {
+    // The preceding window of equal length: [since - len, since).
+    final DateTime? previousSince =
+        since?.subtract(DateTime.now().difference(since));
+
+    // Epley, matching watchOneRMSeries and watchPersonalRecordWorkoutIds.
+    // Reps are capped at 12 because the estimate degrades badly above it.
+    const String oneRm =
+        'ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END';
+
+    // Indexed placeholders (?1 current-window start, ?2 previous-window
+    // start) because each is referenced more than once; drift binds the
+    // `variables` list positionally.
+    final String currentCase = since == null
+        ? oneRm
+        : 'CASE WHEN w.started_at >= ?1 THEN $oneRm END';
+    final String previousCase = since == null
+        ? 'NULL'
+        : 'CASE WHEN w.started_at >= ?2 AND w.started_at < ?1 '
+            'THEN $oneRm END';
+    final String lowerBound = since == null ? '' : 'AND w.started_at >= ?2';
+
+    return customSelect(
+      '''
+      SELECT
+        we.exercise_id as exercise_id,
+        ex.name as exercise_name,
+        MAX($currentCase) as current_best,
+        MAX($previousCase) as previous_best
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+      JOIN workouts_table w ON we.workout_id = w.id
+      JOIN exercises_table ex ON ex.id = we.exercise_id
+      WHERE w.ended_at IS NOT NULL
+        AND ws.is_completed = 1
+        AND ws.is_warmup = 0
+        AND ws.reps BETWEEN 1 AND 12
+        $lowerBound
+      GROUP BY we.exercise_id, ex.name
+      HAVING current_best IS NOT NULL
+      ORDER BY current_best DESC
+      ''',
+      variables: since == null
+          ? const []
+          : [
+              Variable.withDateTime(since),
+              Variable.withDateTime(previousSince!),
+            ],
+      readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable},
+    ).watch().map(
+          (rows) => rows
+              .map(
+                (r) => StrengthChange(
+                  exerciseId: r.read<String>('exercise_id'),
+                  exerciseName: r.read<String>('exercise_name'),
+                  currentBestKg: r.read<double>('current_best'),
+                  previousBestKg: r.readNullable<double>('previous_best'),
+                ),
+              )
+              .toList(),
+        );
+  }
+
+  /// For one workout: each exercise's best set, its estimated 1RM, and the
+  /// best 1RM that lift had reached *before* this workout.
+  ///
+  /// Lets the detail screen say "Leg Press, 55 lb x 10, +9% on your
+  /// previous best" instead of a volume figure that cannot be compared to
+  /// anything.
+  Stream<List<ExercisePerformance>> watchWorkoutPerformance(String workoutId) {
+    const String oneRm =
+        'ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END';
+
+    // Ranks the sets explicitly rather than leaning on SQLite's
+    // "bare columns take the MAX row" behaviour: that only holds when the
+    // query contains exactly one min/max aggregate, so merely adding an
+    // ORDER BY MIN(...) silently made it return the *first* set instead of
+    // the best one. A window function states the intent and cannot drift.
+    return customSelect(
+      '''
+      WITH ranked AS (
+        SELECT
+          we.exercise_id as exercise_id,
+          we.order_index as order_index,
+          ws.weight_kg as weight_kg,
+          ws.reps as reps,
+          $oneRm as one_rm,
+          ROW_NUMBER() OVER (
+            PARTITION BY we.exercise_id ORDER BY $oneRm DESC
+          ) as rank_in_exercise
+        FROM workout_sets_table ws
+        JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+        WHERE we.workout_id = ?1
+          AND ws.is_completed = 1
+          AND ws.is_warmup = 0
+          AND ws.reps BETWEEN 1 AND 12
+      )
+      SELECT
+        r.exercise_id as exercise_id,
+        ex.name as exercise_name,
+        r.weight_kg as weight_kg,
+        r.reps as reps,
+        r.one_rm as one_rm,
+        (
+          SELECT MAX(
+            ws2.weight_kg * CASE WHEN ws2.reps = 1 THEN 1
+                                 ELSE (1 + ws2.reps / 30.0) END
+          )
+          FROM workout_sets_table ws2
+          JOIN workout_exercises_table we2
+            ON ws2.workout_exercise_id = we2.id
+          JOIN workouts_table w2 ON we2.workout_id = w2.id
+          WHERE we2.exercise_id = r.exercise_id
+            AND w2.ended_at IS NOT NULL
+            AND ws2.is_completed = 1
+            AND ws2.is_warmup = 0
+            AND ws2.reps BETWEEN 1 AND 12
+            AND w2.started_at < (
+              SELECT started_at FROM workouts_table WHERE id = ?1
+            )
+        ) as previous_best
+      FROM ranked r
+      JOIN exercises_table ex ON ex.id = r.exercise_id
+      WHERE r.rank_in_exercise = 1
+      ORDER BY r.order_index
+      ''',
+      variables: [Variable.withString(workoutId)],
+      readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable},
+    ).watch().map(
+          (rows) => rows
+              .map(
+                (r) => ExercisePerformance(
+                  exerciseId: r.read<String>('exercise_id'),
+                  exerciseName: r.read<String>('exercise_name'),
+                  bestWeightKg: r.read<double>('weight_kg'),
+                  bestReps: r.read<int>('reps'),
+                  bestOneRmKg: r.read<double>('one_rm'),
+                  previousBestKg: r.readNullable<double>('previous_best'),
+                ),
+              )
+              .toList(),
+        );
+  }
+
   /// Per-exercise 1RM series over time (ADR-123).
   /// Returns (date, exercise_id, estimated_1rm_kg) for completed, non-warmup sets.
   Stream<List<OneRMSeriesPoint>> watchOneRMSeries(
@@ -396,6 +549,68 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
 }
 
 /// Weekly volume data point.
+/// One exercise's best set within a workout, against its prior best.
+class ExercisePerformance {
+  const ExercisePerformance({
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.bestWeightKg,
+    required this.bestReps,
+    required this.bestOneRmKg,
+    required this.previousBestKg,
+  });
+
+  final String exerciseId;
+  final String exerciseName;
+  final double bestWeightKg;
+  final int bestReps;
+  final double bestOneRmKg;
+
+  /// Best 1RM for this lift before this workout. Null the first time the
+  /// lift was performed — which is not a regression.
+  final double? previousBestKg;
+
+  bool get isFirstTime => previousBestKg == null;
+
+  bool get isPersonalRecord =>
+      previousBestKg != null && bestOneRmKg > previousBestKg!;
+
+  /// Fractional change against the prior best, null on a first attempt.
+  double? get change {
+    final double? previous = previousBestKg;
+    if (previous == null || previous == 0) return null;
+    return (bestOneRmKg - previous) / previous;
+  }
+}
+
+/// One lift's best estimated 1RM in a window, against the window before.
+class StrengthChange {
+  const StrengthChange({
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.currentBestKg,
+    required this.previousBestKg,
+  });
+
+  final String exerciseId;
+  final String exerciseName;
+  final double currentBestKg;
+
+  /// Null when there is nothing to compare against — either the range is
+  /// all-time, or the lift is new this window. A new lift is not a
+  /// regression, so callers must not treat null as zero.
+  final double? previousBestKg;
+
+  bool get isNew => previousBestKg == null;
+
+  /// Fractional change, e.g. 0.09 for +9%. Null when [isNew].
+  double? get change {
+    final double? previous = previousBestKg;
+    if (previous == null || previous == 0) return null;
+    return (currentBestKg - previous) / previous;
+  }
+}
+
 class WeeklyVolume {
   const WeeklyVolume({required this.weekStart, required this.totalVolumeKg});
 

@@ -152,7 +152,10 @@ void main() {
         overrides: [appDatabaseProvider.overrideWithValue(database)],
         initialLocation: '/progress',
         prefs: seededPrefs,
-        surfaceSize: const Size(400, 1400),
+        // Tall enough that every section is inside the viewport: a
+        // ListView only builds what is near the fold, and the assertions
+        // below reach for charts near the bottom of the page.
+        surfaceSize: const Size(400, 2400),
       );
       // ProgressPage has no indefinitely-animating widgets once every
       // stream has data (unlike Library/Timer's DB-loading shimmer — see

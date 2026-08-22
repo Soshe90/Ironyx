@@ -73,3 +73,19 @@ Stream<List<MuscleGroupVolume>> muscleGroupSeries(
 @riverpod
 Stream<List<BodyMetrics>> bodyMetricsSeries(Ref ref) =>
     ref.watch(bodyMetricsDaoProvider).watchAll();
+
+/// Best estimated 1RM per lift in the selected window vs the window before.
+///
+/// This is the "did I get stronger" series, as opposed to the volume
+/// series which answers "how much work did I do".
+@riverpod
+Stream<List<StrengthChange>> strengthChange(Ref ref, ProgressRange range) =>
+    ref.watch(workoutDaoProvider).watchStrengthChange(since: range.since);
+
+/// Best set and prior best for each exercise in one saved workout.
+@riverpod
+Stream<List<ExercisePerformance>> workoutPerformance(
+  Ref ref,
+  String workoutId,
+) =>
+    ref.watch(workoutDaoProvider).watchWorkoutPerformance(workoutId);
