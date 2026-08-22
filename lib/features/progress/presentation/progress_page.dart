@@ -363,10 +363,8 @@ class _OneRmChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: _axisReserved + AppSpacing.lg,
-                getTitlesWidget: (double value, TitleMeta meta) => Text(
-                  UnitFormatters.weight(value, unit, withUnit: false),
-                  style: AppTypography.eyebrow(theme),
-                ),
+                getTitlesWidget: (double value, TitleMeta meta) =>
+                    _valueAxisTick(context, value, meta, unit),
               ),
             ),
             bottomTitles: AxisTitles(
@@ -382,7 +380,7 @@ class _OneRmChart extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.xs),
                     child: Text(
-                      DateFormatters.relativeDay(ordered[i].date),
+                      DateFormatters.axisLabel(ordered[i].date),
                       style: AppTypography.eyebrow(theme),
                     ),
                   );
@@ -437,6 +435,27 @@ class _OneRmChart extends StatelessWidget {
 
 /// Past this many points the per-point dots merge into noise.
 const int _dotThreshold = 20;
+
+/// Left-axis tick, with the two edge ticks suppressed.
+///
+/// fl_chart labels its computed intervals *and* the axis min/max. When the
+/// min is not a round number the bottom pair collide and overprint (an
+/// observed "110" sitting on top of "108.5"). Dropping the edges leaves
+/// only the evenly spaced ticks.
+Widget _valueAxisTick(
+  BuildContext context,
+  double value,
+  TitleMeta meta,
+  WeightUnit unit,
+) {
+  if (value == meta.min || value == meta.max) {
+    return const SizedBox.shrink();
+  }
+  return Text(
+    UnitFormatters.weight(value, unit, withUnit: false),
+    style: AppTypography.eyebrow(Theme.of(context)),
+  );
+}
 
 /// Keeps x-axis labels from colliding by showing at most a handful.
 double _labelInterval(int count) {
@@ -511,7 +530,7 @@ class _VolumeSection extends ConsumerWidget {
                         return Padding(
                           padding: const EdgeInsets.only(top: AppSpacing.xs),
                           child: Text(
-                            DateFormatters.relativeDay(points[i].weekStart),
+                            DateFormatters.axisLabel(points[i].weekStart),
                             style: AppTypography.eyebrow(theme),
                           ),
                         );
@@ -1011,10 +1030,8 @@ class _BodyWeightChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: _axisReserved + AppSpacing.lg,
-                getTitlesWidget: (double value, TitleMeta meta) => Text(
-                  UnitFormatters.weight(value, unit, withUnit: false),
-                  style: AppTypography.eyebrow(theme),
-                ),
+                getTitlesWidget: (double value, TitleMeta meta) =>
+                    _valueAxisTick(context, value, meta, unit),
               ),
             ),
             bottomTitles: AxisTitles(
@@ -1030,7 +1047,7 @@ class _BodyWeightChart extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.xs),
                     child: Text(
-                      DateFormatters.relativeDay(ordered[i].date),
+                      DateFormatters.axisLabel(ordered[i].date),
                       style: AppTypography.eyebrow(theme),
                     ),
                   );

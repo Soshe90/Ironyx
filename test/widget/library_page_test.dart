@@ -181,8 +181,11 @@ void main() {
     testWidgets('filter chips work', (tester) async {
       await pumpLibrary(tester);
 
-      // Tap the Chest muscle filter chip.
-      await tester.tap(find.widgetWithText(FilterChip, 'Chest'));
+      // Filters collapse to one chip per dimension; open Muscle and pick
+      // Chest from its menu.
+      await tester.tap(find.text('Muscle'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chest').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Barbell Bench Press'), findsOneWidget);

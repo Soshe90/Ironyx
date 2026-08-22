@@ -10,6 +10,14 @@ abstract final class DateFormatters {
   /// `Monday, 21 Aug` — the dateline above the dashboard's primary action.
   static String dayHeadline(DateTime date) => _weekdayDayMonth.format(date);
 
+  /// `1 Aug` — chart axis ticks.
+  ///
+  /// Deliberately *not* [relativeDay]: that switches between weekday names
+  /// and dates depending on recency, which on an axis produces a row like
+  /// "1 Aug · 7 Aug · Wednesday · Today" where the reader cannot tell the
+  /// spacing. An axis needs one stable format.
+  static String axisLabel(DateTime date) => _dayMonth.format(date);
+
   /// `Today`, `Yesterday`, `Tuesday` within the last week, then a date.
   static String relativeDay(DateTime date, {DateTime? now}) {
     final DateTime reference = now ?? DateTime.now();

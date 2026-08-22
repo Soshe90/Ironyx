@@ -1,0 +1,10 @@
+tags:
+  # Screenshot review harness. Its output embeds the current date and
+  # relative labels like "Today", so it can never be a stable assertion —
+  # it exists to be looked at, not to gate CI.
+  #
+  #   flutter test --tags golden --update-goldens
+  #
+  # then open test/golden/*.png.
+  golden:
+    skip: "Review harness. Run: flutter test --tags golden --update-goldens"

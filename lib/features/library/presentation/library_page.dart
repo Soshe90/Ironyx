@@ -19,7 +19,6 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
-import '../../../core/widgets/filter_chip_group.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sheet_handle.dart';
@@ -197,20 +196,25 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final equipment =
         ref.watch(equipmentStreamProvider).value ?? const <db.Equipment>[];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    // One chip per dimension rather than three inline chip groups. The old
+    // layout put a full option list for every dimension in a single
+    // horizontal scroller, so the three "All" chips looked identical, the
+    // group labels were easy to miss, and the last group's options ran off
+    // the edge with nothing to suggest they were there.
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Row(
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
         children: [
-          FilterChipGroup<Muscle>(
+          _FilterMenuChip<Muscle>(
             label: 'Muscle',
             value: muscles.where((m) => m.id == _selectedMuscleId).firstOrNull,
             options: muscles,
             getLabel: (m) => m.displayName,
             onChanged: (v) => setState(() => _selectedMuscleId = v?.id),
           ),
-          const SizedBox(width: AppSpacing.md),
-          FilterChipGroup<db.Equipment>(
+          _FilterMenuChip<db.Equipment>(
             label: 'Equipment',
             value: equipment
                 .where((e) => e.id == _selectedEquipmentId)
@@ -219,8 +223,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             getLabel: (e) => e.name,
             onChanged: (v) => setState(() => _selectedEquipmentId = v?.id),
           ),
-          const SizedBox(width: AppSpacing.md),
-          FilterChipGroup<MovementPattern>(
+          _FilterMenuChip<MovementPattern>(
             label: 'Pattern',
             value: _selectedPattern,
             options: MovementPattern.values,
@@ -253,6 +256,83 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _ExerciseDetailSheet(exerciseId: summary.exercise.id),
+    );
+  }
+}
+
+/// A single filter dimension, collapsed to one chip that opens its options.
+///
+/// Shows the dimension name when unset and the chosen value when set, so
+/// the active filters are readable at a glance without a legend.
+class _FilterMenuChip<T extends Object> extends StatelessWidget {
+  const _FilterMenuChip({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.getLabel,
+    required this.onChanged,
+  });
+
+  final String label;
+  final T? value;
+  final List<T> options;
+  final String Function(T) getLabel;
+  final void Function(T?) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool active = value != null;
+
+    return PopupMenuButton<T?>(
+      tooltip: 'Filter by ${label.toLowerCase()}',
+      initialValue: value,
+      onSelected: onChanged,
+      itemBuilder: (_) => <PopupMenuEntry<T?>>[
+        PopupMenuItem<T?>(value: null, child: Text('All $label')),
+        const PopupMenuDivider(),
+        for (final T option in options)
+          PopupMenuItem<T?>(value: option, child: Text(getLabel(option))),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        constraints: const BoxConstraints(
+          minHeight: AppSpacing.minTapTarget,
+        ),
+        decoration: BoxDecoration(
+          color: active ? scheme.secondaryContainer : scheme.surface,
+          border: Border.all(
+            color: active ? scheme.secondary : scheme.outlineVariant,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              active ? getLabel(value as T) : label,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: active
+                    ? scheme.onSecondaryContainer
+                    : scheme.onSurfaceVariant,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Icon(
+              active ? Icons.close : Icons.arrow_drop_down,
+              size: 18,
+              color: active
+                  ? scheme.onSecondaryContainer
+                  : scheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

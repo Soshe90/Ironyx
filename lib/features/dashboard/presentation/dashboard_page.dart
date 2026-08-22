@@ -16,6 +16,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/page_body.dart';
+import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/sparkline.dart';
 import '../../../core/widgets/stat_strip.dart';
@@ -80,6 +81,10 @@ class DashboardPage extends StatelessWidget {
     );
   }
 }
+
+/// Trend trace beside the weekly volume figure.
+const double _sparklineWidthCompact = 96;
+const double _sparklineWidthWide = 200;
 
 /// Time-of-day greeting. Orients the user faster than a static wordmark,
 /// which they already know — they just opened the app.
@@ -335,7 +340,11 @@ class _WeekBody extends StatelessWidget {
             if (snapshot.volumeSeries.length >= 2) ...<Widget>[
               const SizedBox(width: AppSpacing.md),
               SizedBox(
-                width: 96,
+                // Widens with the card rather than staying phone-sized on a
+                // tablet, where a 96dp trace reads as a stray fragment.
+                width: context.breakpoint == Breakpoint.compact
+                    ? _sparklineWidthCompact
+                    : _sparklineWidthWide,
                 child: Sparkline(
                   values: snapshot.volumeSeries,
                   color: scheme.primary,
