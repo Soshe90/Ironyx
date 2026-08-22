@@ -32,7 +32,10 @@ class ProgramsTable extends Table {
   /// ISO-8601 UTC last modified timestamp.
   DateTimeColumn get updatedAt => dateTime()();
 
-  /// Whether this is a built-in program (not user-deletable).
+  /// Whether this program is still the untouched seed data. Built-ins are
+  /// editable, but the first edit clears this flag (see
+  /// `ProgramDao.updateProgramWithDays`) so re-seeding can't discard the
+  /// user's version.
   BoolColumn get isBuiltIn => boolean().withDefault(const Constant(false))();
 
   @override

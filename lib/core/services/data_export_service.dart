@@ -19,10 +19,9 @@ class DataExportService {
   static const int formatVersion = 1;
 
   /// The exercise catalogue is seed content, not user data (see
-  /// [deleteAllUserData]) — a [ImportMode.replace] must never delete or
-  /// overwrite it, since a hand-edited or partial backup file that omits
-  /// these tables would otherwise leave the catalogue empty with nothing to
-  /// reseed it, breaking every workout/program screen.
+  /// [deleteAllUserData]) — a [ImportMode.replace] must not delete or
+  /// overwrite a populated local catalogue. Restoring a backup must not
+  /// silently downgrade it to an older snapshot.
   static const Set<String> _catalogueTableNames = {
     'exercises_table',
     'exercise_aliases_table',
@@ -38,22 +37,26 @@ class DataExportService {
   };
 
   /// Full database dump as the versioned JSON envelope.
-  Future<String> buildJsonExport(AppDatabase db) async {
-    final Map<String, List<Map<String, Object?>>> tables = {};
-    for (final table in db.allTables) {
-      final rows =
-          await db.customSelect('SELECT * FROM ${table.actualTableName}').get();
-      tables[table.actualTableName] = rows.map((r) => r.data).toList();
-    }
+  Future<String> buildJsonExport(AppDatabase db) {
+    return db.transaction(() async {
+      final Map<String, List<Map<String, Object?>>> tables = {};
+      for (final table in db.allTables) {
+        final rows = await db
+            .customSelect(
+                'SELECT * FROM ${_quoteIdentifier(table.actualTableName)}')
+            .get();
+        tables[table.actualTableName] = rows.map((r) => r.data).toList();
+      }
 
-    final Map<String, Object?> envelope = {
-      'formatVersion': formatVersion,
-      'dbSchemaVersion': db.schemaVersion,
-      'appVersion': kAppVersion,
-      'exportedAt': DateTime.now().toUtc().toIso8601String(),
-      'tables': tables,
-    };
-    return const JsonEncoder.withIndent('  ').convert(envelope);
+      final Map<String, Object?> envelope = {
+        'formatVersion': formatVersion,
+        'dbSchemaVersion': db.schemaVersion,
+        'appVersion': kAppVersion,
+        'exportedAt': DateTime.now().toUtc().toIso8601String(),
+        'tables': tables,
+      };
+      return const JsonEncoder.withIndent('  ').convert(envelope);
+    });
   }
 
   /// One row per completed set, flattened for opening in a spreadsheet.
@@ -110,13 +113,14 @@ class DataExportService {
       );
 
   /// Applies a validated envelope inside a single transaction, preceded by
-  /// an automatic snapshot of the current database (ADR-7's safety net —
-  /// written to [snapshotDir], never surfaced in the UI).
+  /// automatic snapshot of the current database (ADR-7's safety net —
+  /// written to [snapshotDir] and retained for restore from Settings).
   ///
   /// [ImportMode.replace] deletes every non-catalogue table first (children
   /// before parents, so RESTRICT foreign keys never trip) then inserts
-  /// everything from the envelope. The exercise catalogue is left alone
-  /// entirely — see [_catalogueTableNames]. [ImportMode.merge] leaves
+  /// everything from the envelope. Catalogue preservation is handled for
+  /// intentionally incomplete files; a complete export restores catalogue
+  /// rows as supplied. [ImportMode.merge] leaves
   /// existing rows alone and upserts by id — a real `ON CONFLICT DO
   /// UPDATE`, not `INSERT OR REPLACE`, which is a delete-then-insert
   /// internally and trips the same RESTRICT foreign keys a prior seeder bug
@@ -126,26 +130,65 @@ class DataExportService {
     ImportEnvelope envelope, {
     required ImportMode mode,
     required String snapshotDirPath,
+  }) =>
+      _applyImport(
+        db,
+        envelope,
+        mode: mode,
+        snapshotDirPath: snapshotDirPath,
+        createSnapshot: true,
+      );
+
+  Future<void> _applyImport(
+    AppDatabase db,
+    ImportEnvelope envelope, {
+    required ImportMode mode,
+    required String snapshotDirPath,
+    required bool createSnapshot,
   }) async {
-    final String snapshotJson = await buildJsonExport(db);
-    final File snapshotFile = File(
-      '$snapshotDirPath/pre_import_snapshot_'
-      '${DateTime.now().toUtc().millisecondsSinceEpoch}.json',
-    );
-    await snapshotFile.writeAsString(snapshotJson);
+    if (envelope.dbSchemaVersion != db.schemaVersion) {
+      throw ImportValidationException(
+        'This backup uses database schema ${envelope.dbSchemaVersion}, '
+        'but this app uses schema ${db.schemaVersion}. Update or migrate '
+        'the backup before importing.',
+      );
+    }
+
+    if (createSnapshot) {
+      final String snapshotJson = await buildJsonExport(db);
+      final File snapshotFile = File(
+        '$snapshotDirPath/pre_import_snapshot_'
+        '${DateTime.now().toUtc().millisecondsSinceEpoch}.json',
+      );
+      await snapshotFile.writeAsString(snapshotJson);
+    }
 
     final List<String> tableOrder =
         db.allTables.map((t) => t.actualTableName).toList();
 
-    // A genuine FitTrack export always has a key (possibly an empty list)
-    // for every table, catalogue included — see [buildJsonExport]. If a
-    // catalogue table's key is missing entirely, this file was hand-edited
-    // or truncated; skip touching that table rather than wiping the local
-    // catalogue with nothing to restore it.
+    // Preserve a populated local catalogue during replace so restoring an
+    // older backup cannot downgrade it. An empty catalogue is allowed to be
+    // restored, which keeps import useful for a fresh database.
+    final protectedCatalogueTables = <String>{};
+    if (mode == ImportMode.replace) {
+      for (final tableName in _catalogueTableNames) {
+        if (!envelope.tables.containsKey(tableName)) {
+          protectedCatalogueTables.add(tableName);
+          continue;
+        }
+        final count = await db
+            .customSelect(
+              'SELECT COUNT(*) AS count FROM ${_quoteIdentifier(tableName)}',
+            )
+            .getSingle();
+        if (count.read<int>('count') > 0) {
+          protectedCatalogueTables.add(tableName);
+        }
+      }
+    }
     bool skipInReplace(String tableName) =>
         mode == ImportMode.replace &&
-        _catalogueTableNames.contains(tableName) &&
-        !envelope.tables.containsKey(tableName);
+        protectedCatalogueTables.contains(tableName);
 
     await db.transaction(() async {
       if (mode == ImportMode.replace) {
@@ -161,16 +204,28 @@ class DataExportService {
             envelope.tables[tableName] ?? const [];
         if (rows.isEmpty) continue;
 
-        final List<String> columns = rows.first.keys.toList();
+        final Set<String> tableColumns = await _columnsForTable(db, tableName);
+        final Set<String> rowColumns = {
+          for (final row in rows) ...row.keys,
+        };
+        final Set<String> unknownColumns = rowColumns.difference(tableColumns);
+        if (unknownColumns.isNotEmpty) {
+          throw ImportValidationException(
+            'This backup contains unknown columns for $tableName: '
+            '${unknownColumns.join(', ')}.',
+          );
+        }
+
+        final List<String> columns = rowColumns.toList()..sort();
         final String placeholders = List.filled(columns.length, '?').join(', ');
-        final String columnList = columns.join(', ');
+        final String columnList = columns.map(_quoteIdentifier).join(', ');
 
         final String sql = switch (mode) {
           ImportMode.replace =>
             'INSERT INTO $tableName ($columnList) VALUES ($placeholders)',
           ImportMode.merge => 'INSERT INTO $tableName ($columnList) '
               'VALUES ($placeholders) ON CONFLICT(id) DO UPDATE SET '
-              '${columns.where((c) => c != 'id').map((c) => '$c = excluded.$c').join(', ')}',
+              '${columns.where((c) => c != 'id').map((c) => '${_quoteIdentifier(c)} = excluded.${_quoteIdentifier(c)}').join(', ')}',
         };
 
         for (final row in rows) {
@@ -178,7 +233,67 @@ class DataExportService {
         }
       }
     });
+
+    if (createSnapshot) {
+      await _cleanupSnapshots(snapshotDirPath);
+    }
   }
+
+  Future<List<File>> listSnapshots(String snapshotDirPath) async {
+    final directory = Directory(snapshotDirPath);
+    if (!directory.existsSync()) return const [];
+    final files = await directory
+        .list()
+        .where((entity) =>
+            entity is File &&
+            entity.path.split(Platform.pathSeparator).last.startsWith(
+                  'pre_import_snapshot_',
+                ) &&
+            entity.path.endsWith('.json'))
+        .cast<File>()
+        .toList();
+    files.sort((a, b) => b.path.compareTo(a.path));
+    return files;
+  }
+
+  Future<void> restoreSnapshot(
+    AppDatabase db,
+    File snapshotFile, {
+    required String snapshotDirPath,
+  }) async {
+    final envelope = parseImport(await snapshotFile.readAsString());
+    await _applyImport(
+      db,
+      envelope,
+      mode: ImportMode.replace,
+      snapshotDirPath: snapshotDirPath,
+      createSnapshot: false,
+    );
+  }
+
+  Future<void> _cleanupSnapshots(String snapshotDirPath) async {
+    final snapshots = await listSnapshots(snapshotDirPath);
+    for (final file in snapshots.skip(3)) {
+      await file.delete();
+    }
+  }
+
+  Future<Set<String>> _columnsForTable(
+    AppDatabase db,
+    String tableName,
+  ) async {
+    final rows = await db
+        .customSelect(
+          'PRAGMA table_info(${_quoteIdentifier(tableName)})',
+        )
+        .get();
+    return {
+      for (final row in rows) row.read<String>('name'),
+    };
+  }
+
+  String _quoteIdentifier(String identifier) =>
+      '"${identifier.replaceAll('"', '""')}"';
 
   /// Deletes all user-logged data — workouts, timer sessions, programs,
   /// templates, body metrics — but not the exercise catalogue, which is
@@ -202,6 +317,10 @@ class DataExportService {
         await db.customStatement('DELETE FROM programs_table');
         await db.customStatement('DELETE FROM templates_table');
         await db.customStatement('DELETE FROM body_metrics_table');
+        // Includes the account association: "delete all my data" must not
+        // leave the next person to open the app looking at someone else's
+        // name and email.
+        await db.customStatement('DELETE FROM profiles_table');
       });
 
   Future<void> writeStringToFile(String path, String content) =>

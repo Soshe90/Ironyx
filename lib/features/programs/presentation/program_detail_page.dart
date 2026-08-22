@@ -28,8 +28,10 @@ class ProgramDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(programDetailProvider(programId));
-    final bool showEditAction =
-        detailAsync.value != null && !detailAsync.value!.program.isBuiltIn;
+    // Built-in programs are editable too — the first edit converts them to
+    // custom (see `ProgramDao.updateProgramWithDays`), so the seed data is
+    // a starting point rather than a read-only fixture.
+    final bool showEditAction = detailAsync.value != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -293,8 +295,7 @@ class _DayCard extends StatelessWidget {
                     AppSpacing.minTapTarget,
                   ),
                 ),
-                onPressed:
-                    day.exercises.isEmpty ? null : onStart,
+                onPressed: day.exercises.isEmpty ? null : onStart,
                 child: const Text('Start'),
               ),
             ],

@@ -136,6 +136,11 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
   /// entirely with [days], in one transaction. Used by the program editor —
   /// simpler and safer than diffing individual day/exercise rows against
   /// whatever the user rearranged in the UI.
+  ///
+  /// Editing a built-in program converts it to a custom one. Without that,
+  /// [deleteBuiltInPrograms] would silently discard the user's edits the
+  /// next time the built-in seed version advances — the edit would look
+  /// saved and then vanish on a later launch.
   Future<void> updateProgramWithDays(
     String programId, {
     required String name,
@@ -144,13 +149,13 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
     required List<ProgramDayInsert> days,
   }) {
     return transaction(() async {
-      await (update(programsTable)..where((t) => t.id.equals(programId)))
-          .write(
+      await (update(programsTable)..where((t) => t.id.equals(programId))).write(
         ProgramsTableCompanion(
           name: Value(name),
           description: Value(description),
           splitType: Value(splitType),
           updatedAt: Value(DateTime.now().toUtc()),
+          isBuiltIn: const Value(false),
         ),
       );
 
@@ -158,7 +163,8 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
             ..where((t) => t.programId.equals(programId)))
           .get();
       for (final link in existingLinks) {
-        await (delete(templatesTable)..where((t) => t.id.equals(link.templateId)))
+        await (delete(templatesTable)
+              ..where((t) => t.id.equals(link.templateId)))
             .go();
       }
 
@@ -168,7 +174,8 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
 
   /// Shared by [insertProgram] and [updateProgramWithDays]: inserts each
   /// day's template, its exercises, and the program↔template link.
-  Future<void> _insertDays(String programId, List<ProgramDayInsert> days) async {
+  Future<void> _insertDays(
+      String programId, List<ProgramDayInsert> days) async {
     for (final day in days) {
       final template = day.template;
       await into(templatesTable).insert(template);
@@ -185,6 +192,17 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
         ),
       );
     }
+  }
+
+  /// The names of every program currently stored. `programs_table.name` is
+  /// UNIQUE, so the seeder checks this before re-inserting a built-in whose
+  /// name a user-owned program may have taken over.
+  Future<Set<String>> allProgramNames() async {
+    final rows = await (selectOnly(programsTable)..addColumns([
+          programsTable.name,
+        ]))
+        .get();
+    return rows.map((r) => r.read(programsTable.name)!).toSet();
   }
 
   /// Delete a program. Cascades to its day-templates and their exercises.

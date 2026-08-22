@@ -111,26 +111,28 @@ class ProgramImportService {
 
   /// Inserts parsed programs. Exercises listed in [result.unknownExercises]
   /// are already excluded, so this is a straightforward bulk write.
-  Future<void> apply(AppDatabase db, ProgramImportResult result) async {
-    final dao = ProgramDao(db);
-    final now = DateTime.now().toUtc();
+  Future<void> apply(AppDatabase db, ProgramImportResult result) {
+    return db.transaction(() async {
+      final dao = ProgramDao(db);
+      final now = DateTime.now().toUtc();
 
-    for (final program in result.programs) {
-      await dao.insertProgram(
-        ProgramsTableCompanion.insert(
-          id: _uuid.v4(),
-          name: program.name,
-          description: Value('Imported · ${program.days.length} days'),
-          splitType: const Value('custom'),
-          createdAt: now,
-          updatedAt: now,
-        ),
-        [
-          for (var i = 0; i < program.days.length; i++)
-            _dayInsert(program, program.days[i], i, now),
-        ],
-      );
-    }
+      for (final program in result.programs) {
+        await dao.insertProgram(
+          ProgramsTableCompanion.insert(
+            id: _uuid.v4(),
+            name: program.name,
+            description: Value('Imported · ${program.days.length} days'),
+            splitType: const Value('custom'),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          [
+            for (var i = 0; i < program.days.length; i++)
+              _dayInsert(program, program.days[i], i, now),
+          ],
+        );
+      }
+    });
   }
 
   ProgramDayInsert _dayInsert(

@@ -108,6 +108,25 @@ Applies to: `HapticFeedback` (no-op on web), local notifications, wakelock, file
 
 ---
 
+## ADR-8 — Accounts are optional, Supabase-backed, and hold no workout data
+
+**Decision:** Email/password accounts via Supabase, behind an `AuthService` interface. Signing in is optional: the app is fully usable, forever, without one.
+
+Supabase over Firebase Auth because it is a pure-Dart HTTP client and therefore works on all four targets — Firebase Auth has no Linux desktop support. Credentials arrive as `--dart-define=SUPABASE_URL=` / `SUPABASE_ANON_KEY=`, never committed.
+
+Workouts, programs, templates and body metrics stay in local SQLite and are never uploaded. An account carries identity only. `profiles_table` holds the personal details (name, date of birth, sex, height) as a single row, associated with an account through a nullable `remote_user_id`.
+
+**Binding rules:**
+- No `redirect` on the router for auth. A login wall is the one change able to stop a cold offline launch from reaching the dashboard.
+- No `supabase_flutter` import outside `features/auth/domain/supabase_auth_service.dart`. Everything else speaks `AuthUser` / `AuthFailure`.
+- Implementations translate every transport and vendor error into `AuthFailure`; an unmapped exception reaching the UI is a bug. Network failure is its own kind, distinct from bad credentials.
+- A build without credentials resolves `authServiceProvider` to `DisabledAuthService` and says so in Settings. This is ADR-6's degradation rule applied to accounts, and it is what keeps a credential-free `flutter run` and the whole test suite working.
+- `AuthService.currentUser` is synchronous and reads only local storage, so an offline launch restores the session without a network call.
+- Tests override `authServiceProvider` with a fake. Nothing in the suite touches the network.
+- Body weight belongs to `body_metrics_table`, not to the profile. A second copy would immediately disagree with the Progress charts.
+
+---
+
 ## Cross-cutting conventions
 
 **Layering.** `presentation/` may import `domain/`. `domain/` imports nothing from `data/` or `presentation/`. `data/` implements interfaces declared in `domain/`.

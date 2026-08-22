@@ -337,4 +337,3 @@ class _SessionTotals extends ConsumerWidget {
     );
   }
 }
-

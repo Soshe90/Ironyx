@@ -132,7 +132,9 @@ class WeekSnapshot {
       previousVolumeKg: volumeFor(lastWeek),
       sessions: sessionsFor(thisWeek),
       streakWeeks: streak,
-      volumeSeries: <double>[for (final WeeklyVolume w in volume) w.totalVolumeKg],
+      volumeSeries: <double>[
+        for (final WeeklyVolume w in volume) w.totalVolumeKg
+      ],
       hasHistory: volume.isNotEmpty,
     );
   }

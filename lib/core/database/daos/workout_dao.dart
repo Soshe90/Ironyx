@@ -243,9 +243,8 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     // Indexed placeholders (?1 current-window start, ?2 previous-window
     // start) because each is referenced more than once; drift binds the
     // `variables` list positionally.
-    final String currentCase = since == null
-        ? oneRm
-        : 'CASE WHEN w.started_at >= ?1 THEN $oneRm END';
+    final String currentCase =
+        since == null ? oneRm : 'CASE WHEN w.started_at >= ?1 THEN $oneRm END';
     final String previousCase = since == null
         ? 'NULL'
         : 'CASE WHEN w.started_at >= ?2 AND w.started_at < ?1 '

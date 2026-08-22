@@ -1,11 +1,13 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/timer/domain/timer_preset.dart';
+import '../services/exercise_seeder.dart';
 import 'app_database.dart';
 import 'daos/body_metrics_dao.dart';
 import 'daos/equipment_dao.dart';
 import 'daos/exercise_dao.dart';
 import 'daos/muscle_dao.dart';
+import 'daos/profile_dao.dart';
 import 'daos/program_dao.dart';
 import 'daos/template_dao.dart';
 import 'daos/timer_dao.dart';
@@ -69,15 +71,26 @@ Future<List<TimerPreset>> savedTimerPresets(Ref ref) =>
 BodyMetricsDao bodyMetricsDao(Ref ref) =>
     BodyMetricsDao(ref.watch(appDatabaseProvider));
 
+/// Profile DAO provider.
+@Riverpod(keepAlive: true)
+ProfileDao profileDao(Ref ref) => ProfileDao(ref.watch(appDatabaseProvider));
+
 /// Stream of all exercises (display-ready summaries) — used by Library UI.
 @Riverpod(keepAlive: true)
 Stream<List<ExerciseSummary>> allExercisesStream(Ref ref) =>
-    ref.watch(exerciseDaoProvider).watchAll();
+    ref.watch(exerciseSeederProvider.future).asStream().asyncExpand(
+          (_) => ref.watch(exerciseDaoProvider).watchAll(),
+        );
 
 /// Stream of exercises matching a search query (name or alias).
 @Riverpod(keepAlive: true)
-Stream<List<ExerciseSummary>> exercisesSearchStream(Ref ref, String query) =>
-    ref.watch(exerciseDaoProvider).searchByName(query);
+Stream<List<ExerciseSummary>> exercisesSearchStream(
+  Ref ref,
+  String query,
+) =>
+    ref.watch(exerciseSeederProvider.future).asStream().asyncExpand(
+          (_) => ref.watch(exerciseDaoProvider).searchByName(query),
+        );
 
 /// Stream of exercises filtered by criteria.
 @Riverpod(keepAlive: true)
@@ -87,16 +100,20 @@ Stream<List<ExerciseSummary>> exercisesFilteredStream(
   String? equipmentId,
   MovementPattern? pattern,
 }) =>
-    ref.watch(exerciseDaoProvider).filterBy(
-          muscleId: muscleId,
-          equipmentId: equipmentId,
-          pattern: pattern,
+    ref.watch(exerciseSeederProvider.future).asStream().asyncExpand(
+          (_) => ref.watch(exerciseDaoProvider).filterBy(
+                muscleId: muscleId,
+                equipmentId: equipmentId,
+                pattern: pattern,
+              ),
         );
 
 /// The full nested view of one exercise, for the detail sheet.
 @riverpod
-Future<ExerciseDetail?> exerciseDetail(Ref ref, String exerciseId) =>
-    ref.watch(exerciseDaoProvider).getWithDetails(exerciseId);
+Future<ExerciseDetail?> exerciseDetail(Ref ref, String exerciseId) async {
+  await ref.watch(exerciseSeederProvider.future);
+  return ref.watch(exerciseDaoProvider).getWithDetails(exerciseId);
+}
 
 /// All muscles — used to build the Library's muscle filter.
 @Riverpod(keepAlive: true)

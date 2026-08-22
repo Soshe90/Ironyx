@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -36,6 +37,12 @@ class DataManagementSection extends ConsumerWidget {
           title: const Text('Import data'),
           subtitle: const Text('Restore from a backup file'),
           onTap: () => _import(context, ref),
+        ),
+        ListTile(
+          leading: const Icon(Icons.restore_outlined),
+          title: const Text('Restore pre-import snapshot'),
+          subtitle: const Text('Undo a recent import'),
+          onTap: () => _restoreSnapshot(context, ref),
         ),
         ListTile(
           leading: Icon(Icons.delete_forever_outlined, color: scheme.error),
@@ -128,10 +135,90 @@ class DataManagementSection extends ConsumerWidget {
     }
 
     if (!context.mounted) return;
-    final ImportMode? mode = await _confirmImport(context, envelope);
+    final database = ref.read(appDatabaseProvider);
+    final expectedTables = {
+      for (final table in database.allTables) table.actualTableName,
+    };
+    final missingTables =
+        expectedTables.difference(envelope.tables.keys.toSet());
+    final unknownTables =
+        envelope.tables.keys.toSet().difference(expectedTables);
+    final ImportMode? mode = await _confirmImport(
+      context,
+      envelope,
+      missingTables,
+      unknownTables,
+    );
     if (mode == null || !context.mounted) return;
 
     unawaited(_runImport(context, ref, service, envelope, mode));
+  }
+
+  Future<void> _restoreSnapshot(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final service = ref.read(dataExportServiceProvider);
+    final supportDir = await getApplicationSupportDirectory();
+    final snapshots = await service.listSnapshots(supportDir.path);
+    if (!context.mounted) return;
+    if (snapshots.isEmpty) {
+      await _showError(context, 'There are no recent import snapshots.');
+      return;
+    }
+
+    final File? selected = await showDialog<File>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Restore snapshot'),
+        children: [
+          for (final snapshot in snapshots)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, snapshot),
+              child: Text(
+                snapshot.path.split(Platform.pathSeparator).last,
+              ),
+            ),
+        ],
+      ),
+    );
+    if (selected == null || !context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore snapshot?'),
+        content: const Text(
+          'This replaces current user data with the state saved before that import.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await service.restoreSnapshot(
+        ref.read(appDatabaseProvider),
+        selected,
+        snapshotDirPath: supportDir.path,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Snapshot restored')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await _showError(context, 'Snapshot restore failed: $e');
+    }
   }
 
   Future<void> _runImport(
@@ -172,6 +259,8 @@ class DataManagementSection extends ConsumerWidget {
   Future<ImportMode?> _confirmImport(
     BuildContext context,
     ImportEnvelope envelope,
+    Set<String> missingTables,
+    Set<String> unknownTables,
   ) async {
     ImportMode mode = ImportMode.merge;
     final Map<String, int> counts = envelope.counts;
@@ -197,6 +286,21 @@ class DataManagementSection extends ConsumerWidget {
                   Text('${counts[table]} ${_friendlyName(table)}'),
                 if (highlights.isEmpty)
                   const Text('This backup contains no workout data.'),
+                if (missingTables.isNotEmpty || unknownTables.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    '${[
+                      if (missingTables.isNotEmpty)
+                        'Missing ${missingTables.length} database '
+                            '${missingTables.length == 1 ? 'table' : 'tables'}',
+                      if (unknownTables.isNotEmpty)
+                        '${unknownTables.length} unknown '
+                            '${unknownTables.length == 1 ? 'table' : 'tables'}',
+                    ].join('; ')}. The file may be partial, truncated, or hand-edited.',
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 RadioGroup<ImportMode>(
                   groupValue: mode,

@@ -51,4 +51,22 @@ abstract final class Routes {
   /// The running interval timer session (M4).
   static const String activeTimer = '/timer/active';
   static const String activeTimerName = 'activeTimer';
+
+  // ---- Accounts (ADR-8) ----
+  //
+  // Reached from Settings, never forced: signing in is optional and the app
+  // is fully usable as a guest, so none of these is a redirect target.
+
+  static const String signIn = '/auth/sign-in';
+  static const String signInName = 'signIn';
+
+  static const String signUp = '/auth/sign-up';
+  static const String signUpName = 'signUp';
+
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String forgotPasswordName = 'forgotPassword';
+
+  /// Name, date of birth, sex, height and current weight.
+  static const String personalDetails = '/profile';
+  static const String personalDetailsName = 'personalDetails';
 }

@@ -12,8 +12,8 @@ part 'program_editor_controller.g.dart';
 const _uuid = Uuid();
 
 /// Owns the in-progress edit of a program: a brand new one when
-/// [programId] is null, or an existing (always non-built-in — the editor
-/// is never opened on a built-in program) one loaded from the DB.
+/// [programId] is null, or an existing one loaded from the DB. Built-in
+/// programs are editable; saving one converts it to a custom program.
 ///
 /// Not persisted incrementally like `ActiveWorkoutNotifier`'s draft — a
 /// half-built program isn't useful to resume later the way a half-logged
@@ -72,8 +72,8 @@ class ProgramEditorController extends _$ProgramEditorController {
         ),
       );
 
-  void removeDay(String dayId) =>
-      _update((d) => d.copyWith(days: d.days.where((x) => x.id != dayId).toList()));
+  void removeDay(String dayId) => _update(
+      (d) => d.copyWith(days: d.days.where((x) => x.id != dayId).toList()));
 
   void renameDay(String dayId, String name) =>
       _updateDay(dayId, (day) => day.copyWith(dayName: name));
@@ -111,8 +111,7 @@ class ProgramEditorController extends _$ProgramEditorController {
   void removeExercise(String dayId, String exerciseRowId) => _updateDay(
         dayId,
         (day) => day.copyWith(
-          exercises:
-              day.exercises.where((x) => x.id != exerciseRowId).toList(),
+          exercises: day.exercises.where((x) => x.id != exerciseRowId).toList(),
         ),
       );
 
@@ -127,7 +126,8 @@ class ProgramEditorController extends _$ProgramEditorController {
   /// target set / AMRAP" per `TemplateExercisesTable.targetReps`) — unlike
   /// [setExerciseTargetSets], there's no "leave unchanged" case to
   /// distinguish from "clear it".
-  void setExerciseTargetReps(String dayId, String exerciseRowId, String? reps) =>
+  void setExerciseTargetReps(
+          String dayId, String exerciseRowId, String? reps) =>
       _updateExercise(
         dayId,
         exerciseRowId,

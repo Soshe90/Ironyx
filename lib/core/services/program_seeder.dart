@@ -44,21 +44,27 @@ class ProgramSeeder extends _$ProgramSeeder {
 
     final dao = ref.read(programDaoProvider);
     await dao.deleteBuiltInPrograms();
-    await dao.insertProgram(
-      _programCompanion('builtin_full_body', 'Full Body',
-          splitType: 'fullBody', dayCount: 3),
-      _days('builtin_full_body', _fullBodyDays()),
-    );
-    await dao.insertProgram(
-      _programCompanion('builtin_upper_lower', 'Upper / Lower',
-          splitType: 'upperLower', dayCount: 4),
-      _days('builtin_upper_lower', _upperLowerDays()),
-    );
-    await dao.insertProgram(
-      _programCompanion('builtin_ppl', 'Push / Pull / Legs',
-          splitType: 'ppl', dayCount: 3),
-      _days('builtin_ppl', _pplDays()),
-    );
+
+    // Editing a built-in converts it to a custom program (keeping its name),
+    // so a surviving program can now own a name this seed wants. Skip those
+    // rather than hitting the UNIQUE constraint on `programs_table.name` —
+    // an uncaught failure here blocks app startup, and the user's edited
+    // copy is the one they'd rather keep anyway.
+    final Set<String> taken = await dao.allProgramNames();
+
+    for (final (id, name, splitType, dayCount, days) in <
+        (String, String, String, int, List<_SeedDay>)>[
+      ('builtin_full_body', 'Full Body', 'fullBody', 3, _fullBodyDays()),
+      ('builtin_upper_lower', 'Upper / Lower', 'upperLower', 4,
+          _upperLowerDays()),
+      ('builtin_ppl', 'Push / Pull / Legs', 'ppl', 3, _pplDays()),
+    ]) {
+      if (taken.contains(name)) continue;
+      await dao.insertProgram(
+        _programCompanion(id, name, splitType: splitType, dayCount: dayCount),
+        _days(id, days),
+      );
+    }
 
     await prefs.setInt(_versionKey, _currentVersion);
   }

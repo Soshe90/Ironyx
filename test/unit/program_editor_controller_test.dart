@@ -50,8 +50,7 @@ void main() {
 
     notifier.setName('Full Body');
     notifier.addDay();
-    final draft =
-        container.read(programEditorControllerProvider(null)).value!;
+    final draft = container.read(programEditorControllerProvider(null)).value!;
     final dayId = draft.days.single.id;
     notifier.renameDay(dayId, 'Workout A');
     notifier.addExercise(dayId, exerciseId: 'bench', name: 'Bench Press');
@@ -71,8 +70,7 @@ void main() {
     expect(detail.days.single.exercises.first.targetSets, 3);
   });
 
-  test('editing an existing program replaces its days, not appends',
-      () async {
+  test('editing an existing program replaces its days, not appends', () async {
     // Seed a program directly at the DAO level, then load it into the
     // editor and change it.
     final dao = container.read(programDaoProvider);
@@ -81,14 +79,19 @@ void main() {
     await container.read(programEditorControllerProvider(null).future);
     createNotifier.setName('Push Pull');
     createNotifier.addDay();
-    final firstDayId =
-        container.read(programEditorControllerProvider(null)).value!.days.single.id;
-    createNotifier.addExercise(firstDayId, exerciseId: 'bench', name: 'Bench Press');
+    final firstDayId = container
+        .read(programEditorControllerProvider(null))
+        .value!
+        .days
+        .single
+        .id;
+    createNotifier.addExercise(firstDayId,
+        exerciseId: 'bench', name: 'Bench Press');
     final programId = await createNotifier.save();
 
     // Now edit it: load, rename, replace the single day with a different one.
-    final editNotifier = container
-        .read(programEditorControllerProvider(programId).notifier);
+    final editNotifier =
+        container.read(programEditorControllerProvider(programId).notifier);
     final loaded =
         await container.read(programEditorControllerProvider(programId).future);
     expect(loaded.name, 'Push Pull');
@@ -127,8 +130,8 @@ void main() {
     createNotifier.addExercise(dayId, exerciseId: 'bench', name: 'Bench Press');
     final programId = await createNotifier.save();
 
-    final deleteNotifier = container
-        .read(programEditorControllerProvider(programId).notifier);
+    final deleteNotifier =
+        container.read(programEditorControllerProvider(programId).notifier);
     await container.read(programEditorControllerProvider(programId).future);
     await deleteNotifier.delete();
 

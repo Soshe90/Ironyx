@@ -16,6 +16,7 @@ import 'tables/exercise_tags.dart';
 import 'tables/exercise_variations.dart';
 import 'tables/exercises.dart';
 import 'tables/muscles.dart';
+import 'tables/profiles.dart';
 import 'tables/programs.dart';
 import 'tables/templates.dart';
 import 'tables/timer_presets.dart';
@@ -52,6 +53,7 @@ part 'app_database.g.dart';
     TimerIntervalsTable,
     TimerPresetsTable,
     BodyMetricsTable,
+    ProfilesTable,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -66,11 +68,75 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
+
+  Future<void> _createIndexes() async {
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_exercise_aliases_exercise_id '
+          'ON exercise_aliases_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_equipment_exercise_id '
+          'ON exercise_equipment_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_equipment_equipment_id '
+          'ON exercise_equipment_table (equipment_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_instructions_exercise_id '
+          'ON exercise_instructions_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_media_exercise_id '
+          'ON exercise_media_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_muscles_exercise_id '
+          'ON exercise_muscles_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_muscles_muscle_id '
+          'ON exercise_muscles_table (muscle_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_sources_exercise_id '
+          'ON exercise_sources_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_tags_exercise_id '
+          'ON exercise_tags_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_variations_parent_id '
+          'ON exercise_variations_table (parent_exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_exercise_variations_exercise_id '
+          'ON exercise_variations_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_muscles_parent_id '
+          'ON muscles_table (parent_id)',
+      'CREATE INDEX IF NOT EXISTS idx_program_templates_program_id '
+          'ON program_templates_table (program_id)',
+      'CREATE INDEX IF NOT EXISTS idx_program_templates_template_id '
+          'ON program_templates_table (template_id)',
+      'CREATE INDEX IF NOT EXISTS idx_template_exercises_template_id '
+          'ON template_exercises_table (template_id)',
+      'CREATE INDEX IF NOT EXISTS idx_template_exercises_exercise_id '
+          'ON template_exercises_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_timer_intervals_session_id '
+          'ON timer_intervals_table (session_id)',
+      'CREATE INDEX IF NOT EXISTS idx_workout_exercises_workout_id '
+          'ON workout_exercises_table (workout_id)',
+      'CREATE INDEX IF NOT EXISTS idx_workout_exercises_exercise_id '
+          'ON workout_exercises_table (exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_workout_sets_workout_exercise_id '
+          'ON workout_sets_table (workout_exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_workouts_started_at '
+          'ON workouts_table (started_at)',
+      'CREATE INDEX IF NOT EXISTS idx_body_metrics_date '
+          'ON body_metrics_table (date)',
+    ];
+    final existingTables = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    ).get();
+    final tableNames = {
+      for (final row in existingTables) row.read<String>('name'),
+    };
+    for (final sql in indexes) {
+      final tableName = sql.split(' ON ').last.split(' (').first;
+      if (tableNames.contains(tableName)) {
+        await customStatement(sql);
+      }
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) => m.createAll(),
+        onCreate: (Migrator m) async {
+          await m.createAll();
+          await _createIndexes();
+        },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
             // Historical step, frozen as raw SQL rather than a reference to
@@ -91,6 +157,15 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             await m.createTable(programsTable);
             await m.createTable(programTemplatesTable);
+          }
+          if (from < 6) {
+            await _createIndexes();
+          }
+          if (from < 7) {
+            // Accounts and personal details (ADR-8). Purely additive: no
+            // existing row is touched, and an install that never signs in
+            // simply leaves this table empty.
+            await m.createTable(profilesTable);
           }
         },
         beforeOpen: (OpeningDetails details) async {

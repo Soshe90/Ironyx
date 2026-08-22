@@ -142,13 +142,12 @@ void main() {
   });
 
   group('watchStrengthChange', () {
-    test('compares a window against the one immediately before it',
-        () async {
+    test('compares a window against the one immediately before it', () async {
       final DateTime now = DateTime.now();
       // 40 days ago falls in the previous 30-day window; 10 days ago in
       // the current one.
-      await addWorkout('old', now.subtract(const Duration(days: 40)),
-          [('bench', 100, 5)]);
+      await addWorkout(
+          'old', now.subtract(const Duration(days: 40)), [('bench', 100, 5)]);
       await addWorkout('recent', now.subtract(const Duration(days: 10)),
           [('bench', 110, 5)]);
 
@@ -164,8 +163,8 @@ void main() {
 
     test('a lift only trained this window has no comparison', () async {
       final DateTime now = DateTime.now();
-      await addWorkout('recent', now.subtract(const Duration(days: 5)),
-          [('squat', 140, 5)]);
+      await addWorkout(
+          'recent', now.subtract(const Duration(days: 5)), [('squat', 140, 5)]);
 
       final rows = await dao
           .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
@@ -175,8 +174,7 @@ void main() {
       expect(rows.single.change, isNull);
     });
 
-    test('all-time reports a best with nothing to compare against',
-        () async {
+    test('all-time reports a best with nothing to compare against', () async {
       await addWorkout('w1', DateTime(2020, 1, 1), [('bench', 100, 5)]);
 
       final rows = await dao.watchStrengthChange().first;

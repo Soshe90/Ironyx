@@ -70,8 +70,7 @@ class _EditWorkoutBody extends StatelessWidget {
                   )
                 else ...<Widget>[
                   SliverPadding(
-                    padding: context.sliverGutter
-                        .copyWith(top: AppSpacing.lg),
+                    padding: context.sliverGutter.copyWith(top: AppSpacing.lg),
                     sliver: SliverReorderableList(
                       itemCount: draft.exercises.length,
                       onReorderItem: (int oldIndex, int newIndex) {
@@ -93,8 +92,8 @@ class _EditWorkoutBody extends StatelessWidget {
                     ),
                   ),
                   SliverPadding(
-                    padding: context.sliverGutter
-                        .copyWith(bottom: AppSpacing.xl),
+                    padding:
+                        context.sliverGutter.copyWith(bottom: AppSpacing.xl),
                     sliver: SliverToBoxAdapter(
                       child: OutlinedButton.icon(
                         onPressed: () => _addExercise(context, notifier),

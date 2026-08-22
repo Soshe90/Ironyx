@@ -163,8 +163,7 @@ class _WorkoutDetailBody extends ConsumerWidget {
               exerciseId: exercise.exerciseId,
               workoutId: workoutId,
               name: details.exerciseNames[exercise.id] ?? 'Unknown exercise',
-              sets: details.setsByExercise[exercise.id] ??
-                  const <WorkoutSet>[],
+              sets: details.setsByExercise[exercise.id] ?? const <WorkoutSet>[],
               unit: unit,
             ),
         ],

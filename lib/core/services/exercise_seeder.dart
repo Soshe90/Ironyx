@@ -35,8 +35,19 @@ class ExerciseSeeder extends _$ExerciseSeeder {
     final Map<String, dynamic> seedData =
         jsonDecode(jsonString) as Map<String, dynamic>;
     final int currentVersion = seedData['seedVersion'] as int;
+    final exercises = seedData['exercises'] as List<dynamic>? ?? const [];
+    final exerciseDao = ref.read(exerciseDaoProvider);
+    final seededCount = await (exerciseDao.select(exerciseDao.exercisesTable)
+          ..where((e) => e.seedVersion.equals(currentVersion)))
+        .get()
+        .then((rows) => rows.length);
 
-    if (storedVersion >= currentVersion) return;
+    // The preference is only a fast path. Also verify the catalogue contains
+    // every row for the current asset version so a previously interrupted or
+    // stale seed cannot leave the library incomplete.
+    if (storedVersion >= currentVersion && seededCount >= exercises.length) {
+      return;
+    }
 
     await _seedDatabase(seedData, currentVersion);
     await prefs.setInt(_seedVersionKey, currentVersion);

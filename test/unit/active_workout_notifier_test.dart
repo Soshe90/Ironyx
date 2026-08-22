@@ -122,8 +122,8 @@ void main() {
 
       notifier.cancelScheduledDiscard();
       await Future<void>.delayed(
-          AppDuration.undoWindow + const Duration(seconds: 1),
-        );
+        AppDuration.undoWindow + const Duration(seconds: 1),
+      );
       expect(
         container.read(activeWorkoutProvider),
         isNotNull,

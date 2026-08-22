@@ -73,3 +73,7 @@ coverage/
 
 # Local IDE/agent settings
 .claude/
+
+# Supabase credentials for --dart-define-from-file (ADR-8).
+# The anon key is public by design, but the project URL still stays out of git.
+supabase.json

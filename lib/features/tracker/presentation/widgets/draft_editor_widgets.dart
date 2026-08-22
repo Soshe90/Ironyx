@@ -58,8 +58,8 @@ class ExerciseDraftCard extends ConsumerWidget {
     // persisted `totalVolumeKg` — otherwise this figure and the saved
     // workout's disagree for anyone who logs warm-up sets.
     final double volumeKg = exercise.sets
-        .where((DraftSet s) =>
-            s.isCompleted && !s.isWarmup && !exercise.isWarmup)
+        .where(
+            (DraftSet s) => s.isCompleted && !s.isWarmup && !exercise.isWarmup)
         .fold<double>(0, (double t, DraftSet s) => t + s.weightKg * s.reps);
 
     return Padding(
@@ -91,8 +91,8 @@ class ExerciseDraftCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        _summary(completed, exercise.sets.length, volumeKg,
-                            unit),
+                        _summary(
+                            completed, exercise.sets.length, volumeKg, unit),
                         style: AppTypography.caption(theme),
                       ),
                     ],
@@ -388,6 +388,8 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   /// switches kg/lb mid-workout the displayed number has to be rewritten,
   /// otherwise a 100 entered as kg would silently be re-read as 100 lb.
   WeightUnit? _renderedUnit;
+  Timer? _weightDebounce;
+  Timer? _repsDebounce;
 
   @override
   void initState() {
@@ -406,6 +408,8 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
 
   @override
   void dispose() {
+    _weightDebounce?.cancel();
+    _repsDebounce?.cancel();
     _weightController.dispose();
     _repsController.dispose();
     super.dispose();
@@ -449,14 +453,24 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
               decimal: true,
               onChanged: (String value) {
                 final double? entered = double.tryParse(value);
-                if (entered == null || !entered.isFinite || entered < 0) return;
+                if (entered == null || !entered.isFinite || entered < 0) {
+                  _weightDebounce?.cancel();
+                  return;
+                }
                 final double kg = UnitFormatters.toKg(entered, unit);
-                if (kg > _maxWeightKg) return;
-                widget.controller.updateSet(
-                  widget.exerciseId,
-                  widget.set.id,
-                  weightKg: kg,
-                );
+                if (kg > _maxWeightKg) {
+                  _weightDebounce?.cancel();
+                  return;
+                }
+                _weightDebounce?.cancel();
+                _weightDebounce = Timer(AppDuration.inputDebounce, () {
+                  if (!mounted) return;
+                  widget.controller.updateSet(
+                    widget.exerciseId,
+                    widget.set.id,
+                    weightKg: kg,
+                  );
+                });
               },
             ),
           ),
@@ -467,12 +481,19 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
               semanticLabel: 'Set $index reps',
               onChanged: (String value) {
                 final int? reps = int.tryParse(value);
-                if (reps == null || reps < 0 || reps > _maxReps) return;
-                widget.controller.updateSet(
-                  widget.exerciseId,
-                  widget.set.id,
-                  reps: reps,
-                );
+                if (reps == null || reps < 0 || reps > _maxReps) {
+                  _repsDebounce?.cancel();
+                  return;
+                }
+                _repsDebounce?.cancel();
+                _repsDebounce = Timer(AppDuration.inputDebounce, () {
+                  if (!mounted) return;
+                  widget.controller.updateSet(
+                    widget.exerciseId,
+                    widget.set.id,
+                    reps: reps,
+                  );
+                });
               },
             ),
           ),
@@ -495,8 +516,8 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
               onSelected: (_SetAction action) => switch (action) {
                 _SetAction.duplicate => widget.controller
                     .duplicateSet(widget.exerciseId, widget.set.id),
-                _SetAction.remove => widget.controller
-                    .removeSet(widget.exerciseId, widget.set.id),
+                _SetAction.remove =>
+                  widget.controller.removeSet(widget.exerciseId, widget.set.id),
               },
               itemBuilder: (_) => const <PopupMenuEntry<_SetAction>>[
                 PopupMenuItem<_SetAction>(
@@ -533,8 +554,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
 
   static String _weightText(double kg, WeightUnit? unit) {
     if (kg == 0) return '';
-    final double display =
-        unit == null ? kg : UnitFormatters.fromKg(kg, unit);
+    final double display = unit == null ? kg : UnitFormatters.fromKg(kg, unit);
     return UnitFormatters.plain(display);
   }
 }
@@ -639,4 +659,3 @@ class _SetDoneButton extends StatelessWidget {
     );
   }
 }
-

@@ -420,8 +420,7 @@ class _OneRmSection extends ConsumerWidget {
           loading: () => const _ChartLoading(),
           error: (error, _) => _ChartError(
             error: error,
-            onRetry: () =>
-                ref.invalidate(oneRmSeriesProvider(selected, range)),
+            onRetry: () => ref.invalidate(oneRmSeriesProvider(selected, range)),
           ),
           data: (points) {
             if (points.isEmpty) {
@@ -530,8 +529,7 @@ class _OneRmChart extends StatelessWidget {
                     ),
                     children: [
                       TextSpan(
-                        text:
-                            DateFormatters.full(ordered[spot.x.toInt()].date),
+                        text: DateFormatters.full(ordered[spot.x.toInt()].date),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: scheme.onInverseSurface,
                         ),
@@ -778,8 +776,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
       loading: () => const _ChartLoading(),
       error: (error, _) => _ChartError(
         error: error,
-        onRetry: () =>
-            ref.invalidate(muscleGroupSeriesProvider(widget.range)),
+        onRetry: () => ref.invalidate(muscleGroupSeriesProvider(widget.range)),
       ),
       data: (points) {
         if (points.isEmpty) {
@@ -1197,8 +1194,7 @@ class _BodyWeightChart extends StatelessWidget {
                     ),
                     children: [
                       TextSpan(
-                        text:
-                            DateFormatters.full(ordered[spot.x.toInt()].date),
+                        text: DateFormatters.full(ordered[spot.x.toInt()].date),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: scheme.onInverseSurface,
                         ),

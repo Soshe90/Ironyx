@@ -88,89 +88,91 @@ class WorkoutXlsxImportService {
 
   /// Writes all imported sessions. Historical sessions receive a neutral
   /// one-hour duration because the workbook contains no session timestamps.
-  Future<void> apply(AppDatabase db, WorkoutXlsxImportResult result) async {
-    final dao = WorkoutDao(db);
-    final customExerciseIds = <String, String>{};
-    for (final imported in result.workouts) {
-      for (final exercise in imported.exercises) {
-        if (exercise.exerciseId != null ||
-            customExerciseIds.containsKey(exercise.name)) {
-          continue;
+  Future<void> apply(AppDatabase db, WorkoutXlsxImportResult result) {
+    return db.transaction(() async {
+      final dao = WorkoutDao(db);
+      final customExerciseIds = <String, String>{};
+      for (final imported in result.workouts) {
+        for (final exercise in imported.exercises) {
+          if (exercise.exerciseId != null ||
+              customExerciseIds.containsKey(exercise.name)) {
+            continue;
+          }
+          final id = _uuid.v4();
+          await db.into(db.exercisesTable).insert(
+                ExercisesTableCompanion.insert(
+                  id: id,
+                  slug:
+                      '${_normalize(exercise.name)}-imported-${id.substring(0, 8)}',
+                  name: exercise.name,
+                  category: 'other',
+                  difficulty: 'intermediate',
+                  movementPattern: 'other',
+                  isBodyweight: const Value(false),
+                  seedVersion: 0,
+                ),
+              );
+          customExerciseIds[exercise.name] = id;
         }
-        final id = _uuid.v4();
-        await db.into(db.exercisesTable).insert(
-              ExercisesTableCompanion.insert(
-                id: id,
-                slug:
-                    '${_normalize(exercise.name)}-imported-${id.substring(0, 8)}',
-                name: exercise.name,
-                category: 'other',
-                difficulty: 'intermediate',
-                movementPattern: 'other',
-                isBodyweight: const Value(false),
-                seedVersion: 0,
-              ),
-            );
-        customExerciseIds[exercise.name] = id;
       }
-    }
-    for (final imported in result.workouts) {
-      final startedAt = DateTime.utc(
-        imported.date.year,
-        imported.date.month,
-        imported.date.day,
-        12,
-      );
-      final endedAt = startedAt.add(const Duration(hours: 1));
-      final workoutId = _uuid.v4();
-      final exercises = <WorkoutExercisesTableCompanion>[];
-      final sets = <WorkoutSetsTableCompanion>[];
-      var volumeKg = 0.0;
-
-      for (var exerciseIndex = 0;
-          exerciseIndex < imported.exercises.length;
-          exerciseIndex++) {
-        final exercise = imported.exercises[exerciseIndex];
-        final exerciseId =
-            exercise.exerciseId ?? customExerciseIds[exercise.name]!;
-        final workoutExerciseId = _uuid.v4();
-        exercises.add(
-          WorkoutExercisesTableCompanion.insert(
-            id: workoutExerciseId,
-            workoutId: workoutId,
-            exerciseId: exerciseId,
-            orderIndex: exerciseIndex,
-          ),
+      for (final imported in result.workouts) {
+        final startedAt = DateTime.utc(
+          imported.date.year,
+          imported.date.month,
+          imported.date.day,
+          12,
         );
-        for (var setIndex = 0; setIndex < exercise.sets.length; setIndex++) {
-          final importedSet = exercise.sets[setIndex];
-          sets.add(
-            WorkoutSetsTableCompanion.insert(
-              id: _uuid.v4(),
-              workoutExerciseId: workoutExerciseId,
-              setIndex: setIndex,
-              weightKg: importedSet.weightKg,
-              reps: importedSet.reps,
-              isCompleted: const Value(true),
+        final endedAt = startedAt.add(const Duration(hours: 1));
+        final workoutId = _uuid.v4();
+        final exercises = <WorkoutExercisesTableCompanion>[];
+        final sets = <WorkoutSetsTableCompanion>[];
+        var volumeKg = 0.0;
+
+        for (var exerciseIndex = 0;
+            exerciseIndex < imported.exercises.length;
+            exerciseIndex++) {
+          final exercise = imported.exercises[exerciseIndex];
+          final exerciseId =
+              exercise.exerciseId ?? customExerciseIds[exercise.name]!;
+          final workoutExerciseId = _uuid.v4();
+          exercises.add(
+            WorkoutExercisesTableCompanion.insert(
+              id: workoutExerciseId,
+              workoutId: workoutId,
+              exerciseId: exerciseId,
+              orderIndex: exerciseIndex,
             ),
           );
-          volumeKg += importedSet.weightKg * importedSet.reps;
+          for (var setIndex = 0; setIndex < exercise.sets.length; setIndex++) {
+            final importedSet = exercise.sets[setIndex];
+            sets.add(
+              WorkoutSetsTableCompanion.insert(
+                id: _uuid.v4(),
+                workoutExerciseId: workoutExerciseId,
+                setIndex: setIndex,
+                weightKg: importedSet.weightKg,
+                reps: importedSet.reps,
+                isCompleted: const Value(true),
+              ),
+            );
+            volumeKg += importedSet.weightKg * importedSet.reps;
+          }
         }
-      }
 
-      await dao.insertWorkout(
-        WorkoutsTableCompanion.insert(
-          id: workoutId,
-          startedAt: startedAt,
-          endedAt: Value(endedAt),
-          note: const Value('Imported from XLSX workout log'),
-          totalVolumeKg: Value(volumeKg),
-          durationSeconds: const Value(3600),
-        ),
-        exercises,
-        sets,
-      );
-    }
+        await dao.insertWorkout(
+          WorkoutsTableCompanion.insert(
+            id: workoutId,
+            startedAt: startedAt,
+            endedAt: Value(endedAt),
+            note: const Value('Imported from XLSX workout log'),
+            totalVolumeKg: Value(volumeKg),
+            durationSeconds: const Value(3600),
+          ),
+          exercises,
+          sets,
+        );
+      }
+    });
   }
 
   Future<Map<String, String>> _exerciseNameToId(AppDatabase db) async {

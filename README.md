@@ -89,7 +89,7 @@ shows a preview before writing. Select the workbook's source unit during the
 preview; values are always converted to kilograms in storage. Imported workouts
 then appear in the calendar, history, estimated-1RM, volume, frequency, and
 muscle-group analytics automatically. Unknown exercise names are reported and
-skipped rather than guessed.
+added to the local catalogue as custom exercises rather than guessed.
 
 ## Commands
 

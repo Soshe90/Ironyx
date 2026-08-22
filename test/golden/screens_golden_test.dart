@@ -135,8 +135,8 @@ String _draftJson() => jsonEncode(<String, dynamic>{
           'name': 'Barbell Bench Press',
           'isWarmup': false,
           'sets': <Map<String, dynamic>>[
-            for (final (String id, double w, int r, bool done) in <
-                (String, double, int, bool)>[
+            for (final (String id, double w, int r, bool done)
+                in <(String, double, int, bool)>[
               ('s1', 60, 10, true),
               ('s2', 80, 8, true),
               ('s3', 90, 6, false),
@@ -175,8 +175,7 @@ Future<void> _loadFonts() async {
 
   final String? root = _flutterRoot();
   if (root == null) return;
-  final Directory dir =
-      Directory('$root/bin/cache/artifacts/material_fonts');
+  final Directory dir = Directory('$root/bin/cache/artifacts/material_fonts');
   if (!dir.existsSync()) return;
 
   Future<void> load(String family, List<String> files) async {
@@ -216,8 +215,8 @@ Future<void> _seed(AppDatabase db) async {
   final BodyMetricsDao metrics = BodyMetricsDao(db);
 
   await exercises.upsertExercises(<ExercisesTableCompanion>[
-    for (final (String id, String name, String pattern) in <
-        (String, String, String)>[
+    for (final (String id, String name, String pattern)
+        in <(String, String, String)>[
       ('bench', 'Barbell Bench Press', 'horizontalPush'),
       ('squat', 'Back Squat', 'kneeDominant'),
       ('row', 'Seated Cable Row', 'horizontalPull'),

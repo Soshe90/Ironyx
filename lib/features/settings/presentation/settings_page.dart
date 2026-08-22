@@ -11,6 +11,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../timer/domain/timer_settings_controller.dart';
+import 'widgets/account_section.dart';
 import 'widgets/data_management_section.dart';
 
 /// Root-level route (ADR-3): full screen, bottom bar hidden.
@@ -42,6 +43,7 @@ class SettingsPage extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           children: <Widget>[
+            const AccountSection(),
             const SectionHeader(
               title: 'Appearance',
               subtitle: 'Dark mode is a first-class theme, not an inversion',

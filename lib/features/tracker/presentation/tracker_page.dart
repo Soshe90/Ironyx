@@ -83,8 +83,8 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
             programsAsync.when(
               data: (programs) => programs.isEmpty
                   ? SliverPadding(
-                      padding: context.sliverGutter
-                          .copyWith(bottom: AppSpacing.xl),
+                      padding:
+                          context.sliverGutter.copyWith(bottom: AppSpacing.xl),
                       sliver: SliverToBoxAdapter(
                         child: AppCard(
                           child: Column(
@@ -125,8 +125,8 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                       ),
                     )
                   : SliverPadding(
-                      padding: context.sliverGutter
-                          .copyWith(bottom: AppSpacing.xl),
+                      padding:
+                          context.sliverGutter.copyWith(bottom: AppSpacing.xl),
                       sliver: SliverList.builder(
                         itemCount: programs.length,
                         itemBuilder: (context, index) {
@@ -392,8 +392,7 @@ class _HistorySliverList extends StatelessWidget {
                     bottom: AppSpacing.sm,
                   ),
                   child: Text(
-                    DateFormatters.relativeDay(workout.startedAt)
-                        .toUpperCase(),
+                    DateFormatters.relativeDay(workout.startedAt).toUpperCase(),
                     style: AppTypography.eyebrow(Theme.of(context)),
                   ),
                 ),

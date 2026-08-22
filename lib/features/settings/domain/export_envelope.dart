@@ -75,6 +75,19 @@ class ImportEnvelope {
       );
     }
 
+    final Object? rawSchemaVersion = decoded['dbSchemaVersion'];
+    final Object? rawAppVersion = decoded['appVersion'];
+    final Object? rawExportedAt = decoded['exportedAt'];
+    if (rawSchemaVersion is! int ||
+        rawSchemaVersion < 1 ||
+        rawAppVersion is! String ||
+        rawAppVersion.trim().isEmpty ||
+        rawExportedAt is! String ||
+        DateTime.tryParse(rawExportedAt) == null) {
+      throw ImportValidationException(
+          'This file is not a valid FitTrack export.');
+    }
+
     final Object? rawTables = decoded['tables'];
     if (rawTables is! Map<String, dynamic>) {
       throw ImportValidationException(
@@ -96,10 +109,9 @@ class ImportEnvelope {
 
     return ImportEnvelope(
       formatVersion: rawFormatVersion,
-      dbSchemaVersion: decoded['dbSchemaVersion'] as int? ?? 0,
-      appVersion: decoded['appVersion'] as String? ?? 'unknown',
-      exportedAt: DateTime.tryParse(decoded['exportedAt'] as String? ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0),
+      dbSchemaVersion: rawSchemaVersion,
+      appVersion: rawAppVersion,
+      exportedAt: DateTime.parse(rawExportedAt),
       tables: tables,
     );
   }

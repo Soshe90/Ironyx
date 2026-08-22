@@ -396,8 +396,7 @@ class _ExerciseEditorRow extends ConsumerStatefulWidget {
   final bool canMoveDown;
 
   @override
-  ConsumerState<_ExerciseEditorRow> createState() =>
-      _ExerciseEditorRowState();
+  ConsumerState<_ExerciseEditorRow> createState() => _ExerciseEditorRowState();
 }
 
 class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
@@ -453,10 +452,10 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                 onSelected: (_ExerciseAction action) => switch (action) {
                   _ExerciseAction.moveUp => _notifier.moveExercise(
                       widget.dayId, widget.exercise.id, -1),
-                  _ExerciseAction.moveDown => _notifier.moveExercise(
-                      widget.dayId, widget.exercise.id, 1),
-                  _ExerciseAction.remove => _notifier.removeExercise(
-                      widget.dayId, widget.exercise.id),
+                  _ExerciseAction.moveDown =>
+                    _notifier.moveExercise(widget.dayId, widget.exercise.id, 1),
+                  _ExerciseAction.remove =>
+                    _notifier.removeExercise(widget.dayId, widget.exercise.id),
                 },
                 itemBuilder: (_) => <PopupMenuEntry<_ExerciseAction>>[
                   PopupMenuItem<_ExerciseAction>(

@@ -132,8 +132,8 @@ void main() {
 
       await tester.tap(find.text('Old Name'));
       await tester.pumpAndSettle();
-      expect(find.widgetWithIcon(IconButton, Icons.edit_outlined),
-          findsOneWidget);
+      expect(
+          find.widgetWithIcon(IconButton, Icons.edit_outlined), findsOneWidget);
 
       await tester.tap(find.widgetWithIcon(IconButton, Icons.edit_outlined));
       await tester.pumpAndSettle();
@@ -150,6 +150,81 @@ void main() {
       // Back on the detail page, the rename is reflected without a
       // manual refresh.
       expect(find.text('New Name'), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets(
+        'a built-in program day can be edited, and the edit survives '
+        're-entering the program', (tester) async {
+      final programDao = ProgramDao(database);
+      await programDao.insertProgram(
+        ProgramsTableCompanion.insert(
+          id: 'builtin_full_body',
+          name: 'Full Body',
+          createdAt: DateTime.now().toUtc(),
+          updatedAt: DateTime.now().toUtc(),
+          isBuiltIn: const Value(true),
+        ),
+        [
+          ProgramDayInsert(
+            id: 'builtin_full_body_pt_0',
+            dayName: 'Workout A',
+            orderIndex: 0,
+            template: TemplatesTableCompanion.insert(
+              id: 'builtin_fb_a',
+              name: 'Full Body A',
+              createdAt: DateTime.now().toUtc(),
+              updatedAt: DateTime.now().toUtc(),
+            ),
+            exercises: [
+              TemplateExercisesTableCompanion.insert(
+                id: 'builtin_fb_a_e0',
+                templateId: 'builtin_fb_a',
+                exerciseId: 'bench',
+                orderIndex: 0,
+                targetSets: 3,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await pumpApp(
+        tester,
+        initialLocation: Routes.tracker,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Full Body'));
+      await tester.pumpAndSettle();
+      expect(find.text('Built-in'), findsOneWidget);
+
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.edit_outlined));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit program'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Day name'),
+        'Heavy Day',
+      );
+      await tester.enterText(find.widgetWithText(TextField, 'sets'), '5');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.check));
+      await tester.pumpAndSettle();
+
+      // The detail page beneath shows the edit, and the program is now the
+      // user's own rather than seed data.
+      expect(find.text('Heavy Day'), findsOneWidget);
+      expect(find.text('Custom'), findsOneWidget);
+
+      // Re-entering the editor loads the saved values, not the seed ones.
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.edit_outlined));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Heavy Day'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '5'), findsOneWidget);
 
       await disposeApp(tester);
     });

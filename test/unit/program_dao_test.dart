@@ -213,6 +213,70 @@ void main() {
   });
 
   test(
+      'editing a built-in program converts it to custom so re-seeding '
+      'cannot discard the edit', () async {
+    await programDao.insertProgram(
+      programCompanion(id: 'builtin_full_body', isBuiltIn: true),
+      twoDays('builtin_full_body'),
+    );
+
+    // Keep the program name — only the day changes, which is what a user
+    // tweaking "Full Body / Workout A" actually does.
+    await programDao.updateProgramWithDays(
+      'builtin_full_body',
+      name: 'Full Body',
+      description: '3 days/week',
+      splitType: 'fullBody',
+      days: [
+        ProgramDayInsert(
+          id: 'edited_day',
+          dayName: 'Workout A',
+          orderIndex: 0,
+          template: TemplatesTableCompanion.insert(
+            id: 'edited_tpl',
+            name: 'edited_tpl',
+            createdAt: DateTime.now().toUtc(),
+            updatedAt: DateTime.now().toUtc(),
+          ),
+          exercises: [
+            TemplateExercisesTableCompanion.insert(
+              id: uuid.v4(),
+              templateId: 'edited_tpl',
+              exerciseId: 'bench',
+              orderIndex: 0,
+              targetSets: 5,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final edited = await programDao.getDetail('builtin_full_body');
+    expect(edited!.program.isBuiltIn, isFalse);
+    expect(edited.days.single.exercises.single.targetSets, 5);
+
+    // The event that used to wipe user edits to a built-in.
+    await programDao.deleteBuiltInPrograms();
+
+    final survived = await programDao.getDetail('builtin_full_body');
+    expect(survived, isNotNull);
+    expect(survived!.days.single.exercises.single.targetSets, 5);
+  });
+
+  test('allProgramNames reports every stored program name', () async {
+    await programDao.insertProgram(
+      programCompanion(id: 'p1', name: 'Full Body'),
+      twoDays('p1'),
+    );
+    await programDao.insertProgram(
+      programCompanion(id: 'p2', name: 'My Split'),
+      twoDays('p2'),
+    );
+
+    expect(await programDao.allProgramNames(), {'Full Body', 'My Split'});
+  });
+
+  test(
       'deleteAllUserData removes programs rather than leaving them as '
       'empty shells', () async {
     await programDao.insertProgram(

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/forgot_password_page.dart';
+import '../../features/auth/presentation/sign_in_page.dart';
+import '../../features/auth/presentation/sign_up_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/library/presentation/library_page.dart';
+import '../../features/profile/presentation/personal_details_page.dart';
 import '../../features/programs/presentation/program_detail_page.dart';
 import '../../features/programs/presentation/program_editor_page.dart';
 import '../../features/progress/presentation/progress_page.dart';
@@ -141,6 +145,35 @@ GoRouter createRouter({String initialLocation = Routes.home}) {
         name: Routes.activeTimerName,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ActiveTimerPage(),
+      ),
+
+      // Accounts (ADR-8). Note the deliberate absence of a `redirect` on
+      // this router: an account is optional, and a redirect is the one
+      // thing that could stop a cold offline launch from reaching the
+      // dashboard.
+      GoRoute(
+        path: Routes.signIn,
+        name: Routes.signInName,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SignInPage(),
+      ),
+      GoRoute(
+        path: Routes.signUp,
+        name: Routes.signUpName,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SignUpPage(),
+      ),
+      GoRoute(
+        path: Routes.forgotPassword,
+        name: Routes.forgotPasswordName,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: Routes.personalDetails,
+        name: Routes.personalDetailsName,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const PersonalDetailsPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

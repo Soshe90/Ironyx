@@ -62,8 +62,7 @@ class SummaryCard extends StatelessWidget {
         isLoading: isLoading,
         error: error,
         emptyCaption: emptyCaption,
-        size:
-            compact ? AppTypography.metricSizeSm : AppTypography.metricSizeMd,
+        size: compact ? AppTypography.metricSizeSm : AppTypography.metricSizeMd,
       ),
     );
   }

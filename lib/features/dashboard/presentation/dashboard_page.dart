@@ -123,8 +123,7 @@ class _TodayCard extends ConsumerWidget {
         ? 0
         : draft.exercises.fold<int>(
             0,
-            (int total, e) =>
-                total + e.sets.where((s) => s.isCompleted).length,
+            (int total, e) => total + e.sets.where((s) => s.isCompleted).length,
           );
 
     return AppCard(
@@ -153,7 +152,8 @@ class _TodayCard extends ConsumerWidget {
                     const SizedBox(width: AppSpacing.xs),
                     Text(
                       'IN PROGRESS',
-                      style: AppTypography.eyebrow(theme, color: scheme.primary),
+                      style:
+                          AppTypography.eyebrow(theme, color: scheme.primary),
                     ),
                   ],
                 ),
@@ -367,9 +367,8 @@ class _WeekBody extends StatelessWidget {
             ),
             Stat(
               label: 'Last week',
-              value: previous == 0
-                  ? '—'
-                  : UnitFormatters.volume(previous, unit),
+              value:
+                  previous == 0 ? '—' : UnitFormatters.volume(previous, unit),
             ),
           ],
         ),

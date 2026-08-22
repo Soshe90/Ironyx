@@ -1,5 +1,5 @@
 {
-  "seedVersion": 7,
+  "seedVersion": 10,
   "muscles": [
     {
       "id": "chest",
@@ -4090,6 +4090,296 @@
           "usedFor": "image"
         }
       ]
+    },
+    {
+      "id": "ex_079",
+      "slug": "dumbbell-romanian-deadlift",
+      "name": "Dumbbell Romanian Deadlift",
+      "description": "A dumbbell hip-hinge variation emphasizing the hamstrings and glutes.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "hipDominant",
+      "forceType": "pull",
+      "mechanic": "compound",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        },
+        {
+          "muscleId": "legs",
+          "role": "secondary"
+        },
+        {
+          "muscleId": "back",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold dumbbells at your sides, soften the knees, and hinge at the hips. Lower the weights close to your legs until you feel a hamstring stretch. Drive the hips forward to stand, keeping the back neutral."
+      ],
+      "aliases": ["Dumbbell RDL"],
+      "media": [
+        {
+          "type": "image",
+          "localAsset": "assets/images/exercises/free_exercise_db/Stiff-Legged_Dumbbell_Deadlift/0.jpg",
+          "sortOrder": 0,
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "source": "https://github.com/yuhonas/free-exercise-db"
+        },
+        {
+          "type": "image",
+          "localAsset": "assets/images/exercises/free_exercise_db/Stiff-Legged_Dumbbell_Deadlift/1.jpg",
+          "sortOrder": 1,
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "source": "https://github.com/yuhonas/free-exercise-db"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "free-exercise-db",
+          "sourceUrl": "https://github.com/yuhonas/free-exercise-db",
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_080",
+      "slug": "cable-incline-fly",
+      "name": "Cable Incline Fly",
+      "description": "An incline cable fly variation emphasizing the upper chest.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Set the bench to a low incline between two low cable pulleys. With a slight bend in the elbows, bring the handles together above the upper chest. Squeeze the chest and return with control."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "localAsset": "assets/images/exercises/free_exercise_db/Incline_Cable_Flye/0.jpg",
+          "sortOrder": 0,
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "source": "https://github.com/yuhonas/free-exercise-db"
+        },
+        {
+          "type": "image",
+          "localAsset": "assets/images/exercises/free_exercise_db/Incline_Cable_Flye/1.jpg",
+          "sortOrder": 1,
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "source": "https://github.com/yuhonas/free-exercise-db"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "free-exercise-db",
+          "sourceUrl": "https://github.com/yuhonas/free-exercise-db",
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_081",
+      "slug": "cable-seated-chest-fly",
+      "name": "Cable Seated Chest Fly",
+      "description": "A seated cable fly variation for controlled chest isolation.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [
+        {
+          "muscleId": "chest",
+          "role": "primary"
+        },
+        {
+          "muscleId": "shoulders",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Sit upright between the cable pulleys with the handles at chest height. Bring the handles together in a wide arc, squeeze the chest, and return slowly while keeping tension on the cables."
+      ],
+      "aliases": [],
+      "media": [
+        {
+          "type": "image",
+          "localAsset": "assets/images/exercises/free_exercise_db/Flat_Bench_Cable_Flyes/0.jpg",
+          "sortOrder": 0,
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "source": "https://github.com/yuhonas/free-exercise-db"
+        },
+        {
+          "type": "image",
+          "localAsset": "assets/images/exercises/free_exercise_db/Flat_Bench_Cable_Flyes/1.jpg",
+          "sortOrder": 1,
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "source": "https://github.com/yuhonas/free-exercise-db"
+        }
+      ],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "free-exercise-db",
+          "sourceUrl": "https://github.com/yuhonas/free-exercise-db",
+          "license": "Public domain",
+          "attribution": "Yuhonas / Free Exercise DB",
+          "usedFor": "image"
+        }
+      ]
+    },
+    {
+      "id": "ex_082",
+      "slug": "cable-chest-supported-fly",
+      "name": "Cable Fly with Chest Supported",
+      "description": "A chest-supported cable fly that minimizes body movement.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [{"muscleId": "chest", "role": "primary"}],
+      "equipment": [{"equipmentId": "cable", "isRequired": true}],
+      "instructions": ["Set an incline bench between the cables and brace your chest against it. Bring the handles together with a slight elbow bend, squeeze the chest, and return with control."],
+      "aliases": [],
+      "media": [
+        {"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Incline_Cable_Flye/0.jpg", "sortOrder": 0, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"},
+        {"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Incline_Cable_Flye/1.jpg", "sortOrder": 1, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}
+      ],
+      "tags": [],
+      "sources": [{"sourceName": "free-exercise-db", "sourceUrl": "https://github.com/yuhonas/free-exercise-db", "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "usedFor": "image"}]
+    },
+    {
+      "id": "ex_083",
+      "slug": "cable-standing-fly",
+      "name": "Cable Standing Fly",
+      "description": "A standing cable fly using a stable split stance.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [{"muscleId": "chest", "role": "primary"}, {"muscleId": "shoulders", "role": "secondary"}],
+      "equipment": [{"equipmentId": "cable", "isRequired": true}],
+      "instructions": ["Stand between the pulleys in a stable split stance. With a slight bend in the elbows, bring the handles together in front of the chest and return slowly."],
+      "aliases": [],
+      "media": [{"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Cable_Crossover/0.jpg", "sortOrder": 0, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}, {"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Cable_Crossover/1.jpg", "sortOrder": 1, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}],
+      "tags": [],
+      "sources": [{"sourceName": "free-exercise-db", "sourceUrl": "https://github.com/yuhonas/free-exercise-db", "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "usedFor": "image"}]
+    },
+    {
+      "id": "ex_084",
+      "slug": "cable-lying-fly",
+      "name": "Cable Lying Fly",
+      "description": "A lying cable fly performed from a flat or inclined bench.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [{"muscleId": "chest", "role": "primary"}, {"muscleId": "shoulders", "role": "secondary"}],
+      "equipment": [{"equipmentId": "cable", "isRequired": true}],
+      "instructions": ["Lie on a bench between the low cable pulleys. Start with the handles above the chest, lower them in a wide arc, then bring them together while keeping tension on the chest."],
+      "aliases": [],
+      "media": [{"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Flat_Bench_Cable_Flyes/0.jpg", "sortOrder": 0, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}, {"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Flat_Bench_Cable_Flyes/1.jpg", "sortOrder": 1, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}],
+      "tags": [],
+      "sources": [{"sourceName": "free-exercise-db", "sourceUrl": "https://github.com/yuhonas/free-exercise-db", "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "usedFor": "image"}]
+    },
+    {
+      "id": "ex_085",
+      "slug": "cable-low-fly",
+      "name": "Cable Low Fly",
+      "description": "A low-to-high cable fly emphasizing the upper chest.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [{"muscleId": "chest", "role": "primary"}, {"muscleId": "shoulders", "role": "secondary"}],
+      "equipment": [{"equipmentId": "cable", "isRequired": true}],
+      "instructions": ["Set the pulleys low and raise the handles in an arc from hip level to upper-chest height. Keep a soft bend in the elbows and squeeze at the top."],
+      "aliases": [],
+      "media": [{"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Low_Cable_Crossover/0.jpg", "sortOrder": 0, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}, {"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Low_Cable_Crossover/1.jpg", "sortOrder": 1, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}],
+      "tags": [],
+      "sources": [{"sourceName": "free-exercise-db", "sourceUrl": "https://github.com/yuhonas/free-exercise-db", "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "usedFor": "image"}]
+    },
+    {
+      "id": "ex_086",
+      "slug": "cable-middle-fly",
+      "name": "Cable Middle Fly",
+      "description": "A mid-height cable fly targeting the center of the chest.",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "muscles": [{"muscleId": "chest", "role": "primary"}, {"muscleId": "shoulders", "role": "secondary"}],
+      "equipment": [{"equipmentId": "cable", "isRequired": true}],
+      "instructions": ["Set the pulleys around mid-chest height. Stand centered, bring the handles together directly in front of the chest, and return under control."],
+      "aliases": [],
+      "media": [{"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Cable_Crossover/0.jpg", "sortOrder": 0, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}, {"type": "image", "localAsset": "assets/images/exercises/free_exercise_db/Cable_Crossover/1.jpg", "sortOrder": 1, "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "source": "https://github.com/yuhonas/free-exercise-db"}],
+      "tags": [],
+      "sources": [{"sourceName": "free-exercise-db", "sourceUrl": "https://github.com/yuhonas/free-exercise-db", "license": "Public domain", "attribution": "Yuhonas / Free Exercise DB", "usedFor": "image"}]
     }
   ]
 }

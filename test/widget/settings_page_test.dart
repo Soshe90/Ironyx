@@ -51,8 +51,16 @@ void main() {
       await tester.pumpAndSettle();
 
       // Data is the last group on the page and sits below the fold at the
-      // test surface size.
-      await tester.ensureVisible(find.text('Delete all data'));
+      // test surface size. `scrollUntilVisible` rather than `ensureVisible`:
+      // the latter needs the widget to already exist, and this ListView
+      // builds lazily, so anything far enough down the page has no element
+      // to make visible yet. That made the test brittle to any section
+      // added above it — the Account card duly broke it.
+      await tester.scrollUntilVisible(
+        find.text('Delete all data'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Delete all data'));
       await tester.pumpAndSettle();

@@ -22,7 +22,7 @@ class BodyMetricsDao extends DatabaseAccessor<AppDatabase>
 
   /// Get a single entry by date.
   Future<BodyMetrics?> getByDate(DateTime date) {
-    final dateOnly = DateTime(date.year, date.month, date.day);
+    final dateOnly = _dateOnlyUtc(date);
     return (select(bodyMetricsTable)..where((t) => t.date.equals(dateOnly)))
         .getSingleOrNull()
         .then((row) => row == null ? null : BodyMetrics.fromDrift(row));
@@ -37,17 +37,37 @@ class BodyMetricsDao extends DatabaseAccessor<AppDatabase>
           .map((rows) => rows.map<BodyMetrics>(BodyMetrics.fromDrift).toList());
 
   /// Insert or update a body metrics entry (upsert by date).
-  Future<void> upsert(BodyMetricsTableCompanion entry) =>
-      into(bodyMetricsTable).insertOnConflictUpdate(entry);
+  Future<void> upsert(BodyMetricsTableCompanion entry) async {
+    final normalized = entry.date.present
+        ? entry.copyWith(date: Value(_dateOnlyUtc(entry.date.value)))
+        : entry;
+
+    if (normalized.date.present) {
+      final existing = await (select(bodyMetricsTable)
+            ..where((t) => t.date.equals(normalized.date.value)))
+          .getSingleOrNull();
+      if (existing != null) {
+        await into(bodyMetricsTable).insertOnConflictUpdate(
+          normalized.copyWith(id: Value(existing.id)),
+        );
+        return;
+      }
+    }
+
+    await into(bodyMetricsTable).insertOnConflictUpdate(normalized);
+  }
 
   /// Delete an entry by date.
   Future<void> deleteByDate(DateTime date) {
-    final dateOnly = DateTime(date.year, date.month, date.day);
+    final dateOnly = _dateOnlyUtc(date);
     return (delete(
       bodyMetricsTable,
     )..where((t) => t.date.equals(dateOnly)))
         .go();
   }
+
+  DateTime _dateOnlyUtc(DateTime date) =>
+      DateTime.utc(date.year, date.month, date.day);
 
   /// Latest weight entry.
   Stream<BodyMetrics?> watchLatest() => (select(bodyMetricsTable)
@@ -55,4 +75,17 @@ class BodyMetricsDao extends DatabaseAccessor<AppDatabase>
         ..limit(1))
       .watchSingleOrNull()
       .map((row) => row == null ? null : BodyMetrics.fromDrift(row));
+
+  /// One-shot read of the latest weight entry.
+  ///
+  /// Prefer this over `watchLatest().first` for a single read: taking the
+  /// first event of a query stream sets up and tears down a whole stream
+  /// subscription for one value, and — the reason this exists — a drift
+  /// query stream never emits under `testWidgets`' fake clock, so anything
+  /// awaiting `.first` hangs forever in a widget test.
+  Future<BodyMetrics?> getLatest() => (select(bodyMetricsTable)
+        ..orderBy([(t) => OrderingTerm.desc(t.date)])
+        ..limit(1))
+      .getSingleOrNull()
+      .then((row) => row == null ? null : BodyMetrics.fromDrift(row));
 }

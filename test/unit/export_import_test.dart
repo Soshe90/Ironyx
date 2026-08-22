@@ -136,6 +136,52 @@ void main() {
     await destination.close();
   });
 
+  test('pre-import snapshot can restore data after a replace', () async {
+    const service = DataExportService();
+    final database = AppDatabase.forTesting();
+    await seed(database);
+
+    final emptyEnvelope = ImportEnvelope(
+      formatVersion: DataExportService.formatVersion,
+      // Read from the database rather than hardcoded: import rejects any
+      // schema mismatch, so a literal here silently breaks this test on
+      // every schema bump.
+      dbSchemaVersion: database.schemaVersion,
+      appVersion: '0.1.0',
+      exportedAt: DateTime(2026, 1, 1),
+      tables: {},
+    );
+    await service.applyImport(
+      database,
+      emptyEnvelope,
+      mode: ImportMode.replace,
+      snapshotDirPath: snapshotDir.path,
+    );
+    expect(
+      await database
+          .customSelect('SELECT COUNT(*) AS count FROM workouts_table')
+          .getSingle()
+          .then((row) => row.read<int>('count')),
+      0,
+    );
+
+    final snapshots = await service.listSnapshots(snapshotDir.path);
+    expect(snapshots, hasLength(1));
+    await service.restoreSnapshot(
+      database,
+      snapshots.single,
+      snapshotDirPath: snapshotDir.path,
+    );
+    expect(
+      await database
+          .customSelect('SELECT COUNT(*) AS count FROM workouts_table')
+          .getSingle()
+          .then((row) => row.read<int>('count')),
+      1,
+    );
+    await database.close();
+  });
+
   test('rejects a file with a newer formatVersion', () async {
     const service = DataExportService();
     final String badJson = jsonEncode({
@@ -174,7 +220,7 @@ void main() {
     // A hand-edited/partial backup that has no 'exercises_table' key at all.
     final String partialJson = jsonEncode({
       'formatVersion': DataExportService.formatVersion,
-      'dbSchemaVersion': 4,
+      'dbSchemaVersion': destination.schemaVersion,
       'appVersion': '0.1.0',
       'exportedAt': DateTime.now().toIso8601String(),
       'tables': <String, dynamic>{

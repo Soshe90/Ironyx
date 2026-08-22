@@ -278,12 +278,16 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
   Future<void> upsertExercises(List<ExercisesTableCompanion> exercises) =>
       batch((b) => b.insertAllOnConflictUpdate(exercisesTable, exercises));
 
-  /// Delete exercises that fell out of the current seed version — but
-  /// never one a logged workout still references.
+  /// Delete exercises that fell out of the current seed version — but never
+  /// one referenced by a logged workout or a reusable workout template.
   Future<void> deleteOrphanedSeed(int currentSeedVersion) => customStatement(
         'DELETE FROM exercises_table '
         'WHERE seed_version < ? '
-        'AND id NOT IN (SELECT DISTINCT exercise_id FROM workout_exercises_table)',
+        'AND id NOT IN ('
+        'SELECT DISTINCT exercise_id FROM workout_exercises_table '
+        'UNION '
+        'SELECT DISTINCT exercise_id FROM template_exercises_table'
+        ')',
         [currentSeedVersion],
       );
 
