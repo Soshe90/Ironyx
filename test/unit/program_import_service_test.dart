@@ -98,4 +98,56 @@ void main() {
     final detail = await programDao.getDetail(summaries.single.program.id);
     expect(detail!.days.single.exercises, hasLength(2));
   });
+
+  test(
+      'apply rolls back every program in the batch when one exercise '
+      'reference is invalid', () async {
+    // Built directly rather than through parse(), which only ever resolves
+    // exerciseIds that exist in the catalogue — this simulates a corrupted
+    // ProgramImportResult reaching apply() with a dangling reference.
+    const result = ProgramImportResult(
+      programs: [
+        ImportedProgram(
+          name: 'Valid Program',
+          days: [
+            ImportedDay(
+              dayName: 'Day 1',
+              exercises: [
+                ImportedExercise(
+                  exerciseId: 'squat',
+                  exerciseName: 'Back Squat',
+                  sets: 3,
+                ),
+              ],
+            ),
+          ],
+        ),
+        ImportedProgram(
+          name: 'Broken Program',
+          days: [
+            ImportedDay(
+              dayName: 'Day 1',
+              exercises: [
+                ImportedExercise(
+                  exerciseId: 'does-not-exist',
+                  exerciseName: 'Ghost Exercise',
+                  sets: 3,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+      unknownExercises: [],
+      totalDays: 2,
+      totalExercises: 2,
+    );
+
+    await expectLater(service.apply(database, result), throwsException);
+
+    // apply() runs in one transaction: the first (valid) program must not
+    // survive when the second one fails.
+    final summaries = await programDao.watchAll().first;
+    expect(summaries, isEmpty);
+  });
 }

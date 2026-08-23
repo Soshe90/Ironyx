@@ -24,6 +24,21 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
 
   Timer? _discardTimer;
 
+  /// Every write to [_prefsKey] — including the removes in [discard] and
+  /// [save] — is chained onto this so writes always land in the order they
+  /// were requested. Without it, two independently-debounced set edits (or
+  /// an edit racing a discard/save) could complete their platform-channel
+  /// writes out of order and let a stale draft overwrite — or resurrect
+  /// after — the newer state.
+  Future<void> _writeQueue = Future<void>.value();
+
+  Future<void> _enqueueWrite(Future<void> Function() write) {
+    final scheduled = _writeQueue.then((_) => write());
+    // Swallow so one failed write doesn't wedge every write after it.
+    _writeQueue = scheduled.catchError((_) {});
+    return scheduled;
+  }
+
   @override
   WorkoutDraft? build() {
     ref.onDispose(() => _discardTimer?.cancel());
@@ -76,7 +91,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
     _discardTimer?.cancel();
     _discardTimer = null;
     state = null;
-    await ref.read(sharedPreferencesProvider).remove(_prefsKey);
+    await _persist();
   }
 
   /// Marks the draft for discard after [AppDuration.undoWindow]. The draft
@@ -149,7 +164,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
           workoutSets,
         );
     state = null;
-    await ref.read(sharedPreferencesProvider).remove(_prefsKey);
+    await _persist();
   }
 
   @override
@@ -274,15 +289,18 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
     await _persist();
   }
 
-  Future<void> _persist() async {
-    final draft = state;
-    final prefs = ref.read(sharedPreferencesProvider);
-    if (draft == null) {
-      await prefs.remove(_prefsKey);
-    } else {
-      await prefs.setString(_prefsKey, jsonEncode(_encode(draft)));
-    }
-  }
+  // Reads `state` only once the write actually runs (inside the queued
+  // closure), not when `_persist` is called — otherwise a write queued
+  // earlier but executed later would flush an already-stale snapshot.
+  Future<void> _persist() => _enqueueWrite(() async {
+        final draft = state;
+        final prefs = ref.read(sharedPreferencesProvider);
+        if (draft == null) {
+          await prefs.remove(_prefsKey);
+        } else {
+          await prefs.setString(_prefsKey, jsonEncode(_encode(draft)));
+        }
+      });
 
   Map<String, dynamic> _encode(WorkoutDraft draft) => {
         'id': draft.id,

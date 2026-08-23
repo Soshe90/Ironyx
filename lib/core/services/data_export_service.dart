@@ -22,7 +22,7 @@ class DataExportService {
   /// [deleteAllUserData]) — a [ImportMode.replace] must not delete or
   /// overwrite a populated local catalogue. Restoring a backup must not
   /// silently downgrade it to an older snapshot.
-  static const Set<String> _catalogueTableNames = {
+  static const Set<String> catalogueTableNames = {
     'exercises_table',
     'exercise_aliases_table',
     'exercise_equipment_table',
@@ -34,6 +34,35 @@ class DataExportService {
     'exercise_variations_table',
     'muscles_table',
     'equipment_table',
+  };
+
+  /// The complete table set written by [buildJsonExport]. Keep this explicit so
+  /// adding a table cannot silently produce an export that older validation
+  /// treats as complete.
+  static const Set<String> expectedTableNames = {
+    'exercises_table',
+    'muscles_table',
+    'equipment_table',
+    'exercise_muscles_table',
+    'exercise_equipment_table',
+    'exercise_instructions_table',
+    'exercise_aliases_table',
+    'exercise_media_table',
+    'exercise_variations_table',
+    'exercise_sources_table',
+    'exercise_tags_table',
+    'workouts_table',
+    'workout_exercises_table',
+    'workout_sets_table',
+    'templates_table',
+    'template_exercises_table',
+    'programs_table',
+    'program_templates_table',
+    'timer_sessions_table',
+    'timer_intervals_table',
+    'timer_presets_table',
+    'body_metrics_table',
+    'profiles_table',
   };
 
   /// Full database dump as the versioned JSON envelope.
@@ -137,6 +166,7 @@ class DataExportService {
         mode: mode,
         snapshotDirPath: snapshotDirPath,
         createSnapshot: true,
+        preserveCatalogue: true,
       );
 
   Future<void> _applyImport(
@@ -145,6 +175,7 @@ class DataExportService {
     required ImportMode mode,
     required String snapshotDirPath,
     required bool createSnapshot,
+    required bool preserveCatalogue,
   }) async {
     if (envelope.dbSchemaVersion != db.schemaVersion) {
       throw ImportValidationException(
@@ -153,6 +184,58 @@ class DataExportService {
         'the backup before importing.',
       );
     }
+
+    final List<String> tableOrder =
+        db.allTables.map((t) => t.actualTableName).toList();
+    final Set<String> actualTableNames = tableOrder.toSet();
+    final missingDatabaseTables =
+        expectedTableNames.difference(actualTableNames);
+    final extraDatabaseTables = actualTableNames.difference(expectedTableNames);
+    if (missingDatabaseTables.isNotEmpty || extraDatabaseTables.isNotEmpty) {
+      throw ImportValidationException(
+        'This app database does not match the supported export table set: '
+        'missing $missingDatabaseTables, extra $extraDatabaseTables.',
+      );
+    }
+
+    final Set<String> unknownTableNames =
+        envelope.tables.keys.toSet().difference(expectedTableNames);
+    if (unknownTableNames.isNotEmpty) {
+      final List<String> sortedUnknown = unknownTableNames.toList()..sort();
+      throw ImportValidationException(
+        'This backup references tables this app does not recognize: '
+        '${sortedUnknown.join(', ')}.',
+      );
+    }
+
+    // A replace import that omits a non-catalogue table isn't a smaller
+    // export — it's truncated or hand-edited. Treating a missing key as "this
+    // table is now empty" would silently delete real user data with nothing
+    // to restore it from, so a replace must supply every user-data table
+    // explicitly (catalogue tables have their own preservation logic below).
+    if (mode == ImportMode.replace) {
+      final Set<String> requiredTableNames = preserveCatalogue
+          ? tableOrder.toSet().difference(catalogueTableNames)
+          : tableOrder.toSet();
+      final Set<String> missingTableNames =
+          requiredTableNames.difference(envelope.tables.keys.toSet());
+      if (missingTableNames.isNotEmpty) {
+        final List<String> sortedMissing = missingTableNames.toList()..sort();
+        throw ImportValidationException(
+          'This backup is missing data for: ${sortedMissing.join(', ')}. '
+          'Replacing local data with an incomplete backup would delete it '
+          'without anything to restore, so this import was cancelled.',
+        );
+      }
+    }
+
+    await _validateRowsBeforeApply(
+      db,
+      envelope,
+      mode: mode,
+      tableOrder: tableOrder,
+      preserveCatalogue: preserveCatalogue,
+    );
 
     if (createSnapshot) {
       final String snapshotJson = await buildJsonExport(db);
@@ -163,15 +246,12 @@ class DataExportService {
       await snapshotFile.writeAsString(snapshotJson);
     }
 
-    final List<String> tableOrder =
-        db.allTables.map((t) => t.actualTableName).toList();
-
     // Preserve a populated local catalogue during replace so restoring an
     // older backup cannot downgrade it. An empty catalogue is allowed to be
     // restored, which keeps import useful for a fresh database.
     final protectedCatalogueTables = <String>{};
-    if (mode == ImportMode.replace) {
-      for (final tableName in _catalogueTableNames) {
+    if (mode == ImportMode.replace && preserveCatalogue) {
+      for (final tableName in catalogueTableNames) {
         if (!envelope.tables.containsKey(tableName)) {
           protectedCatalogueTables.add(tableName);
           continue;
@@ -204,18 +284,9 @@ class DataExportService {
             envelope.tables[tableName] ?? const [];
         if (rows.isEmpty) continue;
 
-        final Set<String> tableColumns = await _columnsForTable(db, tableName);
         final Set<String> rowColumns = {
           for (final row in rows) ...row.keys,
         };
-        final Set<String> unknownColumns = rowColumns.difference(tableColumns);
-        if (unknownColumns.isNotEmpty) {
-          throw ImportValidationException(
-            'This backup contains unknown columns for $tableName: '
-            '${unknownColumns.join(', ')}.',
-          );
-        }
-
         final List<String> columns = rowColumns.toList()..sort();
         final String placeholders = List.filled(columns.length, '?').join(', ');
         final String columnList = columns.map(_quoteIdentifier).join(', ');
@@ -256,6 +327,23 @@ class DataExportService {
     return files;
   }
 
+  /// Restores every table, including the exercise catalogue. This is kept
+  /// separate from [applyImport] because ordinary user-data replacement must
+  /// never silently downgrade local catalogue content.
+  Future<void> restoreCompleteDatabase(
+    AppDatabase db,
+    ImportEnvelope envelope, {
+    required String snapshotDirPath,
+  }) =>
+      _applyImport(
+        db,
+        envelope,
+        mode: ImportMode.replace,
+        snapshotDirPath: snapshotDirPath,
+        createSnapshot: true,
+        preserveCatalogue: false,
+      );
+
   Future<void> restoreSnapshot(
     AppDatabase db,
     File snapshotFile, {
@@ -268,6 +356,7 @@ class DataExportService {
       mode: ImportMode.replace,
       snapshotDirPath: snapshotDirPath,
       createSnapshot: false,
+      preserveCatalogue: false,
     );
   }
 
@@ -278,18 +367,233 @@ class DataExportService {
     }
   }
 
-  Future<Set<String>> _columnsForTable(
+  Future<void> _validateRowsBeforeApply(
     AppDatabase db,
+    ImportEnvelope envelope, {
+    required ImportMode mode,
+    required List<String> tableOrder,
+    required bool preserveCatalogue,
+  }) async {
+    final schemas = <String, List<_ImportColumn>>{};
+    for (final tableName in tableOrder) {
+      final info = await db
+          .customSelect(
+            'PRAGMA table_info(${_quoteIdentifier(tableName)})',
+          )
+          .get();
+      schemas[tableName] = [
+        for (final row in info)
+          _ImportColumn(
+            name: row.read<String>('name'),
+            type: row.read<String>('type').toUpperCase(),
+            required: row.read<int>('notnull') == 1 || row.read<int>('pk') > 0,
+            primaryKey: row.read<int>('pk') > 0,
+            hasDefault: row.data['dflt_value'] != null,
+          ),
+      ];
+    }
+
+    for (final tableName in tableOrder) {
+      final rows = envelope.tables[tableName] ?? const [];
+      final columns = schemas[tableName]!;
+      final knownColumns = columns.map((column) => column.name).toSet();
+      final requiredColumns = columns
+          .where((column) => column.required && !column.hasDefault)
+          .map((column) => column.name)
+          .toSet();
+      final ids = <String>{};
+
+      for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        final row = rows[rowIndex];
+        final unknown = row.keys.toSet().difference(knownColumns);
+        if (unknown.isNotEmpty) {
+          throw ImportValidationException(
+            'Invalid $tableName row ${rowIndex + 1}: unknown column '
+            '"${unknown.first}".',
+          );
+        }
+        final missing = requiredColumns.difference(row.keys.toSet());
+        if (missing.isNotEmpty) {
+          throw ImportValidationException(
+            'Invalid $tableName row ${rowIndex + 1}: missing required '
+            'column "${missing.first}".',
+          );
+        }
+
+        final idColumn =
+            columns.where((column) => column.primaryKey).firstOrNull;
+        if (idColumn != null) {
+          final id = row[idColumn.name];
+          if (id is! String || id.isEmpty) {
+            throw ImportValidationException(
+              'Invalid $tableName row ${rowIndex + 1}: primary key '
+              '"${idColumn.name}" must be a non-empty string.',
+            );
+          }
+          if (!ids.add(id)) {
+            throw ImportValidationException(
+              'Invalid $tableName row ${rowIndex + 1}: duplicate primary '
+              'key "$id".',
+            );
+          }
+        }
+
+        for (final column in columns) {
+          if (!row.containsKey(column.name)) continue;
+          _validateValue(
+            tableName,
+            rowIndex,
+            column,
+            row[column.name],
+            validateIdentifier:
+                column.name == 'id' && !catalogueTableNames.contains(tableName),
+          );
+        }
+      }
+    }
+
+    await _validateForeignKeys(
+      db,
+      envelope,
+      mode: mode,
+      tableOrder: tableOrder,
+      schemas: schemas,
+      preserveCatalogue: preserveCatalogue,
+    );
+  }
+
+  void _validateValue(
     String tableName,
-  ) async {
-    final rows = await db
-        .customSelect(
-          'PRAGMA table_info(${_quoteIdentifier(tableName)})',
-        )
-        .get();
-    return {
-      for (final row in rows) row.read<String>('name'),
+    int rowIndex,
+    _ImportColumn column,
+    Object? value, {
+    required bool validateIdentifier,
+  }) {
+    if (value == null) {
+      if (column.required) {
+        throw ImportValidationException(
+          'Invalid $tableName row ${rowIndex + 1}: required column '
+          '"${column.name}" cannot be null.',
+        );
+      }
+      return;
+    }
+    if (validateIdentifier &&
+        column.type == 'TEXT' &&
+        value is String &&
+        !_isValidIdentifier(value)) {
+      throw ImportValidationException(
+        'Invalid $tableName row ${rowIndex + 1}: column "${column.name}" '
+        'must contain a valid UUID or legacy identifier.',
+      );
+    }
+    final valid = switch (column.type) {
+      'TEXT' => value is String,
+      'INTEGER' => value is int &&
+          (column.name.startsWith('is_') ? value == 0 || value == 1 : true),
+      'REAL' => value is num && value is! bool && value.isFinite,
+      _ => true,
     };
+    if (!valid) {
+      throw ImportValidationException(
+        'Invalid $tableName row ${rowIndex + 1}: column "${column.name}" '
+        'has an invalid value type.',
+      );
+    }
+  }
+
+  Future<void> _validateForeignKeys(
+    AppDatabase db,
+    ImportEnvelope envelope, {
+    required ImportMode mode,
+    required List<String> tableOrder,
+    required Map<String, List<_ImportColumn>> schemas,
+    required bool preserveCatalogue,
+  }) async {
+    final importedIds = <String, Set<String>>{};
+    for (final tableName in tableOrder) {
+      final idColumn =
+          schemas[tableName]!.where((column) => column.primaryKey).firstOrNull;
+      importedIds[tableName] = {
+        for (final row
+            in envelope.tables[tableName] ?? const <Map<String, Object?>>[])
+          if (idColumn != null && row[idColumn.name] is String)
+            row[idColumn.name]! as String,
+      };
+    }
+
+    final existingIds = <String, Set<String>>{};
+    for (final tableName in tableOrder) {
+      final idColumn =
+          schemas[tableName]!.where((column) => column.primaryKey).firstOrNull;
+      if (idColumn == null) continue;
+      final rows = await db
+          .customSelect(
+            'SELECT ${_quoteIdentifier(idColumn.name)} FROM ${_quoteIdentifier(tableName)}',
+          )
+          .get();
+      existingIds[tableName] = {
+        for (final row in rows) row.read<String>(idColumn.name),
+      };
+    }
+
+    final foreignKeys = <String, List<_ImportForeignKey>>{};
+    for (final tableName in tableOrder) {
+      final rows = await db
+          .customSelect(
+            'PRAGMA foreign_key_list(${_quoteIdentifier(tableName)})',
+          )
+          .get();
+      foreignKeys[tableName] = [
+        for (final row in rows)
+          _ImportForeignKey(
+            column: row.read<String>('from'),
+            parentTable: row.read<String>('table'),
+            parentColumn: row.read<String>('to'),
+          ),
+      ];
+    }
+
+    for (final tableName in tableOrder) {
+      for (final foreignKey in foreignKeys[tableName]!) {
+        final available = <String>{...importedIds[foreignKey.parentTable]!};
+        if (mode == ImportMode.merge ||
+            (preserveCatalogue &&
+                catalogueTableNames.contains(foreignKey.parentTable))) {
+          available.addAll(existingIds[foreignKey.parentTable] ?? const {});
+        }
+        for (var rowIndex = 0;
+            rowIndex < (envelope.tables[tableName]?.length ?? 0);
+            rowIndex++) {
+          final value =
+              envelope.tables[tableName]![rowIndex][foreignKey.column];
+          if (value is String &&
+              !catalogueTableNames.contains(foreignKey.parentTable) &&
+              !_isValidIdentifier(value)) {
+            throw ImportValidationException(
+              'Invalid $tableName row ${rowIndex + 1}: ${foreignKey.column} '
+              'must contain a valid UUID or legacy identifier.',
+            );
+          }
+          if (value is String && !available.contains(value)) {
+            throw ImportValidationException(
+              'Invalid $tableName row ${rowIndex + 1}: ${foreignKey.column} '
+              'references missing ${foreignKey.parentTable}.${foreignKey.parentColumn} '
+              '"$value".',
+            );
+          }
+        }
+      }
+    }
+  }
+
+  bool _isValidIdentifier(String value) {
+    if (value == 'local_profile' || value == 'custom') return true;
+    if (RegExp(r'^[A-Za-z0-9_]+$').hasMatch(value)) return true;
+    return RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-'
+      r'[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    ).hasMatch(value);
   }
 
   String _quoteIdentifier(String identifier) =>
@@ -327,4 +631,32 @@ class DataExportService {
       File(path).writeAsString(content);
 
   Future<String> readStringFromFile(String path) => File(path).readAsString();
+}
+
+class _ImportColumn {
+  const _ImportColumn({
+    required this.name,
+    required this.type,
+    required this.required,
+    required this.primaryKey,
+    required this.hasDefault,
+  });
+
+  final String name;
+  final String type;
+  final bool required;
+  final bool primaryKey;
+  final bool hasDefault;
+}
+
+class _ImportForeignKey {
+  const _ImportForeignKey({
+    required this.column,
+    required this.parentTable,
+    required this.parentColumn,
+  });
+
+  final String column;
+  final String parentTable;
+  final String parentColumn;
 }

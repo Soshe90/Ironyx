@@ -54,6 +54,28 @@ void main() {
           UNIQUE (date)
         )
       ''')
+      // The v6 -> v7 migration this test targets doesn't touch
+      // exercises_table, but the v7 -> v8 step (isCustom column) runs
+      // right after it in the same onUpgrade chain and needs the table to
+      // exist — matching its real v3+ shape closely enough for that.
+      ..execute('''
+        CREATE TABLE exercises_table (
+          id TEXT NOT NULL PRIMARY KEY,
+          slug TEXT NOT NULL UNIQUE,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT NOT NULL DEFAULT '',
+          category TEXT NOT NULL,
+          difficulty TEXT NOT NULL,
+          movement_pattern TEXT NOT NULL,
+          force_type TEXT,
+          mechanic TEXT,
+          is_unilateral INTEGER NOT NULL DEFAULT 0,
+          is_bodyweight INTEGER NOT NULL DEFAULT 0,
+          seed_version INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      ''')
       ..execute(
         'INSERT INTO workouts_table (id, started_at, ended_at, '
         "total_volume_kg) VALUES ('w1', 1750000000, 1750003600, 4200.5)",
@@ -81,7 +103,7 @@ void main() {
         .customSelect('PRAGMA user_version')
         .getSingle()
         .then((r) => r.data.values.first);
-    expect(version, 7);
+    expect(version, db.schemaVersion);
 
     // The pre-existing rows must be untouched.
     final workout = await db

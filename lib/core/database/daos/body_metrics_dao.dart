@@ -11,9 +11,17 @@ class BodyMetricsDao extends DatabaseAccessor<AppDatabase>
   BodyMetricsDao(super.db);
 
   /// Watch all body metrics, newest first.
-  Stream<List<BodyMetrics>> watchAll({int? limit}) {
+  ///
+  /// [since] applies the same lower bound the Progress page's range selector
+  /// applies to every other series, normalized the way stored rows are so a
+  /// local-time boundary cannot include or exclude the wrong day. Null means
+  /// all-time.
+  Stream<List<BodyMetrics>> watchAll({int? limit, DateTime? since}) {
     final query = select(bodyMetricsTable)
       ..orderBy([(t) => OrderingTerm.desc(t.date)]);
+    if (since != null) {
+      query.where((t) => t.date.isBiggerOrEqualValue(_dateOnlyUtc(since)));
+    }
     if (limit != null) query.limit(limit);
     return query.watch().map(
           (rows) => rows.map<BodyMetrics>(BodyMetrics.fromDrift).toList(),
@@ -28,10 +36,17 @@ class BodyMetricsDao extends DatabaseAccessor<AppDatabase>
         .then((row) => row == null ? null : BodyMetrics.fromDrift(row));
   }
 
-  /// Watch entries in a date range (for charts).
+  /// Watch entries in a date range (for charts). Bounds are normalized the
+  /// same way stored rows are, so a caller passing a local-time boundary
+  /// can't silently exclude or include the wrong day.
   Stream<List<BodyMetrics>> watchInRange(DateTime start, DateTime end) =>
       (select(bodyMetricsTable)
-            ..where((t) => t.date.isBetweenValues(start, end))
+            ..where(
+              (t) => t.date.isBetweenValues(
+                _dateOnlyUtc(start),
+                _dateOnlyUtc(end),
+              ),
+            )
             ..orderBy([(t) => OrderingTerm.asc(t.date)]))
           .watch()
           .map((rows) => rows.map<BodyMetrics>(BodyMetrics.fromDrift).toList());

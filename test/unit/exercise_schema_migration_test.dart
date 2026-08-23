@@ -149,4 +149,56 @@ void main() {
         .getSingle();
     expect(equipmentCount.data['c'], 10);
   });
+
+  void seedV7Database() {
+    final raw = sqlite3.sqlite3.open(dbFile.path);
+    raw.execute('''
+      CREATE TABLE exercises_table (
+        id TEXT NOT NULL PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT NOT NULL DEFAULT '',
+        category TEXT NOT NULL,
+        difficulty TEXT NOT NULL,
+        movement_pattern TEXT NOT NULL,
+        force_type TEXT,
+        mechanic TEXT,
+        is_unilateral INTEGER NOT NULL DEFAULT 0,
+        is_bodyweight INTEGER NOT NULL DEFAULT 0,
+        seed_version INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    ''');
+    raw.execute('''
+      INSERT INTO exercises_table
+        (id, slug, name, category, difficulty, movement_pattern,
+         seed_version, created_at, updated_at)
+      VALUES
+        ('squat', 'back-squat', 'Back Squat', 'strength', 'intermediate',
+         'kneeDominant', 1, 0, 0),
+        ('sled-push', 'sled-push', 'Sled Push', 'other', 'intermediate',
+         'other', 0, 0, 0);
+    ''');
+    raw.execute('PRAGMA user_version = 7');
+    raw.close();
+  }
+
+  test(
+      'v7 -> v8 migration backfills isCustom from the old seedVersion == 0 '
+      'convention', () async {
+    seedV7Database();
+
+    final db = AppDatabase.withExecutor(NativeDatabase(dbFile));
+    addTearDown(db.close);
+
+    final rows = await db
+        .customSelect('SELECT id, is_custom FROM exercises_table')
+        .get();
+    final isCustomById = {
+      for (final row in rows)
+        row.read<String>('id'): row.read<bool>('is_custom'),
+    };
+    expect(isCustomById, {'squat': false, 'sled-push': true});
+  });
 }

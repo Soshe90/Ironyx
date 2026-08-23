@@ -759,45 +759,49 @@ class _ExerciseDetailBody extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.lg),
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: GestureDetector(
-              onTap: () => _searchOnYoutube(context, exercise.name),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (picture != null)
-                    _ExerciseThumbnail(
-                      url: picture,
-                      fallbackUrl: _pictureUrl(
-                        detail.media.firstWhereOrNull(
-                          (media) => media.type == ExerciseMediaType.video,
+            child: Semantics(
+              button: true,
+              label: 'Search "${exercise.name}" on YouTube',
+              child: GestureDetector(
+                onTap: () => _searchOnYoutube(context, exercise.name),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (picture != null)
+                      _ExerciseThumbnail(
+                        url: picture,
+                        fallbackUrl: _pictureUrl(
+                          detail.media.firstWhereOrNull(
+                            (media) => media.type == ExerciseMediaType.video,
+                          ),
+                        ),
+                        fallbackIcon: fallbackIcon,
+                      )
+                    else
+                      Container(
+                        color: scheme.surfaceContainerHighest,
+                        child: Center(
+                          child: Icon(
+                            fallbackIcon,
+                            color: scheme.onSurfaceVariant,
+                            size: 28,
+                          ),
                         ),
                       ),
-                      fallbackIcon: fallbackIcon,
-                    )
-                  else
                     Container(
-                      color: scheme.surfaceContainerHighest,
-                      child: Center(
-                        child: Icon(
-                          fallbackIcon,
-                          color: scheme.onSurfaceVariant,
-                          size: 28,
-                        ),
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.search,
+                        color: Colors.white,
+                        size: 28,
                       ),
                     ),
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.45),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.search,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -72,6 +72,10 @@ void main() {
 
       await seedExercise('bench_1', 'Bench Press', 'chest');
       await seedExercise('row_1', 'Barbell Row', 'back');
+      // Seeded but never performed. The 1RM picker used to list the whole
+      // catalogue, so an exercise like this was offered — and charted
+      // nothing when picked.
+      await seedExercise('zzz_unperformed', 'Never Performed', 'chest');
 
       // 13 weekly workouts spanning ~3 months. Bench weight is flat for
       // several weeks, jumps to a new max mid-way, stays flat again, dips,
@@ -180,17 +184,25 @@ void main() {
       // query or rebuild loop regressed badly.
       expect(stopwatch.elapsedMilliseconds, lessThan(5000));
 
-      // The exercise dropdown defaults to the alphabetically-first exercise
-      // ("Barbell Row"), not necessarily "Bench Press" — assert on the
-      // dropdown existing and the charts actually holding seeded data
-      // rather than on which exercise happens to be selected first.
+      // The picker only offers lifts with logged sets, labelled with their
+      // session count. Both seeded lifts appear in 13 sessions each, so the
+      // tie breaks alphabetically on "Barbell Row" — assert on the label
+      // rather than on which one wins the tie.
       expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+      expect(find.textContaining('· 13 sessions'), findsWidgets);
+      // The seeded-but-never-performed exercise is not offered at all.
+      expect(find.textContaining('Never Performed'), findsNothing);
+
       // Body metrics weren't seeded, so its empty state is expected — but
-      // the 1RM, weekly-volume and muscle-group charts all have data and
-      // must not fall back to their own empty states.
+      // the 1RM, weekly-volume, frequency and muscle-group charts all have
+      // data and must not fall back to their own empty states.
       expect(find.text('Complete weighted sets to see strength trends.'),
           findsNothing);
       expect(find.text('Complete a workout to see volume.'), findsNothing);
+      expect(
+        find.text('Complete workouts to see your weekly frequency.'),
+        findsNothing,
+      );
       expect(
         find.text('Complete a workout to see your muscle-group split.'),
         findsNothing,
@@ -198,17 +210,59 @@ void main() {
 
       expect(find.byType(LineChart), findsOneWidget);
       final lineChart = tester.widget<LineChart>(find.byType(LineChart));
-      expect(lineChart.data.lineBarsData.single.spots, isNotEmpty);
+      final spots = lineChart.data.lineBarsData.single.spots;
+      expect(spots, isNotEmpty);
+      // Time-proportional x axis: 13 weekly sessions span ~84 days, so the
+      // last x is nowhere near the old index-based `length - 1`.
+      expect(spots.first.x, 0);
+      expect(spots.last.x, greaterThan(80));
 
-      expect(find.byType(BarChart), findsNWidgets(2));
+      // Weekly volume, weekly frequency, muscle-group split.
+      expect(find.byType(BarChart), findsNWidgets(3));
       final weeklyVolumeChart =
           tester.widget<BarChart>(find.byType(BarChart).at(0));
       expect(weeklyVolumeChart.data.barGroups, isNotEmpty);
-      final muscleGroupChart =
+
+      // The frequency section used to render `SizedBox.shrink()` under its
+      // headline — a titled card with no plot at all.
+      final frequencyChart =
           tester.widget<BarChart>(find.byType(BarChart).at(1));
+      expect(
+        frequencyChart.data.barGroups,
+        hasLength(weeklyVolumeChart.data.barGroups.length),
+        reason: 'both weekly charts must span the same buckets',
+      );
+
+      final muscleGroupChart =
+          tester.widget<BarChart>(find.byType(BarChart).at(2));
       // Exactly Chest and Back were seeded — the breakdown shouldn't
-      // invent groups or drop one.
+      // invent groups or drop one, and the never-performed exercise must
+      // not contribute a third.
       expect(muscleGroupChart.data.barGroups, hasLength(2));
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('weekly series includes untrained weeks', (tester) async {
+      await pumpProgress(tester);
+
+      // Workouts are seeded one per week for 13 weeks inside a 90-day
+      // window, so every bucket is trained and the counts line up — the
+      // point here is that the caption reports elapsed weeks alongside
+      // active ones rather than dividing by active weeks alone.
+      final volumeChart = tester.widget<BarChart>(find.byType(BarChart).at(0));
+      final frequencyChart =
+          tester.widget<BarChart>(find.byType(BarChart).at(1));
+      expect(volumeChart.data.barGroups.length, greaterThanOrEqualTo(13));
+      expect(find.textContaining('active week'), findsOneWidget);
+      expect(find.textContaining('trained in'), findsOneWidget);
+
+      // Every rod is a real weekly bucket, and the bars were narrowed to fit
+      // rather than overlapping at the fixed 22dp design width.
+      final double width =
+          frequencyChart.data.barGroups.first.barRods.first.width;
+      expect(width, greaterThan(0));
+      expect(width, lessThanOrEqualTo(22));
 
       await disposeApp(tester);
     });
@@ -242,7 +296,7 @@ void main() {
       // Idle state: no bar has been touched yet.
       expect(find.text('Tap or hover a bar for details.'), findsOneWidget);
 
-      final chart = tester.widget<BarChart>(find.byType(BarChart).at(1));
+      final chart = tester.widget<BarChart>(find.byType(BarChart).at(2));
       final touchCallback = chart.data.barTouchData.touchCallback!;
       final chestGroup = chart.data.barGroups.first;
       final chestSpot = BarTouchedSpot(

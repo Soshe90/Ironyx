@@ -9,6 +9,7 @@ import '../../features/library/presentation/library_page.dart';
 import '../../features/profile/presentation/personal_details_page.dart';
 import '../../features/programs/presentation/program_detail_page.dart';
 import '../../features/programs/presentation/program_editor_page.dart';
+import '../../features/progress/presentation/body_metrics_history_page.dart';
 import '../../features/progress/presentation/progress_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/timer/presentation/active_timer_page.dart';
@@ -145,6 +146,12 @@ GoRouter createRouter({String initialLocation = Routes.home}) {
         name: Routes.activeTimerName,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ActiveTimerPage(),
+      ),
+      GoRoute(
+        path: Routes.bodyMetricsHistory,
+        name: Routes.bodyMetricsHistoryName,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const BodyMetricsHistoryPage(),
       ),
 
       // Accounts (ADR-8). Note the deliberate absence of a `redirect` on

@@ -68,11 +68,14 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     ref.invalidate(workoutHistoryStreamProvider);
     ref.invalidate(personalRecordWorkoutIdsProvider);
     if (!context.mounted) return;
+    final appliedCount = result.workouts.length - result.duplicateCount;
+    final skippedSuffix = result.duplicateCount > 0
+        ? ' (${result.duplicateCount} already in history skipped)'
+        : '';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Imported ${result.workouts.length} workouts and '
-          '${result.totalSets} sets.',
+          'Imported $appliedCount workouts$skippedSuffix.',
         ),
       ),
     );
@@ -123,8 +126,16 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
                 '${firstDate?.toIso8601String().split('T').first ?? 'No dates'}'
                 ' → ${lastDate?.toIso8601String().split('T').first ?? ''}\n'
                 'Weights interpreted as ${sourceUnit == WeightUnit.lb ? 'lb' : 'kg'} '
-                'and stored as kg.\nThis creates new history entries; do not import the same file twice.',
+                'and stored as kg.',
               ),
+              if (result.duplicateCount > 0) ...[
+                const SizedBox(height: 16),
+                Text(
+                  '${result.duplicateCount} of ${result.workouts.length} '
+                  'workouts already appear in your history (same date, '
+                  'exercises, and sets) and will be skipped.',
+                ),
+              ],
               if (result.unknownExercises.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Text(
@@ -143,7 +154,7 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: result.workouts.isEmpty
+            onPressed: result.workouts.length == result.duplicateCount
                 ? null
                 : () => Navigator.pop(context, true),
             child: const Text('Import'),

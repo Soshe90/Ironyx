@@ -68,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   Future<void> _createIndexes() async {
     const indexes = [
@@ -166,6 +166,42 @@ class AppDatabase extends _$AppDatabase {
             // existing row is touched, and an install that never signs in
             // simply leaves this table empty.
             await m.createTable(profilesTable);
+          }
+          if (from < 9) {
+            final profileColumns =
+                await customSelect('PRAGMA table_info(profiles_table)').get();
+            final hasWeeklyTarget = profileColumns.any(
+              (row) => row.read<String>('name') == 'weekly_session_target',
+            );
+            if (!hasWeeklyTarget) {
+              await m.addColumn(
+                profilesTable,
+                profilesTable.weeklySessionTarget,
+              );
+            }
+          }
+          if (from < 8) {
+            // Explicit custom-exercise marker, replacing the implicit
+            // seedVersion == 0 convention. Backfill from that convention so
+            // customs created by an XLSX import before this migration keep
+            // their marking rather than silently becoming ordinary rows.
+            //
+            // A database migrating from below v3 already has this column:
+            // the v2 -> v3 step (`_normalizeExercises`) recreates
+            // exercises_table from the *current* table definition, which
+            // now includes `isCustom`. Check first so that path doesn't
+            // collide with an `ADD COLUMN` for one that already has it.
+            final columns =
+                await customSelect('PRAGMA table_info(exercises_table)').get();
+            final hasIsCustom =
+                columns.any((row) => row.read<String>('name') == 'is_custom');
+            if (!hasIsCustom) {
+              await m.addColumn(exercisesTable, exercisesTable.isCustom);
+            }
+            await customStatement(
+              'UPDATE exercises_table SET is_custom = 1 '
+              'WHERE seed_version = 0',
+            );
           }
         },
         beforeOpen: (OpeningDetails details) async {
@@ -275,6 +311,10 @@ class AppDatabase extends _$AppDatabase {
           movementPattern: movementPattern,
           isBodyweight: Value(isBodyweight),
           seedVersion: seedVersion,
+          // Same seedVersion == 0 convention the v7 -> v8 migration
+          // backfills from, applied here too in case a pre-v3 database
+          // already had a locally-created exercise.
+          isCustom: Value(seedVersion == 0),
           createdAt: Value(now),
           updatedAt: Value(now),
         ),

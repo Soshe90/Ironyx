@@ -97,6 +97,48 @@ void main() {
     expect(roundTripped['tables'], equals(original['tables']));
   });
 
+  test(
+      'a local custom exercise survives a full export -> wipe -> import '
+      'round trip', () async {
+    const service = DataExportService();
+
+    final source = AppDatabase.forTesting();
+    await seed(source);
+    // seedVersion 0 marks an exercise as user-created (e.g. via XLSX
+    // import) rather than shipped catalogue content — it must round-trip
+    // exactly like any other exercises_table row, not be treated as
+    // disposable because it didn't come from the seeder.
+    await ExerciseDao(source).upsertExercises([
+      ExercisesTableCompanion.insert(
+        id: 'custom-sled-push',
+        slug: 'custom-sled-push',
+        name: 'Sled Push',
+        category: 'other',
+        difficulty: 'intermediate',
+        movementPattern: 'other',
+        seedVersion: 0,
+        isCustom: const Value(true),
+      ),
+    ]);
+    final String exportedJson = await service.buildJsonExport(source);
+    await source.close();
+
+    final destination = AppDatabase.forTesting();
+    final envelope = service.parseImport(exportedJson);
+    await service.applyImport(
+      destination,
+      envelope,
+      mode: ImportMode.replace,
+      snapshotDirPath: snapshotDir.path,
+    );
+
+    final custom = await ExerciseDao(destination).getById('custom-sled-push');
+    expect(custom, isNotNull);
+    expect(custom!.seedVersion, 0);
+    expect(custom.isCustom, isTrue);
+    await destination.close();
+  });
+
   test('merge mode upserts by id without disturbing unrelated existing rows',
       () async {
     const service = DataExportService();
@@ -149,7 +191,15 @@ void main() {
       dbSchemaVersion: database.schemaVersion,
       appVersion: '0.1.0',
       exportedAt: DateTime(2026, 1, 1),
-      tables: {},
+      // Replace now requires every non-catalogue table to be present
+      // (even empty) so a truncated file can't be mistaken for "wipe
+      // everything" — see the missing-table rejection test below.
+      tables: {
+        for (final table in database.allTables)
+          if (!DataExportService.catalogueTableNames
+              .contains(table.actualTableName))
+            table.actualTableName: <Map<String, Object?>>[],
+      },
     );
     await service.applyImport(
       database,
@@ -167,11 +217,25 @@ void main() {
 
     final snapshots = await service.listSnapshots(snapshotDir.path);
     expect(snapshots, hasLength(1));
+    await ExerciseDao(database).upsertExercises([
+      ExercisesTableCompanion.insert(
+        id: 'new-local-catalogue-row',
+        slug: 'new-local-catalogue-row',
+        name: 'New Local Exercise',
+        category: 'strength',
+        difficulty: 'beginner',
+        movementPattern: 'other',
+        seedVersion: 1,
+      ),
+    ]);
     await service.restoreSnapshot(
       database,
       snapshots.single,
       snapshotDirPath: snapshotDir.path,
     );
+    expect(
+        await ExerciseDao(database).getById('new-local-catalogue-row'), isNull);
+    expect(await ExerciseDao(database).getById('bench'), isNotNull);
     expect(
       await database
           .customSelect('SELECT COUNT(*) AS count FROM workouts_table')
@@ -198,6 +262,71 @@ void main() {
     );
   });
 
+  group('dbSchemaVersion compatibility', () {
+    Map<String, Object?> envelopeJson(int dbSchemaVersion) => {
+          'formatVersion': DataExportService.formatVersion,
+          'dbSchemaVersion': dbSchemaVersion,
+          'appVersion': '0.1.0',
+          'exportedAt': DateTime.now().toIso8601String(),
+          'tables': <String, dynamic>{},
+        };
+
+    test('accepts a backup matching the current schema version', () async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      final envelope = service.parseImport(
+        jsonEncode(envelopeJson(database.schemaVersion)),
+      );
+      // A schema-version match with no tables is otherwise a normal
+      // (if empty) replace, so this must not throw.
+      await service.applyImport(
+        database,
+        envelope,
+        mode: ImportMode.merge,
+        snapshotDirPath: snapshotDir.path,
+      );
+      await database.close();
+    });
+
+    test('rejects a backup from an older schema version', () async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      final envelope = service.parseImport(
+        jsonEncode(envelopeJson(database.schemaVersion - 1)),
+      );
+
+      await expectLater(
+        service.applyImport(
+          database,
+          envelope,
+          mode: ImportMode.merge,
+          snapshotDirPath: snapshotDir.path,
+        ),
+        throwsA(isA<ImportValidationException>()),
+      );
+      await database.close();
+    });
+
+    test('rejects a backup from a newer, unsupported schema version', () async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      final envelope = service.parseImport(
+        jsonEncode(envelopeJson(database.schemaVersion + 1)),
+      );
+
+      await expectLater(
+        service.applyImport(
+          database,
+          envelope,
+          mode: ImportMode.merge,
+          snapshotDirPath: snapshotDir.path,
+        ),
+        throwsA(isA<ImportValidationException>()),
+      );
+      await database.close();
+    });
+  });
+
   test(
       'replace mode leaves the local exercise catalogue intact when the '
       'backup omits it', () async {
@@ -217,14 +346,18 @@ void main() {
       ),
     ]);
 
-    // A hand-edited/partial backup that has no 'exercises_table' key at all.
+    // A backup that has no 'exercises_table' key at all — every other
+    // non-catalogue table must still be present for replace to accept it.
     final String partialJson = jsonEncode({
       'formatVersion': DataExportService.formatVersion,
       'dbSchemaVersion': destination.schemaVersion,
       'appVersion': '0.1.0',
       'exportedAt': DateTime.now().toIso8601String(),
       'tables': <String, dynamic>{
-        'workouts_table': <Map<String, Object?>>[],
+        for (final table in destination.allTables)
+          if (!DataExportService.catalogueTableNames
+              .contains(table.actualTableName))
+            table.actualTableName: <Map<String, Object?>>[],
       },
     });
     final envelope = service.parseImport(partialJson);
@@ -237,6 +370,211 @@ void main() {
 
     expect(await exerciseDao.getById('bench'), isNotNull);
     await destination.close();
+  });
+
+  test(
+      'replace rejects a backup missing a user-data table instead of '
+      'wiping it', () async {
+    const service = DataExportService();
+    final destination = AppDatabase.forTesting();
+    await seed(destination);
+
+    // Truncated/hand-edited backup: every non-catalogue table present
+    // except 'timer_sessions_table'.
+    final String truncatedJson = jsonEncode({
+      'formatVersion': DataExportService.formatVersion,
+      'dbSchemaVersion': destination.schemaVersion,
+      'appVersion': '0.1.0',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'tables': <String, dynamic>{
+        for (final table in destination.allTables)
+          if (!DataExportService.catalogueTableNames
+                  .contains(table.actualTableName) &&
+              table.actualTableName != 'timer_sessions_table')
+            table.actualTableName: <Map<String, Object?>>[],
+      },
+    });
+    final envelope = service.parseImport(truncatedJson);
+
+    await expectLater(
+      service.applyImport(
+        destination,
+        envelope,
+        mode: ImportMode.replace,
+        snapshotDirPath: snapshotDir.path,
+      ),
+      throwsA(isA<ImportValidationException>()),
+    );
+
+    // The seeded workout must survive untouched: rejection must happen
+    // before any DELETE runs.
+    final workoutDao = WorkoutDao(destination);
+    expect(await workoutDao.getWithDetails('w1'), isNotNull);
+    // No snapshot should have been written for a rejected import either.
+    expect(await service.listSnapshots(snapshotDir.path), isEmpty);
+    await destination.close();
+  });
+
+  test('rejects a backup that references an unrecognized table', () async {
+    const service = DataExportService();
+    final destination = AppDatabase.forTesting();
+
+    final String unknownTableJson = jsonEncode({
+      'formatVersion': DataExportService.formatVersion,
+      'dbSchemaVersion': destination.schemaVersion,
+      'appVersion': '0.1.0',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'tables': <String, dynamic>{
+        'not_a_real_table': <Map<String, Object?>>[],
+      },
+    });
+    final envelope = service.parseImport(unknownTableJson);
+
+    await expectLater(
+      service.applyImport(
+        destination,
+        envelope,
+        mode: ImportMode.merge,
+        snapshotDirPath: snapshotDir.path,
+      ),
+      throwsA(isA<ImportValidationException>()),
+    );
+    await destination.close();
+  });
+
+  test('rejects a JSON import containing a dangling foreign key', () async {
+    const service = DataExportService();
+
+    final source = AppDatabase.forTesting();
+    await seed(source);
+    final String validJson = await service.buildJsonExport(source);
+    await source.close();
+
+    // Corrupt the exported workout-exercise row to reference an exercise
+    // that doesn't exist anywhere in this envelope — simulating a
+    // hand-edited or bit-corrupted backup rather than building one from
+    // scratch, since that would require reproducing sqlite's exact epoch/
+    // boolean column representation by hand.
+    final Map<String, dynamic> decoded =
+        jsonDecode(validJson) as Map<String, dynamic>;
+    final tables = decoded['tables'] as Map<String, dynamic>;
+    final workoutExercises =
+        (tables['workout_exercises_table'] as List<dynamic>)
+            .cast<Map<String, dynamic>>();
+    workoutExercises.first['exercise_id'] = 'does-not-exist';
+    final String corruptedJson = jsonEncode(decoded);
+
+    final destination = AppDatabase.forTesting();
+    final envelope = service.parseImport(corruptedJson);
+
+    await expectLater(
+      service.applyImport(
+        destination,
+        envelope,
+        mode: ImportMode.replace,
+        snapshotDirPath: snapshotDir.path,
+      ),
+      throwsException,
+    );
+
+    // The foreign-key violation must roll back everything, not just skip
+    // the bad row.
+    final count = await destination
+        .customSelect('SELECT COUNT(*) AS count FROM workouts_table')
+        .getSingle()
+        .then((row) => row.read<int>('count'));
+    expect(count, 0);
+    await destination.close();
+  });
+
+  group('row validation happens before snapshots or writes', () {
+    Future<Map<String, dynamic>> exportedTables() async {
+      final source = AppDatabase.forTesting();
+      await seed(source);
+      final json = await const DataExportService().buildJsonExport(source);
+      await source.close();
+      return (jsonDecode(json) as Map<String, dynamic>)['tables']
+          as Map<String, dynamic>;
+    }
+
+    test('rejects a missing required column with table and row context',
+        () async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      final tables = await exportedTables();
+      final workout = (tables['workouts_table'] as List<dynamic>).first
+          as Map<String, dynamic>;
+      workout.remove('started_at');
+      final envelope = ImportEnvelope(
+        formatVersion: DataExportService.formatVersion,
+        dbSchemaVersion: database.schemaVersion,
+        appVersion: '0.1.0',
+        exportedAt: DateTime.utc(2026),
+        tables: tables.map(
+          (key, value) => MapEntry(
+            key,
+            (value as List<dynamic>)
+                .map((row) =>
+                    (row as Map<String, dynamic>).cast<String, Object?>())
+                .toList(),
+          ),
+        ),
+      );
+
+      await expectLater(
+        service.applyImport(
+          database,
+          envelope,
+          mode: ImportMode.replace,
+          snapshotDirPath: snapshotDir.path,
+        ),
+        throwsA(
+          predicate<ImportValidationException>(
+            (error) =>
+                error.message.contains('workouts_table row 1') &&
+                error.message.contains('started_at'),
+          ),
+        ),
+      );
+      expect(await service.listSnapshots(snapshotDir.path), isEmpty);
+      await database.close();
+    });
+
+    test('rejects invalid scalar types before touching the database', () async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      final tables = await exportedTables();
+      final set = (tables['workout_sets_table'] as List<dynamic>).first
+          as Map<String, dynamic>;
+      set['reps'] = 'five';
+      final envelope = ImportEnvelope(
+        formatVersion: DataExportService.formatVersion,
+        dbSchemaVersion: database.schemaVersion,
+        appVersion: '0.1.0',
+        exportedAt: DateTime.utc(2026),
+        tables: tables.map(
+          (key, value) => MapEntry(
+            key,
+            (value as List<dynamic>)
+                .map((row) =>
+                    (row as Map<String, dynamic>).cast<String, Object?>())
+                .toList(),
+          ),
+        ),
+      );
+
+      await expectLater(
+        service.applyImport(
+          database,
+          envelope,
+          mode: ImportMode.replace,
+          snapshotDirPath: snapshotDir.path,
+        ),
+        throwsA(isA<ImportValidationException>()),
+      );
+      expect(await service.listSnapshots(snapshotDir.path), isEmpty);
+      await database.close();
+    });
   });
 
   test('rejects a file that is not valid JSON', () {

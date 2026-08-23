@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../formatters/date_formatters.dart';
 import '../app_database.dart';
 import '../tables/exercise_muscles.dart';
 import '../tables/exercises.dart';
@@ -111,7 +112,8 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           .map((rows) => rows.map<Workout>(Workout.fromDrift).toList());
 
   /// Weekly volume aggregation — computed in SQL (ADR-1).
-  /// Returns (week_start, total_volume_kg) for completed workouts.
+  /// Returns (week_start, total_volume_kg) for completed workouts, with
+  /// untrained weeks zero-filled — see [_fillWeekGaps].
   /// `since` is null for all-time (no lower bound).
   Stream<List<WeeklyVolume>> watchWeeklyVolume({DateTime? since}) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
@@ -130,18 +132,25 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       variables: since == null ? [] : [Variable.withDateTime(since)],
       readsFrom: {workoutsTable},
     ).watch().map(
-          (rows) => rows
-              .map(
-                (r) => WeeklyVolume(
-                  weekStart: DateTime.parse(r.read<String>('week_start')),
-                  totalVolumeKg: r.read<double>('total_volume_kg'),
-                ),
-              )
-              .toList(),
+          (rows) => _fillWeekGaps<WeeklyVolume>(
+            rows
+                .map(
+                  (r) => WeeklyVolume(
+                    weekStart: DateTime.parse(r.read<String>('week_start')),
+                    totalVolumeKg: r.read<double>('total_volume_kg'),
+                  ),
+                )
+                .toList(),
+            since: since,
+            weekStartOf: (WeeklyVolume w) => w.weekStart,
+            zero: (DateTime week) =>
+                WeeklyVolume(weekStart: week, totalVolumeKg: 0),
+          ),
         );
   }
 
-  /// Workout frequency by week — computed in SQL (ADR-1).
+  /// Workout frequency by week — computed in SQL (ADR-1), with untrained
+  /// weeks zero-filled (see [_fillWeekGaps]).
   /// `since` is null for all-time (no lower bound).
   Stream<List<WorkoutFrequency>> watchWorkoutFrequency({DateTime? since}) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
@@ -160,11 +169,115 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       variables: since == null ? [] : [Variable.withDateTime(since)],
       readsFrom: {workoutsTable},
     ).watch().map(
+          (rows) => _fillWeekGaps<WorkoutFrequency>(
+            rows
+                .map(
+                  (r) => WorkoutFrequency(
+                    weekStart: DateTime.parse(r.read<String>('week_start')),
+                    workoutCount: r.read<int>('workout_count'),
+                  ),
+                )
+                .toList(),
+            since: since,
+            weekStartOf: (WorkoutFrequency f) => f.weekStart,
+            zero: (DateTime week) =>
+                WorkoutFrequency(weekStart: week, workoutCount: 0),
+          ),
+        );
+  }
+
+  /// Emits an explicit zero row for every week in the queried window that
+  /// contains no workouts.
+  ///
+  /// `GROUP BY` produces no row for a week you did not train, so a raw
+  /// series silently deletes rest weeks from the x-axis and renders the
+  /// weeks either side of a two-month layoff as neighbouring bars. Anything
+  /// averaging over the series has the same problem in reverse: dividing by
+  /// the row count measures *active* weeks, not elapsed ones, and reports a
+  /// single busy week as a sustained rate.
+  ///
+  /// Filled in Dart rather than with a recursive CTE: the aggregation itself
+  /// stays in SQL as ADR-1 requires, and this is presentation-shaped work
+  /// (which calendar weeks the window covers) that is far easier to read and
+  /// unit-test here.
+  ///
+  /// The window runs from the first bucket — `since`'s week, or the earliest
+  /// row's week for an all-time query — through the current week, so a
+  /// window that ends in a layoff shows the layoff. An empty result stays
+  /// empty: callers distinguish "never trained" from "trained, then
+  /// stopped", and fabricating a run of zeroes would erase that difference.
+  List<T> _fillWeekGaps<T>(
+    List<T> rows, {
+    required DateTime? since,
+    required DateTime Function(T) weekStartOf,
+    required T Function(DateTime) zero,
+  }) {
+    if (rows.isEmpty) return rows;
+
+    final Map<DateTime, T> byWeek = <DateTime, T>{
+      for (final T row in rows) weekStartOf(row): row,
+    };
+
+    DateTime cursor = since == null
+        ? weekStartOf(rows.first)
+        : DateFormatters.utcWeekStart(since);
+    // Rows are ordered ascending, so the last one is the newest. Taking the
+    // later of it and the current week keeps a future-dated workout (an
+    // import artefact, or a device clock skew) inside the series instead of
+    // silently truncating it away.
+    final DateTime currentWeek = DateFormatters.utcWeekStart(DateTime.now());
+    final DateTime lastWeek = weekStartOf(rows.last);
+    final DateTime end = lastWeek.isAfter(currentWeek) ? lastWeek : currentWeek;
+
+    final List<T> filled = <T>[];
+    while (!cursor.isAfter(end)) {
+      filled.add(byWeek[cursor] ?? zero(cursor));
+      cursor = DateFormatters.nextWeek(cursor);
+    }
+    return filled;
+  }
+
+  /// Exercises the user has actually logged, most-sessions first.
+  ///
+  /// Backs the Progress page's 1RM picker, which previously listed the whole
+  /// catalogue — so its default selection was an arbitrary seeded exercise
+  /// with no data behind it, and choosing a real lift meant scrolling past
+  /// hundreds of entries never performed.
+  ///
+  /// Filters on the same completed / non-warm-up / reps-1-12 window as
+  /// [watchOneRMSeries], so the picker can never offer a lift whose chart
+  /// would then come up empty.
+  Stream<List<LoggedExercise>> watchLoggedExercises() {
+    return customSelect(
+      '''
+      SELECT
+        we.exercise_id as exercise_id,
+        ex.name as exercise_name,
+        COUNT(DISTINCT w.id) as session_count
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+      JOIN workouts_table w ON we.workout_id = w.id
+      JOIN exercises_table ex ON ex.id = we.exercise_id
+      WHERE w.ended_at IS NOT NULL
+        AND ws.is_completed = 1
+        AND ws.is_warmup = 0
+        AND ws.reps BETWEEN 1 AND 12
+      GROUP BY we.exercise_id, ex.name
+      ORDER BY session_count DESC, ex.name ASC
+      ''',
+      readsFrom: {
+        workoutSetsTable,
+        workoutExercisesTable,
+        workoutsTable,
+        exercisesTable,
+      },
+    ).watch().map(
           (rows) => rows
               .map(
-                (r) => WorkoutFrequency(
-                  weekStart: DateTime.parse(r.read<String>('week_start')),
-                  workoutCount: r.read<int>('workout_count'),
+                (r) => LoggedExercise(
+                  exerciseId: r.read<String>('exercise_id'),
+                  exerciseName: r.read<String>('exercise_name'),
+                  sessionCount: r.read<int>('session_count'),
                 ),
               )
               .toList(),
@@ -219,6 +332,136 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
               )
               .toList(),
         );
+  }
+
+  /// Push/pull and upper/lower volume totals for the selected window.
+  Stream<BalanceRatios> watchBalanceRatios({DateTime? since}) {
+    final whereSince = since == null ? '' : 'AND w.started_at >= ?';
+    return customSelect(
+            '''
+      SELECT
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPush','verticalPush') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS push_volume,
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPull','verticalPull') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS pull_volume,
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPush','verticalPush','horizontalPull','verticalPull') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS upper_volume,
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('kneeDominant','hipDominant') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS lower_volume
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
+      JOIN workouts_table w ON w.id = we.workout_id
+      JOIN exercises_table e ON e.id = we.exercise_id
+      WHERE w.ended_at IS NOT NULL AND ws.is_completed = 1 AND ws.is_warmup = 0
+      $whereSince
+    ''',
+            variables: since == null ? [] : [Variable.withDateTime(since)],
+            readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable, exercisesTable})
+        .watchSingle()
+        .map((r) => BalanceRatios(
+              pushVolumeKg: r.read<double>('push_volume'),
+              pullVolumeKg: r.read<double>('pull_volume'),
+              upperVolumeKg: r.read<double>('upper_volume'),
+              lowerVolumeKg: r.read<double>('lower_volume'),
+            ));
+  }
+
+  /// Weekly volume attributed to each exercise's primary muscle.
+  Stream<List<WeeklyMuscleGroupVolume>> watchWeeklyMuscleGroupVolume(
+      {DateTime? since}) {
+    final whereSince = since == null ? '' : 'AND w.started_at >= ?';
+    return customSelect(
+        '''
+      SELECT date(w.started_at, 'unixepoch', 'weekday 0', '-6 days') AS week_start,
+        m.id AS muscle_id, m.display_name AS muscle_name,
+        SUM(ws.weight_kg * ws.reps) AS total_volume_kg
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
+      JOIN workouts_table w ON w.id = we.workout_id
+      JOIN exercise_muscles_table em ON em.exercise_id = we.exercise_id AND em.role = 'primary'
+      JOIN muscles_table m ON m.id = em.muscle_id
+      WHERE w.ended_at IS NOT NULL AND ws.is_completed = 1 AND ws.is_warmup = 0 $whereSince
+      GROUP BY week_start, m.id, m.display_name ORDER BY week_start, m.display_name
+    ''',
+        variables: since == null ? [] : [Variable.withDateTime(since)],
+        readsFrom: {
+          workoutSetsTable,
+          workoutExercisesTable,
+          workoutsTable,
+          exerciseMusclesTable,
+          musclesTable
+        }).watch().map((rows) => [
+          for (final r in rows)
+            WeeklyMuscleGroupVolume(
+              weekStart: DateTime.parse(r.read<String>('week_start')),
+              muscleId: r.read<String>('muscle_id'),
+              muscleName: r.read<String>('muscle_name'),
+              totalVolumeKg: r.read<double>('total_volume_kg'),
+            ),
+        ]);
+  }
+
+  /// Working-set exposure split into the three common rep ranges.
+  Stream<List<RepRangeDistribution>> watchRepRangeDistribution(
+      {DateTime? since}) {
+    final whereSince = since == null ? '' : 'AND w.started_at >= ?';
+    return customSelect(
+            '''
+      SELECT CASE WHEN ws.reps BETWEEN 1 AND 5 THEN 'oneToFive'
+                  WHEN ws.reps BETWEEN 6 AND 12 THEN 'sixToTwelve'
+                  ELSE 'thirteenPlus' END AS rep_range,
+        COUNT(*) AS set_count, COALESCE(SUM(ws.weight_kg * ws.reps), 0) AS volume_kg
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
+      JOIN workouts_table w ON w.id = we.workout_id
+      WHERE w.ended_at IS NOT NULL AND ws.is_completed = 1 AND ws.is_warmup = 0
+        AND ws.reps > 0 $whereSince
+      GROUP BY rep_range ORDER BY CASE rep_range WHEN 'oneToFive' THEN 1 WHEN 'sixToTwelve' THEN 2 ELSE 3 END
+    ''',
+            variables: since == null ? [] : [Variable.withDateTime(since)],
+            readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable})
+        .watch()
+        .map((rows) {
+      final byRange = {
+        for (final range in RepRange.values)
+          range: RepRangeDistribution(range: range, setCount: 0, volumeKg: 0)
+      };
+      for (final r in rows) {
+        final range = RepRange.values.byName(r.read<String>('rep_range'));
+        byRange[range] = RepRangeDistribution(
+            range: range,
+            setCount: r.read<int>('set_count'),
+            volumeKg: r.read<double>('volume_kg'));
+      }
+      return [for (final range in RepRange.values) byRange[range]!];
+    });
+  }
+
+  /// Monday-first distribution of completed workouts and distinct training days.
+  Stream<List<WeekdayDistribution>> watchWeekdayDistribution(
+      {DateTime? since}) {
+    final whereSince = since == null ? '' : 'AND started_at >= ?';
+    return customSelect(
+        '''
+      SELECT CASE CAST(strftime('%w', started_at, 'unixepoch') AS INTEGER)
+               WHEN 0 THEN 7 ELSE CAST(strftime('%w', started_at, 'unixepoch') AS INTEGER) END AS weekday,
+        COUNT(*) AS workout_count,
+        COUNT(DISTINCT date(started_at, 'unixepoch')) AS training_day_count
+      FROM workouts_table WHERE ended_at IS NOT NULL $whereSince
+      GROUP BY weekday ORDER BY weekday
+    ''',
+        variables: since == null ? [] : [Variable.withDateTime(since)],
+        readsFrom: {workoutsTable}).watch().map((rows) {
+      final byDay = {
+        for (var day = 1; day <= 7; day++)
+          day: WeekdayDistribution(
+              weekday: day, trainingDayCount: 0, workoutCount: 0)
+      };
+      for (final r in rows) {
+        final day = r.read<int>('weekday');
+        byDay[day] = WeekdayDistribution(
+            weekday: day,
+            trainingDayCount: r.read<int>('training_day_count'),
+            workoutCount: r.read<int>('workout_count'));
+      }
+      return [for (var day = 1; day <= 7; day++) byDay[day]!];
+    });
   }
 
   /// Best estimated 1RM per exercise in a window, next to the same figure
@@ -373,29 +616,77 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         );
   }
 
-  /// Per-exercise 1RM series over time (ADR-123).
-  /// Returns (date, exercise_id, estimated_1rm_kg) for completed, non-warmup sets.
+  /// Per-session load for one lift. This separates heavier lifting from doing
+  /// more total work in the same 1RM window.
+  Stream<List<SessionVolumeLoad>> watchSessionVolumeLoad(
+    String exerciseId, {
+    DateTime? since,
+  }) {
+    final sinceClause = since == null ? '' : 'AND w.started_at >= ?';
+    return customSelect('''
+      SELECT w.id AS workout_id, w.started_at AS date,
+        SUM(ws.weight_kg * ws.reps) AS volume_kg
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
+      JOIN workouts_table w ON w.id = we.workout_id
+      WHERE we.exercise_id = ? AND w.ended_at IS NOT NULL
+        AND ws.is_completed = 1 AND ws.is_warmup = 0
+        AND ws.reps BETWEEN 1 AND 12 $sinceClause
+      GROUP BY w.id, w.started_at ORDER BY w.started_at ASC
+    ''', variables: [
+      Variable.withString(exerciseId),
+      if (since != null) Variable.withDateTime(since),
+    ], readsFrom: {
+      workoutSetsTable,
+      workoutExercisesTable,
+      workoutsTable
+    }).watch().map((rows) => [
+          for (final row in rows)
+            SessionVolumeLoad(
+              workoutId: row.read<String>('workout_id'),
+              date: row.read<DateTime>('date'),
+              volumeKg: row.read<double>('volume_kg'),
+            ),
+        ]);
+  }
+
+  /// Per-exercise 1RM series over time (ADR-123): one point per *session*,
+  /// its best estimated 1RM that day — not one point per set. A session with
+  /// several sets of the same lift would otherwise plot as several points on
+  /// the same date, showing intra-workout fatigue instead of a progress
+  /// trend, and [limit] would cap the range at N sets rather than N sessions.
   Stream<List<OneRMSeriesPoint>> watchOneRMSeries(
     String exerciseId, {
     int limit = 50,
     DateTime? since,
   }) {
+    const String oneRm =
+        'ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END';
+
     return customSelect(
       '''
-      SELECT
-        w.started_at as date,
-        ws.weight_kg,
-        ws.reps
-      FROM workout_sets_table ws
-      JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
-      JOIN workouts_table w ON we.workout_id = w.id
-      WHERE we.exercise_id = ?
-        AND w.ended_at IS NOT NULL
-        AND w.started_at >= ?
-        AND ws.is_completed = 1
-        AND ws.is_warmup = 0
-        AND ws.reps BETWEEN 1 AND 12
-      ORDER BY w.started_at DESC
+      WITH ranked AS (
+        SELECT
+          w.started_at as date,
+          ws.weight_kg as weight_kg,
+          ws.reps as reps,
+          ROW_NUMBER() OVER (
+            PARTITION BY w.started_at ORDER BY $oneRm DESC
+          ) as rank_in_session
+        FROM workout_sets_table ws
+        JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+        JOIN workouts_table w ON we.workout_id = w.id
+        WHERE we.exercise_id = ?
+          AND w.ended_at IS NOT NULL
+          AND w.started_at >= ?
+          AND ws.is_completed = 1
+          AND ws.is_warmup = 0
+          AND ws.reps BETWEEN 1 AND 12
+      )
+      SELECT date, weight_kg, reps
+      FROM ranked
+      WHERE rank_in_session = 1
+      ORDER BY date DESC
       LIMIT ?
       ''',
       variables: [
@@ -406,19 +697,29 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         Variable.withInt(limit),
       ],
       readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable},
-    ).watch().map(
-          (rows) => rows.map((r) {
-            final weightKg = r.read<double>('weight_kg');
-            final reps = r.read<int>('reps');
-            // `date` is a raw `started_at` passthrough (not a SQL date()
-            // call), so it's still in the column's native storage
-            // representation — read it typed as DateTime rather than
-            // parsing it as an ISO string.
-            final date = r.read<DateTime>('date');
-            final oneRM = reps == 1 ? weightKg : weightKg * (1 + reps / 30.0);
-            return OneRMSeriesPoint(date: date, estimated1RM: oneRM);
-          }).toList(),
+    ).watch().map((rows) {
+      final points = rows.map((r) {
+        final weightKg = r.read<double>('weight_kg');
+        final reps = r.read<int>('reps');
+        final date = r.read<DateTime>('date');
+        final oneRM = reps == 1 ? weightKg : weightKg * (1 + reps / 30.0);
+        return OneRMSeriesPoint(date: date, estimated1RM: oneRM);
+      }).toList();
+      // The query is newest-first. Mark points against earlier points in the
+      // returned window, then restore newest-first order for existing callers.
+      var best = double.negativeInfinity;
+      for (final point in points.reversed) {
+        final isRecord = point.estimated1RM > best;
+        if (isRecord) best = point.estimated1RM;
+        final index = points.indexOf(point);
+        points[index] = OneRMSeriesPoint(
+          date: point.date,
+          estimated1RM: point.estimated1RM,
+          isPersonalRecord: isRecord,
         );
+      }
+      return points;
+    });
   }
 
   /// IDs of workouts that set at least one personal record — i.e. contain a
@@ -430,30 +731,49 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// the same Epley formula as [isPersonalRecord] in `progress_calculators`,
   /// so a badge here always agrees with the 1RM chart.
   Stream<Set<String>> watchPersonalRecordWorkoutIds() {
+    const String oneRm =
+        'ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END';
+
+    // A workout counts as a PR for an exercise if *any* of its sets beats
+    // every strictly-earlier workout's best for that exercise — which is
+    // the same thing as its *best* set beating that history, since "some
+    // set beats X" iff "the best set beats X". Aggregating to one row per
+    // (workout, exercise) first and comparing with a window function is
+    // O(n log n); the previous correlated subquery re-scanned the sets
+    // table once per outer *set* row, which was O(n^2) and took over 100
+    // seconds against a benchmark of 3,000 workouts / 36,000 sets — this
+    // powers a PR badge on every workout in history, so at that scale the
+    // list would have simply hung.
     return customSelect(
       '''
-      SELECT DISTINCT w.id as workout_id
-      FROM workouts_table w
-      JOIN workout_exercises_table we ON we.workout_id = w.id
-      JOIN workout_sets_table ws ON ws.workout_exercise_id = we.id
-      WHERE w.ended_at IS NOT NULL
-        AND ws.is_completed = 1
-        AND ws.is_warmup = 0
-        AND ws.reps BETWEEN 1 AND 12
-        AND (ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END) > (
-          SELECT COALESCE(MAX(
-            ws2.weight_kg * CASE WHEN ws2.reps = 1 THEN 1 ELSE (1 + ws2.reps / 30.0) END
-          ), 0)
-          FROM workout_sets_table ws2
-          JOIN workout_exercises_table we2 ON ws2.workout_exercise_id = we2.id
-          JOIN workouts_table w2 ON we2.workout_id = w2.id
-          WHERE we2.exercise_id = we.exercise_id
-            AND w2.ended_at IS NOT NULL
-            AND ws2.is_completed = 1
-            AND ws2.is_warmup = 0
-            AND ws2.reps BETWEEN 1 AND 12
-            AND w2.started_at < w.started_at
-        )
+      WITH workout_best AS (
+        SELECT
+          w.id AS workout_id,
+          we.exercise_id AS exercise_id,
+          w.started_at AS started_at,
+          MAX($oneRm) AS best_one_rm
+        FROM workout_sets_table ws
+        JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+        JOIN workouts_table w ON we.workout_id = w.id
+        WHERE w.ended_at IS NOT NULL
+          AND ws.is_completed = 1
+          AND ws.is_warmup = 0
+          AND ws.reps BETWEEN 1 AND 12
+        GROUP BY w.id, we.exercise_id
+      ),
+      scored AS (
+        SELECT
+          workout_id,
+          best_one_rm,
+          MAX(best_one_rm) OVER (
+            PARTITION BY exercise_id ORDER BY started_at
+            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+          ) AS prior_best
+        FROM workout_best
+      )
+      SELECT DISTINCT workout_id
+      FROM scored
+      WHERE best_one_rm > COALESCE(prior_best, 0)
       ''',
       readsFrom: {workoutsTable, workoutExercisesTable, workoutSetsTable},
     ).watch().map(
@@ -628,6 +948,67 @@ class WorkoutFrequency {
   final int workoutCount;
 }
 
+/// An exercise the user has logged, with how many sessions it appears in.
+class LoggedExercise {
+  const LoggedExercise({
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.sessionCount,
+  });
+
+  final String exerciseId;
+  final String exerciseName;
+  final int sessionCount;
+}
+
+class BalanceRatios {
+  const BalanceRatios(
+      {required this.pushVolumeKg,
+      required this.pullVolumeKg,
+      required this.upperVolumeKg,
+      required this.lowerVolumeKg});
+  final double pushVolumeKg;
+  final double pullVolumeKg;
+  final double upperVolumeKg;
+  final double lowerVolumeKg;
+  double? get pushPullRatio =>
+      pullVolumeKg == 0 ? null : pushVolumeKg / pullVolumeKg;
+  double? get upperLowerRatio =>
+      lowerVolumeKg == 0 ? null : upperVolumeKg / lowerVolumeKg;
+}
+
+class WeeklyMuscleGroupVolume {
+  const WeeklyMuscleGroupVolume(
+      {required this.weekStart,
+      required this.muscleId,
+      required this.muscleName,
+      required this.totalVolumeKg});
+  final DateTime weekStart;
+  final String muscleId;
+  final String muscleName;
+  final double totalVolumeKg;
+}
+
+enum RepRange { oneToFive, sixToTwelve, thirteenPlus }
+
+class RepRangeDistribution {
+  const RepRangeDistribution(
+      {required this.range, required this.setCount, required this.volumeKg});
+  final RepRange range;
+  final int setCount;
+  final double volumeKg;
+}
+
+class WeekdayDistribution {
+  const WeekdayDistribution(
+      {required this.weekday,
+      required this.trainingDayCount,
+      required this.workoutCount});
+  final int weekday;
+  final int trainingDayCount;
+  final int workoutCount;
+}
+
 /// Total training volume attributed to one muscle group over a window.
 class MuscleGroupVolume {
   const MuscleGroupVolume({
@@ -642,11 +1023,23 @@ class MuscleGroupVolume {
 }
 
 /// OneRM series data point.
+class SessionVolumeLoad {
+  const SessionVolumeLoad(
+      {required this.workoutId, required this.date, required this.volumeKg});
+  final String workoutId;
+  final DateTime date;
+  final double volumeKg;
+}
+
 class OneRMSeriesPoint {
-  const OneRMSeriesPoint({required this.date, required this.estimated1RM});
+  const OneRMSeriesPoint(
+      {required this.date,
+      required this.estimated1RM,
+      this.isPersonalRecord = false});
 
   final DateTime date;
   final double estimated1RM;
+  final bool isPersonalRecord;
 }
 
 /// Direction of change between a lift's most recent two 1RM estimates.

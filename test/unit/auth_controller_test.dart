@@ -143,7 +143,7 @@ void main() {
       if (kind != AuthFailureKind.unknown) {
         expect(
           message,
-          isNot(AuthFailure(AuthFailureKind.unknown).message),
+          isNot(const AuthFailure(AuthFailureKind.unknown).message),
           reason: '${kind.name} falls back to the generic message',
         );
       }

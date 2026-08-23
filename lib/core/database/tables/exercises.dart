@@ -51,6 +51,12 @@ class ExercisesTable extends Table {
   /// so the idempotent seeder can detect diffs.
   IntColumn get seedVersion => integer()();
 
+  /// Whether this row was created locally (e.g. an unmatched name from a
+  /// historical XLSX import) rather than shipped in the seed catalogue.
+  /// Explicit rather than inferred from `seedVersion == 0`, since that was
+  /// a de facto convention with no named meaning of its own.
+  BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -151,6 +157,7 @@ abstract class Exercise with _$Exercise {
     required bool isUnilateral,
     required bool isBodyweight,
     required int seedVersion,
+    required bool isCustom,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _Exercise;
@@ -171,6 +178,7 @@ abstract class Exercise with _$Exercise {
         isUnilateral: row.isUnilateral,
         isBodyweight: row.isBodyweight,
         seedVersion: row.seedVersion,
+        isCustom: row.isCustom,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       );

@@ -1,17 +1,14 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/database/app_database.dart';
-import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/daos/workout_dao.dart';
-import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -23,8 +20,8 @@ import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/trend_badge.dart';
 import '../domain/progress_providers.dart';
-
-const _uuid = Uuid();
+import '../domain/strength_analytics.dart';
+import 'widgets/body_metric_widgets.dart';
 
 /// Height of a full chart. One value for all of them, so the page has a
 /// consistent rhythm instead of three hand-picked heights.
@@ -64,6 +61,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               subtitle: _strengthSubtitle(range),
             ),
             _StrengthChangeSection(range: range),
+            _RelativeStrengthSection(range: range),
             const SizedBox(height: AppSpacing.xl),
             const SectionHeader(
               title: 'Estimated 1RM',
@@ -75,12 +73,32 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               onExerciseChanged: (String? id) =>
                   setState(() => _exerciseId = id),
             ),
+            _SessionVolumeSection(range: range, exerciseId: _exerciseId),
             const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Weekly volume'),
+            SectionHeader(
+              title: 'Weekly volume',
+              subtitle: 'Every week in the ${range.description}, '
+                  'including untrained ones',
+            ),
             _VolumeSection(range: range),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Consistency'),
+            _ConsistencySection(range: range),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Training balance'),
+            _BalanceSection(range: range),
             const SizedBox(height: AppSpacing.xl),
             const SectionHeader(title: 'Workout frequency'),
             _FrequencySection(range: range),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Weekly volume by muscle'),
+            _WeeklyMuscleSection(range: range),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Rep-range distribution'),
+            _RepRangeSection(range: range),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Training days'),
+            _WeekdaySection(range: range),
             const SizedBox(height: AppSpacing.xl),
             const SectionHeader(title: 'Volume by muscle group'),
             _MuscleGroupSection(range: range),
@@ -89,7 +107,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               title: 'Body metrics',
               subtitle: 'Weight and body fat over time',
             ),
-            const _BodyMetricsSection(),
+            _BodyMetricsSection(range: range),
             const SizedBox(height: AppSpacing.xl),
           ],
         ),
@@ -98,12 +116,14 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   }
 }
 
-String _strengthSubtitle(ProgressRange range) => switch (range) {
-      ProgressRange.month => 'Best lift this month vs the month before',
-      ProgressRange.quarter => 'Best lift this quarter vs the quarter before',
-      ProgressRange.year => 'Best lift this year vs the year before',
-      ProgressRange.all => 'Your best lift ever, per exercise',
-    };
+/// Describes the comparison in the same rolling terms [ProgressRange.since]
+/// actually computes. This used to say "this month vs the month before",
+/// which reads as calendar months the query never draws.
+String _strengthSubtitle(ProgressRange range) =>
+    range.previousDescription == null
+        ? 'Your best lift ever, per exercise'
+        : 'Best lift in the ${range.description} '
+            'vs ${range.previousDescription}';
 
 /// Per-lift strength comparison: the question "am I improving" answered
 /// directly, rather than inferred from a volume figure.
@@ -145,6 +165,42 @@ class _StrengthChangeSection extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+class _RelativeStrengthSection extends ConsumerWidget {
+  const _RelativeStrengthSection({required this.range});
+  final ProgressRange range;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(relativeStrengthsProvider(range)).when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (rows) => rows.isEmpty
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Relative strength',
+                            style: Theme.of(context).textTheme.titleSmall),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text('e1RM ÷ latest body weight',
+                            style: AppTypography.caption(Theme.of(context))),
+                        for (final row in rows.take(6))
+                          ListTile(
+                            dense: true,
+                            title: Text(row.exerciseName),
+                            trailing: Text('${row.ratio.toStringAsFixed(2)}×'),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+        );
   }
 }
 
@@ -373,15 +429,18 @@ class _OneRmSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<ExerciseSummary>> exercises =
-        ref.watch(allExercisesStreamProvider);
+    // Only lifts with logged sets, most-trained first — not the whole
+    // catalogue. The default selection is therefore the exercise the user
+    // trains most, instead of whichever seeded exercise sorted first.
+    final AsyncValue<List<LoggedExercise>> exercises =
+        ref.watch(loggedExercisesProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
     return exercises.when(
       loading: () => const _ChartLoading(),
       error: (error, _) => _ChartError(
         error: error,
-        onRetry: () => ref.invalidate(allExercisesStreamProvider),
+        onRetry: () => ref.invalidate(loggedExercisesProvider),
       ),
       data: (items) {
         if (items.isEmpty) {
@@ -392,9 +451,9 @@ class _OneRmSection extends ConsumerWidget {
         }
 
         final String selected =
-            items.any((ExerciseSummary i) => i.exercise.id == exerciseId)
+            items.any((LoggedExercise i) => i.exerciseId == exerciseId)
                 ? exerciseId!
-                : items.first.exercise.id;
+                : items.first.exerciseId;
 
         final AsyncValue<List<OneRMSeriesPoint>> seriesAsync =
             ref.watch(oneRmSeriesProvider(selected, range));
@@ -404,11 +463,12 @@ class _OneRmSection extends ConsumerWidget {
           decoration: const InputDecoration(labelText: 'Exercise'),
           isExpanded: true,
           items: [
-            for (final ExerciseSummary item in items)
+            for (final LoggedExercise item in items)
               DropdownMenuItem<String>(
-                value: item.exercise.id,
+                value: item.exerciseId,
                 child: Text(
-                  item.exercise.name,
+                  '${item.exerciseName} · ${item.sessionCount} '
+                  'session${item.sessionCount == 1 ? '' : 's'}',
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -443,16 +503,28 @@ class _OneRmSection extends ConsumerWidget {
                 : current < first
                     ? TrendDirection.down
                     : TrendDirection.flat;
+            final LinearTrend? regression = linearTrend(ordered);
+            final String trendCaption = regression == null
+                ? 'From ${UnitFormatters.estimate(first, unit)} over ${ordered.length} sessions'
+                : '${regression.slopeKgPerMonth >= 0 ? '+' : ''}${UnitFormatters.weight(regression.slopeKgPerMonth, unit, withUnit: true)}/month · ${ordered.length} sessions';
 
             return _ChartCard(
               header: picker,
               headline: UnitFormatters.estimate(current, unit),
               caption: ordered.length == 1
                   ? 'One data point in this range'
-                  : 'From ${UnitFormatters.estimate(first, unit)} over '
-                      '${ordered.length} sessions',
+                  : trendCaption,
               trend: ordered.length == 1 ? null : trend,
-              child: _OneRmChart(ordered: ordered, unit: unit),
+              child: _DatedLineChart(
+                ordered: <_DatedPoint>[
+                  for (final OneRMSeriesPoint p in ordered)
+                    _DatedPoint(
+                        date: p.date,
+                        valueKg: p.estimated1RM,
+                        isPersonalRecord: p.isPersonalRecord),
+                ],
+                unit: unit,
+              ),
             );
           },
         );
@@ -461,21 +533,97 @@ class _OneRmSection extends ConsumerWidget {
   }
 }
 
-class _OneRmChart extends StatelessWidget {
-  const _OneRmChart({required this.ordered, required this.unit});
+class _SessionVolumeSection extends ConsumerWidget {
+  const _SessionVolumeSection({required this.range, required this.exerciseId});
+  final ProgressRange range;
+  final String? exerciseId;
 
-  final List<OneRMSeriesPoint> ordered;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final id = exerciseId;
+    if (id == null) return const SizedBox.shrink();
+    final unit = ref.watch(weightUnitControllerProvider);
+    return ref.watch(sessionVolumeLoadProvider(id, range)).when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (rows) => rows.isEmpty
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Session volume load',
+                            style: Theme.of(context).textTheme.titleSmall),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text('Working-set volume for the selected lift',
+                            style: AppTypography.caption(Theme.of(context))),
+                        for (final row in rows.take(8))
+                          ListTile(
+                            dense: true,
+                            title: Text(DateFormatters.axisLabel(row.date)),
+                            trailing:
+                                Text(UnitFormatters.volume(row.volumeKg, unit)),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+        );
+  }
+}
+
+/// One dated value in kilograms — the shape both the estimated-1RM chart
+/// and the body-weight chart plot.
+class _DatedPoint {
+  const _DatedPoint(
+      {required this.date,
+      required this.valueKg,
+      this.isPersonalRecord = false});
+
+  final DateTime date;
+  final double valueKg;
+  final bool isPersonalRecord;
+}
+
+/// Line chart over a dated series, plotted on a **time-proportional** x axis.
+///
+/// Both series used to be laid out by list index, which spaced three
+/// sessions inside one week exactly like three sessions across six months —
+/// and the slope of that line is the entire question these charts exist to
+/// answer. X is now elapsed days from the first point, so a training gap
+/// reads as a gap.
+class _DatedLineChart extends StatelessWidget {
+  const _DatedLineChart({required this.ordered, required this.unit});
+
+  /// Oldest first.
+  final List<_DatedPoint> ordered;
   final WeightUnit unit;
+
+  static const double _minutesPerDay = 60 * 24;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
 
+    final DateTime first = ordered.first.date;
+    double xOf(DateTime date) =>
+        date.difference(first).inMinutes / _minutesPerDay;
+
+    final double span = xOf(ordered.last.date);
+    // A lone point — or several sharing one instant — spans nothing, and
+    // fl_chart cannot scale a zero-width axis. Pad a day either side and let
+    // the dot sit in the middle.
+    final bool degenerate = span <= 0;
+
     return SizedBox(
       height: _chartHeight,
       child: LineChart(
         LineChartData(
+          minX: degenerate ? -1 : 0,
+          maxX: degenerate ? 1 : span,
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
@@ -500,17 +648,20 @@ class _OneRmChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: _axisReserved,
-                interval: _labelInterval(ordered.length),
+                interval: _dayLabelInterval(span),
                 getTitlesWidget: (double value, TitleMeta meta) {
-                  final int i = value.toInt();
-                  if (i < 0 || i >= ordered.length) {
+                  if (degenerate) {
+                    return value == 0
+                        ? _axisDate(theme, first)
+                        : const SizedBox.shrink();
+                  }
+                  if (value < 0 || value > span) {
                     return const SizedBox.shrink();
                   }
-                  return Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.xs),
-                    child: Text(
-                      DateFormatters.axisLabel(ordered[i].date),
-                      style: AppTypography.eyebrow(theme),
+                  return _axisDate(
+                    theme,
+                    first.add(
+                      Duration(minutes: (value * _minutesPerDay).round()),
                     ),
                   );
                 },
@@ -529,7 +680,10 @@ class _OneRmChart extends StatelessWidget {
                     ),
                     children: [
                       TextSpan(
-                        text: DateFormatters.full(ordered[spot.x.toInt()].date),
+                        // Indexed by spot, not by x: x is now a day offset
+                        // rather than a list position, so `x.toInt()` would
+                        // read the wrong entry (or throw).
+                        text: DateFormatters.full(ordered[spot.spotIndex].date),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: scheme.onInverseSurface,
                         ),
@@ -541,14 +695,27 @@ class _OneRmChart extends StatelessWidget {
           ),
           lineBarsData: [
             LineChartBarData(
+              // Plotted in kilograms; the axis and tooltip formatters do the
+              // display conversion (ADR-1).
               spots: [
-                for (var i = 0; i < ordered.length; i++)
-                  FlSpot(i.toDouble(), ordered[i].estimated1RM),
+                for (final _DatedPoint p in ordered)
+                  FlSpot(degenerate ? 0 : xOf(p.date), p.valueKg),
               ],
               isCurved: true,
               color: scheme.primary,
               barWidth: 3,
-              dotData: FlDotData(show: ordered.length <= _dotThreshold),
+              dotData: FlDotData(
+                show: ordered.length <= _dotThreshold,
+                getDotPainter: (spot, percent, bar, index) =>
+                    FlDotCirclePainter(
+                  radius: ordered[index].isPersonalRecord ? 5 : 3,
+                  color: ordered[index].isPersonalRecord
+                      ? scheme.tertiary
+                      : scheme.primary,
+                  strokeWidth: ordered[index].isPersonalRecord ? 2 : 0,
+                  strokeColor: scheme.onSurface,
+                ),
+              ),
               belowBarData: BarAreaData(
                 show: true,
                 color: scheme.primary.withValues(alpha: 0.10),
@@ -559,6 +726,23 @@ class _OneRmChart extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _axisDate(ThemeData theme, DateTime date) => Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Text(
+        DateFormatters.axisLabel(date),
+        style: AppTypography.eyebrow(theme),
+      ),
+    );
+
+/// Tick spacing in days for a time axis covering [span] days, targeting a
+/// handful of labels rather than an unreadable row of them.
+double _dayLabelInterval(double span) {
+  const int maxLabels = 4;
+  if (span <= 0) return 1;
+  final double interval = (span / maxLabels).ceilToDouble();
+  return interval < 1 ? 1 : interval;
 }
 
 /// Past this many points the per-point dots merge into noise.
@@ -602,8 +786,6 @@ class _VolumeSection extends ConsumerWidget {
     final AsyncValue<List<WeeklyVolume>> async =
         ref.watch(weeklyVolumeSeriesProvider(range));
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
 
     return async.when(
       loading: () => const _ChartLoading(),
@@ -623,92 +805,230 @@ class _VolumeSection extends ConsumerWidget {
           0,
           (double sum, WeeklyVolume p) => sum + p.totalVolumeKg,
         );
+        // The series is zero-filled, so its length is elapsed weeks, not
+        // trained ones — count the trained ones explicitly.
+        final int activeWeeks =
+            points.where((WeeklyVolume p) => p.totalVolumeKg > 0).length;
 
         return _ChartCard(
           headline: UnitFormatters.volume(total, unit),
-          caption: 'Across ${points.length} active '
-              'week${points.length == 1 ? '' : 's'}',
-          child: SizedBox(
-            height: _chartHeight,
-            child: BarChart(
-              BarChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: scheme.outlineVariant,
-                    strokeWidth: 1,
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(),
-                  rightTitles: const AxisTitles(),
-                  topTitles: const AxisTitles(),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: _axisReserved,
-                      interval: _labelInterval(points.length),
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        final int i = value.toInt();
-                        if (i < 0 || i >= points.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xs),
-                          child: Text(
-                            DateFormatters.axisLabel(points[i].weekStart),
-                            style: AppTypography.eyebrow(theme),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                        BarTooltipItem(
-                      '${UnitFormatters.volume(points[group.x].totalVolumeKg, unit)}\n',
-                      theme.textTheme.labelMedium!.copyWith(
-                        color: scheme.onInverseSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'Week of '
-                              '${DateFormatters.full(points[group.x].weekStart)}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onInverseSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                barGroups: [
-                  for (var i = 0; i < points.length; i++)
-                    BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: points[i].totalVolumeKg,
-                          color: scheme.primary,
-                          width: _barWidth,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(AppRadius.sm),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
+          caption: 'Across $activeWeeks active '
+              'week${activeWeeks == 1 ? '' : 's'} of ${points.length}',
+          child: _WeeklyBarChart(
+            weekStarts: <DateTime>[
+              for (final WeeklyVolume p in points) p.weekStart,
+            ],
+            values: <double>[
+              for (final WeeklyVolume p in points) p.totalVolumeKg,
+            ],
+            tooltipValue: (int i) =>
+                UnitFormatters.volume(points[i].totalVolumeKg, unit),
           ),
         );
       },
     );
+  }
+}
+
+class _ConsistencySection extends ConsumerWidget {
+  const _ConsistencySection({required this.range});
+  final ProgressRange range;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(consistencySummaryProvider(range)).when(
+          loading: () => const _ChartLoading(),
+          error: (e, _) => _ChartError(
+              error: e,
+              onRetry: () => ref.invalidate(consistencySummaryProvider(range))),
+          data: (summary) => AppCard(
+              child: Wrap(
+                  alignment: WrapAlignment.spaceAround,
+                  spacing: AppSpacing.lg,
+                  runSpacing: AppSpacing.md,
+                  children: [
+                _Metric(
+                    label: 'Current streak',
+                    value: '${summary.currentStreakWeeks} wk'),
+                _Metric(
+                    label: 'Longest streak',
+                    value: '${summary.longestStreakWeeks} wk'),
+                _Metric(
+                    label: 'Adherence · ${summary.targetSessionsPerWeek}/wk',
+                    value: summary.adherenceFraction == null
+                        ? '—'
+                        : '${(summary.adherenceFraction! * 100).round()}%'),
+              ])),
+        );
+  }
+}
+
+class _BalanceSection extends ConsumerWidget {
+  const _BalanceSection({required this.range});
+  final ProgressRange range;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(balanceRatiosProvider(range)).when(
+            loading: () => const _ChartLoading(),
+            error: (e, _) => _ChartError(
+                error: e,
+                onRetry: () => ref.invalidate(balanceRatiosProvider(range))),
+            data: (b) => AppCard(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  _RatioLine(label: 'Push / pull', ratio: b.pushPullRatio),
+                  const SizedBox(height: AppSpacing.sm),
+                  _RatioLine(label: 'Upper / lower', ratio: b.upperLowerRatio),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text('Reference band: 0.75–1.33',
+                      style: AppTypography.caption(Theme.of(context))),
+                ])),
+          );
+}
+
+class _WeeklyMuscleSection extends ConsumerWidget {
+  const _WeeklyMuscleSection({required this.range});
+  final ProgressRange range;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(weeklyMuscleGroupVolumeSeriesProvider(range))
+      .when(
+        loading: () => const _ChartLoading(),
+        error: (e, _) => _ChartError(
+            error: e,
+            onRetry: () =>
+                ref.invalidate(weeklyMuscleGroupVolumeSeriesProvider(range))),
+        data: (rows) => rows.isEmpty
+            ? const _ChartEmpty(
+                icon: Icons.groups_outlined,
+                message:
+                    'Complete working sets to compare muscle volume over time.')
+            : AppCard(
+                child: Column(children: [
+                for (final row in rows.take(12))
+                  ListTile(
+                      dense: true,
+                      title: Text(row.muscleName),
+                      subtitle: Text(DateFormatters.axisLabel(row.weekStart)),
+                      trailing: Text('${row.totalVolumeKg.round()} kg'))
+              ])),
+      );
+}
+
+class _RepRangeSection extends ConsumerWidget {
+  const _RepRangeSection({required this.range});
+  final ProgressRange range;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(repRangeDistributionProvider(range)).when(
+            loading: () => const _ChartLoading(),
+            error: (e, _) => _ChartError(
+                error: e,
+                onRetry: () =>
+                    ref.invalidate(repRangeDistributionProvider(range))),
+            data: (rows) => AppCard(
+                child: Column(children: [
+              for (final row in rows)
+                _DistributionLine(
+                    label: switch (row.range) {
+                      RepRange.oneToFive => '1–5 reps',
+                      RepRange.sixToTwelve => '6–12 reps',
+                      RepRange.thirteenPlus => '13+ reps'
+                    },
+                    value: row.setCount,
+                    suffix: 'sets')
+            ])),
+          );
+}
+
+class _WeekdaySection extends ConsumerWidget {
+  const _WeekdaySection({required this.range});
+  final ProgressRange range;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(weekdayDistributionProvider(range)).when(
+            loading: () => const _ChartLoading(),
+            error: (e, _) => _ChartError(
+                error: e,
+                onRetry: () =>
+                    ref.invalidate(weekdayDistributionProvider(range))),
+            data: (rows) => AppCard(
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [for (final row in rows) _WeekdayBar(row: row)])),
+          );
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: '$label: $value',
+      child: Column(children: [
+        Text(value, style: Theme.of(context).textTheme.titleLarge),
+        Text(label, style: AppTypography.caption(Theme.of(context)))
+      ]));
+}
+
+class _RatioLine extends StatelessWidget {
+  const _RatioLine({required this.label, required this.ratio});
+  final String label;
+  final double? ratio;
+  @override
+  Widget build(BuildContext context) {
+    final status = ratio == null
+        ? 'Insufficient data'
+        : ratio! >= .75 && ratio! <= 1.33
+            ? 'balanced'
+            : 'outside reference band';
+    return Semantics(
+        label:
+            '$label: ${ratio == null ? status : ratio!.toStringAsFixed(2)}, $status',
+        child: Row(children: [
+          Expanded(child: Text(label)),
+          Text(
+              ratio == null ? status : '${ratio!.toStringAsFixed(2)} · $status')
+        ]));
+  }
+}
+
+class _DistributionLine extends StatelessWidget {
+  const _DistributionLine(
+      {required this.label, required this.value, required this.suffix});
+  final String label;
+  final int value;
+  final String suffix;
+  @override
+  Widget build(BuildContext context) => ListTile(
+      dense: true, title: Text(label), trailing: Text('$value $suffix'));
+}
+
+class _WeekdayBar extends StatelessWidget {
+  const _WeekdayBar({required this.row});
+  final WeekdayDistribution row;
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    return Semantics(
+        label:
+            '${labels[row.weekday - 1]}: ${row.trainingDayCount} training days',
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+              height: 72,
+              child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                      width: 18,
+                      height: 8.0 + row.trainingDayCount * 10,
+                      color: Theme.of(context).colorScheme.primary))),
+          const SizedBox(height: 4),
+          Text(labels[row.weekday - 1]),
+          Text('${row.workoutCount}',
+              style: Theme.of(context).textTheme.labelSmall)
+        ]));
   }
 }
 
@@ -739,17 +1059,155 @@ class _FrequencySection extends ConsumerWidget {
           0,
           (int sum, WorkoutFrequency p) => sum + p.workoutCount,
         );
+        final int activeWeeks =
+            points.where((WorkoutFrequency p) => p.workoutCount > 0).length;
+        // Per *elapsed* week. Dividing by the number of weeks that happen to
+        // contain a workout reports three sessions crammed into one week —
+        // and nothing for the two months after it — as "3.0 / week".
         final double average = total / points.length;
 
         return _ChartCard(
           headline: '${average.toStringAsFixed(1)} / week',
           caption: '$total workout${total == 1 ? '' : 's'} across '
-              '${points.length} active week${points.length == 1 ? '' : 's'}',
-          child: const SizedBox.shrink(),
+              '${points.length} week${points.length == 1 ? '' : 's'} · '
+              'trained in $activeWeeks',
+          child: _WeeklyBarChart(
+            weekStarts: <DateTime>[
+              for (final WorkoutFrequency p in points) p.weekStart,
+            ],
+            values: <double>[
+              for (final WorkoutFrequency p in points)
+                p.workoutCount.toDouble(),
+            ],
+            tooltipValue: (int i) => '${points[i].workoutCount} '
+                'workout${points[i].workoutCount == 1 ? '' : 's'}',
+          ),
         );
       },
     );
   }
+}
+
+/// Bar chart over consecutive weekly buckets.
+///
+/// Shared by weekly volume and weekly frequency: both plot one bar per week
+/// of the selected range against the same zero-filled x axis, and having
+/// them diverge in bar width or label spacing made two views of the same
+/// weeks look like two unrelated charts.
+class _WeeklyBarChart extends StatelessWidget {
+  const _WeeklyBarChart({
+    required this.weekStarts,
+    required this.values,
+    required this.tooltipValue,
+  });
+
+  final List<DateTime> weekStarts;
+  final List<double> values;
+
+  /// Formatted headline line of the tooltip for the bar at an index.
+  final String Function(int index) tooltipValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
+    return SizedBox(
+      height: _chartHeight,
+      // Bar width has to follow the bucket count now that untrained weeks
+      // are included: a fixed 22dp rod was already tight, and an all-time
+      // range can run to hundreds of weeks, where fixed-width rods overlap
+      // into a solid block.
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double width = _barWidthFor(
+            constraints.maxWidth,
+            weekStarts.length,
+          );
+          return BarChart(
+            BarChartData(
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: scheme.outlineVariant,
+                  strokeWidth: 1,
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: const AxisTitles(),
+                rightTitles: const AxisTitles(),
+                topTitles: const AxisTitles(),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: _axisReserved,
+                    interval: _labelInterval(weekStarts.length),
+                    getTitlesWidget: (double value, TitleMeta meta) {
+                      final int i = value.toInt();
+                      if (i < 0 || i >= weekStarts.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return _axisDate(theme, weekStarts[i]);
+                    },
+                  ),
+                ),
+              ),
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                      BarTooltipItem(
+                    '${tooltipValue(group.x)}\n',
+                    theme.textTheme.labelMedium!.copyWith(
+                      color: scheme.onInverseSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Week of '
+                            '${DateFormatters.full(weekStarts[group.x])}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.onInverseSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              barGroups: [
+                for (var i = 0; i < values.length; i++)
+                  BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: values[i],
+                        color: scheme.primary,
+                        width: width,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppRadius.sm),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Rod width that keeps [count] bars inside [available] with a gap between
+/// them, capped at the design width so a short range does not draw slabs.
+double _barWidthFor(double available, int count) {
+  if (count <= 0 || !available.isFinite || available <= 0) return _barWidth;
+  const double minWidth = 1;
+  // Two thirds of each slot is bar, one third is gap.
+  final double perBar = (available / count) * (2 / 3);
+  if (perBar > _barWidth) return _barWidth;
+  return perBar < minWidth ? minWidth : perBar;
 }
 
 class _MuscleGroupSection extends ConsumerStatefulWidget {
@@ -769,6 +1227,10 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
   Widget build(BuildContext context) {
     final AsyncValue<List<MuscleGroupVolume>> async =
         ref.watch(muscleGroupSeriesProvider(widget.range));
+    // Volumes arrive in kilograms like every other stored weight; this card
+    // used to print them raw with a hardcoded "kg" suffix, so a pounds user
+    // read kilogram figures on the one card that never converted (ADR-1).
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
 
@@ -814,7 +1276,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
         return _ChartCard(
           headline: grouped.first.muscleName,
           caption: 'Most trained · '
-              '${grouped.first.totalVolumeKg.toStringAsFixed(0)} kg',
+              '${UnitFormatters.volume(grouped.first.totalVolumeKg, unit)}',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -826,7 +1288,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                 touched == null
                     ? 'Tap or hover a bar for details.'
                     : '${grouped[touched].muscleName}: '
-                        '${grouped[touched].totalVolumeKg.toStringAsFixed(0)} kg',
+                        '${UnitFormatters.volume(grouped[touched].totalVolumeKg, unit)}',
                 style: AppTypography.caption(theme),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -895,8 +1357,10 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                             ),
                             children: [
                               TextSpan(
-                                text:
-                                    '${muscle.totalVolumeKg.toStringAsFixed(0)} kg',
+                                text: UnitFormatters.volume(
+                                  muscle.totalVolumeKg,
+                                  unit,
+                                ),
                                 style: theme.textTheme.labelMedium?.copyWith(
                                   color: scheme.onInverseSurface,
                                 ),
@@ -933,34 +1397,43 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
   }
 }
 
+/// How many measurements the Progress page lists inline before deferring to
+/// the full history page. The page's ListView builds its children eagerly,
+/// so this list cannot be unbounded.
+const int _inlineMetricEntries = 8;
+
 class _BodyMetricsSection extends ConsumerWidget {
-  const _BodyMetricsSection();
+  const _BodyMetricsSection({required this.range});
+
+  final ProgressRange range;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<BodyMetrics>> async =
-        ref.watch(bodyMetricsSeriesProvider);
+        ref.watch(bodyMetricsSeriesProvider(range));
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
-    final ThemeData theme = Theme.of(context);
 
     return async.when(
       loading: () => const _ChartLoading(),
       error: (error, _) => _ChartError(
         error: error,
-        onRetry: () => ref.invalidate(bodyMetricsSeriesProvider),
+        onRetry: () => ref.invalidate(bodyMetricsSeriesProvider(range)),
       ),
       data: (entries) {
         if (entries.isEmpty) {
           return AppCard(
             child: Column(
               children: <Widget>[
-                const EmptyState(
+                EmptyState(
                   icon: Icons.monitor_weight_outlined,
                   title: 'No measurements yet',
-                  message: 'Track weight and body fat over time.',
+                  message: range == ProgressRange.all
+                      ? 'Track weight and body fat over time.'
+                      : 'Nothing logged in the ${range.description}.',
                 ),
                 FilledButton.icon(
-                  onPressed: () => _edit(context, ref, unit: unit),
+                  onPressed: () =>
+                      showBodyMetricEditor(context, ref, unit: unit),
                   icon: const Icon(Icons.add),
                   label: const Text('Log measurement'),
                 ),
@@ -970,6 +1443,9 @@ class _BodyMetricsSection extends ConsumerWidget {
         }
 
         final BodyMetrics latest = entries.first;
+        final List<BodyMetrics> shown =
+            entries.take(_inlineMetricEntries).toList();
+        final int hidden = entries.length - shown.length;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -981,249 +1457,34 @@ class _BodyMetricsSection extends ConsumerWidget {
                   : '${DateFormatters.relativeDay(latest.date)} · '
                       '${latest.bodyFatPercentage!.toStringAsFixed(1)}% body fat',
               child: entries.length >= 2
-                  ? _BodyWeightChart(entries: entries, unit: unit)
+                  ? _DatedLineChart(
+                      // Stored newest-first; charts read left to right.
+                      ordered: <_DatedPoint>[
+                        for (final BodyMetrics e in entries.reversed)
+                          _DatedPoint(date: e.date, valueKg: e.weightKg),
+                      ],
+                      unit: unit,
+                    )
                   : const SizedBox.shrink(),
             ),
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
-              onPressed: () => _edit(context, ref, unit: unit),
+              onPressed: () => showBodyMetricEditor(context, ref, unit: unit),
               icon: const Icon(Icons.add),
               label: const Text('Log measurement'),
             ),
             const SizedBox(height: AppSpacing.md),
-            for (final BodyMetrics entry in entries)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: AppCard(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.xs,
-                  ),
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      UnitFormatters.weight(entry.weightKg, unit),
-                      style: AppTypography.numeric(
-                        theme.textTheme.titleSmall ?? const TextStyle(),
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${DateFormatters.full(entry.date)}'
-                      '${entry.bodyFatPercentage == null ? '' : ' · ${entry.bodyFatPercentage!.toStringAsFixed(1)}% body fat'}',
-                      style: AppTypography.caption(theme),
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (action) {
-                        if (action == 'edit') {
-                          _edit(context, ref, entry: entry, unit: unit);
-                        }
-                        if (action == 'delete') {
-                          ref
-                              .read(bodyMetricsDaoProvider)
-                              .deleteByDate(entry.date);
-                        }
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(value: 'edit', child: Text('Edit')),
-                        PopupMenuItem(value: 'delete', child: Text('Delete')),
-                      ],
-                    ),
-                  ),
-                ),
+            for (final BodyMetrics entry in shown)
+              BodyMetricTile(entry: entry, unit: unit),
+            if (hidden > 0)
+              TextButton(
+                onPressed: () =>
+                    context.pushNamed(Routes.bodyMetricsHistoryName),
+                child: Text('View all measurements ($hidden more)'),
               ),
           ],
         );
       },
-    );
-  }
-
-  /// Weight is entered and shown in the user's display unit and converted
-  /// to kilograms on save — ADR-1's boundary. The dialog used to be
-  /// hard-labelled "kg" and stored the raw number, so a pounds user
-  /// silently recorded pounds as kilograms.
-  Future<void> _edit(
-    BuildContext context,
-    WidgetRef ref, {
-    required WeightUnit unit,
-    BodyMetrics? entry,
-  }) async {
-    final TextEditingController weight = TextEditingController(
-      text: entry == null
-          ? ''
-          : UnitFormatters.plain(
-              UnitFormatters.fromKg(entry.weightKg, unit),
-            ),
-    );
-    final TextEditingController bodyFat = TextEditingController(
-      text: entry?.bodyFatPercentage == null
-          ? ''
-          : UnitFormatters.plain(entry!.bodyFatPercentage!),
-    );
-    final DateTime date = entry?.date ?? DateTime.now();
-
-    final bool? saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(entry == null ? 'Log measurement' : 'Edit measurement'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              DateFormatters.full(date),
-              style: AppTypography.caption(Theme.of(context)),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            TextField(
-              controller: weight,
-              autofocus: true,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'Weight (${unit.label})',
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: bodyFat,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Body fat % (optional)',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (saved != true) return;
-
-    final double? entered = double.tryParse(weight.text);
-    if (entered == null || entered <= 0) return;
-    final double weightKg = UnitFormatters.toKg(entered, unit);
-    final double? fat = double.tryParse(bodyFat.text);
-
-    await ref.read(bodyMetricsDaoProvider).upsert(
-          BodyMetricsTableCompanion.insert(
-            id: entry?.id ?? _uuid.v4(),
-            date: date,
-            weightKg: weightKg,
-            bodyFatPercentage: Value(fat),
-          ),
-        );
-  }
-}
-
-class _BodyWeightChart extends StatelessWidget {
-  const _BodyWeightChart({required this.entries, required this.unit});
-
-  final List<BodyMetrics> entries;
-  final WeightUnit unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
-    // Stored newest-first; charts read left to right.
-    final List<BodyMetrics> ordered = entries.reversed.toList();
-
-    return SizedBox(
-      height: _chartHeight,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: scheme.outlineVariant,
-              strokeWidth: 1,
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            rightTitles: const AxisTitles(),
-            topTitles: const AxisTitles(),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: _axisReserved + AppSpacing.lg,
-                getTitlesWidget: (double value, TitleMeta meta) =>
-                    _valueAxisTick(context, value, meta, unit),
-              ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: _axisReserved,
-                interval: _labelInterval(ordered.length),
-                getTitlesWidget: (double value, TitleMeta meta) {
-                  final int i = value.toInt();
-                  if (i < 0 || i >= ordered.length) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.xs),
-                    child: Text(
-                      DateFormatters.axisLabel(ordered[i].date),
-                      style: AppTypography.eyebrow(theme),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipItems: (spots) => [
-                for (final spot in spots)
-                  LineTooltipItem(
-                    '${UnitFormatters.weight(spot.y, unit)}\n',
-                    theme.textTheme.labelMedium!.copyWith(
-                      color: scheme.onInverseSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: DateFormatters.full(ordered[spot.x.toInt()].date),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: scheme.onInverseSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              // Plotted in kilograms; the axis and tooltip formatters do
-              // the display conversion, exactly as the 1RM chart does.
-              spots: [
-                for (var i = 0; i < ordered.length; i++)
-                  FlSpot(i.toDouble(), ordered[i].weightKg),
-              ],
-              isCurved: true,
-              color: scheme.primary,
-              barWidth: 3,
-              dotData: FlDotData(show: ordered.length <= _dotThreshold),
-              belowBarData: BarAreaData(
-                show: true,
-                color: scheme.primary.withValues(alpha: 0.10),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

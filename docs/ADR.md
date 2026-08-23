@@ -105,6 +105,7 @@ Applies to: `HapticFeedback` (no-op on web), local notifications, wakelock, file
 - Older versions are migrated by explicit, tested migration functions.
 - An unversioned file is never best-effort parsed.
 - Import is transactional, preceded by a preview with entity counts and a confirmation, and takes an automatic pre-import snapshot.
+- `ImportMode.replace` means *replace all user data while preserving a populated local exercise catalogue* — not a full database restore. The catalogue is seed content, not user data: a populated local catalogue survives a replace even if the backup carries an older or absent one, so importing a workout backup can never downgrade or wipe it. Restoring catalogue data itself (e.g. reverting a bad manual edit) is not a supported use of import; it is reseeded from `assets/data/exercises_seed.json` instead. A replace import that omits any *non-catalogue* table is rejected outright rather than treated as "this table is now empty" — a truncated or hand-edited file must never silently delete real user data with nothing to restore it from.
 
 ---
 

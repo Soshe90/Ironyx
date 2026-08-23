@@ -56,6 +56,16 @@ class ProfileDao extends DatabaseAccessor<AppDatabase> with _$ProfileDaoMixin {
     });
   }
 
+  /// Stores the weekly completed-session target used by Progress adherence.
+  Future<void> setWeeklySessionTarget(int? target) {
+    if (target != null && (target < 1 || target > 7)) {
+      throw ArgumentError.value(target, 'target', 'must be between 1 and 7');
+    }
+    return upsert(
+      ProfilesTableCompanion(weeklySessionTarget: Value(target)),
+    );
+  }
+
   /// Associates the local profile with a signed-in account.
   ///
   /// Only touches the account columns — a returning user keeps the name,

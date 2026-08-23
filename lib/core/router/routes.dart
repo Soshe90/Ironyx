@@ -52,6 +52,11 @@ abstract final class Routes {
   static const String activeTimer = '/timer/active';
   static const String activeTimerName = 'activeTimer';
 
+  /// Full body-measurement history. Progress lists only the most recent few
+  /// inline, since its own ListView builds every child eagerly.
+  static const String bodyMetricsHistory = '/progress/measurements';
+  static const String bodyMetricsHistoryName = 'bodyMetricsHistory';
+
   // ---- Accounts (ADR-8) ----
   //
   // Reached from Settings, never forced: signing in is optional and the app

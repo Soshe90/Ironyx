@@ -39,6 +39,12 @@ dependencies:
   audio_session: ^0.1.25
 
   intl: ^0.19.0
+  # No icon in this app uses CupertinoIcons directly — this exists only so
+  # the font asset it provides is bundled. Without it, Flutter's default
+  # MaterialApp iOS page-transition/adaptive widgets still reference the
+  # CupertinoIcons font family internally, and the web release build warns
+  # that the font is "expected but not found" on every build.
+  cupertino_icons: ^1.0.9
   url_launcher: ^6.3.2
   meta: ^1.19.0
   file_picker: ^12.0.0

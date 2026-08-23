@@ -170,6 +170,103 @@ void main() {
       restored.dispose();
     });
 
+    test(
+        'concurrent unawaited mutations converge to a persisted state '
+        'matching the final in-memory draft', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'squat', name: 'Squat');
+      final exerciseId =
+          container.read(activeWorkoutProvider)!.exercises.single.id;
+      final setId = container
+          .read(activeWorkoutProvider)!
+          .exercises
+          .single
+          .sets
+          .single
+          .id;
+
+      // Fire a burst of mutations without awaiting each one individually —
+      // e.g. two debounced row edits landing back to back. Every call
+      // queues a write of *whatever `state` is when that write actually
+      // runs*, so even though these persists overlap, the one that runs
+      // last must always reflect the truly final state.
+      final futures = <Future<void>>[];
+      for (var weight = 1; weight <= 10; weight++) {
+        futures.add(
+          notifier.updateSet(exerciseId, setId, weightKg: weight.toDouble()),
+        );
+      }
+      await Future.wait(futures);
+
+      final finalWeight = container
+          .read(activeWorkoutProvider)!
+          .exercises
+          .single
+          .sets
+          .single
+          .weightKg;
+      expect(finalWeight, 10.0);
+
+      final restored = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
+        ],
+      );
+      addTearDown(restored.dispose);
+      expect(
+        restored
+            .read(activeWorkoutProvider)!
+            .exercises
+            .single
+            .sets
+            .single
+            .weightKg,
+        finalWeight,
+        reason: 'the persisted draft must match the final in-memory state, '
+            'not an earlier write that happened to complete last',
+      );
+    });
+
+    test('a discard racing an in-flight edit is never resurrected', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'squat', name: 'Squat');
+      final exerciseId =
+          container.read(activeWorkoutProvider)!.exercises.single.id;
+      final setId = container
+          .read(activeWorkoutProvider)!
+          .exercises
+          .single
+          .sets
+          .single
+          .id;
+
+      // An edit's write is still in flight when discard fires — discard's
+      // null write must be the one that lands last, not the edit's.
+      final editFuture = notifier.updateSet(exerciseId, setId, weightKg: 42);
+      final discardFuture = notifier.discard();
+      await Future.wait([editFuture, discardFuture]);
+
+      expect(container.read(activeWorkoutProvider), isNull);
+
+      final restored = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
+        ],
+      );
+      addTearDown(restored.dispose);
+      expect(
+        restored.read(activeWorkoutProvider),
+        isNull,
+        reason: 'a discarded draft must not reappear from a stale edit write',
+      );
+    });
+
     test('startFromTemplate preloads exercises with empty set rows', () async {
       final notifier = container.read(activeWorkoutProvider.notifier);
       await notifier.startFromTemplate(const [

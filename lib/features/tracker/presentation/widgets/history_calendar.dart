@@ -147,7 +147,7 @@ class _DayCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final DateTime? date = this.date;
     if (date == null) {
-      return const SizedBox(height: 44);
+      return const SizedBox(height: AppSpacing.minTapTarget);
     }
 
     final ColorScheme scheme = Theme.of(context).colorScheme;
@@ -158,7 +158,7 @@ class _DayCell extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.pill),
         onTap: isMarked ? () => onTap(date) : null,
         child: SizedBox(
-          height: 44,
+          height: AppSpacing.minTapTarget,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[

@@ -47,6 +47,10 @@ class ProfilesTable extends Table {
   /// conversion is a presentation concern).
   RealColumn get heightCm => real().nullable()();
 
+  /// Desired number of completed sessions per Monday-Sunday week.
+  /// Null means the user has not configured a target; the domain layer uses 3.
+  IntColumn get weeklySessionTarget => integer().nullable()();
+
   DateTimeColumn get createdAt => dateTime()();
 
   DateTimeColumn get updatedAt => dateTime()();
@@ -66,6 +70,7 @@ abstract class Profile with _$Profile {
     DateTime? dateOfBirth,
     String? sex,
     double? heightCm,
+    int? weeklySessionTarget,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _Profile;
@@ -92,6 +97,7 @@ abstract class Profile with _$Profile {
         dateOfBirth: row.dateOfBirth?.toUtc(),
         sex: row.sex,
         heightCm: row.heightCm,
+        weeklySessionTarget: row.weeklySessionTarget,
         createdAt: row.createdAt.toUtc(),
         updatedAt: row.updatedAt.toUtc(),
       );

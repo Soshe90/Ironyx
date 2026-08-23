@@ -75,10 +75,20 @@ class WorkoutXlsxImportService {
     }
 
     workouts.sort((a, b) => a.date.compareTo(b.date));
+
+    final markedWorkouts = <ImportedHistoricalWorkout>[];
+    for (final workout in workouts) {
+      markedWorkouts.add(
+        workout.copyWith(
+          isDuplicate: await _isDuplicateOfExisting(db, workout),
+        ),
+      );
+    }
+
     return WorkoutXlsxImportResult(
-      workouts: workouts,
+      workouts: markedWorkouts,
       unknownExercises: unknown.toList()..sort(),
-      totalSets: workouts.fold(
+      totalSets: markedWorkouts.fold(
         0,
         (sum, workout) =>
             sum + workout.exercises.fold(0, (s, e) => s + e.sets.length),
@@ -86,13 +96,68 @@ class WorkoutXlsxImportService {
     );
   }
 
+  /// A workout is a duplicate only if one already exists at the exact
+  /// neutral timestamp [apply] gives historical imports for that date, with
+  /// the same exercises in the same order and identical sets — i.e. this
+  /// exact file (or an overlapping one) was already imported. A manually
+  /// logged workout on the same calendar day has a different `startedAt`
+  /// and is never flagged.
+  Future<bool> _isDuplicateOfExisting(
+    AppDatabase db,
+    ImportedHistoricalWorkout workout,
+  ) async {
+    final candidateStartedAt = DateTime.utc(
+      workout.date.year,
+      workout.date.month,
+      workout.date.day,
+      12,
+    );
+    final existingWorkout = await (db.select(db.workoutsTable)
+          ..where((t) => t.startedAt.equals(candidateStartedAt)))
+        .getSingleOrNull();
+    if (existingWorkout == null) return false;
+
+    final existingExercises = await (db.select(db.workoutExercisesTable)
+          ..where((t) => t.workoutId.equals(existingWorkout.id))
+          ..orderBy([(t) => OrderingTerm.asc(t.orderIndex)]))
+        .get();
+    if (existingExercises.length != workout.exercises.length) return false;
+
+    for (var i = 0; i < existingExercises.length; i++) {
+      final existingExercise = existingExercises[i];
+      final importedExercise = workout.exercises[i];
+      final resolvedExerciseId = importedExercise.exerciseId;
+      if (resolvedExerciseId == null ||
+          existingExercise.exerciseId != resolvedExerciseId) {
+        return false;
+      }
+
+      final existingSets = await (db.select(db.workoutSetsTable)
+            ..where((t) => t.workoutExerciseId.equals(existingExercise.id))
+            ..orderBy([(t) => OrderingTerm.asc(t.setIndex)]))
+          .get();
+      if (existingSets.length != importedExercise.sets.length) return false;
+      for (var j = 0; j < existingSets.length; j++) {
+        final existingSet = existingSets[j];
+        final importedSet = importedExercise.sets[j];
+        if (existingSet.reps != importedSet.reps ||
+            existingSet.weightKg != importedSet.weightKg) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   /// Writes all imported sessions. Historical sessions receive a neutral
   /// one-hour duration because the workbook contains no session timestamps.
   Future<void> apply(AppDatabase db, WorkoutXlsxImportResult result) {
+    final workoutsToApply =
+        result.workouts.where((w) => !w.isDuplicate).toList();
     return db.transaction(() async {
       final dao = WorkoutDao(db);
       final customExerciseIds = <String, String>{};
-      for (final imported in result.workouts) {
+      for (final imported in workoutsToApply) {
         for (final exercise in imported.exercises) {
           if (exercise.exerciseId != null ||
               customExerciseIds.containsKey(exercise.name)) {
@@ -110,12 +175,13 @@ class WorkoutXlsxImportService {
                   movementPattern: 'other',
                   isBodyweight: const Value(false),
                   seedVersion: 0,
+                  isCustom: const Value(true),
                 ),
               );
           customExerciseIds[exercise.name] = id;
         }
       }
-      for (final imported in result.workouts) {
+      for (final imported in workoutsToApply) {
         final startedAt = DateTime.utc(
           imported.date.year,
           imported.date.month,
@@ -293,13 +359,31 @@ class WorkoutXlsxImportResult {
   final List<ImportedHistoricalWorkout> workouts;
   final List<String> unknownExercises;
   final int totalSets;
+
+  /// Workouts that already exist in history and [apply] will skip.
+  int get duplicateCount => workouts.where((w) => w.isDuplicate).length;
 }
 
 class ImportedHistoricalWorkout {
-  ImportedHistoricalWorkout({required this.date, required this.exercises});
+  ImportedHistoricalWorkout({
+    required this.date,
+    required this.exercises,
+    this.isDuplicate = false,
+  });
 
   final DateTime date;
   final List<ImportedHistoricalExercise> exercises;
+
+  /// Whether an identical workout (same date, exercises, and sets) is
+  /// already in local history — see [WorkoutXlsxImportService.parse].
+  final bool isDuplicate;
+
+  ImportedHistoricalWorkout copyWith({bool? isDuplicate}) =>
+      ImportedHistoricalWorkout(
+        date: date,
+        exercises: exercises,
+        isDuplicate: isDuplicate ?? this.isDuplicate,
+      );
 }
 
 class ImportedHistoricalExercise {
