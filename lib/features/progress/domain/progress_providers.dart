@@ -94,6 +94,14 @@ Stream<List<WorkoutFrequency>> workoutFrequencySeries(
     ref.watch(workoutDaoProvider).watchWorkoutFrequency(since: range.since);
 
 @riverpod
+Stream<List<SessionRpe>> rpeAnalytics(Ref ref, ProgressRange range) =>
+    ref.watch(workoutDaoProvider).watchRpeAnalytics(since: range.since);
+
+@riverpod
+Stream<List<SessionRest>> restAnalytics(Ref ref, ProgressRange range) =>
+    ref.watch(workoutDaoProvider).watchRestAnalytics(since: range.since);
+
+@riverpod
 Stream<BalanceRatios> balanceRatios(Ref ref, ProgressRange range) =>
     ref.watch(workoutDaoProvider).watchBalanceRatios(since: range.since);
 

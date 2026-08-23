@@ -112,6 +112,8 @@ class AppDatabase extends _$AppDatabase {
           'ON workout_exercises_table (exercise_id)',
       'CREATE INDEX IF NOT EXISTS idx_workout_sets_workout_exercise_id '
           'ON workout_sets_table (workout_exercise_id)',
+      'CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise_set_index '
+          'ON workout_sets_table (workout_exercise_id, set_index)',
       'CREATE INDEX IF NOT EXISTS idx_workouts_started_at '
           'ON workouts_table (started_at)',
       'CREATE INDEX IF NOT EXISTS idx_body_metrics_date '
@@ -167,19 +169,6 @@ class AppDatabase extends _$AppDatabase {
             // simply leaves this table empty.
             await m.createTable(profilesTable);
           }
-          if (from < 9) {
-            final profileColumns =
-                await customSelect('PRAGMA table_info(profiles_table)').get();
-            final hasWeeklyTarget = profileColumns.any(
-              (row) => row.read<String>('name') == 'weekly_session_target',
-            );
-            if (!hasWeeklyTarget) {
-              await m.addColumn(
-                profilesTable,
-                profilesTable.weeklySessionTarget,
-              );
-            }
-          }
           if (from < 8) {
             // Explicit custom-exercise marker, replacing the implicit
             // seedVersion == 0 convention. Backfill from that convention so
@@ -202,6 +191,19 @@ class AppDatabase extends _$AppDatabase {
               'UPDATE exercises_table SET is_custom = 1 '
               'WHERE seed_version = 0',
             );
+          }
+          if (from < 9) {
+            final profileColumns =
+                await customSelect('PRAGMA table_info(profiles_table)').get();
+            final hasWeeklyTarget = profileColumns.any(
+              (row) => row.read<String>('name') == 'weekly_session_target',
+            );
+            if (profileColumns.isNotEmpty && !hasWeeklyTarget) {
+              await m.addColumn(
+                profilesTable,
+                profilesTable.weeklySessionTarget,
+              );
+            }
           }
         },
         beforeOpen: (OpeningDetails details) async {

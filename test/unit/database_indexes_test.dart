@@ -19,6 +19,7 @@ void main() {
       'idx_workout_exercises_workout_id',
       'idx_workout_exercises_exercise_id',
       'idx_workout_sets_workout_exercise_id',
+      'idx_workout_sets_exercise_set_index',
       'idx_program_templates_program_id',
       'idx_program_templates_template_id',
       'idx_template_exercises_template_id',

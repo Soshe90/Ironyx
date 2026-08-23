@@ -514,12 +514,21 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
               icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
               padding: EdgeInsets.zero,
               onSelected: (_SetAction action) => switch (action) {
+                _SetAction.details => _showSetDetails(),
                 _SetAction.duplicate => widget.controller
                     .duplicateSet(widget.exerciseId, widget.set.id),
                 _SetAction.remove =>
                   widget.controller.removeSet(widget.exerciseId, widget.set.id),
               },
               itemBuilder: (_) => const <PopupMenuEntry<_SetAction>>[
+                PopupMenuItem<_SetAction>(
+                  value: _SetAction.details,
+                  child: ListTile(
+                    leading: Icon(Icons.speed_outlined),
+                    title: Text('RPE and rest time'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
                 PopupMenuItem<_SetAction>(
                   value: _SetAction.duplicate,
                   child: ListTile(
@@ -544,6 +553,72 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
     );
   }
 
+  Future<void> _showSetDetails() async {
+    final rpeController = TextEditingController(
+      text: widget.set.rpeTimes10 == null
+          ? ''
+          : (widget.set.rpeTimes10! / 10).toStringAsFixed(1),
+    );
+    final restController = TextEditingController(
+      text: widget.set.restSeconds?.toString() ?? '',
+    );
+    try {
+      final result = await showDialog<(int?, int?)>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Set ${widget.index} details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: rpeController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'RPE (1–10)'),
+              ),
+              TextField(
+                controller: restController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Rest before set (seconds)'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final rpe = double.tryParse(rpeController.text);
+                final rest = int.tryParse(restController.text);
+                if ((rpe != null && (rpe < 1 || rpe > 10)) ||
+                    (rest != null && (rest < 0 || rest > 3600))) {
+                  return;
+                }
+                Navigator.pop(context, (
+                  rpe == null ? null : (rpe * 10).round(),
+                  rest,
+                ));
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || result == null) return;
+      await widget.controller.updateSet(
+        widget.exerciseId,
+        widget.set.id,
+        rpeTimes10: result.$1,
+        restSeconds: result.$2,
+      );
+    } finally {
+      rpeController.dispose();
+      restController.dispose();
+    }
+  }
+
   void _sync(TextEditingController controller, String value) {
     if (controller.text != value && !controller.selection.isValid) {
       controller.text = value;
@@ -559,7 +634,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   }
 }
 
-enum _SetAction { duplicate, remove }
+enum _SetAction { details, duplicate, remove }
 
 /// Bare numeric field sized for a table cell.
 ///

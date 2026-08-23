@@ -142,6 +142,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
             setIndex: setIndex,
             weightKg: set.weightKg,
             reps: set.reps,
+            rpeTimes10: Value(set.rpeTimes10),
+            restSeconds: Value(set.restSeconds),
             isCompleted: Value(set.isCompleted),
             isWarmup: Value(set.isWarmup || exercise.isWarmup),
           ),
@@ -255,6 +257,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
     int? reps,
     bool? isCompleted,
     bool? isWarmup,
+    int? rpeTimes10,
+    int? restSeconds,
   }) async {
     await _updateExercise(
       exerciseId,
@@ -266,6 +270,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
             reps: reps ?? set.reps,
             isCompleted: isCompleted ?? set.isCompleted,
             isWarmup: isWarmup ?? set.isWarmup,
+            rpeTimes10: rpeTimes10 ?? set.rpeTimes10,
+            restSeconds: restSeconds ?? set.restSeconds,
           );
         }).toList(),
       ),
@@ -320,6 +326,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
                         'reps': set.reps,
                         'isCompleted': set.isCompleted,
                         'isWarmup': set.isWarmup,
+                        'rpeTimes10': set.rpeTimes10,
+                        'restSeconds': set.restSeconds,
                       },
                     )
                     .toList(),
@@ -346,6 +354,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
                 reps: set['reps'] as int? ?? 0,
                 isCompleted: set['isCompleted'] as bool? ?? false,
                 isWarmup: set['isWarmup'] as bool? ?? false,
+                rpeTimes10: set['rpeTimes10'] as int?,
+                restSeconds: set['restSeconds'] as int?,
               );
             }).toList(),
           );

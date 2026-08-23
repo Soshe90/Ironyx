@@ -19,6 +19,7 @@ import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/trend_badge.dart';
+import '../domain/progress_insights.dart';
 import '../domain/progress_providers.dart';
 import '../domain/strength_analytics.dart';
 import 'widgets/body_metric_widgets.dart';
@@ -55,6 +56,8 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           children: [
             _RangeSelector(range: range),
+            const SizedBox(height: AppSpacing.md),
+            _InsightsSection(range: range),
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(
               title: 'Strength change',
@@ -84,6 +87,10 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
             const SizedBox(height: AppSpacing.xl),
             const SectionHeader(title: 'Consistency'),
             _ConsistencySection(range: range),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Effort and recovery'),
+            _RpeSection(range: range),
+            _RestSection(range: range),
             const SizedBox(height: AppSpacing.xl),
             const SectionHeader(title: 'Training balance'),
             _BalanceSection(range: range),
@@ -278,6 +285,105 @@ class _StrengthRow extends StatelessWidget {
   }
 }
 
+class _InsightsSection extends ConsumerWidget {
+  const _InsightsSection({required this.range});
+  final ProgressRange range;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strength = ref.watch(strengthChangeProvider(range));
+    final volume = ref.watch(weeklyVolumeSeriesProvider(range));
+    final frequency = ref.watch(workoutFrequencySeriesProvider(range));
+    final muscles = ref.watch(muscleGroupSeriesProvider(range));
+
+    if (strength.isLoading ||
+        volume.isLoading ||
+        frequency.isLoading ||
+        muscles.isLoading) {
+      return const _ChartLoading();
+    }
+    Object? error;
+    for (final value in [strength, volume, frequency, muscles]) {
+      if (value.hasError) {
+        error = value.error;
+        break;
+      }
+    }
+    if (error != null) {
+      return _ChartError(
+        error: error,
+        onRetry: () {
+          ref.invalidate(strengthChangeProvider(range));
+          ref.invalidate(weeklyVolumeSeriesProvider(range));
+          ref.invalidate(workoutFrequencySeriesProvider(range));
+          ref.invalidate(muscleGroupSeriesProvider(range));
+        },
+      );
+    }
+
+    final insights = buildProgressInsights(
+      strengthChanges: strength.value ?? const [],
+      volume: volume.value ?? const [],
+      frequency: frequency.value ?? const [],
+      currentMuscleVolume: muscles.value ?? const [],
+      previousMuscleVolume: const [],
+    );
+    return Semantics(
+      container: true,
+      label: 'Progress insights',
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Insights', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.xs),
+            if (insights.isEmpty)
+              Text(
+                'Keep logging workouts to unlock personalized progress insights.',
+                style: AppTypography.caption(Theme.of(context)),
+              )
+            else
+              for (final insight in insights) _InsightTile(insight: insight),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InsightTile extends StatelessWidget {
+  const _InsightTile({required this.insight});
+  final ProgressInsight insight;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = switch (insight.target) {
+      InsightTarget.strength => 'Strength',
+      InsightTarget.volume => 'Volume',
+      InsightTarget.consistency => 'Consistency',
+      InsightTarget.balance => 'Balance',
+    };
+    return Semantics(
+      container: true,
+      label:
+          '${insight.headline}. ${insight.supportingFigure}. See $target section.',
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        title: Text(insight.headline),
+        subtitle: Text('${insight.supportingFigure} · See $target'),
+        leading: Icon(
+          insight.severity == InsightSeverity.actionable
+              ? Icons.priority_high
+              : insight.severity == InsightSeverity.negative
+                  ? Icons.trending_down
+                  : Icons.trending_up,
+        ),
+      ),
+    );
+  }
+}
+
 class _RangeSelector extends ConsumerWidget {
   const _RangeSelector({required this.range});
 
@@ -454,6 +560,11 @@ class _OneRmSection extends ConsumerWidget {
             items.any((LoggedExercise i) => i.exerciseId == exerciseId)
                 ? exerciseId!
                 : items.first.exerciseId;
+        if (exerciseId == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) onExerciseChanged(selected);
+          });
+        }
 
         final AsyncValue<List<OneRMSeriesPoint>> seriesAsync =
             ref.watch(oneRmSeriesProvider(selected, range));
@@ -860,6 +971,68 @@ class _ConsistencySection extends ConsumerWidget {
               ])),
         );
   }
+}
+
+class _RpeSection extends ConsumerWidget {
+  const _RpeSection({required this.range});
+  final ProgressRange range;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(rpeAnalyticsProvider(range)).when(
+            loading: () => const _ChartLoading(),
+            error: (e, _) => _ChartError(
+                error: e,
+                onRetry: () => ref.invalidate(rpeAnalyticsProvider(range))),
+            data: (rows) => rows.isEmpty
+                ? const _ChartEmpty(
+                    icon: Icons.speed_outlined,
+                    message:
+                        'Record RPE on completed sets to see effort and load together.')
+                : AppCard(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                        Text('Session RPE vs volume',
+                            style: Theme.of(context).textTheme.titleSmall),
+                        for (final row in rows.take(8))
+                          ListTile(
+                              dense: true,
+                              title: Text(DateFormatters.axisLabel(row.date)),
+                              trailing: Text(
+                                  'RPE ${row.averageRpe.toStringAsFixed(1)} · ${row.volumeKg.round()} kg')),
+                      ])),
+          );
+}
+
+class _RestSection extends ConsumerWidget {
+  const _RestSection({required this.range});
+  final ProgressRange range;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(restAnalyticsProvider(range)).when(
+            loading: () => const _ChartLoading(),
+            error: (e, _) => _ChartError(
+                error: e,
+                onRetry: () => ref.invalidate(restAnalyticsProvider(range))),
+            data: (rows) => rows.isEmpty
+                ? const _ChartEmpty(
+                    icon: Icons.timer_outlined,
+                    message:
+                        'Record rest before sets to see your recovery pattern.')
+                : AppCard(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                        Text('Rest time',
+                            style: Theme.of(context).textTheme.titleSmall),
+                        for (final row in rows.take(8))
+                          ListTile(
+                              dense: true,
+                              title: Text(DateFormatters.axisLabel(row.date)),
+                              trailing: Text(
+                                  '${row.averageRestSeconds.round()} sec average')),
+                      ])),
+          );
 }
 
 class _BalanceSection extends ConsumerWidget {

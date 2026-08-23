@@ -34,6 +34,8 @@ abstract class DraftSet with _$DraftSet {
     @Default(0) int reps,
     @Default(false) bool isCompleted,
     @Default(false) bool isWarmup,
+    int? rpeTimes10,
+    int? restSeconds,
   }) = _DraftSet;
 }
 

@@ -334,6 +334,62 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         );
   }
 
+  /// Session-level RPE and working volume, for fatigue/load comparisons.
+  Stream<List<SessionRpe>> watchRpeAnalytics({DateTime? since}) {
+    final sinceClause = since == null ? '' : 'AND w.started_at >= ?';
+    return customSelect('''
+      SELECT w.id AS workout_id, w.started_at AS date,
+        AVG(ws.rpe_times10) AS average_rpe_times_10,
+        SUM(ws.weight_kg * ws.reps) AS volume_kg
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
+      JOIN workouts_table w ON w.id = we.workout_id
+      WHERE w.ended_at IS NOT NULL AND ws.is_completed = 1
+        AND ws.is_warmup = 0 AND ws.rpe_times10 IS NOT NULL $sinceClause
+      GROUP BY w.id, w.started_at ORDER BY w.started_at ASC
+    ''',
+            variables: [if (since != null) Variable.withDateTime(since)],
+            readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable})
+        .watch()
+        .map((rows) => [
+              for (final row in rows)
+                SessionRpe(
+                  workoutId: row.read<String>('workout_id'),
+                  date: row.read<DateTime>('date'),
+                  averageRpe: row.read<double>('average_rpe_times_10') / 10,
+                  volumeKg: row.read<double>('volume_kg'),
+                ),
+            ]);
+  }
+
+  /// Per-session average recorded rest between sets.
+  Stream<List<SessionRest>> watchRestAnalytics({DateTime? since}) {
+    final sinceClause = since == null ? '' : 'AND w.started_at >= ?';
+    return customSelect('''
+      SELECT w.id AS workout_id, w.started_at AS date,
+        AVG(ws.rest_seconds) AS average_rest_seconds,
+        COUNT(ws.rest_seconds) AS recorded_rest_count
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
+      JOIN workouts_table w ON w.id = we.workout_id
+      WHERE w.ended_at IS NOT NULL AND ws.is_completed = 1
+        AND ws.is_warmup = 0 AND ws.rest_seconds IS NOT NULL $sinceClause
+      GROUP BY w.id, w.started_at ORDER BY w.started_at ASC
+    ''',
+            variables: [if (since != null) Variable.withDateTime(since)],
+            readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable})
+        .watch()
+        .map((rows) => [
+              for (final row in rows)
+                SessionRest(
+                  workoutId: row.read<String>('workout_id'),
+                  date: row.read<DateTime>('date'),
+                  averageRestSeconds: row.read<double>('average_rest_seconds'),
+                  recordedSetCount: row.read<int>('recorded_rest_count'),
+                ),
+            ]);
+  }
+
   /// Push/pull and upper/lower volume totals for the selected window.
   Stream<BalanceRatios> watchBalanceRatios({DateTime? since}) {
     final whereSince = since == null ? '' : 'AND w.started_at >= ?';
@@ -1023,6 +1079,30 @@ class MuscleGroupVolume {
 }
 
 /// OneRM series data point.
+class SessionRpe {
+  const SessionRpe(
+      {required this.workoutId,
+      required this.date,
+      required this.averageRpe,
+      required this.volumeKg});
+  final String workoutId;
+  final DateTime date;
+  final double averageRpe;
+  final double volumeKg;
+}
+
+class SessionRest {
+  const SessionRest(
+      {required this.workoutId,
+      required this.date,
+      required this.averageRestSeconds,
+      required this.recordedSetCount});
+  final String workoutId;
+  final DateTime date;
+  final double averageRestSeconds;
+  final int recordedSetCount;
+}
+
 class SessionVolumeLoad {
   const SessionVolumeLoad(
       {required this.workoutId, required this.date, required this.volumeKg});

@@ -100,6 +100,8 @@ class _FakeController implements DraftEditorController {
     int? reps,
     bool? isCompleted,
     bool? isWarmup,
+    int? rpeTimes10,
+    int? restSeconds,
   }) async {
     _ensureExercise(exerciseId);
     final source = _exercise!;
@@ -112,6 +114,8 @@ class _FakeController implements DraftEditorController {
               reps: reps ?? set.reps,
               isCompleted: isCompleted ?? set.isCompleted,
               isWarmup: isWarmup ?? set.isWarmup,
+              rpeTimes10: rpeTimes10 ?? set.rpeTimes10,
+              restSeconds: restSeconds ?? set.restSeconds,
             )
           else
             set,

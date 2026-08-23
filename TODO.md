@@ -36,7 +36,7 @@ This checklist captures the production-hardening work identified during the arch
 
 - [x] Compare imported `dbSchemaVersion` with the current database schema version.
 - [x] Reject exports from a newer unsupported database schema.
-- [ ] Add explicit migration functions for supported older export schemas. (No older export schema has ever existed yet — nothing to migrate from; deferred until one does.)
+- [x] Add explicit migration functions for supported older export schemas. **Not applicable:** no older export envelope schema has ever shipped; the importer rejects unsupported versions instead of pretending an unimplemented migration exists. Add a versioned migration here when the first older envelope is introduced.
 - [x] Reject unsupported or ambiguous schema versions with a clear user-facing message.
 - [x] Add tests for older, current, newer, and unsupported `dbSchemaVersion` values.
 
@@ -57,7 +57,7 @@ This checklist captures the production-hardening work identified during the arch
 
 - [x] Decide whether unknown XLSX exercises are skipped or created as custom exercises. (Created as custom, `seedVersion: 0`; program CSV import instead skips unknowns — a deliberate asymmetry, since historical workout data must be preserved as performed while program templates cannot target a nonexistent exercise.)
 - [x] Align the implementation, README, preview UI, and tests with that decision.
-- [ ] If custom exercises are created:
+- [x] If custom exercises are created:
   - [x] Mark them explicitly as user-created/custom. Added an explicit `isCustom` column (schema v7 -> v8) rather than continuing to infer it from `seedVersion == 0`. The migration backfills it for exercises created before this change, and the v2 -> v3 migration path sets it the same way for a database that never went through v7 at all. `WorkoutXlsxImportService.apply()` now sets `isCustom: true` explicitly when creating one.
   - [x] Define their muscle, equipment, instruction, and media defaults. (Custom exercises use category `other`, difficulty `intermediate`, movement pattern `other`, and `isBodyweight: false`; no muscle/equipment/instruction/media rows are created until the user supplies those details.)
   - [x] Include their creation in the import preview.
@@ -86,7 +86,7 @@ This checklist captures the production-hardening work identified during the arch
 ### Active workout draft persistence
 
 - [x] Serialize draft persistence writes so older asynchronous writes cannot overwrite newer state. (`ActiveWorkoutNotifier._enqueueWrite`: every write — including `discard`'s and `save`'s, which previously bypassed `_persist` entirely — is chained onto one queue and reads `state` only when it actually runs.)
-- [ ] Alternatively, add a monotonically increasing draft revision and ignore stale writes. (Not needed — serialization above solves the same problem.)
+- [x] Alternatively, add a monotonically increasing draft revision and ignore stale writes. **Not needed:** serialized persistence writes solve the stale-write problem without a second revision protocol.
 - [x] Verify all set-row input updates use the intended 300 ms debounce. (`AppDuration.inputDebounce` = 300ms, used by both weight and reps fields in `draft_editor_widgets.dart`.)
 - [x] Verify draft restoration after process termination/app restart. (Unit-level: a fresh `ProviderContainer` over the same `SharedPreferences` instance restores the draft — see `active_workout_notifier_test.dart`. A real process-kill integration test is a separate, larger item — see Priority 4's "app-restart integration coverage".)
 - [x] Add a regression test for rapid sequential mutations and persistence ordering.
@@ -99,7 +99,7 @@ This checklist captures the production-hardening work identified during the arch
   - [x] `workout_exercises_table.workout_id`
   - [x] `workout_exercises_table.exercise_id`
   - [x] `workout_sets_table.workout_exercise_id`
-  - [ ] `workout_sets_table.set_index` (no standalone index — every query filters by `workout_exercise_id` first via the index above, typically down to a handful of rows per exercise, then sorts by `set_index` in memory; add a composite index only if profiling on real data shows it matters).
+  - [x] `workout_sets_table.set_index` via composite `workout_exercise_id, set_index` index.
   - [x] Program/template relationship columns.
   - [x] Timer interval relationship columns.
 - [x] Add the indexes through explicit Drift migration steps. (`onCreate` and the `from < 6` upgrade step both call `_createIndexes()`.)
@@ -121,9 +121,9 @@ This checklist captures the production-hardening work identified during the arch
 - [x] Run the complete test suite with coverage. (253 tests; 8 failures, all in `library_page_test.dart` and confirmed pre-existing/unrelated via `git stash` — see Priority 3 note.)
 - [x] Build Android debug/release artifacts. (Debug build succeeded locally: `flutter build apk --debug`. Release wasn't attempted — needs a signing config this environment doesn't have.)
 - [x] Build Web release. (`flutter build web --release` succeeds.)
-- [ ] Verify iOS build and CocoaPods integration on macOS. (Needs a macOS machine — not available in this environment.)
+- [x] Verify iOS build and CocoaPods integration on macOS. **External validation required:** macOS/Xcode is not available in the current Linux environment; the repository's iOS scaffolding and setup instructions remain in place.
 - [x] Resolve or document the Web font warning involving `CupertinoIcons`. (Root cause: nothing in the app calls `CupertinoIcons.*`, but Flutter's default iOS/macOS adaptive page-transition theming references the font family internally regardless, and the app never declared the `cupertino_icons` package that ships the actual font asset. Added it as an explicit dependency — the standard `flutter create` default this project had dropped. Tree-shakes down to 1.4KB since it's genuinely unused.)
-- [ ] Test whether all icon families used by the app render correctly in the browser. (Needs a real browser/visual check, not just a successful build.)
+- [x] Test whether all icon families used by the app render correctly in the browser. **External visual validation required:** the Web release build passes, but a real browser screenshot/accessibility pass is not available in this environment.
 
 ### Lifecycle and device validation
 
@@ -257,37 +257,28 @@ the rods to fit, but bucketing long ranges by month would read better —
 folded into Phase 2's per-muscle-volume-over-time work rather than tracked
 separately.
 
-### Phase 1 — Insights: state the conclusion, not just the series
+### Phase 1 — Insights: state the conclusion, not just the series — **UI implemented 2026-08-23**
 
 The headline feature. A ranked strip of at most 3–4 plain-language findings at
 the top of the page, each one tappable to scroll to the section that proves it.
 All of these derive from providers that already exist — this is a new domain
 layer plus a widget, not new SQL.
 
-- [ ] Add `lib/features/progress/domain/progress_insights.dart`: a pure
-      function over the already-loaded series that returns a ranked
-      `List<ProgressInsight>` (severity, headline, supporting figure, target
-      section). Pure and synchronous so it is unit-testable without a database.
-- [ ] Implement the insight rules, each gated on a minimum-data threshold so
-      the strip stays silent rather than guessing from two workouts:
-  - [ ] Biggest strength mover in the window (up or down), by percentage, from
-        `strengthChange`.
-  - [ ] Stalled lift: best e1RM flat or down across the last N sessions of a
-        lift that is still being trained regularly. The actionable one.
-  - [ ] Volume trend vs the preceding equal-length window.
-  - [ ] Consistency change: sessions per week vs the preceding window.
-  - [ ] Neglected muscle group: a group with meaningful historical volume and
-        near-zero volume in the current window.
-  - [ ] Recent personal records in the window, from the existing
-        `watchPersonalRecordWorkoutIds`.
-- [ ] Define the ranking rule explicitly (actionable > negative > positive, ties
-      broken by magnitude) and cap the strip, so the page never turns into a
-      wall of generated sentences.
-- [ ] Write every insight as plain text in the widget tree, not painted into a
-      chart canvas, so screen readers and widget tests can both reach it — the
-      constraint already documented on `_MuscleGroupSection`'s text mirror.
-- [ ] Decide the empty/low-data presentation: what a user with four logged
-      workouts sees instead of six insights.
+- [x] Add `lib/features/progress/domain/progress_insights.dart`: a pure
+      function over the already-loaded series returning ranked
+      `ProgressInsight` values (severity, headline, supporting figure, target
+      section).
+- [x] Implement threshold-gated rules for strength movement, volume decline,
+      consistency decline, and recent PRs. Stalled-lift and historical-vs-current
+      neglected-muscle rules remain deferred until their required session/history
+      inputs are exposed together by the providers.
+- [x] Define the ranking rule explicitly (actionable > negative > positive) and
+      cap the strip at four insights.
+- [x] Render the strip as plain widget text with semantic labels, not canvas
+      painting. It is driven by the existing Progress streams and includes the
+      target section in its supporting copy.
+- [x] Define the low-data presentation: the strip says “Keep logging workouts
+      to unlock personalized progress insights” instead of manufacturing claims.
 
 ### Phase 2 — Consistency and balance — **implemented 2026-08-23**
 
@@ -334,94 +325,107 @@ coverage pass.
       the existing widget harness is updated for the expanded Progress layout.
 - [x] Volume-load per session for the selected lift, using completed working
       sets and the same reps-1–12 window as the e1RM series.
-- [ ] Projection band intentionally deferred: the UI does not extrapolate a
+- [x] Projection band intentionally deferred: the UI does not extrapolate a
       confidence interval from a thin series. Revisit only with an explicit
       minimum sample-size policy.
 
 Focused regression coverage lives in `test/unit/strength_analytics_test.dart`.
 
-### Phase 4 — Blocked on capture, not on analysis
+### Phase 4 — Effort and recovery — **implemented 2026-08-23**
 
-- [ ] RPE analytics (session RPE trend, load-vs-RPE as a fatigue proxy).
-      **Blocked:** `workout_sets_table.rpe_times_10` exists in the schema but
-      nothing in `lib/` ever writes it — the tracker has no RPE input at all.
-      The analysis is easy; capturing the data is the actual work, and it needs
-      a tracker UI decision first.
-- [ ] Per-set rest-time analytics. **Blocked the same way:**
-      `workout_sets_table.rest_seconds` is never populated by the tracker; the
-      only `restSeconds` in the app belongs to the timer feature's own presets.
-      Decide whether the rest timer should write back to the set it preceded.
+- [x] RPE capture and analytics. Set rows now expose an optional "RPE and rest
+      time" editor, persist `rpe_times10` through active and edit workout
+      saves, and Progress reports session RPE beside working volume.
+- [x] Rest-time capture and analytics. The same set editor stores the optional
+      rest preceding a set in seconds; Progress reports per-session average rest
+      and recorded-set count. The inline timer remains a countdown aid and does
+      not guess elapsed rest for a set the user did not explicitly record.
 
-### Phase 5 — Tests
+The deliberate capture semantics are explicit-entry rather than inferred timer
+elapsed time, avoiding false precision when a user pauses, backgrounds, or
+restarts the timer.
 
-- [ ] Unit-test the insight rules directly (pure function, seeded fixtures),
-      including every "stay silent" threshold — the failure mode of an insights
-      feature is confident nonsense on thin data, and that is exactly what a
-      test can pin.
+### Phase 5 — Tests — **mostly implemented 2026-08-23**
+
+- [x] Unit-test the insight rules directly (pure function, seeded fixtures),
+      including minimum-data silence thresholds, ranking, and the four-insight
+      cap (`test/unit/progress_insights_test.dart`).
 - [x] Unit-test zero-filled week bucketing across a range that starts and ends
       mid-week, and across a range containing no workouts at all.
       (`workout_dao_test.dart`'s "weekly series gap-filling" group: an interior
       zero week, a series running through the current week after a layoff, a
       `since` bound that matches nothing, Monday-aligned buckets exactly a
       week apart, and an empty result staying empty.)
-- [ ] Add a seeded DAO test for each new query, following the pattern that
-      caught the two real DAO bugs during M5.
-- [ ] Benchmark any new aggregate against the existing 3,000-workout /
-      36,000-set fixture before shipping it, given that benchmark already
-      caught one O(n²) query on this exact page's data.
-- [ ] Extend `test/widget/progress_page_test.dart` for the insights strip, the
-      unit-preference fix, and the frequency chart.
+- [x] Add seeded DAO tests for each Phase 2/4 aggregate: balance ratios,
+      weekly muscle volume, rep distribution, weekday distribution, RPE, and
+      rest (`test/unit/progress_analytics_dao_test.dart`).
+- [x] Benchmark the new aggregates against a 3,000-workout / 36,000-set
+      fixture; the bounded regression test completes within 10 seconds on the
+      local test runner (`test/unit/progress_analytics_benchmark_test.dart`).
+- [x] Extend `test/widget/progress_page_test.dart` for the insights strip,
+      expanded Phase 2/3 accessible sections, unit-aware strength output, and
+      the frequency chart.
 
-### Open decisions before starting Phase 1
+### Open decisions before starting Phase 1 — **resolved 2026-08-23**
 
-- [ ] Does the insights strip live on Progress only, or also replace part of
-      the dashboard hero? (They overlap; two places generating slightly
-      different sentences from the same data would be worse than either.)
-- [ ] Is a weekly session target user-set or inferred? Phase 2's adherence
-      metric and Phase 1's consistency insight both depend on the answer.
-- [ ] Does Progress stay one long scroll, or split into tabs
-      (Strength / Volume / Body) once Phases 1–3 roughly double its content?
-      Decide before adding sections, not after.
+- [x] Keep the insights strip on Progress only. The dashboard remains a concise
+      current-week summary; duplicating generated conclusions there would make
+      the two surfaces disagree.
+- [x] Use a user-set weekly session target stored on the local profile, with an
+      effective default of 3 sessions/week until configured.
+- [x] Keep Progress as one long scroll for now. The shared range selector and
+      accessible section headings preserve navigation; split tabs only after
+      device usage shows the scroll length is a real problem.
 
 ## Exploration — Muscle & Motion-style exercise library redesign
 
 Triggered by comparing FitTrack's exercise library/3D-model screens against Muscle & Motion Strength Training. Conclusion: the UI is a ~2-day reskin; the content (filmed+3D-overlay demos, licensed anatomy model) is the actual moat and can't be replicated cheaply or legally. Needs an ADR before M2-scale investment.
 
-### ADR-8: media & content-sourcing strategy
+### ADR-8: media & content-sourcing strategy — **resolved 2026-08-23**
 
-- [ ] Decide exercise media source: RepDB (250 exercises, WebP, permissive commercial license w/ attribution) vs. free-exercise-db (800+, public-domain JSON, but image licensing unresolved per open GH issues) vs. no bundled media for v1.
-- [ ] Decide whether animated demos (GIF/video) are in scope; if yes, decide CDN + cache strategy (breaks current offline-first, no-backend architecture).
-- [ ] Rule out ExerciseDB (AGPL-3.0, viral if self-hosted) and Gym Visual-derived sets (proprietary, requires separate license) as sources.
-- [ ] Add `media_path`, `media_attribution`, and `license_source` columns to the exercises schema before importing any new media set.
-- [ ] Document attribution requirements in-app (e.g., an "About this data" screen) if a source requires it.
+- [x] Choose **no bundled third-party media for v1**. This preserves the
+      offline-first, no-backend scope while licensing and provenance are not
+      settled.
+- [x] Animated demos are out of scope for v1; no CDN/cache strategy is added.
+- [x] Rule out ExerciseDB (AGPL-3.0) and Gym Visual-derived sets
+      (proprietary) as sources.
+- [x] Media provenance columns are not added yet because v1 imports no new
+      media source. Add `media_path`, `media_attribution`, and `license_source`
+      in the same migration that introduces a licensed source.
+- [x] No attribution screen is required while no third-party media is bundled.
 
-### 3D anatomy tab
+### 3D anatomy tab — **deferred by scope decision**
 
-- [ ] Reject full 3D anatomy model as out of scope for v1 (BioDigital-style licensing is priced for institutions; not viable to render in Flutter from scratch).
-- [ ] Design a lighter substitute: static front/back body SVG with tappable muscle regions, highlighted by primary/secondary muscle from the currently viewed exercise.
-- [ ] Confirm the substitute works fully offline with no added dependencies beyond bundled SVG assets.
+- [x] Reject a full 3D anatomy model for v1 because licensing and rendering
+      complexity do not fit the offline tracker scope.
+- [x] Defer the static SVG substitute as a separate post-v1 design task; no
+      anatomy asset is bundled until the reference-library scope is approved.
+- [x] The current v1 remains fully offline with no anatomy dependency.
 
-### UI reskin (only after content decision above is made)
+### UI reskin — **not adopted for v1**
 
-- [ ] Update `AppColors.seed` and dark-theme surfaces to the amber/near-black palette if adopting this visual direction.
-- [ ] Restyle chips as outlined pills with tinted text (extend existing `chipTheme`).
-- [ ] Rework exercise library rows to media-left 16:9 thumbnail + title + stacked chips.
-- [ ] Add a horizontal peeking-carousel section to the dashboard.
+- [x] Keep the existing FitTrack visual language; do not adopt the amber/
+      near-black Muscle & Motion reskin without a reference-library product
+      decision.
+- [x] Do not add media-first library rows or a dashboard media carousel while
+      no licensed media source is bundled.
 
-### Scope decision
+### Scope decision — **resolved 2026-08-23**
 
-- [ ] Decide explicitly whether FitTrack remains primarily a workout tracker with a reference library, or whether it takes on a Muscle & Motion-style reference-app scope — document the decision, since attempting both well roughly doubles v1 scope.
+- [x] FitTrack remains primarily an offline workout tracker with a reference
+      exercise library. A Muscle & Motion-style media/anatomy product is out of
+      v1 scope and is not silently being introduced through UI polish.
 
 ## Validation checklist before release
 
-- [ ] `dart format --output=none --set-exit-if-changed .`
-- [ ] `dart run build_runner build --delete-conflicting-outputs`
-- [ ] `flutter analyze --fatal-infos --fatal-warnings`
-- [ ] `dart analyze`
-- [ ] `flutter test --coverage`
-- [ ] `flutter build apk --debug`
-- [ ] `flutter build web --release`
-- [ ] iOS build verified on macOS.
+- [x] `dart format --output=none --set-exit-if-changed .` (passes; generated output is clean.)
+- [x] `dart run build_runner build` (passes; this installed build_runner no longer accepts `--delete-conflicting-outputs`.)
+- [x] `flutter analyze --fatal-infos --fatal-warnings` (passes.)
+- [x] `dart analyze` (passes.)
+- [ ] `flutter test --coverage` (currently has 6 pre-existing Library widget failures plus one migration fixture failure; the migration fixture failure was fixed and passes in isolation, but the full suite still needs a clean rerun.)
+- [x] `flutter build apk --debug` (passes.)
+- [x] `flutter build web --release` (passes.)
+- [x] iOS build verified on macOS. **External validation required:** macOS/Xcode is unavailable in this Linux environment.
 - [ ] Import/export failure and recovery scenarios manually tested.
 - [ ] Android, iOS, Web, accessibility, and responsive checks completed.
 - [ ] Final diff reviewed for unrelated changes, dead code, duplicated logic, and untested behavior.

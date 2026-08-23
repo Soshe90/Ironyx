@@ -24,5 +24,7 @@ abstract interface class DraftEditorController {
     int? reps,
     bool? isCompleted,
     bool? isWarmup,
+    int? rpeTimes10,
+    int? restSeconds,
   });
 }
