@@ -60,8 +60,14 @@ web/**/flutter_service_worker.js
 *.freezed.dart
 
 # IDE
-.idea/
-.vscode/
+# Run configurations are committed: they carry the --dart-define-from-file
+# wiring (ADR-8) and no secrets. Everything else in .idea/ is personal.
+.idea/*
+!.idea/runConfigurations/
+# .vscode/launch.json is committed for the same reason. Everything else in
+# .vscode/ is personal.
+.vscode/*
+!.vscode/launch.json
 *.iml
 
 # Test output
@@ -77,3 +83,7 @@ coverage/
 # Supabase credentials for --dart-define-from-file (ADR-8).
 # The anon key is public by design, but the project URL still stays out of git.
 supabase.json
+
+# Upstream exercise dump + original images, re-downloaded on demand by
+# scripts/build_exercise_seed.py. Large, and reproducible from the network.
+scripts/.cache/

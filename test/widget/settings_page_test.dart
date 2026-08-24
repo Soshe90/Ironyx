@@ -29,6 +29,18 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Units sits below the fold at the test surface size, and lazily-built
+      // list children have no element to scroll to until they are reached —
+      // same reason the delete-all test below scrolls rather than tapping
+      // blind. Every row added to the Account card above pushes this further
+      // down, so the scroll is what keeps the test about units.
+      await tester.scrollUntilVisible(
+        find.text('Pounds (lb)'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
       expect(find.text('Kilograms (kg)'), findsOneWidget);
       await tester.tap(find.text('Pounds (lb)'));
       await tester.pumpAndSettle();

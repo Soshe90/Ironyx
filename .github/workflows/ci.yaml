@@ -28,6 +28,11 @@ jobs:
       - name: Analyze
         run: flutter analyze --fatal-infos --fatal-warnings
 
+      # Runs before the build so an unlicensed asset can never reach a
+      # published artifact. See ASSETS-LICENSE.md.
+      - name: Check asset licences
+        run: dart run tool/check_asset_licenses.dart
+
       - name: Test
         run: flutter test --coverage
 

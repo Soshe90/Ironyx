@@ -90,6 +90,16 @@ class AccountSection extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.pushNamed(Routes.personalDetailsName),
               ),
+              // The welcome screen shows once per install, so without this
+              // the only way back to it is a reinstall — which would take
+              // the workout history with it.
+              ListTile(
+                leading: const Icon(Icons.slideshow_outlined),
+                title: const Text('Show welcome screen'),
+                subtitle: const Text('The intro shown on first launch'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.pushNamed(Routes.welcomeName),
+              ),
             ],
           ),
         ),

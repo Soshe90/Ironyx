@@ -6,6 +6,7 @@ import '../../features/auth/presentation/sign_in_page.dart';
 import '../../features/auth/presentation/sign_up_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/library/presentation/library_page.dart';
+import '../../features/onboarding/presentation/welcome_page.dart';
 import '../../features/profile/presentation/personal_details_page.dart';
 import '../../features/programs/presentation/program_detail_page.dart';
 import '../../features/programs/presentation/program_editor_page.dart';
@@ -21,15 +22,17 @@ import '../../features/tracker/presentation/workout_edit_page.dart';
 import 'routes.dart';
 import 'scaffold_with_nav_bar.dart';
 
-final GlobalKey<NavigatorState> rootNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'root');
-
 /// Application router.
 ///
 /// ADR-3: five branches in a [StatefulShellRoute.indexedStack]. Focused-task
 /// screens are declared at root level with [rootNavigatorKey] so they cover
 /// the shell and hide the bottom bar.
 GoRouter createRouter({String initialLocation = Routes.home}) {
+  // Keep the navigator key scoped to this router instance. Reusing one global
+  // key across recreated routers can leave inherited-widget dependents attached
+  // to the previous navigator and trigger Flutter's `_dependents.isEmpty`
+  // assertion during teardown/relaunch.
+  final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation,
@@ -181,6 +184,16 @@ GoRouter createRouter({String initialLocation = Routes.home}) {
         name: Routes.personalDetailsName,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const PersonalDetailsPage(),
+      ),
+
+      // First launch. Selected as `initialLocation` by `app.dart`, which
+      // reads the persisted flag synchronously; still no `redirect` here,
+      // for the reason given above.
+      GoRoute(
+        path: Routes.welcome,
+        name: Routes.welcomeName,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const WelcomePage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

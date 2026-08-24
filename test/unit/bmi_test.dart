@@ -1,0 +1,17 @@
+import 'package:fittrack/features/progress/domain/bmi.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('calculates BMI and category from metric source values', () {
+    final result = calculateBmi(weightKg: 81, heightCm: 180);
+    expect(result, isNotNull);
+    expect(result!.value, closeTo(25, .01));
+    expect(result.category, 'Overweight');
+  });
+
+  test('returns null for missing or invalid measurements', () {
+    expect(calculateBmi(weightKg: 80, heightCm: 0), isNull);
+    expect(calculateBmi(weightKg: -1, heightCm: 180), isNull);
+    expect(calculateBmi(weightKg: double.nan, heightCm: 180), isNull);
+  });
+}

@@ -63,8 +63,23 @@ wall of "undefined name" errors if you skip it.
 dart format .
 flutter analyze --fatal-infos --fatal-warnings
 flutter test
-flutter run
+flutter run --dart-define-from-file=supabase.json
 ```
+
+## 6. Supabase credentials (optional accounts)
+
+`SupabaseConfig` reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` via
+`String.fromEnvironment`, which resolves at **compile time** (ADR-8). Omit
+them and the app still runs — storage is local — but auth is swapped for
+`DisabledAuthService` and Settings shows "Accounts unavailable".
+
+```bash
+cp supabase.example.json supabase.json   # gitignored; paste your real values
+scripts/build_android.sh run             # or apk / bundle / install
+```
+
+`scripts/build_android.sh` and the `.vscode/launch.json` configurations both
+pass `--dart-define-from-file=supabase.json` so the flag cannot be forgotten.
 
 ---
 

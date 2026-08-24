@@ -12,6 +12,7 @@ import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../timer/domain/timer_settings_controller.dart';
 import 'widgets/account_section.dart';
+import 'widgets/cloud_backup_section.dart';
 import 'widgets/data_management_section.dart';
 
 /// Root-level route (ADR-3): full screen, bottom bar hidden.
@@ -44,6 +45,10 @@ class SettingsPage extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           children: <Widget>[
             const AccountSection(),
+            // Directly under Account on purpose: the backup is tied to the
+            // account, and someone who has just signed in on a fresh
+            // install is exactly the person looking for it.
+            const CloudBackupSection(),
             const SectionHeader(
               title: 'Appearance',
               subtitle: 'Dark mode is a first-class theme, not an inversion',

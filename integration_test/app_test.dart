@@ -13,7 +13,12 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('boots and reaches every destination', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    // Past the first-launch welcome screen: this journey is about the five
+    // shell destinations, and a fresh install would otherwise start on the
+    // account-or-guest choice instead of the dashboard.
+    SharedPreferences.setMockInitialValues(
+      <String, Object>{'onboarding_complete': true},
+    );
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(

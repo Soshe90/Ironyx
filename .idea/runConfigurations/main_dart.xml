@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="main.dart" type="FlutterRunConfigurationType" factoryName="Flutter">
+    <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
+    <!-- Supabase credentials are String.fromEnvironment constants, resolved at
+         compile time (ADR-8). Without this flag the build ships with auth
+         disabled and Settings shows "Accounts unavailable". supabase.json is
+         gitignored; create it from supabase.example.json. -->
+    <option name="additionalArgs" value="--dart-define-from-file=supabase.json" />
+    <method />
+  </configuration>
+</component>

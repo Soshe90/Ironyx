@@ -75,8 +75,8 @@ flutter:
     - assets/data/
     - assets/audio/
     - assets/images/exercises/
-    - assets/images/exercises/free_exercise_db/Stiff-Legged_Dumbbell_Deadlift/
-    - assets/images/exercises/free_exercise_db/Incline_Cable_Flye/
-    - assets/images/exercises/free_exercise_db/Flat_Bench_Cable_Flyes/
-    - assets/images/exercises/free_exercise_db/Cable_Crossover/
-    - assets/images/exercises/free_exercise_db/Low_Cable_Crossover/
+    # Asset directory entries are not recursive, which is why every
+    # exercise image lives directly in this one folder rather than in
+    # upstream's folder-per-exercise layout. See
+    # scripts/build_exercise_seed.py, which writes them.
+    - assets/images/exercises/free_exercise_db/

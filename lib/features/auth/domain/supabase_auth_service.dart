@@ -11,14 +11,21 @@ import 'auth_service.dart';
 /// [AuthFailure] so nothing downstream — controllers, widgets, tests — has
 /// to know which backend is behind the seam.
 class SupabaseAuthService implements AuthService {
-  SupabaseAuthService(this._client, {this.passwordResetRedirectTo});
+  SupabaseAuthService(this._client, {this.redirectTo});
 
   final sb.SupabaseClient _client;
 
-  /// Deep link the password-reset mail sends the user back to. Null until
-  /// per-platform link handling is configured, in which case Supabase falls
-  /// back to the project's default Site URL.
-  final String? passwordResetRedirectTo;
+  /// Deep link that confirmation and password-reset mails send the user back
+  /// to. One value for both: they are the same journey — leave the app, tap
+  /// a link in a mail client, come back signed in.
+  ///
+  /// Null on platforms with no URL scheme registered (and in tests), in which
+  /// case Supabase falls back to the project's Site URL. That degrades to the
+  /// old behaviour rather than failing: the confirmation itself happens on
+  /// Supabase's side before the redirect is ever followed, so the account is
+  /// confirmed either way — the user just lands on a dead page instead of
+  /// back in the app.
+  final String? redirectTo;
 
   sb.GoTrueClient get _auth => _client.auth;
 
@@ -41,6 +48,7 @@ class SupabaseAuthService implements AuthService {
       final sb.AuthResponse response = await _auth.signUp(
         email: email.trim(),
         password: password,
+        emailRedirectTo: redirectTo,
       );
       // A null session with a non-null user means the project requires
       // email confirmation: the account exists but nobody is signed in yet.
@@ -83,7 +91,7 @@ class SupabaseAuthService implements AuthService {
     return _guard(
       () => _auth.resetPasswordForEmail(
         email.trim(),
-        redirectTo: passwordResetRedirectTo,
+        redirectTo: redirectTo,
       ),
     );
   }

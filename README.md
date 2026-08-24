@@ -41,11 +41,29 @@ Once set up:
 
     flutter pub get
     dart run build_runner build
-    flutter run
+    flutter run --dart-define-from-file=supabase.json
 
 `build_runner` is required before the first compile: `*.g.dart` files are
 gitignored, so `themeModeControllerProvider` will not exist until you
 generate it.
+
+### Accounts (Supabase) credentials
+
+Sign-in is optional — workouts are stored on-device either way — but the
+credentials are `String.fromEnvironment` constants, so they are baked in at
+**compile time**. A build that omits them ships with auth disabled and Settings
+shows "Accounts unavailable"; hot reload cannot fix it, only a rebuild can.
+
+Copy `supabase.example.json` to `supabase.json` (gitignored) and fill in your
+project URL and anon/publishable key, then use any of:
+
+    scripts/build_android.sh run       # debug on the connected device
+    scripts/build_android.sh apk       # release APK
+    scripts/build_android.sh bundle    # release AAB for Play
+    scripts/build_android.sh install   # release APK, installed on the device
+
+VS Code users can pick the **FitTrack (debug)** launch configuration instead;
+`.vscode/launch.json` passes the same flag.
 
 ## Architecture
 

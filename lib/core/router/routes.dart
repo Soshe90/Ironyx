@@ -74,4 +74,11 @@ abstract final class Routes {
   /// Name, date of birth, sex, height and current weight.
   static const String personalDetails = '/profile';
   static const String personalDetailsName = 'personalDetails';
+
+  /// First-launch introduction and the account-or-guest choice.
+  ///
+  /// Reached by being the router's `initialLocation` on a fresh install, not
+  /// by a redirect — see the note on `createRouter`.
+  static const String welcome = '/welcome';
+  static const String welcomeName = 'welcome';
 }

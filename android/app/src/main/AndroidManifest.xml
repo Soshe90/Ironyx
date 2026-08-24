@@ -30,6 +30,21 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Supabase auth callback. Email confirmation and password-reset
+                 links redirect here so they reopen the app instead of the
+                 project's default Site URL (http://localhost:3000), which no
+                 phone can load. The scheme must match DeepLinks.authCallback
+                 and the Supabase dashboard's Redirect URLs allow-list.
+                 BROWSABLE is what lets a browser or mail client follow it;
+                 DEFAULT is what lets it be resolved by an implicit intent. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="com.fittrack.fittrack"
+                    android:host="login-callback"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

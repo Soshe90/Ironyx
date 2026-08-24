@@ -4,6 +4,7 @@ import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/database/tables/profiles.dart';
+
 import 'consistency_calculators.dart';
 import 'strength_analytics.dart';
 
@@ -142,6 +143,10 @@ Stream<List<MuscleGroupVolume>> muscleGroupSeries(
   ProgressRange range,
 ) =>
     ref.watch(workoutDaoProvider).watchMuscleGroupVolume(since: range.since);
+
+@riverpod
+Stream<Profile?> progressProfile(Ref ref) =>
+    ref.watch(profileDaoProvider).watch();
 
 /// Body-metric entries inside the selected range.
 ///

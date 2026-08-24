@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/tables/body_metrics.dart';
+import '../../../core/database/tables/profiles.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
@@ -13,12 +14,14 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/chart_gestures.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/trend_badge.dart';
+import '../domain/bmi.dart';
 import '../domain/progress_insights.dart';
 import '../domain/progress_providers.dart';
 import '../domain/strength_analytics.dart';
@@ -52,71 +55,90 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Progress')),
       body: PageBody(
-        child: ListView(
+        // Deliberately not a ListView. A lazy sliver estimates the extent
+        // it has not built yet as `remaining children x average height of
+        // the built ones`, and this page's children range from a 0px
+        // SizedBox.shrink to a ~300px chart card. The average of whichever
+        // handful is on screen predicts the rest badly, so maxScrollExtent
+        // swung by 3000px as you scrolled; scrolling back up built the
+        // short top sections, collapsed the estimate, and the position was
+        // clamped against it — a flick upward moved the page *down*, and
+        // the top became unreachable by dragging.
+        //
+        // Building every section up front makes the extent exact instead
+        // of estimated. It costs one eager build of ~30 sections, which is
+        // what the 8000px-surface test in progress_page_test.dart already
+        // exercises. See test/widget/progress_scroll_test.dart.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          children: [
-            _RangeSelector(range: range),
-            const SizedBox(height: AppSpacing.md),
-            _InsightsSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
-              title: 'Strength change',
-              subtitle: _strengthSubtitle(range),
-            ),
-            _StrengthChangeSection(range: range),
-            _RelativeStrengthSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(
-              title: 'Estimated 1RM',
-              subtitle: 'Epley estimate from your heaviest logged sets',
-            ),
-            _OneRmSection(
-              range: range,
-              exerciseId: _exerciseId,
-              onExerciseChanged: (String? id) =>
-                  setState(() => _exerciseId = id),
-            ),
-            _SessionVolumeSection(range: range, exerciseId: _exerciseId),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
-              title: 'Weekly volume',
-              subtitle: 'Every week in the ${range.description}, '
-                  'including untrained ones',
-            ),
-            _VolumeSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Consistency'),
-            _ConsistencySection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Effort and recovery'),
-            _RpeSection(range: range),
-            _RestSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Training balance'),
-            _BalanceSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Workout frequency'),
-            _FrequencySection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Weekly volume by muscle'),
-            _WeeklyMuscleSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Rep-range distribution'),
-            _RepRangeSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Training days'),
-            _WeekdaySection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(title: 'Volume by muscle group'),
-            _MuscleGroupSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeader(
-              title: 'Body metrics',
-              subtitle: 'Weight and body fat over time',
-            ),
-            _BodyMetricsSection(range: range),
-            const SizedBox(height: AppSpacing.xl),
-          ],
+          child: Column(
+            // ListView stretched its children to the full width; Column
+            // centres and shrink-wraps them unless told otherwise.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _RangeSelector(range: range),
+              const SizedBox(height: AppSpacing.md),
+              _InsightsSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
+                title: 'Strength change',
+                subtitle: _strengthSubtitle(range),
+              ),
+              _StrengthChangeSection(range: range),
+              _RelativeStrengthSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(
+                title: 'Estimated 1RM',
+                subtitle: 'Epley estimate from your heaviest logged sets',
+              ),
+              _OneRmSection(
+                range: range,
+                exerciseId: _exerciseId,
+                onExerciseChanged: (String? id) =>
+                    setState(() => _exerciseId = id),
+              ),
+              _SessionVolumeSection(range: range, exerciseId: _exerciseId),
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
+                title: 'Weekly volume',
+                subtitle: 'Every week in the ${range.description}, '
+                    'including untrained ones',
+              ),
+              _VolumeSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Consistency'),
+              _ConsistencySection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Effort and recovery'),
+              _RpeSection(range: range),
+              _RestSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Training balance'),
+              _BalanceSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Workout frequency'),
+              _FrequencySection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Weekly volume by muscle'),
+              _WeeklyMuscleSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Rep-range distribution'),
+              _RepRangeSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Training days'),
+              _WeekdaySection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Volume by muscle group'),
+              _MuscleGroupSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(
+                title: 'Body metrics',
+                subtitle: 'Weight and body fat over time',
+              ),
+              _BodyMetricsSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ),
         ),
       ),
     );
@@ -780,6 +802,7 @@ class _DatedLineChart extends StatelessWidget {
             ),
           ),
           lineTouchData: LineTouchData(
+            longPressDuration: kChartNoLongPress,
             touchTooltipData: LineTouchTooltipData(
               getTooltipItems: (spots) => [
                 for (final spot in spots)
@@ -1328,6 +1351,7 @@ class _WeeklyBarChart extends StatelessWidget {
                 ),
               ),
               barTouchData: BarTouchData(
+                longPressDuration: kChartNoLongPress,
                 touchTooltipData: BarTouchTooltipData(
                   getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                       BarTooltipItem(
@@ -1505,6 +1529,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                       ),
                     ),
                     barTouchData: BarTouchData(
+                      longPressDuration: kChartNoLongPress,
                       // handleBuiltInTouches keeps the canvas tooltip (mouse
                       // hover and touch tap both drive it, via fl_chart's
                       // shared FlTouchEvent pipeline); touchCallback
@@ -1584,6 +1609,7 @@ class _BodyMetricsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<BodyMetrics>> async =
         ref.watch(bodyMetricsSeriesProvider(range));
+    final AsyncValue<Profile?> profile = ref.watch(progressProfileProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
     return async.when(
@@ -1616,6 +1642,10 @@ class _BodyMetricsSection extends ConsumerWidget {
         }
 
         final BodyMetrics latest = entries.first;
+        final double? heightCm = profile.value?.heightCm;
+        final BmiResult? bmi = heightCm == null
+            ? null
+            : calculateBmi(weightKg: latest.weightKg, heightCm: heightCm);
         final List<BodyMetrics> shown =
             entries.take(_inlineMetricEntries).toList();
         final int hidden = entries.length - shown.length;
@@ -1625,10 +1655,13 @@ class _BodyMetricsSection extends ConsumerWidget {
           children: <Widget>[
             _ChartCard(
               headline: UnitFormatters.weight(latest.weightKg, unit),
-              caption: latest.bodyFatPercentage == null
-                  ? DateFormatters.relativeDay(latest.date)
-                  : '${DateFormatters.relativeDay(latest.date)} · '
-                      '${latest.bodyFatPercentage!.toStringAsFixed(1)}% body fat',
+              caption: [
+                DateFormatters.relativeDay(latest.date),
+                if (latest.bodyFatPercentage != null)
+                  '${latest.bodyFatPercentage!.toStringAsFixed(1)}% body fat',
+                if (bmi != null)
+                  'BMI ${bmi.value.toStringAsFixed(1)} · ${bmi.category}',
+              ].join(' · '),
               child: entries.length >= 2
                   ? _DatedLineChart(
                       // Stored newest-first; charts read left to right.

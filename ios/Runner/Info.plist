@@ -14,6 +14,22 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<!-- Supabase auth callback, mirroring the Android intent filter. Must
+	     match DeepLinks.authCallback and the Supabase dashboard's Redirect
+	     URLs allow-list. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.fittrack.fittrack.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.fittrack.fittrack</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleName</key>
 	<string>fittrack</string>
 	<key>CFBundlePackageType</key>

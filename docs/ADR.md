@@ -117,9 +117,17 @@ Supabase over Firebase Auth because it is a pure-Dart HTTP client and therefore 
 
 Workouts, programs, templates and body metrics stay in local SQLite and are never uploaded. An account carries identity only. `profiles_table` holds the personal details (name, date of birth, sex, height) as a single row, associated with an account through a nullable `remote_user_id`.
 
+> **Amended 2026-08-24 — temporary exception, opt-in.** "Never uploaded" is no longer unconditionally true. `features/backup/` adds an explicit, user-initiated **Account backup**: the whole database, as the ADR-7 export envelope, gzipped into one row per user in Supabase. Nothing uploads automatically and nothing uploads while signed out — it happens only when the user taps "Back up now".
+>
+> This exists because the app is in hands-on testing and a reinstall otherwise loses everything unless the tester remembered to export a file first. It is **backup/restore, not sync**: one slot per account, last write wins, restore replaces the device. There is no conflict rule because there is no merge.
+>
+> PLAN.md Phase 5 supersedes it with real per-table sync and rewrites this ADR properly. Until then the exception is written down here rather than left as a contradiction between the document and the code — the failure mode this whole file exists to prevent.
+>
+> Consequence to keep in view: Settings and the welcome screen still say workouts are local to the device. That is true by default and false once a user opts in, so the copy is scoped to "your workouts are stored on this device either way" rather than claiming nothing ever leaves.
+
 **Binding rules:**
 - No `redirect` on the router for auth. A login wall is the one change able to stop a cold offline launch from reaching the dashboard.
-- No `supabase_flutter` import outside `features/auth/domain/supabase_auth_service.dart`. Everything else speaks `AuthUser` / `AuthFailure`.
+- No `supabase_flutter` import outside `features/auth/domain/supabase_auth_service.dart` and `features/backup/data/supabase_cloud_backup_service.dart`. Everything else speaks `AuthUser` / `AuthFailure`, or `CloudBackupInfo` / `CloudBackupFailure`.
 - Implementations translate every transport and vendor error into `AuthFailure`; an unmapped exception reaching the UI is a bug. Network failure is its own kind, distinct from bad credentials.
 - A build without credentials resolves `authServiceProvider` to `DisabledAuthService` and says so in Settings. This is ADR-6's degradation rule applied to accounts, and it is what keeps a credential-free `flutter run` and the whole test suite working.
 - `AuthService.currentUser` is synchronous and reads only local storage, so an offline launch restores the session without a network call.

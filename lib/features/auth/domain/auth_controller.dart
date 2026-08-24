@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
+import '../../../core/config/deep_links.dart';
 import '../../../core/config/supabase_config.dart';
 import 'auth_service.dart';
 import 'supabase_auth_service.dart';
@@ -16,7 +18,14 @@ part 'auth_controller.g.dart';
 AuthService authService(Ref ref) {
   if (!SupabaseConfig.isConfigured) return const DisabledAuthService();
   try {
-    return SupabaseAuthService(sb.Supabase.instance.client);
+    return SupabaseAuthService(
+      sb.Supabase.instance.client,
+      // Only where a URL scheme is actually registered. Handing Supabase a
+      // redirect that the platform cannot open would strand the user on a
+      // page that never loads — worse than the Site URL fallback, which at
+      // least fails somewhere they can read.
+      redirectTo: _supportsDeepLinks ? DeepLinks.authCallback : null,
+    );
   } on Object {
     // Configured but not initialized: `main`'s `Supabase.initialize` failed
     // and chose to keep launching (see `_initSupabase`). Reading `.instance`
@@ -25,6 +34,16 @@ AuthService authService(Ref ref) {
     return const DisabledAuthService();
   }
 }
+
+/// The two platforms where [DeepLinks.authCallback] is registered.
+///
+/// The web build has a real origin and is better served by Supabase's Site
+/// URL; the desktop builds register no scheme at all, and ADR-6 says a
+/// capability that isn't there degrades rather than throws.
+bool get _supportsDeepLinks =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);
 
 /// Whether this build can offer accounts at all. Lets the UI explain itself
 /// instead of showing a sign-in button that can only fail.

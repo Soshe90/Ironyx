@@ -1,0 +1,40 @@
+{
+  // Supabase credentials are compile-time constants (String.fromEnvironment),
+  // so every launch has to pass them or the build ships with auth disabled and
+  // Settings shows "Accounts unavailable". See docs/ADR.md (ADR-8).
+  //
+  // supabase.json is gitignored; copy supabase.example.json to create it.
+  // The "no accounts" configs are for reproducing the credential-free build.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FitTrack (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": ["--dart-define-from-file=supabase.json"]
+    },
+    {
+      "name": "FitTrack (profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "profile",
+      "toolArgs": ["--dart-define-from-file=supabase.json"]
+    },
+    {
+      "name": "FitTrack (release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "release",
+      "toolArgs": ["--dart-define-from-file=supabase.json"]
+    },
+    {
+      "name": "FitTrack (debug, no accounts)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    }
+  ]
+}
