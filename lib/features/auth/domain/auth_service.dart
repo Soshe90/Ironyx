@@ -68,32 +68,10 @@ class AuthFailure implements Exception {
 
   final AuthFailureKind kind;
 
-  /// The backend's own message, kept for logs. Never shown verbatim — see
-  /// [message] for the user-facing text.
+  /// The backend's own message, kept for logs. Never shown verbatim — the
+  /// user-facing wording comes from `AuthFailureL10n.messageFor` in the
+  /// presentation layer, which is where the translations live.
   final String? detail;
-
-  /// Plain, non-blaming wording for the UI.
-  String get message => switch (kind) {
-        AuthFailureKind.wrongCredentials =>
-          'That email and password don\'t match an account.',
-        AuthFailureKind.emailAlreadyRegistered =>
-          'There\'s already an account with that email. Try signing in.',
-        AuthFailureKind.weakPassword =>
-          'That password is too weak. Use at least 8 characters.',
-        AuthFailureKind.emailRejected =>
-          'That email address wasn\'t accepted. Try a different one.',
-        AuthFailureKind.signUpDisabled =>
-          'New accounts aren\'t being accepted right now.',
-        AuthFailureKind.emailNotConfirmed =>
-          'Confirm your email first — check your inbox for the link.',
-        AuthFailureKind.rateLimited =>
-          'Too many attempts. Wait a minute and try again.',
-        AuthFailureKind.offline =>
-          'Couldn\'t reach the server. Check your connection and try again.',
-        AuthFailureKind.notConfigured =>
-          'Accounts aren\'t available in this build.',
-        AuthFailureKind.unknown => 'Something went wrong. Try again.',
-      };
 
   @override
   String toString() => 'AuthFailure(${kind.name}${detail == null ? '' : ': '

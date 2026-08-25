@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../auth/domain/auth_controller.dart';
 import '../../../auth/domain/auth_service.dart';
+import '../../../auth/presentation/auth_failure_messages.dart';
 
 /// The Settings entry point for accounts and personal details.
 ///
@@ -30,35 +32,36 @@ class AccountSection extends ConsumerWidget {
     // already identifies the account; the display name belongs on the
     // Personal Details screen, which is one tap away.
 
+    final AppLocalizations l10n = context.l10n;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SectionHeader(
-          title: 'Account',
-          subtitle: 'Optional — your workouts are stored on this device '
-              'either way',
+        SectionHeader(
+          title: l10n.accountSectionTitle,
+          subtitle: l10n.accountSectionSubtitle,
         ),
         AppCard(
           padding: EdgeInsets.zero,
           child: Column(
             children: <Widget>[
               if (!available)
-                const ListTile(
-                  leading: Icon(Icons.cloud_off_outlined),
-                  title: Text('Accounts unavailable'),
-                  subtitle: Text('This build has no sign-in configured.'),
+                ListTile(
+                  leading: const Icon(Icons.cloud_off_outlined),
+                  title: Text(l10n.accountUnavailableTitle),
+                  subtitle: Text(l10n.accountUnavailableSubtitle),
                 )
               else if (user == null) ...<Widget>[
                 ListTile(
                   leading: const Icon(Icons.login),
-                  title: const Text('Sign in'),
-                  subtitle: const Text('Keep your details with your account'),
+                  title: Text(l10n.authSignInTitle),
+                  subtitle: Text(l10n.accountSignInSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.pushNamed(Routes.signInName),
                 ),
                 ListTile(
                   leading: const Icon(Icons.person_add_alt),
-                  title: const Text('Create account'),
+                  title: Text(l10n.authCreateAccountTitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.pushNamed(Routes.signUpName),
                 ),
@@ -66,18 +69,17 @@ class AccountSection extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.account_circle_outlined),
                   title: Text(user.email),
-                  subtitle: const Text('Signed in'),
+                  subtitle: Text(l10n.authSignedIn),
                 ),
                 if (!user.isEmailConfirmed)
-                  const ListTile(
-                    leading: Icon(Icons.mark_email_unread_outlined),
-                    title: Text('Email not confirmed'),
-                    subtitle: Text('Open the link we sent to finish setting '
-                        'up your account.'),
+                  ListTile(
+                    leading: const Icon(Icons.mark_email_unread_outlined),
+                    title: Text(l10n.accountEmailNotConfirmedTitle),
+                    subtitle: Text(l10n.accountEmailNotConfirmedSubtitle),
                   ),
                 ListTile(
                   leading: const Icon(Icons.logout),
-                  title: const Text('Sign out'),
+                  title: Text(l10n.authSignOut),
                   onTap: () => _signOut(context, ref),
                 ),
               ],
@@ -85,8 +87,8 @@ class AccountSection extends ConsumerWidget {
               // and a guest has just as much use for them.
               ListTile(
                 leading: const Icon(Icons.badge_outlined),
-                title: const Text('Personal details'),
-                subtitle: const Text('Name, date of birth, sex, height'),
+                title: Text(l10n.accountPersonalDetailsTitle),
+                subtitle: Text(l10n.accountPersonalDetailsSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.pushNamed(Routes.personalDetailsName),
               ),
@@ -95,8 +97,8 @@ class AccountSection extends ConsumerWidget {
               // the workout history with it.
               ListTile(
                 leading: const Icon(Icons.slideshow_outlined),
-                title: const Text('Show welcome screen'),
-                subtitle: const Text('The intro shown on first launch'),
+                title: Text(l10n.accountShowWelcomeTitle),
+                subtitle: Text(l10n.accountShowWelcomeSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.pushNamed(Routes.welcomeName),
               ),
@@ -109,22 +111,20 @@ class AccountSection extends ConsumerWidget {
   }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l10n = context.l10n;
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: const Text(
-          'Your workouts, programs and personal details stay on this device. '
-          'Only the account link is removed.',
-        ),
+        title: Text(l10n.authSignOutConfirmTitle),
+        content: Text(l10n.authSignOutConfirmBody),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sign out'),
+            child: Text(l10n.authSignOut),
           ),
         ],
       ),
@@ -135,9 +135,11 @@ class AccountSection extends ConsumerWidget {
     try {
       await ref.read(authControllerProvider.notifier).signOut();
       await ref.read(profileDaoProvider).unlinkAccount();
-      messenger.showSnackBar(const SnackBar(content: Text('Signed out')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.authSignedOut)));
     } on AuthFailure catch (failure) {
-      messenger.showSnackBar(SnackBar(content: Text(failure.message)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(failure.messageFor(l10n))),
+      );
     }
   }
 }

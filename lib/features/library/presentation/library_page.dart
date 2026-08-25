@@ -14,6 +14,7 @@ import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/muscles.dart';
 
 import '../../../core/formatters/youtube.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
@@ -22,6 +23,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sheet_handle.dart';
+import '../domain/exercise_catalogue_l10n.dart';
 
 /// A curated image wins; a linked video is turned into a thumbnail
 /// (already just a picture fallback — see `Youtube.searchUrl` for why a
@@ -109,11 +111,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Exercise Library'),
+        title: Text(context.l10n.libraryTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_off),
-            tooltip: 'Clear filters',
+            tooltip: context.l10n.libraryClearFilters,
             onPressed: _hasActiveFilters ? _clearFilters : null,
           ),
         ],
@@ -131,12 +133,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search exercises...',
+                hintText: context.l10n.librarySearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
-                        tooltip: 'Clear search',
+                        tooltip: context.l10n.libraryClearSearch,
                         onPressed: () {
                           _searchController.clear();
                           _commitSearch('');
@@ -163,7 +165,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               ),
               loading: () => _buildLoadingGrid(),
               error: (error, _) => ErrorView(
-                title: 'Failed to load exercises',
+                title: context.l10n.libraryLoadFailed,
                 details: error.toString(),
                 onRetry: () => ref.invalidate(allExercisesStreamProvider),
               ),
@@ -208,14 +210,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         runSpacing: AppSpacing.sm,
         children: [
           _FilterMenuChip<Muscle>(
-            label: 'Muscle',
+            label: context.l10n.libraryFilterMuscle,
             value: muscles.where((m) => m.id == _selectedMuscleId).firstOrNull,
             options: muscles,
-            getLabel: (m) => m.displayName,
+            getLabel: (m) => m.localizedName(context),
             onChanged: (v) => setState(() => _selectedMuscleId = v?.id),
           ),
           _FilterMenuChip<db.Equipment>(
-            label: 'Equipment',
+            label: context.l10n.libraryFilterEquipment,
             value: equipment
                 .where((e) => e.id == _selectedEquipmentId)
                 .firstOrNull,
@@ -224,10 +226,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             onChanged: (v) => setState(() => _selectedEquipmentId = v?.id),
           ),
           _FilterMenuChip<MovementPattern>(
-            label: 'Pattern',
+            label: context.l10n.libraryFilterPattern,
             value: _selectedPattern,
             options: MovementPattern.values,
-            getLabel: (p) => p.label,
+            getLabel: (p) => p.localizedLabel(context.l10n),
             onChanged: (v) => setState(() => _selectedPattern = v),
           ),
         ],
@@ -286,11 +288,14 @@ class _FilterMenuChip<T extends Object> extends StatelessWidget {
     final bool active = value != null;
 
     return PopupMenuButton<T?>(
-      tooltip: 'Filter by ${label.toLowerCase()}',
+      tooltip: context.l10n.libraryFilterBy(label.toLowerCase()),
       initialValue: value,
       onSelected: onChanged,
       itemBuilder: (_) => <PopupMenuEntry<T?>>[
-        PopupMenuItem<T?>(value: null, child: Text('All $label')),
+        PopupMenuItem<T?>(
+          value: null,
+          child: Text(context.l10n.libraryFilterAllOf(label)),
+        ),
         const PopupMenuDivider(),
         for (final T option in options)
           PopupMenuItem<T?>(value: option, child: Text(getLabel(option))),
@@ -366,9 +371,9 @@ class _ExerciseList extends StatelessWidget {
     if (exercises.isEmpty) {
       return EmptyState(
         icon: Icons.search_off,
-        title: 'No exercises found',
-        message: 'Try adjusting your search or filters.',
-        actionLabel: hasActiveFilters ? 'Clear filters' : null,
+        title: context.l10n.libraryNoResults,
+        message: context.l10n.libraryNoResultsMessage,
+        actionLabel: hasActiveFilters ? context.l10n.libraryClearFilters : null,
         onAction: hasActiveFilters ? onClearFilters : null,
       );
     }
@@ -384,7 +389,7 @@ class _ExerciseList extends StatelessWidget {
         AppSpacing.sm,
       ),
       child: Text(
-        '${exercises.length} exercise${exercises.length == 1 ? '' : 's'}',
+        context.l10n.exerciseCount(exercises.length),
         style: AppTypography.eyebrow(theme),
       ),
     );
@@ -447,8 +452,10 @@ class _ExerciseRow extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final exercise = summary.exercise;
-    final String equipmentLabel = summary.equipmentNames.join(', ');
-    final String? muscle = summary.primaryMuscle?.displayName;
+    final String equipmentLabel = summary.equipmentNames
+        .map((String e) => localizedEquipmentName(context, e))
+        .join('، ');
+    final String? muscle = summary.primaryMuscle?.localizedName(context);
     final String? thumbnailUrl = _pictureUrl(summary.media);
     final IconData fallbackIcon = summary.equipmentNames.isEmpty
         ? Icons.fitness_center
@@ -457,13 +464,13 @@ class _ExerciseRow extends StatelessWidget {
     final String meta = <String>[
       if (muscle != null) muscle,
       if (equipmentLabel.isNotEmpty) equipmentLabel,
-      exercise.movementPattern.label,
+      exercise.movementPattern.localizedLabel(context.l10n),
     ].join(' · ');
 
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.sm),
-      semanticLabel: '${exercise.name}, $meta',
+      semanticLabel: '${exercise.displayName(context)}, $meta',
       child: Row(
         children: <Widget>[
           ClipRRect(
@@ -493,7 +500,7 @@ class _ExerciseRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  exercise.name,
+                  exercise.displayName(context),
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                   maxLines: 1,
@@ -515,7 +522,7 @@ class _ExerciseRow extends StatelessWidget {
               Icons.accessibility_new,
               size: 16,
               color: scheme.primary,
-              semanticLabel: 'Bodyweight',
+              semanticLabel: context.l10n.libraryBodyweight,
             ),
           ],
         ],
@@ -539,12 +546,15 @@ class _ExerciseCard extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final exercise = summary.exercise;
-    final equipmentLabel = summary.equipmentNames.join(', ');
+    final equipmentLabel = summary.equipmentNames
+        .map((String e) => localizedEquipmentName(context, e))
+        .join('، ');
 
     return AppCard(
       onTap: onTap,
-      semanticLabel:
-          '${exercise.name}, ${summary.primaryMuscle?.displayName ?? ''}, $equipmentLabel',
+      semanticLabel: '${exercise.displayName(context)}, '
+          '${summary.primaryMuscle?.localizedName(context) ?? ''}, '
+          '$equipmentLabel',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -576,7 +586,7 @@ class _ExerciseCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
               child: Text(
-                muscle.displayName,
+                muscle.localizedName(context),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: scheme.onPrimaryContainer,
                   fontWeight: FontWeight.w600,
@@ -586,7 +596,7 @@ class _ExerciseCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           // Name
           Text(
-            exercise.name,
+            exercise.displayName(context),
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -623,7 +633,7 @@ class _ExerciseCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.xxs),
               Expanded(
                 child: Text(
-                  exercise.movementPattern.label,
+                  exercise.movementPattern.localizedLabel(context.l10n),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -641,7 +651,7 @@ class _ExerciseCard extends StatelessWidget {
                 Icon(Icons.accessibility_new, size: 14, color: scheme.primary),
                 const SizedBox(width: AppSpacing.xxs),
                 Text(
-                  'Bodyweight',
+                  context.l10n.libraryBodyweight,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: scheme.primary,
                     fontWeight: FontWeight.w600,
@@ -703,9 +713,9 @@ class _ExerciseDetailSheet extends ConsumerWidget {
         ),
         child: detailAsync.when(
           data: (detail) => detail == null
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.search_off,
-                  title: 'Exercise not found',
+                  title: context.l10n.libraryExerciseNotFound,
                 )
               : _ExerciseDetailBody(
                   detail: detail,
@@ -713,7 +723,7 @@ class _ExerciseDetailSheet extends ConsumerWidget {
                 ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ErrorView(
-            title: 'Failed to load exercise',
+            title: context.l10n.libraryLoadFailed,
             details: error.toString(),
             onRetry: () => ref.invalidate(exerciseDetailProvider(exerciseId)),
           ),
@@ -747,6 +757,11 @@ class _ExerciseDetailBody extends StatelessWidget {
     final fallbackIcon = detail.equipment.isEmpty
         ? Icons.fitness_center
         : _equipmentIcon(detail.equipment.first.equipment.id);
+    final List<String> instructions = localizedExerciseInstructions(
+      context,
+      exercise.slug,
+      detail.instructions.map((step) => step.instruction).toList(),
+    );
 
     return ListView(
       controller: scrollController,
@@ -761,7 +776,9 @@ class _ExerciseDetailBody extends StatelessWidget {
             aspectRatio: 16 / 9,
             child: Semantics(
               button: true,
-              label: 'Search "${exercise.name}" on YouTube',
+              label: context.l10n.librarySearchYoutube(
+                exercise.displayName(context),
+              ),
               child: GestureDetector(
                 onTap: () => _searchOnYoutube(context, exercise.name),
                 child: Stack(
@@ -810,7 +827,7 @@ class _ExerciseDetailBody extends StatelessWidget {
 
         // Name
         Text(
-          exercise.name,
+          exercise.displayName(context),
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
@@ -825,30 +842,31 @@ class _ExerciseDetailBody extends StatelessWidget {
             for (final muscle in primary)
               _MetadataChip(
                 icon: Icons.fitness_center,
-                label: muscle.displayName,
+                label: muscle.localizedName(context),
                 color: scheme.primary,
               ),
             if (secondary.isNotEmpty)
               _MetadataChip(
                 icon: Icons.fitness_center_outlined,
-                label: secondary.map((m) => m.displayName).join(', '),
+                label:
+                    secondary.map((m) => m.localizedName(context)).join('، '),
                 color: scheme.secondary,
               ),
             for (final link in detail.equipment)
               _MetadataChip(
                 icon: _equipmentIcon(link.equipment.id),
-                label: link.equipment.name,
+                label: link.equipment.localizedName(context),
                 color: scheme.tertiary,
               ),
             _MetadataChip(
               icon: Icons.swap_horiz,
-              label: exercise.movementPattern.label,
+              label: exercise.movementPattern.localizedLabel(context.l10n),
               color: scheme.outline,
             ),
             if (exercise.isBodyweight)
               _MetadataChip(
                 icon: Icons.accessibility_new,
-                label: 'Bodyweight',
+                label: context.l10n.libraryBodyweight,
                 color: scheme.primary,
               ),
             for (final tag in detail.tags)
@@ -863,13 +881,13 @@ class _ExerciseDetailBody extends StatelessWidget {
 
         // Instructions
         Text(
-          'Instructions',
+          context.l10n.libraryInstructions,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        for (var i = 0; i < detail.instructions.length; i++)
+        for (var i = 0; i < instructions.length; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Row(
@@ -894,7 +912,7 @@ class _ExerciseDetailBody extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    detail.instructions[i].instruction,
+                    instructions[i],
                     style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
                   ),
                 ),
@@ -904,7 +922,7 @@ class _ExerciseDetailBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
 
         Text(
-          'Video Demo',
+          context.l10n.libraryVideoDemo,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -913,13 +931,19 @@ class _ExerciseDetailBody extends StatelessWidget {
         FilledButton.icon(
           onPressed: () => _searchOnYoutube(context, exercise.name),
           icon: const Icon(Icons.search),
-          label: const Text('Search on YouTube'),
+          label: Text(context.l10n.librarySearchOnYoutube),
         ),
         const SizedBox(height: AppSpacing.xxxl),
       ],
     );
   }
 
+  /// Opens a YouTube search for [exerciseName].
+  ///
+  /// Callers pass the English `exercise.name`, not the localized one, even
+  /// in Arabic: form demonstrations for these movements are overwhelmingly
+  /// indexed under their English names, and searching the Arabic name
+  /// returns far less.
   Future<void> _searchOnYoutube(
     BuildContext context,
     String exerciseName,
@@ -930,7 +954,7 @@ class _ExerciseDetailBody extends StatelessWidget {
     );
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open YouTube')),
+        SnackBar(content: Text(context.l10n.libraryYoutubeOpenFailed)),
       );
     }
   }

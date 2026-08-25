@@ -18,7 +18,7 @@
 ///   any `redirect_to` it has not been told about and silently falls back to
 ///   the Site URL.
 abstract final class DeepLinks {
-  static const String scheme = 'com.fittrack.fittrack';
+  static const String scheme = 'com.soshe90.fittrack';
 
   static const String _host = 'login-callback';
 

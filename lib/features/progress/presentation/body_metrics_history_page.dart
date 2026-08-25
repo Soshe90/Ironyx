@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
@@ -33,7 +34,7 @@ class BodyMetricsHistoryPage extends ConsumerWidget {
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Measurements')),
+      appBar: AppBar(title: Text(context.l10n.progressMeasurementsTitle)),
       body: PageBody(
         child: async.when(
           loading: () => ListView(
@@ -47,17 +48,17 @@ class BodyMetricsHistoryPage extends ConsumerWidget {
             ],
           ),
           error: (error, _) => ErrorView(
-            title: 'Could not load measurements',
+            title: context.l10n.progressMeasurementsLoadFailed,
             details: error.toString(),
             onRetry: () =>
                 ref.invalidate(bodyMetricsSeriesProvider(ProgressRange.all)),
           ),
           data: (entries) {
             if (entries.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.monitor_weight_outlined,
-                title: 'No measurements yet',
-                message: 'Track weight and body fat over time.',
+                title: context.l10n.progressNoMeasurementsTitle,
+                message: context.l10n.progressNoMeasurementsMessage,
               );
             }
             return ListView.builder(
@@ -74,7 +75,7 @@ class BodyMetricsHistoryPage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showBodyMetricEditor(context, ref, unit: unit),
         icon: const Icon(Icons.add),
-        label: const Text('Log measurement'),
+        label: Text(context.l10n.progressLogMeasurement),
       ),
     );
   }

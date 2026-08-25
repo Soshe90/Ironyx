@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -21,7 +22,7 @@ class SummaryCard extends StatelessWidget {
     this.trend,
     this.isLoading = false,
     this.error,
-    this.emptyCaption = 'No data yet',
+    this.emptyCaption,
     super.key,
   });
 
@@ -38,8 +39,9 @@ class SummaryCard extends StatelessWidget {
 
   /// Shown in place of [caption] when there is no data. Phrasing it per
   /// tile ("Log a lift to see this") turns an empty tile into a prompt
-  /// rather than a dead end.
-  final String emptyCaption;
+  /// rather than a dead end. Null falls back to [MetricBlock]'s generic
+  /// wording.
+  final String? emptyCaption;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +54,7 @@ class SummaryCard extends StatelessWidget {
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      semanticLabel: _semanticLabel(),
+      semanticLabel: _semanticLabel(context.l10n),
       child: MetricBlock(
         label: title,
         icon: icon,
@@ -67,13 +69,17 @@ class SummaryCard extends StatelessWidget {
     );
   }
 
-  String _semanticLabel() {
+  String _semanticLabel(AppLocalizations l10n) {
     if (error != null) {
-      return '$title, failed to load';
+      return l10n.dashboardRowSemanticError(title);
     }
     if (isLoading) {
-      return '$title, loading';
+      return l10n.dashboardRowSemanticLoading(title);
     }
-    return '$title, ${metric ?? 'no data'}, ${caption ?? ''}';
+    return l10n.dashboardRowSemantic(
+      title,
+      metric ?? l10n.dashboardRowSemanticNoData,
+      caption ?? '',
+    );
   }
 }

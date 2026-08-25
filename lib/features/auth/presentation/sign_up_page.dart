@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/database_providers.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../domain/auth_controller.dart';
 import '../domain/auth_service.dart';
 import '../domain/auth_validators.dart';
+import 'auth_failure_messages.dart';
 import 'widgets/auth_form_scaffold.dart';
 
 /// Creates an account, then sends the user on to Personal Details.
@@ -37,53 +39,57 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+
     return AuthFormScaffold(
-      title: 'Create account',
-      intro: 'Optional. Everything you have already logged stays exactly '
-          'where it is.',
+      title: l10n.authCreateAccountTitle,
+      intro: l10n.authCreateAccountIntro,
       formKey: _formKey,
       busy: _busy,
       errorMessage: _error,
-      primaryLabel: 'Create account',
+      primaryLabel: l10n.authCreateAccountTitle,
       onSubmit: _submit,
       fields: <Widget>[
         TextFormField(
           controller: _email,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: InputDecoration(labelText: l10n.authFieldEmail),
           keyboardType: TextInputType.emailAddress,
           autofillHints: const <String>[AutofillHints.email],
           textInputAction: TextInputAction.next,
           autocorrect: false,
-          validator: AuthValidators.email,
+          validator: (String? value) => AuthValidators.email(value, l10n),
         ),
         TextFormField(
           controller: _password,
           decoration: InputDecoration(
-            labelText: 'Password',
-            helperText:
-                'At least ${AuthValidators.minPasswordLength} characters',
+            labelText: l10n.authFieldPassword,
+            helperText: l10n.authPasswordHelper(
+              AuthValidators.minPasswordLength,
+            ),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscure
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
               ),
-              tooltip: _obscure ? 'Show password' : 'Hide password',
+              tooltip: _obscure
+                  ? l10n.authShowPassword
+                  : l10n.authHidePassword,
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
           obscureText: _obscure,
           autofillHints: const <String>[AutofillHints.newPassword],
           textInputAction: TextInputAction.next,
-          validator: AuthValidators.password,
+          validator: (String? value) => AuthValidators.password(value, l10n),
         ),
         TextFormField(
           controller: _confirm,
-          decoration: const InputDecoration(labelText: 'Confirm password'),
+          decoration: InputDecoration(labelText: l10n.authFieldConfirmPassword),
           obscureText: _obscure,
           textInputAction: TextInputAction.done,
-          validator: (value) =>
-              AuthValidators.confirmPassword(value, _password.text),
+          validator: (String? value) =>
+              AuthValidators.confirmPassword(value, _password.text, l10n),
           onFieldSubmitted: (_) => _submit(),
         ),
       ],
@@ -91,7 +97,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         onPressed: _busy
             ? null
             : () => context.pushReplacementNamed(Routes.signInName),
-        child: const Text('Already have an account? Sign in'),
+        child: Text(l10n.authHaveAccountSignIn),
       ),
     );
   }
@@ -131,7 +137,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           context.pushReplacementNamed(Routes.personalDetailsName);
       }
     } on AuthFailure catch (failure) {
-      if (mounted) setState(() => _error = failure.message);
+      if (mounted) setState(() => _error = failure.messageFor(context.l10n));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -141,15 +147,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Check your email'),
-        content: Text(
-          'We sent a confirmation link to ${_email.text.trim()}. Open it, '
-          'then come back and sign in.',
-        ),
+        title: Text(context.l10n.authCheckEmailTitle),
+        content: Text(context.l10n.authCheckEmailBody(_email.text.trim())),
         actions: <Widget>[
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
+            child: Text(context.l10n.actionGotIt),
           ),
         ],
       ),

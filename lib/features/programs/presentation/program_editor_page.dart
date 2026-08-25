@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/tables/exercises.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
@@ -38,17 +39,21 @@ class ProgramEditorPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit program' : 'New program'),
+        title: Text(
+          isEditing
+              ? context.l10n.programEditTitle
+              : context.l10n.programNewTitle,
+        ),
         actions: <Widget>[
           if (isEditing)
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              tooltip: 'Delete program',
+              tooltip: context.l10n.programDeleteTooltip,
               onPressed: () => _delete(context, ref),
             ),
           IconButton(
             icon: const Icon(Icons.check),
-            tooltip: 'Save',
+            tooltip: context.l10n.actionSave,
             onPressed: draftAsync.value == null
                 ? null
                 : () => _save(context, ref, draftAsync.value!),
@@ -58,7 +63,7 @@ class ProgramEditorPage extends ConsumerWidget {
       body: draftAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
-          title: 'Failed to load program',
+          title: context.l10n.programLoadFailed,
           details: error.toString(),
         ),
         data: (draft) => _EditorBody(programId: programId, draft: draft),
@@ -72,15 +77,15 @@ class ProgramEditorPage extends ConsumerWidget {
     ProgramDraft draft,
   ) async {
     if (draft.name.trim().isEmpty) {
-      _showMessage(context, 'Give the program a name.');
+      _showMessage(context, context.l10n.programGiveName);
       return;
     }
     if (draft.days.isEmpty) {
-      _showMessage(context, 'Add at least one day.');
+      _showMessage(context, context.l10n.programAddDayValidation);
       return;
     }
     if (draft.days.any((day) => day.exercises.isEmpty)) {
-      _showMessage(context, 'Every day needs at least one exercise.');
+      _showMessage(context, context.l10n.programDayNeedsExercise);
       return;
     }
 
@@ -100,19 +105,16 @@ class ProgramEditorPage extends ConsumerWidget {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete program?'),
-        content: const Text(
-          'This permanently deletes the program and its days. '
-          'Workouts you already logged from it are not affected.',
-        ),
+        title: Text(context.l10n.programDeleteTitle),
+        content: Text(context.l10n.programDeleteBody),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(context.l10n.actionDelete),
           ),
         ],
       ),
@@ -169,20 +171,22 @@ class _EditorBodyState extends ConsumerState<_EditorBody> {
       child: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         children: <Widget>[
-          const SectionHeader(title: 'Details'),
+          SectionHeader(title: context.l10n.programDetails),
           AppCard(
             child: Column(
               children: <Widget>[
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Program name'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.programNameField,
+                  ),
                   onChanged: _notifier.setName,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description (optional)',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.programDescriptionField,
                   ),
                   onChanged: (value) =>
                       _notifier.setDescription(value.isEmpty ? null : value),
@@ -192,11 +196,10 @@ class _EditorBodyState extends ConsumerState<_EditorBody> {
           ),
           const SizedBox(height: AppSpacing.xl),
           SectionHeader(
-            title: 'Days',
+            title: context.l10n.programDays,
             subtitle: draft.days.isEmpty
-                ? 'A program needs at least one day to be saved'
-                : '${draft.days.length} day'
-                    '${draft.days.length == 1 ? '' : 's'}',
+                ? context.l10n.programDaysRequired
+                : context.l10n.dayCount(draft.days.length),
           ),
           for (var i = 0; i < draft.days.length; i++)
             Padding(
@@ -213,7 +216,7 @@ class _EditorBodyState extends ConsumerState<_EditorBody> {
           OutlinedButton.icon(
             onPressed: _notifier.addDay,
             icon: const Icon(Icons.add),
-            label: const Text('Add day'),
+            label: Text(context.l10n.programAddDay),
           ),
           const SizedBox(height: AppSpacing.xl),
         ],
@@ -277,12 +280,12 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
           Row(
             children: <Widget>[
               Text(
-                'DAY ${widget.position}',
+                context.l10n.programDayLabel(widget.position),
                 style: AppTypography.eyebrow(Theme.of(context)),
               ),
               const Spacer(),
               PopupMenuButton<_DayAction>(
-                tooltip: 'Day ${widget.position} options',
+                tooltip: context.l10n.programDayOptions(widget.position),
                 icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
                 onSelected: (_DayAction action) => switch (action) {
                   _DayAction.moveUp => _notifier.moveDay(widget.day.id, -1),
@@ -293,26 +296,26 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
                   PopupMenuItem<_DayAction>(
                     value: _DayAction.moveUp,
                     enabled: widget.canMoveUp,
-                    child: const ListTile(
-                      leading: Icon(Icons.arrow_upward),
-                      title: Text('Move up'),
+                    child: ListTile(
+                      leading: const Icon(Icons.arrow_upward),
+                      title: Text(context.l10n.programMoveUp),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
                   PopupMenuItem<_DayAction>(
                     value: _DayAction.moveDown,
                     enabled: widget.canMoveDown,
-                    child: const ListTile(
-                      leading: Icon(Icons.arrow_downward),
-                      title: Text('Move down'),
+                    child: ListTile(
+                      leading: const Icon(Icons.arrow_downward),
+                      title: Text(context.l10n.programMoveDown),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem<_DayAction>(
+                  PopupMenuItem<_DayAction>(
                     value: _DayAction.remove,
                     child: ListTile(
-                      leading: Icon(Icons.delete_outline),
-                      title: Text('Remove day'),
+                      leading: const Icon(Icons.delete_outline),
+                      title: Text(context.l10n.programRemoveDay),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -322,7 +325,9 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
           ),
           TextField(
             controller: _dayNameController,
-            decoration: const InputDecoration(labelText: 'Day name'),
+            decoration: InputDecoration(
+              labelText: context.l10n.programDayNameField,
+            ),
             onChanged: (value) => _notifier.renameDay(widget.day.id, value),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -339,13 +344,13 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
           TextButton.icon(
             onPressed: () => _addExercise(context),
             icon: const Icon(Icons.add),
-            label: const Text('Add exercise'),
+            label: Text(context.l10n.programAddExercise),
           ),
           if (widget.day.exercises.isEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Text(
-                'No exercises yet',
+                context.l10n.programNoExercises,
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
@@ -447,7 +452,9 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                 ),
               ),
               PopupMenuButton<_ExerciseAction>(
-                tooltip: '${widget.exercise.name} options',
+                tooltip: context.l10n.programExerciseOptions(
+                  widget.exercise.name,
+                ),
                 icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
                 onSelected: (_ExerciseAction action) => switch (action) {
                   _ExerciseAction.moveUp => _notifier.moveExercise(
@@ -461,26 +468,26 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                   PopupMenuItem<_ExerciseAction>(
                     value: _ExerciseAction.moveUp,
                     enabled: widget.canMoveUp,
-                    child: const ListTile(
-                      leading: Icon(Icons.arrow_upward),
-                      title: Text('Move up'),
+                    child: ListTile(
+                      leading: const Icon(Icons.arrow_upward),
+                      title: Text(context.l10n.programMoveUp),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
                   PopupMenuItem<_ExerciseAction>(
                     value: _ExerciseAction.moveDown,
                     enabled: widget.canMoveDown,
-                    child: const ListTile(
-                      leading: Icon(Icons.arrow_downward),
-                      title: Text('Move down'),
+                    child: ListTile(
+                      leading: const Icon(Icons.arrow_downward),
+                      title: Text(context.l10n.programMoveDown),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem<_ExerciseAction>(
+                  PopupMenuItem<_ExerciseAction>(
                     value: _ExerciseAction.remove,
                     child: ListTile(
-                      leading: Icon(Icons.close),
-                      title: Text('Remove exercise'),
+                      leading: const Icon(Icons.close),
+                      title: Text(context.l10n.programRemoveExercise),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -497,7 +504,9 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                   style: AppTypography.numeric(
                     theme.textTheme.bodyLarge ?? const TextStyle(),
                   ),
-                  decoration: const InputDecoration(labelText: 'sets'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.programSetsField,
+                  ),
                   onChanged: (value) {
                     final sets = int.tryParse(value);
                     if (sets != null && sets > 0 && sets <= _maxTargetSets) {
@@ -517,7 +526,9 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                   style: AppTypography.numeric(
                     theme.textTheme.bodyLarge ?? const TextStyle(),
                   ),
-                  decoration: const InputDecoration(labelText: 'reps'),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.programRepsField,
+                  ),
                   onChanged: (value) => _notifier.setExerciseTargetReps(
                     widget.dayId,
                     widget.exercise.id,

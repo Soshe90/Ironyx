@@ -6,6 +6,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/l10n/l10n_extension.dart';
+import '../../../core/l10n/l10n_provider.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/haptics_service.dart';
 import '../../../core/services/notification_service.dart';
@@ -231,6 +233,11 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     }
 
     final NotificationService notifications = _notifications;
+    // Resolved once per reschedule: these notifications fire minutes from
+    // now, with no widget tree to read a language from by then.
+    final AppLocalizations l10n = await ref.read(
+      appLocalizationsProvider.future,
+    );
     await notifications.cancelAll();
     if (_disposed) return;
     final TimerSnapshot snapshot = engine.snapshot();
@@ -248,8 +255,8 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
       await notifications.scheduleBoundary(
         id: 10000 + index,
         at: now.add(untilBoundary),
-        title: '${nextPhase.type.label} phase',
-        body: '${nextPhase.type.label} starts now',
+        title: l10n.timerNotificationTitle(nextPhase.type.label(l10n)),
+        body: l10n.timerNotificationBody(nextPhase.type.label(l10n)),
       );
     }
   }

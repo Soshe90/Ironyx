@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/l10n/l10n_extension.dart';
+
 part 'timer_preset.freezed.dart';
 
 /// Phase type within a timer preset.
@@ -10,11 +12,16 @@ part 'timer_preset.freezed.dart';
 enum TimerPhaseType { work, rest, prepare, cooldown }
 
 extension TimerPhaseTypeX on TimerPhaseType {
-  String get label => switch (this) {
-        TimerPhaseType.work => 'Work',
-        TimerPhaseType.rest => 'Rest',
-        TimerPhaseType.prepare => 'Prepare',
-        TimerPhaseType.cooldown => 'Cooldown',
+  /// The phase name as the user sees it.
+  ///
+  /// Takes the localizations rather than reading a global: this is called
+  /// both from the timer screen and from the notification scheduler, and the
+  /// latter has no `BuildContext` (see `appLocalizationsProvider`).
+  String label(AppLocalizations l10n) => switch (this) {
+        TimerPhaseType.work => l10n.timerPhaseWork,
+        TimerPhaseType.rest => l10n.timerPhaseRest,
+        TimerPhaseType.prepare => l10n.timerPhasePrepare,
+        TimerPhaseType.cooldown => l10n.timerPhaseCooldown,
       };
 }
 

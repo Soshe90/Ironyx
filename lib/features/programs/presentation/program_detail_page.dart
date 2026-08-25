@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/daos/program_dao.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -35,7 +36,7 @@ class ProgramDetailPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Program'),
+        title: Text(context.l10n.programTitle),
         actions: <Widget>[
           // Always mounted (never conditionally inserted/removed), even
           // though visibility depends on async data — a widget that
@@ -57,16 +58,16 @@ class ProgramDetailPage extends ConsumerWidget {
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
-          title: 'Failed to load program',
+          title: context.l10n.programLoadFailed,
           details: error.toString(),
           onRetry: () => ref.invalidate(programDetailProvider(programId)),
         ),
         data: (detail) {
           if (detail == null) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.event_busy,
-              title: 'Program not found',
-              message: 'It may have been deleted.',
+              title: context.l10n.programNotFound,
+              message: context.l10n.programNotFoundMessage,
             );
           }
           return _ProgramDetailBody(detail: detail);
@@ -85,7 +86,7 @@ class _EditProgramAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
       icon: const Icon(Icons.edit_outlined),
-      tooltip: 'Edit program',
+      tooltip: context.l10n.programEditTooltip,
       onPressed: () async {
         await context.pushNamed(
           Routes.programEditName,
@@ -132,27 +133,29 @@ class _ProgramDetailBody extends ConsumerWidget {
           StatStrip(
             stats: <Stat>[
               Stat(
-                label: 'Days',
+                label: context.l10n.programDays,
                 value: '${detail.days.length}',
                 emphasis: true,
               ),
-              Stat(label: 'Exercises', value: '$totalExercises'),
+              Stat(label: context.l10n.statExercises, value: '$totalExercises'),
               Stat(
-                label: 'Type',
-                value: program.isBuiltIn ? 'Built-in' : 'Custom',
+                label: context.l10n.programType,
+                value: program.isBuiltIn
+                    ? context.l10n.programBuiltIn
+                    : context.l10n.programCustom,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
-          const SectionHeader(
-            title: 'Days',
-            subtitle: 'Starting a day preloads its exercises and target sets',
+          SectionHeader(
+            title: context.l10n.programDays,
+            subtitle: context.l10n.programDaysSubtitle,
           ),
           if (detail.days.isEmpty)
-            const EmptyState(
+            EmptyState(
               icon: Icons.event_busy,
-              title: 'No days yet',
-              message: 'Edit this program to add a training day.',
+              title: context.l10n.programNoDays,
+              message: context.l10n.programNoDaysMessage,
             )
           else
             for (int i = 0; i < detail.days.length; i++) ...[
@@ -177,19 +180,16 @@ class _ProgramDetailBody extends ConsumerWidget {
       final bool? replace = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Workout in progress'),
-          content: const Text(
-            'You already have a workout in progress. Starting this one '
-            'will discard it and its logged sets.',
-          ),
+          title: Text(context.l10n.programWorkoutInProgress),
+          content: Text(context.l10n.programWorkoutInProgressBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.actionCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Discard & start'),
+              child: Text(context.l10n.programDiscardAndStart),
             ),
           ],
         ),
@@ -270,8 +270,7 @@ class _DayCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '${day.exercises.length} '
-                      'exercise${day.exercises.length == 1 ? '' : 's'}',
+                      context.l10n.exerciseCount(day.exercises.length),
                       style: AppTypography.caption(theme),
                     ),
                   ],
@@ -296,7 +295,7 @@ class _DayCard extends StatelessWidget {
                   ),
                 ),
                 onPressed: day.exercises.isEmpty ? null : onStart,
-                child: const Text('Start'),
+                child: Text(context.l10n.programStart),
               ),
             ],
           ),
@@ -324,7 +323,7 @@ class _DayCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
-                      _targetLabel(exercise),
+                      _targetLabel(context, exercise),
                       style: AppTypography.numeric(
                         theme.textTheme.bodySmall ?? const TextStyle(),
                       ).copyWith(color: scheme.onSurfaceVariant),
@@ -338,10 +337,10 @@ class _DayCard extends StatelessWidget {
     );
   }
 
-  String _targetLabel(ProgramDayExercise exercise) {
+  String _targetLabel(BuildContext context, ProgramDayExercise exercise) {
     final reps = exercise.targetReps;
     return reps == null
-        ? '${exercise.targetSets} sets'
+        ? context.l10n.programTargetSets(exercise.targetSets)
         : '${exercise.targetSets} × $reps';
   }
 }

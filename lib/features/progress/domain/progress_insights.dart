@@ -4,16 +4,42 @@ enum InsightSeverity { actionable, negative, positive }
 
 enum InsightTarget { strength, volume, consistency, balance }
 
+enum InsightKind {
+  strengthChange,
+  consistencySlipping,
+  volumeTrendingDown,
+  personalRecords,
+  neglectedMuscle,
+}
+
+enum InsightDirection { up, down }
+
+/// Locale-neutral data for one ranked progress conclusion.
+///
+/// User-facing sentences are built in the presentation layer so each locale
+/// can control word order, grammar, and plural forms independently.
 class ProgressInsight {
-  const ProgressInsight(
-      {required this.severity,
-      required this.headline,
-      required this.supportingFigure,
-      required this.target});
+  const ProgressInsight({
+    required this.severity,
+    required this.target,
+    required this.kind,
+    this.subjectName,
+    this.direction,
+    this.percentage,
+    this.currentBestKg,
+    this.averageSessionsPerWeek,
+    this.count,
+  });
+
   final InsightSeverity severity;
-  final String headline;
-  final String supportingFigure;
   final InsightTarget target;
+  final InsightKind kind;
+  final String? subjectName;
+  final InsightDirection? direction;
+  final int? percentage;
+  final double? currentBestKg;
+  final double? averageSessionsPerWeek;
+  final int? count;
 }
 
 /// Builds a small, ranked set of conclusions from already-loaded analytics.
@@ -33,14 +59,18 @@ List<ProgressInsight> buildProgressInsights({
     movers.sort((a, b) => b.change!.abs().compareTo(a.change!.abs()));
     final mover = movers.first;
     final change = mover.change!;
-    insights.add(ProgressInsight(
-      severity:
-          change < 0 ? InsightSeverity.negative : InsightSeverity.positive,
-      headline:
-          '${mover.exerciseName} is ${change < 0 ? 'down' : 'up'} ${(change.abs() * 100).round()}%',
-      supportingFigure: '${mover.currentBestKg.toStringAsFixed(1)} kg e1RM',
-      target: InsightTarget.strength,
-    ));
+    insights.add(
+      ProgressInsight(
+        severity:
+            change < 0 ? InsightSeverity.negative : InsightSeverity.positive,
+        target: InsightTarget.strength,
+        kind: InsightKind.strengthChange,
+        subjectName: mover.exerciseName,
+        direction: change < 0 ? InsightDirection.down : InsightDirection.up,
+        percentage: (change.abs() * 100).round(),
+        currentBestKg: mover.currentBestKg,
+      ),
+    );
   }
 
   if (frequency.length >= 4) {
@@ -49,12 +79,14 @@ List<ProgressInsight> buildProgressInsights({
         frequency.fold<int>(0, (sum, week) => sum + week.workoutCount) /
             frequency.length;
     if (active >= 2 && average < 1) {
-      insights.add(ProgressInsight(
-        severity: InsightSeverity.negative,
-        headline: 'Training consistency is slipping',
-        supportingFigure: '${average.toStringAsFixed(1)} sessions/week',
-        target: InsightTarget.consistency,
-      ));
+      insights.add(
+        ProgressInsight(
+          severity: InsightSeverity.negative,
+          target: InsightTarget.consistency,
+          kind: InsightKind.consistencySlipping,
+          averageSessionsPerWeek: average,
+        ),
+      );
     }
   }
 
@@ -67,23 +99,26 @@ List<ProgressInsight> buildProgressInsights({
         .skip(midpoint)
         .fold<double>(0, (sum, row) => sum + row.totalVolumeKg);
     if (earlier > 0 && recent < earlier * .8) {
-      insights.add(ProgressInsight(
-        severity: InsightSeverity.negative,
-        headline: 'Weekly volume is trending down',
-        supportingFigure:
-            '${((recent / earlier - 1) * 100).round()}% vs earlier weeks',
-        target: InsightTarget.volume,
-      ));
+      insights.add(
+        ProgressInsight(
+          severity: InsightSeverity.negative,
+          target: InsightTarget.volume,
+          kind: InsightKind.volumeTrendingDown,
+          percentage: ((1 - recent / earlier) * 100).round(),
+        ),
+      );
     }
   }
 
   if (recentPersonalRecords >= 2) {
-    insights.add(ProgressInsight(
-      severity: InsightSeverity.positive,
-      headline: 'New personal records are stacking up',
-      supportingFigure: '$recentPersonalRecords recent PRs',
-      target: InsightTarget.strength,
-    ));
+    insights.add(
+      ProgressInsight(
+        severity: InsightSeverity.positive,
+        target: InsightTarget.strength,
+        kind: InsightKind.personalRecords,
+        count: recentPersonalRecords,
+      ),
+    );
   }
 
   final neglected =
@@ -95,20 +130,23 @@ List<ProgressInsight> buildProgressInsights({
   }).toList();
   if (neglected.isNotEmpty) {
     final group = neglected.first;
-    insights.add(ProgressInsight(
-      severity: InsightSeverity.actionable,
-      headline: '${group.muscleName} has been neglected',
-      supportingFigure: 'under 10% of the previous volume',
-      target: InsightTarget.balance,
-    ));
+    insights.add(
+      ProgressInsight(
+        severity: InsightSeverity.actionable,
+        target: InsightTarget.balance,
+        kind: InsightKind.neglectedMuscle,
+        subjectName: group.muscleName,
+      ),
+    );
   }
 
-  final severityRank = {
+  const severityRank = {
     InsightSeverity.actionable: 0,
     InsightSeverity.negative: 1,
-    InsightSeverity.positive: 2
+    InsightSeverity.positive: 2,
   };
   insights.sort(
-      (a, b) => severityRank[a.severity]!.compareTo(severityRank[b.severity]!));
+    (a, b) => severityRank[a.severity]!.compareTo(severityRank[b.severity]!),
+  );
   return insights.take(4).toList();
 }

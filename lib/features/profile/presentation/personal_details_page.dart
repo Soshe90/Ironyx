@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/error_view.dart';
@@ -17,18 +18,25 @@ import 'widgets/value_pill.dart';
 /// The options offered for sex. Free-form storage (see `ProfilesTable.sex`),
 /// but a short list covers the cases that change a training or nutrition
 /// calculation, and "Prefer not to say" keeps the field answerable.
+///
+/// These are the values written to the database, so they stay English in
+/// every locale — profiles already on disk were stored this way, and
+/// translating the stored value would orphan them. [_sexLabel] does the
+/// translating, at the point of display.
 const List<String> _sexOptions = <String>[
   'Male',
   'Female',
   'Prefer not to say',
 ];
 
-/// Placeholder on a pill whose value hasn't been entered yet.
-///
-/// Reads as a state ("Date of Birth · Not set") rather than an instruction,
-/// and — unlike a bare "Set" — doesn't collide with the picker dialog's own
-/// confirm button, for sighted users or for the semantics tree.
-const String _unset = 'Not set';
+String _sexLabel(String option, AppLocalizations l10n) => switch (option) {
+      'Male' => l10n.profileSexMale,
+      'Female' => l10n.profileSexFemale,
+      'Prefer not to say' => l10n.profileSexPreferNotToSay,
+      // A value from an older build, or one this list no longer offers.
+      // Showing it verbatim beats showing nothing.
+      _ => option,
+    };
 
 /// Lowest and highest values the pickers offer. Wide enough not to exclude
 /// anyone real, narrow enough to catch a cm/kg mix-up.
@@ -47,11 +55,11 @@ class PersonalDetailsPage extends ConsumerWidget {
         ref.watch(profileControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Personal Details')),
+      appBar: AppBar(title: Text(context.l10n.accountPersonalDetailsTitle)),
       body: draftAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
-          title: 'Failed to load your details',
+          title: context.l10n.profileLoadFailed,
           details: error.toString(),
           onRetry: () => ref.invalidate(profileControllerProvider),
         ),
@@ -89,10 +97,12 @@ class _BodyState extends ConsumerState<_Body> {
     final ProfileDraft draft = widget.draft;
     final ThemeData theme = Theme.of(context);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final AppLocalizations l10n = context.l10n;
 
     final String? advisory = BmiAdvisory.message(
       weightKg: draft.weightKg,
       heightCm: draft.heightCm,
+      l10n: l10n,
     );
 
     return Column(
@@ -103,46 +113,50 @@ class _BodyState extends ConsumerState<_Body> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               children: <Widget>[
                 Text(
-                  'To tailor your program and progress tracking, FitTrack '
-                  'uses a few personal details. They stay on this device.',
+                  l10n.profileIntro,
                   style: theme.textTheme.bodyLarge,
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 TextField(
                   controller: _name,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                  decoration: InputDecoration(labelText: l10n.profileName),
                   textCapitalization: TextCapitalization.words,
                   onChanged: _notifier.setDisplayName,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 ValuePillRow(
                   icon: Icons.calendar_today_outlined,
-                  label: 'Date of Birth',
+                  label: l10n.profileDateOfBirth,
                   value: draft.dateOfBirth == null
-                      ? _unset
+                      // An ISO date rather than a localized one: this is the
+                      // value the user typed into a picker, and it round-trips
+                      // unambiguously in any locale.
+                      ? l10n.profileNotSet
                       : DateFormat('yyyy-MM-dd').format(draft.dateOfBirth!),
                   onPressed: _pickDateOfBirth,
                 ),
                 ValuePillRow(
                   icon: Icons.people_outline,
-                  label: 'Sex',
-                  value: draft.sex ?? _unset,
+                  label: l10n.profileSex,
+                  value: draft.sex == null
+                      ? l10n.profileNotSet
+                      : _sexLabel(draft.sex!, l10n),
                   onPressed: _pickSex,
                 ),
                 ValuePillRow(
                   icon: Icons.monitor_weight_outlined,
-                  label: 'Weight',
+                  label: l10n.profileWeight,
                   value: draft.weightKg == null
-                      ? _unset
+                      ? l10n.profileNotSet
                       : UnitFormatters.weight(draft.weightKg!, unit),
                   onPressed: () => _pickWeight(unit),
                 ),
                 ValuePillRow(
                   icon: Icons.straighten,
-                  label: 'Height',
+                  label: l10n.profileHeight,
                   value: draft.heightCm == null
-                      ? _unset
-                      : '${draft.heightCm!.round()} cm',
+                      ? l10n.profileNotSet
+                      : l10n.profileHeightCm(draft.heightCm!.round()),
                   onPressed: _pickHeight,
                 ),
                 if (advisory != null) ...<Widget>[
@@ -161,7 +175,7 @@ class _BodyState extends ConsumerState<_Body> {
         StickyActionBar(
           child: FilledButton(
             onPressed: _saving ? null : _confirm,
-            child: const Text('Confirm'),
+            child: Text(l10n.actionConfirm),
           ),
         ),
       ],
@@ -177,12 +191,13 @@ class _BodyState extends ConsumerState<_Body> {
       // keeps the picker from offering an age that can't have an account.
       firstDate: DateTime(now.year - 120),
       lastDate: DateTime(now.year - 13, now.month, now.day),
-      helpText: 'Date of birth',
+      helpText: context.l10n.profileDateOfBirth,
     );
     if (picked != null) _notifier.setDateOfBirth(picked);
   }
 
   Future<void> _pickSex() async {
+    final AppLocalizations l10n = context.l10n;
     final String? picked = await showModalBottomSheet<String>(
       context: context,
       useSafeArea: true,
@@ -196,7 +211,10 @@ class _BodyState extends ConsumerState<_Body> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               for (final String option in _sexOptions)
-                RadioListTile<String>(value: option, title: Text(option)),
+                RadioListTile<String>(
+                  value: option,
+                  title: Text(_sexLabel(option, l10n)),
+                ),
             ],
           ),
         ),
@@ -209,7 +227,7 @@ class _BodyState extends ConsumerState<_Body> {
     // Prompted and parsed in the user's display unit, converted to kg on the
     // way in — ADR-1: a pound value must never reach the database.
     final double? entered = await _promptForNumber(
-      title: 'Weight',
+      title: context.l10n.profileWeight,
       suffix: unit.label,
       initial: widget.draft.weightKg == null
           ? null
@@ -224,8 +242,8 @@ class _BodyState extends ConsumerState<_Body> {
 
   Future<void> _pickHeight() async {
     final double? entered = await _promptForNumber(
-      title: 'Height',
-      suffix: 'cm',
+      title: context.l10n.profileHeight,
+      suffix: context.l10n.unitCentimetres,
       initial: widget.draft.heightCm,
       min: _minHeightCm,
       max: _maxHeightCm,
@@ -256,17 +274,19 @@ class _BodyState extends ConsumerState<_Body> {
     setState(() => _saving = true);
     final NavigatorState navigator = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    // Resolved up front, like the two above it: by the time the snack bar is
+    // shown this page has usually popped, and `context` is no longer a safe
+    // place to look anything up.
+    final AppLocalizations l10n = context.l10n;
     try {
       await _notifier.save();
       if (!mounted) return;
       // The BMI note is advisory, never a gate — Confirm always commits.
       if (navigator.canPop()) context.pop();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Personal details saved')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
     } on Object catch (error) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Could not save your details: $error')),
+        SnackBar(content: Text(l10n.profileSaveFailed('$error'))),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -331,19 +351,25 @@ class _NumberInputDialogState extends State<_NumberInputDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
-        FilledButton(onPressed: _submit, child: const Text('Save')),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(context.l10n.actionSave),
+        ),
       ],
     );
   }
 
   String? _validate(String? value) {
+    final AppLocalizations l10n = context.l10n;
     final double? parsed = double.tryParse((value ?? '').trim());
-    if (parsed == null) return 'Enter a number.';
+    if (parsed == null) return l10n.profileEnterANumber;
     if (parsed < widget.min || parsed > widget.max) {
-      return 'Enter a value between ${UnitFormatters.plain(widget.min)} '
-          'and ${UnitFormatters.plain(widget.max)}.';
+      return l10n.profileEnterValueBetween(
+        UnitFormatters.plain(widget.min),
+        UnitFormatters.plain(widget.max),
+      );
     }
     return null;
   }

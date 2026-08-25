@@ -1,7 +1,10 @@
+enum BmiCategory { underweight, healthy, overweight, obesity }
+
 class BmiResult {
   const BmiResult({required this.value, required this.category});
+
   final double value;
-  final String category;
+  final BmiCategory category;
 }
 
 /// Calculates BMI from kilograms and centimetres. BMI is intentionally a
@@ -20,9 +23,9 @@ BmiResult? calculateBmi({required double weightKg, required double heightCm}) {
   return BmiResult(value: value, category: bmiCategory(value));
 }
 
-String bmiCategory(double value) => switch (value) {
-      < 18.5 => 'Underweight',
-      < 25 => 'Healthy range',
-      < 30 => 'Overweight',
-      _ => 'Obesity range',
+BmiCategory bmiCategory(double value) => switch (value) {
+      < 18.5 => BmiCategory.underweight,
+      < 25 => BmiCategory.healthy,
+      < 30 => BmiCategory.overweight,
+      _ => BmiCategory.obesity,
     };

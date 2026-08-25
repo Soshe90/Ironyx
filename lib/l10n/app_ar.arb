@@ -1,0 +1,944 @@
+{
+  "@@locale": "ar",
+
+  "appTitle": "FitTrack",
+  "@appTitle": {
+    "description": "Left in Latin script on purpose: it is the product name, and a transliteration would not match the store listing or the icon."
+  },
+
+  "actionSave": "حفظ",
+  "actionCancel": "إلغاء",
+  "actionDelete": "حذف",
+  "actionEdit": "تعديل",
+  "actionDone": "تم",
+  "actionRetry": "إعادة المحاولة",
+  "actionClose": "إغلاق",
+  "actionAdd": "إضافة",
+  "actionContinue": "متابعة",
+  "actionBack": "رجوع",
+  "actionNext": "التالي",
+  "actionRemove": "إزالة",
+  "actionConfirm": "تأكيد",
+  "actionSkip": "تخطٍّ",
+
+  "commonToday": "اليوم",
+  "commonYesterday": "أمس",
+  "commonError": "حدث خطأ ما",
+  "commonLoading": "جارٍ التحميل",
+
+  "navHome": "الرئيسية",
+  "navLibrary": "المكتبة",
+  "navProgress": "التقدّم",
+  "navTimer": "المؤقّت",
+  "navSettings": "الإعدادات",
+
+  "errorTryAgain": "حاول مرة أخرى",
+  "metricNoDataYet": "لا توجد بيانات بعد",
+  "metricCouldNotLoad": "تعذّر التحميل",
+  "filterAll": "الكل",
+  "prBadge": "رقم قياسي",
+
+  "settingsLanguageTitle": "اللغة",
+  "settingsLanguageSubtitle": "يسري التغيير فورًا دون إعادة تشغيل",
+  "settingsLanguageSystem": "حسب إعدادات الجهاز",
+  "settingsAppearanceTitle": "المظهر",
+  "settingsAppearanceSubtitle": "الوضع الداكن مظهر أصيل وليس مجرد عكس للألوان",
+  "settingsThemeSystem": "النظام",
+  "settingsThemeLight": "فاتح",
+  "settingsThemeDark": "داكن",
+  "settingsUnitsTitle": "الوحدات",
+  "settingsUnitsSubtitle": "تُطبَّق في كل موضع تُعرض فيه الأوزان أو تُدخَل",
+  "settingsUnitKilograms": "كيلوغرام (kg)",
+  "settingsUnitPounds": "رطل (lb)",
+  "settingsFeedbackTitle": "التنبيهات",
+  "settingsFeedbackSubtitle": "تنبيهات عند انتهاء مرحلة المؤقّت",
+  "settingsSoundCues": "التنبيهات الصوتية",
+  "settingsSoundCuesSubtitle": "تشغيل نغمة عند تغيّر المرحلة",
+  "settingsHaptics": "الاهتزاز",
+  "settingsHapticsSubtitle": "اهتزاز عند تغيّر المرحلة",
+  "settingsDataTitle": "البيانات",
+  "settingsDataSubtitle": "يحفظ FitTrack كل شيء على هذا الجهاز",
+  "settingsStorageNote": "لا تغادر بيانات تدريبك هذا الجهاز إلا إذا صدّرتها بنفسك.",
+
+  "authErrorWrongCredentials": "لا يطابق هذا البريد الإلكتروني وكلمة المرور أي حساب.",
+  "authErrorEmailAlreadyRegistered": "يوجد حساب مسجَّل بهذا البريد الإلكتروني. جرّب تسجيل الدخول.",
+  "authErrorWeakPassword": "كلمة المرور ضعيفة. استخدم 8 أحرف على الأقل.",
+  "authErrorEmailRejected": "لم يُقبل هذا البريد الإلكتروني. جرّب بريدًا آخر.",
+  "authErrorSignUpDisabled": "لا تُقبل حسابات جديدة في الوقت الحالي.",
+  "authErrorEmailNotConfirmed": "أكّد بريدك الإلكتروني أولًا — ابحث عن رابط التأكيد في بريدك.",
+  "authErrorRateLimited": "محاولات كثيرة جدًا. انتظر دقيقة ثم حاول مرة أخرى.",
+  "authErrorOffline": "تعذّر الوصول إلى الخادم. تحقّق من اتصالك وحاول مرة أخرى.",
+  "authErrorNotConfigured": "الحسابات غير متاحة في هذه النسخة.",
+  "authErrorUnknown": "حدث خطأ ما. حاول مرة أخرى.",
+
+  "backupErrorNotSignedIn": "سجّل الدخول أولًا — تُحفظ النسخة الاحتياطية مع حسابك.",
+  "backupErrorNotConfigured": "النسخ الاحتياطي غير متاح في هذه النسخة.",
+  "backupErrorNotProvisioned": "لم يُهيّأ النسخ الاحتياطي على الخادم بعد. نفّذ أوامر SQL الموجودة في docs/cloud_backup_setup.sql على مشروع Supabase الخاص بك.",
+  "backupErrorNoBackupYet": "لا توجد نسخة احتياطية محفوظة لهذا الحساب بعد.",
+  "backupErrorOffline": "تعذّر الوصول إلى الخادم. تحقّق من اتصالك وحاول مرة أخرى.",
+  "backupErrorCorrupt": "تعذّرت قراءة هذه النسخة الاحتياطية. ربما أُنشئت بإصدار أحدث من التطبيق.",
+  "backupErrorUnknown": "حدث خطأ ما. حاول مرة أخرى.",
+
+  "backupSectionTitle": "النسخ الاحتياطي للحساب",
+  "backupSectionSubtitle": "مؤقّت أثناء فترة اختبار التطبيق — نسخة احتياطية واحدة لكل حساب، تُستبدل في كل مرة تنسخ فيها",
+  "backupSignInTitle": "سجّل الدخول لإنشاء نسخة احتياطية",
+  "backupSignInSubtitle": "تُحفظ النسخة الاحتياطية مع حسابك، فيمكنك إعادة تثبيت التطبيق وتسجيل الدخول لاستعادة بياناتك.",
+  "backupLastBackup": "آخر نسخة احتياطية",
+  "backupChecking": "جارٍ التحقّق…",
+  "backupCouldNotCheck": "تعذّر التحقّق من وجود نسخة احتياطية.",
+  "backupNoneYet": "لا توجد نسخة احتياطية بعد",
+  "backupStatusLine": "{date} في {time} · {size}",
+  "@backupStatusLine": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "time": { "type": "String" },
+      "size": { "type": "String" }
+    }
+  },
+  "backupNowTitle": "أنشئ نسخة احتياطية الآن",
+  "backupNowSubtitle": "يرفع كل ما على هذا الجهاز",
+  "backupInProgress": "جارٍ النسخ الاحتياطي…",
+  "backupInProgressSubtitle": "جارٍ تجهيز بياناتك ورفعها",
+  "backupFailed": "تعذّر إكمال النسخ الاحتياطي.",
+  "backupFailedRetry": "تعذّر إكمال النسخ الاحتياطي. حاول مرة أخرى.",
+  "backupSucceeded": "تم النسخ الاحتياطي ({size})",
+  "@backupSucceeded": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "backupRestoreTitle": "الاستعادة من حسابي",
+  "backupRestoreSubtitle": "يستبدل البيانات الموجودة على هذا الجهاز بنسختك الاحتياطية",
+  "backupRestoreConfirmTitle": "الاستعادة من حسابك؟",
+  "backupRestoreConfirmBody": "كل ما هو موجود حاليًا على هذا الجهاز — التمارين والبرامج والقوالب وقياسات الجسم — سيُستبدل بنسختك الاحتياطية.\n\nتُحفظ نسخة من البيانات الحالية أولًا، فيمكنك التراجع عن ذلك من إدارة البيانات.",
+  "backupRestoreAction": "استعادة",
+  "backupRestoring": "جارٍ الاستعادة…",
+  "backupRestored": "تمت الاستعادة من حسابك",
+
+  "actionGotIt": "فهمت",
+
+  "navTracker": "السجلّ",
+  "routeNotFoundTitle": "غير موجود",
+  "routeNotFoundBody": "لا يوجد مسار لـ {uri}",
+  "@routeNotFoundBody": {
+    "placeholders": {
+      "uri": { "type": "String" }
+    }
+  },
+
+  "dayCount": "{count, plural, zero{لا أيام} one{يوم واحد} two{يومان} few{{count} أيام} many{{count} يومًا} other{{count} يوم}}",
+  "@dayCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "trackerPrograms": "البرامج",
+  "trackerProgramsSubtitle": "قوالب أيام قابلة لإعادة الاستخدام تبدأ منها جلستك",
+  "trackerNew": "جديد",
+  "trackerNewProgram": "برنامج جديد",
+  "trackerNoPrograms": "لا توجد برامج بعد",
+  "trackerNoProgramsMessage": "أنشئ برنامجًا لتحميل تمارينك ومجموعاتك المستهدفة مسبقًا في الجلسة.",
+  "trackerHistory": "السجلّ",
+  "trackerNoWorkouts": "لا توجد تمارين بعد",
+  "trackerNoWorkoutsMessage": "أنهِ تمرينًا وسيظهر هنا، مع حجمك التدريبي وأي أرقام قياسية.",
+  "trackerHistoryLoadFailed": "تعذّر تحميل السجلّ",
+  "trackerProgramSemantic": "{name}، {days}",
+  "@trackerProgramSemantic": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "days": { "type": "String" }
+    }
+  },
+  "trackerResumeSemantic": "متابعة التمرين الجاري",
+  "trackerTapToResume": "اضغط للمتابعة",
+  "trackerResumeWithExercises": "{exercises} مسجَّلة · اضغط للمتابعة",
+  "@trackerResumeWithExercises": {
+    "placeholders": {
+      "exercises": { "type": "String" }
+    }
+  },
+  "trackerWorkoutSemantic": "تمرين في {date}، حجم تدريبي {volume}",
+  "@trackerWorkoutSemantic": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "volume": { "type": "String" }
+    }
+  },
+  "trackerWorkoutSemanticPr": "تمرين في {date}، حجم تدريبي {volume}، رقم قياسي",
+  "@trackerWorkoutSemanticPr": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "volume": { "type": "String" }
+    }
+  },
+  "trackerNoDuration": "لم تُسجَّل مدة",
+
+  "actionUndo": "تراجع",
+  "statVolume": "الحجم التدريبي",
+  "statDuration": "المدة",
+  "statExercises": "التمارين",
+  "statSets": "المجموعات",
+
+  "workoutDetailTitle": "التمرين",
+  "workoutEditTitle": "تعديل التمرين",
+  "workoutEditTooltip": "تعديل التمرين",
+  "workoutDeleteTooltip": "حذف التمرين",
+  "workoutNotFound": "التمرين غير موجود",
+  "workoutNotFoundMessage": "ربما حُذف بالفعل.",
+  "workoutLoadFailed": "تعذّر تحميل التمرين",
+  "workoutDeleteConfirmTitle": "حذف التمرين؟",
+  "workoutDeleteConfirmBody": "لا يمكن التراجع عن هذا.",
+  "workoutDateTime": "{date} · {time}",
+  "@workoutDateTime": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "workoutUnknownExercise": "تمرين غير معروف",
+  "workoutVolumeLine": "الحجم التدريبي {volume}",
+  "@workoutVolumeLine": {
+    "placeholders": {
+      "volume": { "type": "String" }
+    }
+  },
+  "workoutTopSet": "أفضل مجموعة",
+  "workoutFirstTimeLogged": "أول مرة تُسجَّل · أقصى تكرار مُقدَّر {oneRm}",
+  "@workoutFirstTimeLogged": {
+    "placeholders": {
+      "oneRm": { "type": "String" }
+    }
+  },
+  "workoutOneRmWithPrevious": "أقصى تكرار مُقدَّر {oneRm} · أفضل سابق {previous}",
+  "@workoutOneRmWithPrevious": {
+    "placeholders": {
+      "oneRm": { "type": "String" },
+      "previous": { "type": "String" }
+    }
+  },
+  "workoutSetSemantic": "المجموعة {index}، {weight} لـ {reps} تكرار{completion}{warmup}",
+  "@workoutSetSemantic": {
+    "placeholders": {
+      "index": { "type": "int" },
+      "weight": { "type": "String" },
+      "reps": { "type": "int" },
+      "completion": { "type": "String" },
+      "warmup": { "type": "String" }
+    }
+  },
+  "workoutSetCompleted": "، مكتملة",
+  "workoutSetNotCompleted": "، غير مكتملة",
+  "workoutSetWarmup": "، إحماء",
+  "workoutNoExercisesLeft": "لم تعد هناك تمارين",
+  "workoutNoExercisesLeftMessage": "أضف تمرينًا واحدًا على الأقل قبل الحفظ.",
+  "workoutAddExercise": "إضافة تمرين",
+  "workoutSaveChanges": "حفظ التغييرات",
+  "workoutUpdated": "تم تحديث التمرين",
+  "workoutSaveChangesFailed": "تعذّر حفظ التغييرات: {error}",
+  "@workoutSaveChangesFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "categoryStrength": "قوة",
+  "categoryCardio": "هوائي",
+  "categoryMobility": "مرونة حركية",
+  "categoryBalance": "توازن",
+  "categoryPlyometric": "بلايومترك",
+  "categoryOther": "أخرى",
+  "difficultyBeginner": "مبتدئ",
+  "difficultyIntermediate": "متوسط",
+  "difficultyAdvanced": "متقدم",
+  "forceTypePush": "دفع",
+  "forceTypePull": "سحب",
+  "forceTypeIsometric": "ثابت",
+  "mechanicCompound": "مركّب",
+  "mechanicIsolation": "عزل",
+  "patternHorizontalPush": "دفع أفقي",
+  "patternVerticalPush": "دفع عمودي",
+  "patternHorizontalPull": "سحب أفقي",
+  "patternVerticalPull": "سحب عمودي",
+  "patternKneeDominant": "اعتماد على الركبة",
+  "patternHipDominant": "اعتماد على الورك",
+  "patternCarry": "حمل",
+  "patternRotation": "دوران",
+  "patternAntiRotation": "مقاومة الدوران",
+  "patternOther": "أخرى",
+
+  "calendarPreviousMonth": "الشهر السابق",
+  "calendarNextMonth": "الشهر التالي",
+  "calendarDayWithWorkout": "{day}، يوجد تمرين",
+  "@calendarDayWithWorkout": {
+    "placeholders": {
+      "day": { "type": "int" }
+    }
+  },
+
+  "draftRemoveExercise": "إزالة {name}",
+  "@draftRemoveExercise": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "draftReorderExercise": "إعادة ترتيب {name}",
+  "@draftReorderExercise": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "draftAddSet": "إضافة مجموعة",
+  "draftNoSetsYet": "لا توجد مجموعات بعد",
+  "draftSetsProgress": "{completed}/{total} مجموعات",
+  "@draftSetsProgress": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "draftColumnSet": "المجموعة",
+  "draftColumnReps": "التكرارات",
+  "draftColumnDone": "تم",
+  "draftRest": "راحة",
+  "draftPauseRest": "إيقاف الراحة مؤقتًا",
+  "draftResumeRest": "استئناف الراحة",
+  "draftRestartRest": "إعادة تشغيل الراحة",
+  "draftStopRest": "إيقاف الراحة",
+  "draftSetWeightSemantic": "وزن المجموعة {index} بوحدة {unit}",
+  "@draftSetWeightSemantic": {
+    "placeholders": {
+      "index": { "type": "int" },
+      "unit": { "type": "String" }
+    }
+  },
+  "draftSetRepsSemantic": "تكرارات المجموعة {index}",
+  "@draftSetRepsSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftSetOptionsSemantic": "خيارات المجموعة {index}",
+  "@draftSetOptionsSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftRpeAndRest": "معدّل الجهد المُدرَك ووقت الراحة",
+  "draftDuplicateSet": "تكرار المجموعة",
+  "draftRemoveSet": "إزالة المجموعة",
+  "draftSetDetailsTitle": "تفاصيل المجموعة {index}",
+  "@draftSetDetailsTitle": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftRpeField": "معدّل الجهد المُدرَك (1–10)",
+  "draftRestBeforeSetField": "الراحة قبل المجموعة (ثوانٍ)",
+
+  "importXlsxAction": "استيراد XLSX",
+  "importXlsxPickerTitle": "اختر ملف سجلّ تمارينك بصيغة XLSX",
+  "importXlsxWrongType": "الرجاء اختيار ملف بصيغة ‎.xlsx‎.",
+  "importXlsxReadFailed": "تعذّرت قراءة ملف XLSX هذا: {error}",
+  "@importXlsxReadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "importXlsxDone": "تم استيراد {count} تمرين.",
+  "@importXlsxDone": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "importXlsxDoneWithSkips": "تم استيراد {count} تمرين (وتم تخطّي {skipped} موجودة في السجلّ مسبقًا).",
+  "@importXlsxDoneWithSkips": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "skipped": { "type": "int" }
+    }
+  },
+  "importXlsxUnitTitle": "ما الوحدة المستخدمة في الملف؟",
+  "importXlsxUnitBody": "تُحوَّل القيم المستوردة إلى الكيلوغرام للتخزين. يبدو أن هذا الملف يستخدم الأرطال (lb).",
+  "importXlsxUnitKg": "كيلوغرام",
+  "importXlsxUnitLb": "رطل (موصى به)",
+  "importXlsxConfirmTitle": "استيراد سجلّ التمارين؟",
+  "importXlsxConfirmSummary": "{workouts} تمرين · {sets} مجموعة\n{firstDate} ← {lastDate}\nتُقرأ الأوزان بوحدة {unit} وتُخزَّن بالكيلوغرام.",
+  "@importXlsxConfirmSummary": {
+    "placeholders": {
+      "workouts": { "type": "int" },
+      "sets": { "type": "int" },
+      "firstDate": { "type": "String" },
+      "lastDate": { "type": "String" },
+      "unit": { "type": "String" }
+    }
+  },
+  "importXlsxNoDates": "لا توجد تواريخ",
+  "importXlsxDuplicateNote": "{duplicates} من أصل {total} تمرين موجودة بالفعل في سجلّك (نفس التاريخ والتمارين والمجموعات) وسيتم تخطّيها.",
+  "@importXlsxDuplicateNote": {
+    "placeholders": {
+      "duplicates": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "importXlsxUnknownExercises": "هذه التمارين غير موجودة في الفهرس وستُضاف كتمارين مخصّصة:",
+  "importXlsxConfirmAction": "استيراد",
+
+  "activeWorkoutDiscardTooltip": "تجاهل التمرين",
+  "activeWorkoutAddFirstExercise": "أضف تمرينك الأول",
+  "activeWorkoutAddFirstExerciseMessage": "اختر حركة وابدأ تسجيل المجموعات. تُحفظ مسوّدتك أولًا بأول.",
+  "activeWorkoutFinish": "إنهاء التمرين",
+  "activeWorkoutSaved": "تم حفظ التمرين",
+  "activeWorkoutSaveFailed": "تعذّر حفظ التمرين: {error}",
+  "@activeWorkoutSaveFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "activeWorkoutDiscardTitle": "تجاهل التمرين؟",
+  "activeWorkoutDiscardBody": "ستُزال مسوّدتك الحالية.",
+  "activeWorkoutDiscardAction": "تجاهل",
+  "activeWorkoutDiscarded": "تم تجاهل التمرين",
+  "activeWorkoutElapsedSemantic": "الوقت المنقضي {time}",
+  "@activeWorkoutElapsedSemantic": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+
+  "timerPhaseWork": "عمل",
+  "timerPhaseRest": "راحة",
+  "timerPhasePrepare": "استعداد",
+  "timerPhaseCooldown": "تهدئة",
+  "timerPhaseDone": "انتهى",
+  "timerNotificationTitle": "مرحلة {phase}",
+  "@timerNotificationTitle": {
+    "placeholders": {
+      "phase": { "type": "String" }
+    }
+  },
+  "timerNotificationBody": "تبدأ مرحلة {phase} الآن",
+  "@timerNotificationBody": {
+    "placeholders": {
+      "phase": { "type": "String" }
+    }
+  },
+  "timerEndTooltip": "إنهاء المؤقّت",
+  "timerSkipTooltip": "تخطّي الفترة",
+  "timerPauseSemantic": "إيقاف المؤقّت مؤقتًا",
+  "timerResumeSemantic": "استئناف المؤقّت",
+  "timerQuickStartTitle": "بدء سريع",
+  "timerQuickStartSubtitle": "اضغط على إعداد جاهز للبدء فورًا",
+  "timerSavedPresets": "الإعدادات المحفوظة",
+  "timerCustomTitle": "مخصّص",
+  "timerCustomSubtitle": "أنشئ فترة زمنية ثم ابدأها أو احفظها",
+  "timerPresetSaved": "تم حفظ الإعداد.",
+  "timerFeedbackSubtitle": "متاح أيضًا في الإعدادات",
+  "timerNoSavedPresets": "لا توجد إعدادات محفوظة بعد. أنشئ واحدًا بالأسفل واضغط «حفظ الإعداد» للاحتفاظ به هنا.",
+  "timerPresetsLoadFailed": "تعذّر تحميل الإعدادات المحفوظة",
+  "timerPresetSemantic": "ابدأ {name}، {duration} إجمالًا",
+  "@timerPresetSemantic": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
+  "intervalCount": "{count, plural, zero{لا فترات} one{فترة واحدة} two{فترتان} few{{count} فترات} many{{count} فترةً} other{{count} فترة}}",
+  "@intervalCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "timerPositiveValuesRequired": "يجب أن تكون قيم العمل والراحة والجولات موجبة.",
+  "timerFieldWork": "العمل (ث)",
+  "timerFieldRest": "الراحة (ث)",
+  "timerFieldRounds": "الجولات",
+  "timerFieldWarmup": "الإحماء (ث)",
+  "timerFieldCooldown": "التهدئة (ث)",
+  "timerStartCustom": "ابدأ المخصّص",
+  "timerSavePreset": "حفظ الإعداد",
+  "timerPresetStrength": "قوة",
+  "timerPresetFormula": "{work} ث عمل / {rest} ث راحة × {rounds}",
+  "@timerPresetFormula": {
+    "placeholders": {
+      "work": { "type": "int" },
+      "rest": { "type": "int" },
+      "rounds": { "type": "int" }
+    }
+  },
+  "timerComplete": "اكتمل",
+  "timerIntervalOf": "الفترة {current} من {total}",
+  "@timerIntervalOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "timerNotificationsOff": "الإشعارات مُعطَّلة — لن تصلك تنبيهات إذا كان التطبيق في الخلفية تمامًا. المؤقّت يواصل العمل.",
+
+  "exerciseCount": "{count, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{count} تمارين} many{{count} تمرينًا} other{{count} تمرين}}",
+  "@exerciseCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "setsLoggedCount": "{count, plural, zero{لا مجموعات مسجَّلة} one{مجموعة واحدة مسجَّلة} two{مجموعتان مسجَّلتان} few{{count} مجموعات مسجَّلة} many{{count} مجموعةً مسجَّلة} other{{count} مجموعة مسجَّلة}}",
+  "@setsLoggedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sessionCount": "{count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستان} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}}",
+  "@sessionCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "greetingMorning": "صباح الخير",
+  "greetingAfternoon": "طاب يومك",
+  "greetingEvening": "مساء الخير",
+
+  "dashboardInProgressBadge": "قيد التنفيذ",
+  "dashboardWorkoutInProgress": "تمرين قيد التنفيذ",
+  "dashboardReadyToTrain": "جاهز للتمرين",
+  "dashboardReadyToTrainCaption": "ابدأ جلسة وسجّل مجموعاتك أثناء التمرين.",
+  "dashboardResumeWorkout": "متابعة التمرين",
+  "dashboardStartWorkout": "ابدأ التمرين",
+  "dashboardStartFromProgram": "ابدأ من برنامج",
+  "dashboardNoExercisesYet": "لم تُضف أي تمارين بعد.",
+  "dashboardDraftSummary": "{exercises} · {sets}",
+  "@dashboardDraftSummary": {
+    "placeholders": {
+      "exercises": { "type": "String" },
+      "sets": { "type": "String" }
+    }
+  },
+  "dashboardThisWeek": "هذا الأسبوع",
+  "dashboardThisWeekLoadFailed": "تعذّر تحميل بيانات هذا الأسبوع",
+  "dashboardThisWeekSemantic": "هذا الأسبوع، {volume}، {sessions}",
+  "@dashboardThisWeekSemantic": {
+    "placeholders": {
+      "volume": { "type": "String" },
+      "sessions": { "type": "String" }
+    }
+  },
+  "dashboardThisWeekSemanticLoading": "هذا الأسبوع، جارٍ التحميل",
+  "dashboardThisWeekSemanticError": "هذا الأسبوع، تعذّر التحميل",
+  "dashboardNoRecentTraining": "{weeks, plural, zero{لا تدريب مؤخّرًا} one{لا تدريب خلال الأسبوع الماضي} two{لا تدريب خلال الأسبوعين الماضيين} few{لا تدريب خلال آخر {weeks} أسابيع} many{لا تدريب خلال آخر {weeks} أسبوعًا} other{لا تدريب خلال آخر {weeks} أسبوع}}",
+  "@dashboardNoRecentTraining": {
+    "placeholders": {
+      "weeks": { "type": "int" }
+    }
+  },
+  "dashboardNoRecentTrainingCaption": "سجّل تمرينًا وستظهر هنا حصيلتك الأسبوعية وسلسلة مواظبتك واتجاهاتك. السجلّ الأقدم موجود في تبويب التقدّم.",
+  "dashboardVolumeEyebrow": "الحجم التدريبي",
+  "dashboardStatSessions": "الجلسات",
+  "dashboardStatStreak": "المواظبة",
+  "dashboardStatLastWeek": "الأسبوع الماضي",
+  "dashboardStreakWeeks": "{count} أسبوع",
+  "@dashboardStreakWeeks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dashboardRecent": "الأحدث",
+  "dashboardNothingYet": "لا شيء بعد",
+  "dashboardLastWorkout": "آخر تمرين",
+  "dashboardLastTimer": "آخر مؤقّت",
+  "dashboardEstOneRm": "أقصى تكرار مُقدَّر",
+  "dashboardLogALiftToSeeThis": "سجّل رفعة لعرض هذا",
+  "dashboardBodyWeight": "وزن الجسم",
+  "dashboardNotRecorded": "غير مسجَّل",
+  "dashboardRowSemantic": "{title}، {value}، {caption}",
+  "@dashboardRowSemantic": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "value": { "type": "String" },
+      "caption": { "type": "String" }
+    }
+  },
+  "dashboardRowSemanticLoading": "{title}، جارٍ التحميل",
+  "@dashboardRowSemanticLoading": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "dashboardRowSemanticError": "{title}، تعذّر التحميل",
+  "@dashboardRowSemanticError": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "dashboardRowSemanticNoData": "لا توجد بيانات",
+
+  "unitCentimetres": "سم",
+
+  "profileIntro": "لتخصيص برنامجك وتتبّع تقدّمك، يستخدم FitTrack بعض البيانات الشخصية. تبقى هذه البيانات على هذا الجهاز.",
+  "profileLoadFailed": "تعذّر تحميل بياناتك",
+  "profileName": "الاسم",
+  "profileDateOfBirth": "تاريخ الميلاد",
+  "profileSex": "الجنس",
+  "profileWeight": "الوزن",
+  "profileHeight": "الطول",
+  "profileHeightCm": "{value} سم",
+  "@profileHeightCm": {
+    "placeholders": {
+      "value": { "type": "int" }
+    }
+  },
+  "profileNotSet": "غير محدَّد",
+  "profileSexMale": "ذكر",
+  "profileSexFemale": "أنثى",
+  "profileSexPreferNotToSay": "أفضّل عدم الإفصاح",
+  "profileSaved": "تم حفظ البيانات الشخصية",
+  "profileSaveFailed": "تعذّر حفظ بياناتك: {error}",
+  "@profileSaveFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "profileEnterANumber": "أدخل رقمًا.",
+  "profileEnterValueBetween": "أدخل قيمة بين {min} و{max}.",
+  "@profileEnterValueBetween": {
+    "placeholders": {
+      "min": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+  "profileBmiUnderweight": "تشير القيم المُدخَلة إلى درجة من نقص الوزن. تحقّق من صحة الوزن والطول المُدخَلين ثم أكّد.",
+  "profileBmiOverweight": "تشير القيم المُدخَلة إلى درجة من زيادة الوزن. تحقّق من صحة الوزن والطول المُدخَلين ثم أكّد.",
+
+  "welcomeTagline": "تدريبك، مُوثَّقًا.",
+  "welcomeFeatureLogTitle": "سجّل كل مجموعة وتكرار",
+  "welcomeFeatureLogDetail": "الوزن والتكرارات والراحة، تُسجَّل أثناء تمرينك.",
+  "welcomeFeatureProgramsTitle": "اتبع برامج جاهزة أو أنشئ برنامجك",
+  "welcomeFeatureProgramsDetail": "ابدأ من تقسيمة جاهزة أو اكتب برنامجك الخاص.",
+  "welcomeFeatureTimerTitle": "مؤقّت راحة دقيق",
+  "welcomeFeatureTimerDetail": "يعمل في الخلفية، مع صوت واهتزاز.",
+  "welcomeFeatureChartsTitle": "رسوم بيانية تُظهر تقدّمك",
+  "welcomeFeatureChartsDetail": "الحجم التدريبي، وتقدير أقصى تكرار واحد، وقياسات الجسم.",
+  "welcomeCreateAccount": "أنشئ حسابًا مجانيًا",
+  "welcomeHaveAccount": "لديّ حساب بالفعل",
+  "welcomeContinueAsGuest": "المتابعة بدون حساب",
+  "welcomeGetStarted": "لنبدأ",
+  "welcomeDataNotice": "تبقى تمارينك على هذا الجهاز. إلغاء تثبيت التطبيق يحذفها — احفظ نسخة احتياطية من الإعدادات في أي وقت.",
+  "welcomeDataNoticeWithAccounts": "تبقى تمارينك على هذا الجهاز، بحساب أو بدونه. إلغاء تثبيت التطبيق يحذفها — احفظ نسخة احتياطية من الإعدادات في أي وقت. الحساب المجاني يحفظ ملفك الشخصي.",
+
+  "authSignInTitle": "تسجيل الدخول",
+  "authSignInIntro": "تبقى تمارينك على هذا الجهاز في كل الأحوال — الحساب يحفظ بياناتك معك فقط.",
+  "authSignedIn": "تم تسجيل الدخول",
+  "authSignOut": "تسجيل الخروج",
+  "authSignedOut": "تم تسجيل الخروج",
+  "authSignOutConfirmTitle": "تسجيل الخروج؟",
+  "authSignOutConfirmBody": "تبقى تمارينك وبرامجك وبياناتك الشخصية على هذا الجهاز. يُزال ارتباط الحساب فقط.",
+  "authCreateAccountTitle": "إنشاء حساب",
+  "authCreateAccountIntro": "اختياري. كل ما سجّلته حتى الآن يبقى كما هو تمامًا.",
+  "authFieldEmail": "البريد الإلكتروني",
+  "authFieldPassword": "كلمة المرور",
+  "authFieldConfirmPassword": "تأكيد كلمة المرور",
+  "authShowPassword": "إظهار كلمة المرور",
+  "authHidePassword": "إخفاء كلمة المرور",
+  "authPasswordHelper": "{count} أحرف على الأقل",
+  "@authPasswordHelper": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "authForgotPasswordLink": "نسيت كلمة المرور؟",
+  "authNoAccountCreateOne": "ليس لديك حساب؟ أنشئ واحدًا",
+  "authHaveAccountSignIn": "لديك حساب بالفعل؟ سجّل الدخول",
+  "authCheckEmailTitle": "تحقّق من بريدك الإلكتروني",
+  "authCheckEmailBody": "أرسلنا رابط تأكيد إلى {email}. افتحه ثم عد وسجّل الدخول.",
+  "@authCheckEmailBody": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "authResetPasswordTitle": "إعادة تعيين كلمة المرور",
+  "authResetIntro": "أدخل البريد الإلكتروني الذي سجّلت به وسنرسل لك رابط إعادة التعيين.",
+  "authResetSentIntro": "إن كان لهذا العنوان حساب، فرابط إعادة التعيين في طريقه إليك. يُفتح الرابط في متصفّحك.",
+  "authResetSendLink": "إرسال رابط إعادة التعيين",
+  "authResetSendAgain": "إرسال مرة أخرى",
+  "authBackToSignIn": "العودة إلى تسجيل الدخول",
+
+  "authValidatorEmailEmpty": "أدخل بريدك الإلكتروني.",
+  "authValidatorEmailInvalid": "أدخل بريدًا إلكترونيًا صالحًا.",
+  "authValidatorPasswordEmpty": "أدخل كلمة مرور.",
+  "authValidatorPasswordTooShort": "استخدم {count} أحرف على الأقل.",
+  "@authValidatorPasswordTooShort": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "authValidatorSignInPasswordEmpty": "أدخل كلمة المرور.",
+  "authValidatorConfirmPasswordEmpty": "أعد إدخال كلمة المرور.",
+  "authValidatorPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين.",
+
+  "accountSectionTitle": "الحساب",
+  "accountSectionSubtitle": "اختياري — تُحفظ تمارينك على هذا الجهاز في كل الأحوال",
+  "accountUnavailableTitle": "الحسابات غير متاحة",
+  "accountUnavailableSubtitle": "لم يُهيّأ تسجيل الدخول في هذه النسخة.",
+  "accountSignInSubtitle": "احفظ بياناتك مع حسابك",
+  "accountEmailNotConfirmedTitle": "البريد الإلكتروني غير مؤكَّد",
+  "accountEmailNotConfirmedSubtitle": "افتح الرابط الذي أرسلناه لإكمال إعداد حسابك.",
+  "accountPersonalDetailsTitle": "البيانات الشخصية",
+  "accountPersonalDetailsSubtitle": "الاسم، تاريخ الميلاد، الجنس، الطول",
+  "accountShowWelcomeTitle": "عرض شاشة الترحيب",
+  "accountShowWelcomeSubtitle": "المقدّمة التي تظهر عند أول تشغيل",
+
+  "sizeBytes": "{count} B",
+  "@sizeBytes": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sizeKilobytes": "{count} KB",
+  "@sizeKilobytes": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sizeMegabytes": "{count} MB",
+  "@sizeMegabytes": {
+    "placeholders": {
+      "count": { "type": "String" }
+    }
+  },
+
+  "programTitle": "البرنامج",
+  "programEditTitle": "تعديل البرنامج",
+  "programNewTitle": "برنامج جديد",
+  "programEditTooltip": "تعديل البرنامج",
+  "programDeleteTooltip": "حذف البرنامج",
+  "programLoadFailed": "تعذّر تحميل البرنامج",
+  "programNotFound": "البرنامج غير موجود",
+  "programNotFoundMessage": "ربما حُذف.",
+  "programGiveName": "أدخل اسمًا للبرنامج.",
+  "programAddDayValidation": "أضف يومًا واحدًا على الأقل.",
+  "programDayNeedsExercise": "يجب أن يحتوي كل يوم على تمرين واحد على الأقل.",
+  "programDeleteTitle": "حذف البرنامج؟",
+  "programDeleteBody": "سيؤدي هذا إلى حذف البرنامج وأيامه نهائيًا. لن تتأثر التمارين التي سبق أن سجّلتها منه.",
+  "programDetails": "التفاصيل",
+  "programNameField": "اسم البرنامج",
+  "programDescriptionField": "الوصف (اختياري)",
+  "programDays": "الأيام",
+  "programDaysRequired": "يحتاج البرنامج إلى يوم واحد على الأقل ليُحفظ",
+  "programAddDay": "إضافة يوم",
+  "programDayLabel": "اليوم {position}",
+  "@programDayLabel": {
+    "placeholders": { "position": { "type": "int" } }
+  },
+  "programDayOptions": "خيارات اليوم {position}",
+  "@programDayOptions": {
+    "placeholders": { "position": { "type": "int" } }
+  },
+  "programMoveUp": "نقل إلى أعلى",
+  "programMoveDown": "نقل إلى أسفل",
+  "programRemoveDay": "إزالة اليوم",
+  "programDayNameField": "اسم اليوم",
+  "programAddExercise": "إضافة تمرين",
+  "programNoExercises": "لا توجد تمارين بعد",
+  "programExerciseOptions": "خيارات {name}",
+  "@programExerciseOptions": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "programRemoveExercise": "إزالة التمرين",
+  "programSetsField": "المجموعات",
+  "programRepsField": "التكرارات",
+  "programType": "النوع",
+  "programBuiltIn": "مدمج",
+  "programCustom": "مخصّص",
+  "programDaysSubtitle": "بدء يوم يحمّل تمارينه ومجموعاته المستهدفة مسبقًا",
+  "programNoDays": "لا توجد أيام بعد",
+  "programNoDaysMessage": "عدّل هذا البرنامج لإضافة يوم تدريب.",
+  "programWorkoutInProgress": "يوجد تمرين جارٍ",
+  "programWorkoutInProgressBody": "لديك تمرين جارٍ بالفعل. سيؤدي بدء هذا التمرين إلى تجاهله مع مجموعاته المسجّلة.",
+  "programDiscardAndStart": "تجاهل وابدأ",
+  "programStart": "ابدأ",
+  "programTargetSets": "{count, plural, zero{لا مجموعات} one{مجموعة واحدة} two{مجموعتان} few{{count} مجموعات} many{{count} مجموعة} other{{count} مجموعة}}",
+  "@programTargetSets": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "libraryTitle": "مكتبة التمارين",
+  "libraryClearFilters": "مسح عوامل التصفية",
+  "librarySearchHint": "البحث عن تمارين",
+  "libraryClearSearch": "مسح البحث",
+  "libraryLoadFailed": "تعذّر تحميل التمارين",
+  "libraryFilterMuscle": "العضلة",
+  "libraryFilterEquipment": "المعدّات",
+  "libraryFilterPattern": "نمط الحركة",
+  "libraryFilterBy": "تصفية حسب {filter}",
+  "@libraryFilterBy": {
+    "placeholders": { "filter": { "type": "String" } }
+  },
+  "libraryFilterAllOf": "كل {filter}",
+  "@libraryFilterAllOf": {
+    "placeholders": { "filter": { "type": "String" } }
+  },
+  "libraryNoResults": "لم يُعثر على تمارين",
+  "libraryNoResultsMessage": "جرّب تغيير البحث أو عوامل التصفية.",
+  "libraryBodyweight": "وزن الجسم",
+  "libraryExerciseNotFound": "التمرين غير موجود",
+  "librarySearchYoutube": "البحث عن {name} على YouTube",
+  "@librarySearchYoutube": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "libraryInstructions": "التعليمات",
+  "libraryVideoDemo": "عرض فيديو",
+  "librarySearchOnYoutube": "البحث على YouTube",
+  "libraryYoutubeOpenFailed": "تعذّر فتح YouTube",
+
+  "progressRangeLabel": "{range, select, month{شهر} quarter{3 أشهر} year{سنة} all{الكل} other{الكل}}",
+  "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },
+  "progressStrengthChangeTitle": "تغيّر القوة",
+  "progressStrengthSubtitle": "{range, select, month{أفضل رفعة خلال آخر 30 يومًا مقارنةً بالأيام الثلاثين السابقة} quarter{أفضل رفعة خلال آخر 90 يومًا مقارنةً بالأيام التسعين السابقة} year{أفضل رفعة خلال آخر 12 شهرًا مقارنةً بالأشهر الاثني عشر السابقة} all{أفضل رفعة سجّلتها لكل تمرين} other{أفضل رفعة سجّلتها لكل تمرين}}",
+  "@progressStrengthSubtitle": { "placeholders": { "range": { "type": "String" } } },
+  "progressEstimatedOneRmTitle": "الحد الأقصى المقدّر لتكرار واحد",
+  "progressEstimatedOneRmSubtitle": "تقدير بمعادلة إبلي اعتمادًا على أثقل مجموعاتك المسجّلة",
+  "progressWeeklyVolumeTitle": "الحجم التدريبي الأسبوعي",
+  "progressWeeklyVolumeSubtitle": "{range, select, month{كل أسبوع خلال آخر 30 يومًا، بما فيها الأسابيع دون تدريب} quarter{كل أسبوع خلال آخر 90 يومًا، بما فيها الأسابيع دون تدريب} year{كل أسبوع خلال آخر 12 شهرًا، بما فيها الأسابيع دون تدريب} all{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب} other{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب}}",
+  "@progressWeeklyVolumeSubtitle": { "placeholders": { "range": { "type": "String" } } },
+  "progressConsistencyTitle": "المواظبة",
+  "progressEffortRecoveryTitle": "الجهد والاستشفاء",
+  "progressTrainingBalanceTitle": "توازن التدريب",
+  "progressWorkoutFrequencyTitle": "وتيرة التمرين",
+  "progressWeeklyVolumeByMuscleTitle": "الحجم الأسبوعي حسب العضلة",
+  "progressRepRangeDistributionTitle": "توزيع نطاقات التكرار",
+  "progressTrainingDaysTitle": "أيام التدريب",
+  "progressVolumeByMuscleGroupTitle": "الحجم حسب المجموعة العضلية",
+  "progressBodyMetricsTitle": "قياسات الجسم",
+  "progressBodyMetricsSubtitle": "تغيّر الوزن ونسبة الدهون مع مرور الوقت",
+  "progressStrengthEmpty": "سجّل بعض مجموعات العمل لمعرفة اتجاه كل رفعة.",
+  "progressRelativeStrengthTitle": "القوة النسبية",
+  "progressRelativeStrengthSubtitle": "الحد الأقصى المقدّر لتكرار واحد ÷ أحدث وزن للجسم",
+  "progressRelativeStrengthRatio": "{ratio}×",
+  "@progressRelativeStrengthRatio": { "placeholders": { "ratio": { "type": "String" } } },
+  "progressStrengthSemantic": "{direction, select, up{{exercise}، {estimate}، تحسّن بنسبة {percent} بالمئة} down{{exercise}، {estimate}، تراجع بنسبة {percent} بالمئة} other{{exercise}، {estimate}، تغيّر بنسبة {percent} بالمئة}}",
+  "@progressStrengthSemantic": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" }, "direction": { "type": "String" }, "percent": { "type": "int" } } },
+  "progressStrengthSemanticNoChange": "{exercise}، {estimate}",
+  "@progressStrengthSemanticNoChange": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" } } },
+  "progressStrengthNewThisPeriod": "جديد خلال هذه الفترة",
+  "progressStrengthPreviousBest": "كان {estimate}",
+  "@progressStrengthPreviousBest": { "placeholders": { "estimate": { "type": "String" } } },
+  "progressInsightsSemantic": "استنتاجات التقدّم",
+  "progressInsightsTitle": "استنتاجات",
+  "progressInsightsEmpty": "واصل تسجيل التمارين للحصول على استنتاجات مخصّصة عن تقدّمك.",
+  "progressInsightTargetStrength": "القوة",
+  "progressInsightTargetVolume": "الحجم التدريبي",
+  "progressInsightTargetConsistency": "المواظبة",
+  "progressInsightTargetBalance": "التوازن",
+  "progressInsightStrengthHeadline": "{direction, select, up{تحسّن أداء {exercise} بنسبة {percent}%} down{تراجع أداء {exercise} بنسبة {percent}%} other{تغيّر أداء {exercise} بنسبة {percent}%}}",
+  "@progressInsightStrengthHeadline": { "placeholders": { "direction": { "type": "String" }, "exercise": { "type": "String" }, "percent": { "type": "int" } } },
+  "progressInsightStrengthFigure": "الحد الأقصى المقدّر لتكرار واحد: {estimate}",
+  "@progressInsightStrengthFigure": { "placeholders": { "estimate": { "type": "String" } } },
+  "progressInsightConsistencyHeadline": "المواظبة على التدريب آخذة في التراجع",
+  "progressInsightConsistencyFigure": "بمتوسط {average} جلسة أسبوعيًا",
+  "@progressInsightConsistencyFigure": { "placeholders": { "average": { "type": "String" } } },
+  "progressInsightVolumeHeadline": "الحجم التدريبي الأسبوعي آخذ في الانخفاض",
+  "progressInsightVolumeFigure": "أقل بنسبة {percent}% من الأسابيع السابقة",
+  "@progressInsightVolumeFigure": { "placeholders": { "percent": { "type": "int" } } },
+  "progressInsightPersonalRecordsHeadline": "أرقامك القياسية الشخصية الجديدة تتوالى",
+  "progressInsightPersonalRecordsFigure": "{count, plural, zero{لا أرقام قياسية حديثة} one{رقم قياسي شخصي حديث واحد} two{رقمان قياسيان شخصيان حديثان} few{{count} أرقام قياسية شخصية حديثة} many{{count} رقمًا قياسيًا شخصيًا حديثًا} other{{count} رقم قياسي شخصي حديث}}",
+  "@progressInsightPersonalRecordsFigure": { "placeholders": { "count": { "type": "int" } } },
+  "progressInsightNeglectedHeadline": "لم تحظَ عضلة {muscle} بالاهتمام الكافي",
+  "@progressInsightNeglectedHeadline": { "placeholders": { "muscle": { "type": "String" } } },
+  "progressInsightNeglectedFigure": "أقل من 10% من الحجم السابق",
+  "progressInsightSubtitle": "{figure} · راجع قسم {target}",
+  "@progressInsightSubtitle": { "placeholders": { "figure": { "type": "String" }, "target": { "type": "String" } } },
+  "progressInsightSemantic": "{headline}. {figure}. راجع قسم {target}.",
+  "@progressInsightSemantic": { "placeholders": { "headline": { "type": "String" }, "figure": { "type": "String" }, "target": { "type": "String" } } },
+  "progressChartLoadFailed": "تعذّر تحميل هذا المخطط",
+  "progressOneRmEmpty": "أكمل مجموعات موزونة لعرض اتجاهات القوة.",
+  "progressExerciseField": "التمرين",
+  "progressExerciseWithSessions": "{exercise} · {sessions}",
+  "@progressExerciseWithSessions": { "placeholders": { "exercise": { "type": "String" }, "sessions": { "type": "String" } } },
+  "progressExerciseRangeEmpty": "لا توجد مجموعات مكتملة لهذا التمرين ضمن الفترة المحدّدة.",
+  "progressOneRmFromSessions": "بدأ من {estimate} على مدى {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستين} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}}",
+  "@progressOneRmFromSessions": { "placeholders": { "estimate": { "type": "String" }, "count": { "type": "int" } } },
+  "progressOneRmMonthlyTrend": "{change} شهريًا · {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستان} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}}",
+  "@progressOneRmMonthlyTrend": { "placeholders": { "change": { "type": "String" }, "count": { "type": "int" } } },
+  "progressOneDataPoint": "نقطة بيانات واحدة ضمن هذه الفترة",
+  "progressSessionVolumeTitle": "حجم الجلسة التدريبي",
+  "progressSessionVolumeSubtitle": "حجم مجموعات العمل للرفعة المحدّدة",
+  "progressVolumeEmpty": "أكمل تمرينًا لعرض الحجم التدريبي.",
+  "progressVolumeActiveWeeks": "خلال {activeWeeks, plural, zero{لا أسابيع نشطة} one{أسبوع نشط واحد} two{أسبوعين نشطين} few{{activeWeeks} أسابيع نشطة} many{{activeWeeks} أسبوعًا نشطًا} other{{activeWeeks} أسبوع نشط}} من أصل {totalWeeks, plural, one{أسبوع واحد} two{أسبوعين} few{{totalWeeks} أسابيع} many{{totalWeeks} أسبوعًا} other{{totalWeeks} أسبوع}}",
+  "@progressVolumeActiveWeeks": { "placeholders": { "activeWeeks": { "type": "int" }, "totalWeeks": { "type": "int" } } },
+  "progressCurrentStreak": "سلسلة المواظبة الحالية",
+  "progressLongestStreak": "أطول سلسلة مواظبة",
+  "progressAdherenceTarget": "الالتزام · {target}/أسبوع",
+  "@progressAdherenceTarget": { "placeholders": { "target": { "type": "int" } } },
+  "progressRpeEmpty": "سجّل معدل الجهد المدرك للمجموعات المكتملة لعرض الجهد والحمل معًا.",
+  "progressSessionRpeTitle": "جهد الجلسة مقارنةً بالحجم",
+  "progressSessionRpeValue": "معدل الجهد المدرك {rpe} · {volume}",
+  "@progressSessionRpeValue": { "placeholders": { "rpe": { "type": "String" }, "volume": { "type": "String" } } },
+  "progressRestEmpty": "سجّل الراحة قبل المجموعات لعرض نمط استشفائك.",
+  "progressRestTimeTitle": "مدة الراحة",
+  "progressAverageRestSeconds": "{seconds, plural, zero{متوسط الراحة صفر ثانية} one{متوسط الراحة ثانية واحدة} two{متوسط الراحة ثانيتان} few{متوسط الراحة {seconds} ثوانٍ} many{متوسط الراحة {seconds} ثانيةً} other{متوسط الراحة {seconds} ثانية}}",
+  "@progressAverageRestSeconds": { "placeholders": { "seconds": { "type": "int" } } },
+  "progressPushPull": "الدفع / السحب",
+  "progressUpperLower": "الجزء العلوي / السفلي",
+  "progressReferenceBand": "النطاق المرجعي: 0.75–1.33",
+  "progressRatioInsufficient": "البيانات غير كافية",
+  "progressRatioBalanced": "متوازن",
+  "progressRatioOutsideBand": "خارج النطاق المرجعي",
+  "progressRatioValueStatus": "{ratio} · {status}",
+  "@progressRatioValueStatus": { "placeholders": { "ratio": { "type": "String" }, "status": { "type": "String" } } },
+  "progressRatioSemantic": "{label}: {ratio}، {status}",
+  "@progressRatioSemantic": { "placeholders": { "label": { "type": "String" }, "ratio": { "type": "String" }, "status": { "type": "String" } } },
+  "progressRatioInsufficientSemantic": "{label}: البيانات غير كافية",
+  "@progressRatioInsufficientSemantic": { "placeholders": { "label": { "type": "String" } } },
+  "progressWeeklyMuscleEmpty": "أكمل مجموعات عمل لمقارنة حجم العضلات مع مرور الوقت.",
+  "progressRepRangeOneToFive": "1–5 تكرارات",
+  "progressRepRangeSixToTwelve": "6–12 تكرارًا",
+  "progressRepRangeThirteenPlus": "13 تكرارًا فأكثر",
+  "progressWeekdayShort": "{weekday, select, monday{ن} tuesday{ث} wednesday{ر} thursday{خ} friday{ج} saturday{س} sunday{ح} other{؟}}",
+  "@progressWeekdayShort": { "placeholders": { "weekday": { "type": "String" } } },
+  "progressWeekdayFull": "{weekday, select, monday{الاثنين} tuesday{الثلاثاء} wednesday{الأربعاء} thursday{الخميس} friday{الجمعة} saturday{السبت} sunday{الأحد} other{يوم غير معروف}}",
+  "@progressWeekdayFull": { "placeholders": { "weekday": { "type": "String" } } },
+  "progressWeekdaySemantic": "{weekday}: {trainingDays, plural, zero{لا أيام تدريب} one{يوم تدريب واحد} two{يوما تدريب} few{{trainingDays} أيام تدريب} many{{trainingDays} يوم تدريب} other{{trainingDays} يوم تدريب}}، {workouts, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{workouts} تمارين} many{{workouts} تمرينًا} other{{workouts} تمرين}}",
+  "@progressWeekdaySemantic": { "placeholders": { "weekday": { "type": "String" }, "trainingDays": { "type": "int" }, "workouts": { "type": "int" } } },
+  "progressFrequencyEmpty": "أكمل تمارين لعرض وتيرتك الأسبوعية.",
+  "progressAveragePerWeek": "{average} أسبوعيًا",
+  "@progressAveragePerWeek": { "placeholders": { "average": { "type": "String" } } },
+  "progressFrequencySummary": "{workouts, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{workouts} تمارين} many{{workouts} تمرينًا} other{{workouts} تمرين}} خلال {weeks, plural, one{أسبوع واحد} two{أسبوعين} few{{weeks} أسابيع} many{{weeks} أسبوعًا} other{{weeks} أسبوع}} · تدربت في {activeWeeks, plural, zero{صفر أسبوع} one{أسبوع واحد} two{أسبوعين} few{{activeWeeks} أسابيع} many{{activeWeeks} أسبوعًا} other{{activeWeeks} أسبوع}}",
+  "@progressFrequencySummary": { "placeholders": { "workouts": { "type": "int" }, "weeks": { "type": "int" }, "activeWeeks": { "type": "int" } } },
+  "progressWorkoutCount": "{count, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{count} تمارين} many{{count} تمرينًا} other{{count} تمرين}}",
+  "@progressWorkoutCount": { "placeholders": { "count": { "type": "int" } } },
+  "progressWeekOf": "أسبوع {date}",
+  "@progressWeekOf": { "placeholders": { "date": { "type": "String" } } },
+  "progressMuscleGroupEmpty": "أكمل تمرينًا لعرض توزيع الحجم على المجموعات العضلية.",
+  "progressOtherMuscles": "أخرى",
+  "progressMostTrained": "الأكثر تدريبًا · {volume}",
+  "@progressMostTrained": { "placeholders": { "volume": { "type": "String" } } },
+  "progressChartInteractionHelp": "اضغط على أحد الأعمدة أو مرّر المؤشر فوقه لعرض التفاصيل.",
+  "progressMuscleVolumeDetail": "{muscle}: {volume}",
+  "@progressMuscleVolumeDetail": { "placeholders": { "muscle": { "type": "String" }, "volume": { "type": "String" } } },
+  "progressNoMeasurementsTitle": "لا توجد قياسات بعد",
+  "progressNoMeasurementsMessage": "تتبّع الوزن ونسبة الدهون مع مرور الوقت.",
+  "progressNoMeasurementsInRange": "{range, select, month{لم يُسجَّل أي قياس خلال آخر 30 يومًا.} quarter{لم يُسجَّل أي قياس خلال آخر 90 يومًا.} year{لم يُسجَّل أي قياس خلال آخر 12 شهرًا.} all{لم يُسجَّل أي قياس بعد.} other{لم يُسجَّل أي قياس بعد.}}",
+  "@progressNoMeasurementsInRange": { "placeholders": { "range": { "type": "String" } } },
+  "progressLogMeasurement": "تسجيل قياس",
+  "progressBodyFatValue": "نسبة الدهون {percentage}%",
+  "@progressBodyFatValue": { "placeholders": { "percentage": { "type": "String" } } },
+  "progressBmiSummary": "مؤشر كتلة الجسم {value} · {category}",
+  "@progressBmiSummary": { "placeholders": { "value": { "type": "String" }, "category": { "type": "String" } } },
+  "progressBmiUnderweight": "نقص في الوزن",
+  "progressBmiHealthy": "ضمن النطاق الصحي",
+  "progressBmiOverweight": "زيادة في الوزن",
+  "progressBmiObesity": "ضمن نطاق السمنة",
+  "progressViewAllMeasurements": "عرض كل القياسات ({count, plural, one{قياس إضافي واحد} two{قياسان إضافيان} few{{count} قياسات إضافية} many{{count} قياسًا إضافيًا} other{{count} قياس إضافي}})",
+  "@progressViewAllMeasurements": { "placeholders": { "count": { "type": "int" } } },
+  "progressMeasurementsTitle": "القياسات",
+  "progressMeasurementsLoadFailed": "تعذّر تحميل القياسات",
+  "progressMeasurementOptions": "خيارات القياس",
+  "progressBodyMetricDateAndFat": "{date} · نسبة الدهون {percentage}%",
+  "@progressBodyMetricDateAndFat": { "placeholders": { "date": { "type": "String" }, "percentage": { "type": "String" } } },
+  "progressEditMeasurement": "تعديل القياس",
+  "progressWeightField": "الوزن ({unit})",
+  "@progressWeightField": { "placeholders": { "unit": { "type": "String" } } },
+  "progressBodyFatOptionalField": "نسبة الدهون % (اختياري)",
+  "progressMetricSemantic": "{label}: {value}",
+  "@progressMetricSemantic": { "placeholders": { "label": { "type": "String" }, "value": { "type": "String" } } }
+}

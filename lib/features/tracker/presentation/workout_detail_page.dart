@@ -9,6 +9,7 @@ import '../../../core/database/tables/workout_sets.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -30,14 +31,15 @@ class WorkoutDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(workoutDetailProvider(workoutId));
+    final AppLocalizations l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Workout'),
+        title: Text(l10n.workoutDetailTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit workout',
+            tooltip: l10n.workoutEditTooltip,
             onPressed: () => context.pushNamed(
               Routes.workoutEditName,
               pathParameters: {'id': workoutId},
@@ -45,7 +47,7 @@ class WorkoutDetailPage extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Delete workout',
+            tooltip: l10n.workoutDeleteTooltip,
             onPressed: () => _confirmDelete(context, ref),
           ),
         ],
@@ -53,17 +55,17 @@ class WorkoutDetailPage extends ConsumerWidget {
       body: detailAsync.when(
         data: (details) {
           if (details == null) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.search_off,
-              title: 'Workout not found',
-              message: 'It may have already been deleted.',
+              title: l10n.workoutNotFound,
+              message: l10n.workoutNotFoundMessage,
             );
           }
           return _WorkoutDetailBody(details: details, workoutId: workoutId);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
-          title: 'Failed to load workout',
+          title: l10n.workoutLoadFailed,
           details: error.toString(),
           onRetry: () => ref.invalidate(workoutDetailProvider(workoutId)),
         ),
@@ -72,19 +74,20 @@ class WorkoutDetailPage extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete workout?'),
-        content: const Text('This cannot be undone.'),
+        title: Text(l10n.workoutDeleteConfirmTitle),
+        content: Text(l10n.workoutDeleteConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton.tonal(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(l10n.actionDelete),
           ),
         ],
       ),
@@ -105,6 +108,8 @@ class _WorkoutDetailBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = context.l10n;
+    final DateFormatters dates = DateFormatters.of(context);
     final workout = details.workout;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final bool isPr = ref
@@ -121,7 +126,7 @@ class _WorkoutDetailBody extends ConsumerWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  DateFormatters.relativeDay(workout.startedAt),
+                  dates.relativeDay(workout.startedAt),
                   style: theme.textTheme.headlineSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -131,20 +136,22 @@ class _WorkoutDetailBody extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
-            '${DateFormatters.full(workout.startedAt)} · '
-            '${DateFormatters.time(workout.startedAt)}',
+            l10n.workoutDateTime(
+              dates.full(workout.startedAt),
+              dates.time(workout.startedAt),
+            ),
             style: AppTypography.caption(theme),
           ),
           const SizedBox(height: AppSpacing.xl),
           StatStrip(
             stats: <Stat>[
               Stat(
-                label: 'Volume',
+                label: l10n.statVolume,
                 value: UnitFormatters.volume(workout.totalVolumeKg, unit),
                 emphasis: true,
               ),
               Stat(
-                label: 'Duration',
+                label: l10n.statDuration,
                 value: workout.durationSeconds == null
                     ? '—'
                     : UnitFormatters.durationShort(
@@ -152,7 +159,7 @@ class _WorkoutDetailBody extends ConsumerWidget {
                       ),
               ),
               Stat(
-                label: 'Exercises',
+                label: l10n.statExercises,
                 value: '${details.exercises.length}',
               ),
             ],
@@ -162,7 +169,8 @@ class _WorkoutDetailBody extends ConsumerWidget {
             _ExerciseBreakdown(
               exerciseId: exercise.exerciseId,
               workoutId: workoutId,
-              name: details.exerciseNames[exercise.id] ?? 'Unknown exercise',
+              name: details.exerciseNames[exercise.id] ??
+                  l10n.workoutUnknownExercise,
               sets: details.setsByExercise[exercise.id] ?? const <WorkoutSet>[],
               unit: unit,
             ),
@@ -243,7 +251,9 @@ class _ExerciseBreakdown extends ConsumerWidget {
               _SetLine(index: i + 1, set: sets[i], unit: unit),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Volume ${UnitFormatters.volume(volumeKg, unit)}',
+              context.l10n.workoutVolumeLine(
+                UnitFormatters.volume(volumeKg, unit),
+              ),
               style: AppTypography.caption(theme),
             ),
           ],
@@ -278,7 +288,10 @@ class _TopSet extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text('TOP SET', style: AppTypography.eyebrow(theme)),
+        Text(
+          context.l10n.workoutTopSet,
+          style: AppTypography.eyebrow(theme),
+        ),
         const SizedBox(height: AppSpacing.xs),
         Row(
           children: <Widget>[
@@ -305,12 +318,13 @@ class _TopSet extends StatelessWidget {
         const SizedBox(height: AppSpacing.xxs),
         Text(
           performance.isFirstTime
-              ? 'First time logged · est. 1RM '
-                  '${UnitFormatters.estimate(performance.bestOneRmKg, unit)}'
-              : 'Est. 1RM '
-                  '${UnitFormatters.estimate(performance.bestOneRmKg, unit)}'
-                  ' · previous best '
-                  '${UnitFormatters.estimate(performance.previousBestKg!, unit)}',
+              ? context.l10n.workoutFirstTimeLogged(
+                  UnitFormatters.estimate(performance.bestOneRmKg, unit),
+                )
+              : context.l10n.workoutOneRmWithPrevious(
+                  UnitFormatters.estimate(performance.bestOneRmKg, unit),
+                  UnitFormatters.estimate(performance.previousBestKg!, unit),
+                ),
           style: AppTypography.caption(theme),
         ),
       ],
@@ -336,9 +350,15 @@ class _SetLine extends StatelessWidget {
     final bool done = set.isCompleted;
 
     return Semantics(
-      label: 'Set $index, ${UnitFormatters.weight(set.weightKg, unit)} '
-          'for ${set.reps} reps${done ? ', completed' : ', not completed'}'
-          '${set.isWarmup ? ', warm-up' : ''}',
+      label: context.l10n.workoutSetSemantic(
+        index,
+        UnitFormatters.weight(set.weightKg, unit),
+        set.reps,
+        done
+            ? context.l10n.workoutSetCompleted
+            : context.l10n.workoutSetNotCompleted,
+        set.isWarmup ? context.l10n.workoutSetWarmup : '',
+      ),
       child: ExcludeSemantics(
         child: Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),

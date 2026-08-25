@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 
 /// Month-grid view of workout history: a marker on every day that has at
@@ -25,7 +26,14 @@ class HistoryCalendar extends StatelessWidget {
   final ValueChanged<DateTime> onMonthChanged;
   final ValueChanged<DateTime> onDayTap;
 
-  static final DateFormat _monthYear = DateFormat('MMMM yyyy');
+  /// Rebuilt per locale so the month name follows the app's language.
+  static final Map<String, DateFormat> _monthYearByLocale =
+      <String, DateFormat>{};
+
+  static DateFormat _monthYear(String locale) => _monthYearByLocale.putIfAbsent(
+        locale,
+        () => DateFormat('MMMM yyyy', locale),
+      );
 
   bool get _isCurrentMonth {
     final DateTime now = DateTime.now();
@@ -45,21 +53,21 @@ class HistoryCalendar extends StatelessWidget {
           children: <Widget>[
             IconButton(
               icon: const Icon(Icons.chevron_left),
-              tooltip: 'Previous month',
+              tooltip: context.l10n.calendarPreviousMonth,
               onPressed: () => onMonthChanged(
                 DateTime(visibleMonth.year, visibleMonth.month - 1),
               ),
             ),
             Expanded(
               child: Text(
-                _monthYear.format(visibleMonth),
+                _monthYear(context.localeName).format(visibleMonth),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right),
-              tooltip: 'Next month',
+              tooltip: context.l10n.calendarNextMonth,
               onPressed: _isCurrentMonth
                   ? null
                   : () => onMonthChanged(
@@ -152,7 +160,9 @@ class _DayCell extends StatelessWidget {
 
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Semantics(
-      label: isMarked ? '${date.day}, has a workout' : '${date.day}',
+      label: isMarked
+          ? context.l10n.calendarDayWithWorkout(date.day)
+          : '${date.day}',
       button: isMarked,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.pill),

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/database_providers.dart';
 import '../../../core/formatters/unit_formatters.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -19,6 +20,7 @@ import '../../../core/widgets/section_header.dart';
 import '../domain/timer_controller.dart';
 import '../domain/timer_preset.dart';
 import '../domain/timer_settings_controller.dart';
+import 'timer_preset_labels.dart';
 
 /// Timer hub (branch index 3). Quick-start presets, a custom builder, and
 /// feedback toggles. Starting a session requests notification permission in
@@ -28,16 +30,18 @@ class TimerPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = context.l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Timer')),
+      appBar: AppBar(title: Text(l10n.navTimer)),
       body: SafeArea(
         child: PageBody(
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
             children: [
-              const SectionHeader(
-                title: 'Quick start',
-                subtitle: 'Tap a preset to begin immediately',
+              SectionHeader(
+                title: l10n.timerQuickStartTitle,
+                subtitle: l10n.timerQuickStartSubtitle,
               ),
               for (final TimerPreset preset in <TimerPreset>[
                 TimerPresets.tabata(),
@@ -49,12 +53,12 @@ class TimerPage extends ConsumerWidget {
                   onTap: () => startTimer(context, ref, preset),
                 ),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: 'Saved presets'),
+              SectionHeader(title: l10n.timerSavedPresets),
               const _SavedPresets(),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(
-                title: 'Custom',
-                subtitle: 'Build an interval and start or save it',
+              SectionHeader(
+                title: l10n.timerCustomTitle,
+                subtitle: l10n.timerCustomSubtitle,
               ),
               _CustomBuilder(
                 onStart: (preset) => startTimer(context, ref, preset),
@@ -63,15 +67,15 @@ class TimerPage extends ConsumerWidget {
                   ref.invalidate(savedTimerPresetsProvider);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Preset saved.')),
+                      SnackBar(content: Text(context.l10n.timerPresetSaved)),
                     );
                   }
                 },
               ),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(
-                title: 'Feedback',
-                subtitle: 'Also available in Settings',
+              SectionHeader(
+                title: l10n.settingsFeedbackTitle,
+                subtitle: l10n.timerFeedbackSubtitle,
               ),
               const _FeedbackToggles(),
             ],
@@ -128,8 +132,7 @@ class _SavedPresets extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
-                      'No saved presets yet. Build one below and tap '
-                      '"Save preset" to keep it here.',
+                      context.l10n.timerNoSavedPresets,
                       style: AppTypography.caption(theme),
                     ),
                   ),
@@ -157,7 +160,7 @@ class _SavedPresets extends ConsumerWidget {
       ),
       error: (error, _) => AppCard(
         child: ErrorView(
-          title: 'Unable to load saved presets',
+          title: context.l10n.timerPresetsLoadFailed,
           details: error.toString(),
           compact: true,
           onRetry: () => ref.invalidate(savedTimerPresetsProvider),
@@ -187,8 +190,10 @@ class _PresetCard extends StatelessWidget {
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
-        semanticLabel: 'Start ${preset.name}, '
-            '${UnitFormatters.duration(total)} total',
+        semanticLabel: context.l10n.timerPresetSemantic(
+          preset.displayName(context.l10n),
+          UnitFormatters.duration(total),
+        ),
         child: Row(
           children: [
             Expanded(
@@ -197,13 +202,13 @@ class _PresetCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    preset.name,
+                    preset.displayName(context.l10n),
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    preset.description,
+                    preset.displayDescription(context.l10n),
                     style: AppTypography.caption(theme),
                   ),
                 ],
@@ -222,8 +227,7 @@ class _PresetCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${preset.totalIntervals} interval'
-                  '${preset.totalIntervals == 1 ? '' : 's'}',
+                  context.l10n.intervalCount(preset.totalIntervals),
                   style: AppTypography.eyebrow(theme),
                 ),
               ],
@@ -273,8 +277,8 @@ class _CustomBuilderState extends ConsumerState<_CustomBuilder> {
 
     if (work <= 0 || rest <= 0 || rounds <= 0 || warmup < 0 || cooldown < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Work, rest and rounds must be positive.'),
+        SnackBar(
+          content: Text(context.l10n.timerPositiveValuesRequired),
         ),
       );
       return null;
@@ -301,6 +305,8 @@ class _CustomBuilderState extends ConsumerState<_CustomBuilder> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+
     // Paired side by side because that is how the values are reasoned
     // about — work against rest, warm-up against cool-down — and it keeps
     // five fields from becoming a five-screen-tall stack.
@@ -311,26 +317,29 @@ class _CustomBuilderState extends ConsumerState<_CustomBuilder> {
           Row(
             children: <Widget>[
               Expanded(
-                child: _NumberField(label: 'Work (s)', controller: _work),
+                child: _NumberField(label: l10n.timerFieldWork, controller: _work),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: _NumberField(label: 'Rest (s)', controller: _rest),
+                child: _NumberField(label: l10n.timerFieldRest, controller: _rest),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          _NumberField(label: 'Rounds', controller: _rounds),
+          _NumberField(label: l10n.timerFieldRounds, controller: _rounds),
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: <Widget>[
               Expanded(
-                child: _NumberField(label: 'Warm-up (s)', controller: _warmup),
+                child: _NumberField(
+                  label: l10n.timerFieldWarmup,
+                  controller: _warmup,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _NumberField(
-                  label: 'Cool-down (s)',
+                  label: l10n.timerFieldCooldown,
                   controller: _cooldown,
                 ),
               ),
@@ -340,13 +349,13 @@ class _CustomBuilderState extends ConsumerState<_CustomBuilder> {
           FilledButton.icon(
             onPressed: _submit,
             icon: const Icon(Icons.play_arrow),
-            label: const Text('Start custom'),
+            label: Text(l10n.timerStartCustom),
           ),
           const SizedBox(height: AppSpacing.sm),
           OutlinedButton.icon(
             onPressed: _save,
             icon: const Icon(Icons.bookmark_add_outlined),
-            label: const Text('Save preset'),
+            label: Text(l10n.timerSavePreset),
           ),
         ],
       ),
@@ -388,12 +397,12 @@ class _FeedbackToggles extends ConsumerWidget {
       child: Column(
         children: [
           SwitchListTile(
-            title: const Text('Sound cues'),
+            title: Text(context.l10n.settingsSoundCues),
             value: settings.soundEnabled,
             onChanged: controller.setSoundEnabled,
           ),
           SwitchListTile(
-            title: const Text('Haptics'),
+            title: Text(context.l10n.settingsHaptics),
             value: settings.hapticsEnabled,
             onChanged: controller.setHapticsEnabled,
           ),

@@ -19,6 +19,7 @@ import '../../features/tracker/presentation/active_workout_page.dart';
 import '../../features/tracker/presentation/tracker_page.dart';
 import '../../features/tracker/presentation/workout_detail_page.dart';
 import '../../features/tracker/presentation/workout_edit_page.dart';
+import '../l10n/l10n_extension.dart';
 import 'routes.dart';
 import 'scaffold_with_nav_bar.dart';
 
@@ -197,8 +198,10 @@ GoRouter createRouter({String initialLocation = Routes.home}) {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Not found')),
-      body: Center(child: Text('No route for ${state.uri}')),
+      appBar: AppBar(title: Text(context.l10n.routeNotFoundTitle)),
+      body: Center(
+        child: Text(context.l10n.routeNotFoundBody('${state.uri}')),
+      ),
     ),
   );
 }

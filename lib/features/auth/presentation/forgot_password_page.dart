@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/l10n_extension.dart';
 import '../domain/auth_controller.dart';
 import '../domain/auth_service.dart';
 import '../domain/auth_validators.dart';
+import 'auth_failure_messages.dart';
 import 'widgets/auth_form_scaffold.dart';
 
 /// Sends a password-reset link.
@@ -36,32 +38,32 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+
     return AuthFormScaffold(
-      title: 'Reset password',
-      intro: _sent
-          ? 'If that address has an account, a reset link is on its way. '
-              'The link opens in your browser.'
-          : 'Enter the email you signed up with and we\'ll send a reset link.',
+      title: l10n.authResetPasswordTitle,
+      intro: _sent ? l10n.authResetSentIntro : l10n.authResetIntro,
       formKey: _formKey,
       busy: _busy,
       errorMessage: _error,
-      primaryLabel: _sent ? 'Send again' : 'Send reset link',
+      primaryLabel:
+          _sent ? l10n.authResetSendAgain : l10n.authResetSendLink,
       onSubmit: _submit,
       fields: <Widget>[
         TextFormField(
           controller: _email,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: InputDecoration(labelText: l10n.authFieldEmail),
           keyboardType: TextInputType.emailAddress,
           autofillHints: const <String>[AutofillHints.email],
           textInputAction: TextInputAction.done,
           autocorrect: false,
-          validator: AuthValidators.email,
+          validator: (String? value) => AuthValidators.email(value, l10n),
           onFieldSubmitted: (_) => _submit(),
         ),
       ],
       footer: TextButton(
         onPressed: _busy ? null : () => context.pop(),
-        child: const Text('Back to sign in'),
+        child: Text(l10n.authBackToSignIn),
       ),
     );
   }
@@ -83,7 +85,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       // Note: a nonexistent address is *not* surfaced as an error. Supabase
       // returns success either way, on purpose — telling a stranger which
       // emails have accounts is an account-enumeration leak.
-      if (mounted) setState(() => _error = failure.message);
+      if (mounted) setState(() => _error = failure.messageFor(context.l10n));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

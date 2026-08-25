@@ -8,12 +8,14 @@ import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/muscles.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/filter_chip_group.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/sheet_handle.dart';
+import '../domain/exercise_catalogue_l10n.dart';
 
 /// Placeholder rows shown while the catalogue query resolves.
 const int _skeletonRows = 6;
@@ -88,7 +90,7 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
               0,
             ),
             child: Text(
-              'Add exercise',
+              context.l10n.workoutAddExercise,
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
@@ -98,12 +100,12 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
               controller: _searchController,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Search exercises...',
+                hintText: context.l10n.librarySearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
-                        tooltip: 'Clear search',
+                        tooltip: context.l10n.libraryClearSearch,
                         onPressed: () {
                           _searchController.clear();
                           _commitSearch('');
@@ -120,11 +122,11 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: FilterChipGroup<Muscle>(
-                label: 'Muscle',
+                label: context.l10n.libraryFilterMuscle,
                 value:
                     muscles.where((m) => m.id == _selectedMuscleId).firstOrNull,
                 options: muscles,
-                getLabel: (m) => m.displayName,
+                getLabel: (m) => m.localizedName(context),
                 onChanged: (v) => setState(() => _selectedMuscleId = v?.id),
               ),
             ),
@@ -134,10 +136,10 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
             child: exercisesAsync.when(
               data: (exercises) {
                 if (exercises.isEmpty) {
-                  return const EmptyState(
+                  return EmptyState(
                     icon: Icons.search_off,
-                    title: 'No exercises found',
-                    message: 'Try adjusting your search or filter.',
+                    title: context.l10n.libraryNoResults,
+                    message: context.l10n.libraryNoResultsMessage,
                   );
                 }
                 return ListView.builder(
@@ -150,12 +152,15 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                     final summary = exercises[index];
                     final subtitle = [
                       if (summary.primaryMuscle != null)
-                        summary.primaryMuscle!.displayName,
+                        summary.primaryMuscle!.localizedName(context),
                       if (summary.equipmentNames.isNotEmpty)
-                        summary.equipmentNames.join(', '),
+                        summary.equipmentNames
+                            .map((String e) =>
+                                localizedEquipmentName(context, e))
+                            .join('، '),
                     ].join(' · ');
                     return ListTile(
-                      title: Text(summary.exercise.name),
+                      title: Text(summary.exercise.displayName(context)),
                       subtitle: subtitle.isEmpty ? null : Text(subtitle),
                       trailing: Icon(
                         Icons.add_circle_outline,
@@ -187,7 +192,7 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                 ],
               ),
               error: (error, _) => ErrorView(
-                title: 'Failed to load exercises',
+                title: context.l10n.libraryLoadFailed,
                 details: error.toString(),
                 compact: true,
               ),

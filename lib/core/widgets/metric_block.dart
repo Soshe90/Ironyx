@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n_extension.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import 'error_view.dart';
@@ -23,7 +24,7 @@ class MetricBlock extends StatelessWidget {
     this.size = AppTypography.metricSizeMd,
     this.isLoading = false,
     this.error,
-    this.emptyCaption = 'No data yet',
+    this.emptyCaption,
     super.key,
   });
 
@@ -42,7 +43,10 @@ class MetricBlock extends StatelessWidget {
 
   final bool isLoading;
   final Object? error;
-  final String emptyCaption;
+
+  /// Defaults to the generic "no data yet" caption; see [ErrorView.title] for
+  /// why this is nullable rather than a literal default.
+  final String? emptyCaption;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +55,7 @@ class MetricBlock extends StatelessWidget {
 
     if (error != null) {
       return ErrorView(
-        title: 'Could not load',
+        title: context.l10n.metricCouldNotLoad,
         details: error.toString(),
         compact: true,
       );
@@ -105,7 +109,7 @@ class MetricBlock extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
-            caption ?? emptyCaption,
+            caption ?? emptyCaption ?? context.l10n.metricNoDataYet,
             style: AppTypography.caption(theme),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../l10n/l10n_extension.dart';
 import '../widgets/responsive.dart';
 
 /// Persistent shell around the five branch navigators.
@@ -12,17 +13,24 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  static const List<_Destination> _destinations = <_Destination>[
-    _Destination('Home', Icons.home_outlined, Icons.home),
-    _Destination('Tracker', Icons.add_box_outlined, Icons.add_box),
-    _Destination(
-      'Library',
-      Icons.fitness_center_outlined,
-      Icons.fitness_center,
-    ),
-    _Destination('Timer', Icons.timer_outlined, Icons.timer),
-    _Destination('Progress', Icons.insights_outlined, Icons.insights),
-  ];
+  /// Built per-locale rather than held in a `const` list: the labels come
+  /// from `AppLocalizations`, which needs a context.
+  static List<_Destination> _destinationsFor(AppLocalizations l10n) =>
+      <_Destination>[
+        _Destination(l10n.navHome, Icons.home_outlined, Icons.home),
+        _Destination(l10n.navTracker, Icons.add_box_outlined, Icons.add_box),
+        _Destination(
+          l10n.navLibrary,
+          Icons.fitness_center_outlined,
+          Icons.fitness_center,
+        ),
+        _Destination(l10n.navTimer, Icons.timer_outlined, Icons.timer),
+        _Destination(
+          l10n.navProgress,
+          Icons.insights_outlined,
+          Icons.insights,
+        ),
+      ];
 
   void _onDestinationSelected(int index) {
     // `initialLocation: true` when re-tapping the current tab pops that
@@ -36,6 +44,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool useRail = context.isAtLeast(Breakpoint.medium);
+    final List<_Destination> destinations = _destinationsFor(context.l10n);
 
     if (useRail) {
       return Scaffold(
@@ -46,7 +55,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
               onDestinationSelected: _onDestinationSelected,
               labelType: NavigationRailLabelType.all,
               destinations: <NavigationRailDestination>[
-                for (final _Destination d in _destinations)
+                for (final _Destination d in destinations)
                   NavigationRailDestination(
                     icon: Icon(d.icon),
                     selectedIcon: Icon(d.selectedIcon),
@@ -67,7 +76,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
         destinations: <Widget>[
-          for (final _Destination d in _destinations)
+          for (final _Destination d in destinations)
             NavigationDestination(
               icon: Icon(d.icon),
               selectedIcon: Icon(d.selectedIcon),

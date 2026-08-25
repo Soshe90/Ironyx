@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/formatters/unit_formatters.dart';
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/services/workout_xlsx_import_service.dart';
 
 /// Preview-first importer for the user's historical XLSX workout log.
@@ -14,21 +15,21 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return TextButton.icon(
       icon: const Icon(Icons.table_view_outlined),
-      label: const Text('Import XLSX'),
+      label: Text(context.l10n.importXlsxAction),
       onPressed: () => _run(context, ref),
     );
   }
 
   Future<void> _run(BuildContext context, WidgetRef ref) async {
     final picked = await FilePicker.pickFile(
-      dialogTitle: 'Choose your XLSX workout log',
+      dialogTitle: context.l10n.importXlsxPickerTitle,
       type: FileType.any,
     );
     if (picked == null) return;
     if (!picked.name.toLowerCase().endsWith('.xlsx')) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please choose an .xlsx file.')),
+          SnackBar(content: Text(context.l10n.importXlsxWrongType)),
         );
       }
       return;
@@ -51,7 +52,7 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not read this XLSX file: $error')),
+          SnackBar(content: Text(context.l10n.importXlsxReadFailed('$error'))),
         );
       }
       return;
@@ -69,13 +70,15 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     ref.invalidate(personalRecordWorkoutIdsProvider);
     if (!context.mounted) return;
     final appliedCount = result.workouts.length - result.duplicateCount;
-    final skippedSuffix = result.duplicateCount > 0
-        ? ' (${result.duplicateCount} already in history skipped)'
-        : '';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Imported $appliedCount workouts$skippedSuffix.',
+          result.duplicateCount > 0
+              ? context.l10n.importXlsxDoneWithSkips(
+                  appliedCount,
+                  result.duplicateCount,
+                )
+              : context.l10n.importXlsxDone(appliedCount),
         ),
       ),
     );
@@ -85,19 +88,16 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     return showDialog<WeightUnit>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('What unit is the workbook using?'),
-        content: const Text(
-          'The imported values are converted to kilograms for storage. '
-          'This workbook looks like it uses pounds (lb).',
-        ),
+        title: Text(context.l10n.importXlsxUnitTitle),
+        content: Text(context.l10n.importXlsxUnitBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, WeightUnit.kg),
-            child: const Text('Kilograms'),
+            child: Text(context.l10n.importXlsxUnitKg),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, WeightUnit.lb),
-            child: const Text('Pounds (recommended)'),
+            child: Text(context.l10n.importXlsxUnitLb),
           ),
         ],
       ),
@@ -115,33 +115,34 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Import workout history?'),
+        title: Text(context.l10n.importXlsxConfirmTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${result.workouts.length} workouts · ${result.totalSets} sets\n'
-                '${firstDate?.toIso8601String().split('T').first ?? 'No dates'}'
-                ' → ${lastDate?.toIso8601String().split('T').first ?? ''}\n'
-                'Weights interpreted as ${sourceUnit == WeightUnit.lb ? 'lb' : 'kg'} '
-                'and stored as kg.',
+                context.l10n.importXlsxConfirmSummary(
+                  result.workouts.length,
+                  result.totalSets,
+                  firstDate?.toIso8601String().split('T').first ??
+                      context.l10n.importXlsxNoDates,
+                  lastDate?.toIso8601String().split('T').first ?? '',
+                  sourceUnit.label,
+                ),
               ),
               if (result.duplicateCount > 0) ...[
                 const SizedBox(height: 16),
                 Text(
-                  '${result.duplicateCount} of ${result.workouts.length} '
-                  'workouts already appear in your history (same date, '
-                  'exercises, and sets) and will be skipped.',
+                  context.l10n.importXlsxDuplicateNote(
+                    result.duplicateCount,
+                    result.workouts.length,
+                  ),
                 ),
               ],
               if (result.unknownExercises.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                const Text(
-                  'These exercises are not in the catalogue and will be added '
-                  'as custom exercises:',
-                ),
+                Text(context.l10n.importXlsxUnknownExercises),
                 const SizedBox(height: 8),
                 for (final name in result.unknownExercises) Text('• $name'),
               ],
@@ -151,13 +152,13 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: result.workouts.length == result.duplicateCount
                 ? null
                 : () => Navigator.pop(context, true),
-            child: const Text('Import'),
+            child: Text(context.l10n.importXlsxConfirmAction),
           ),
         ],
       ),

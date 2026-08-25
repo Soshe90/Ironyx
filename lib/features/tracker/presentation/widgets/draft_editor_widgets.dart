@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -92,7 +93,12 @@ class ExerciseDraftCard extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         _summary(
-                            completed, exercise.sets.length, volumeKg, unit),
+                          context.l10n,
+                          completed,
+                          exercise.sets.length,
+                          volumeKg,
+                          unit,
+                        ),
                         style: AppTypography.caption(theme),
                       ),
                     ],
@@ -101,14 +107,14 @@ class ExerciseDraftCard extends ConsumerWidget {
                 IconButton(
                   onPressed: () => controller.removeExercise(exercise.id),
                   icon: const Icon(Icons.close),
-                  tooltip: 'Remove ${exercise.name}',
+                  tooltip: context.l10n.draftRemoveExercise(exercise.name),
                   visualDensity: VisualDensity.compact,
                 ),
                 if (dragHandleIndex != null)
                   ReorderableDragStartListener(
                     index: dragHandleIndex!,
                     child: Tooltip(
-                      message: 'Reorder ${exercise.name}',
+                      message: context.l10n.draftReorderExercise(exercise.name),
                       child: Icon(
                         Icons.drag_indicator,
                         color: scheme.onSurfaceVariant,
@@ -137,7 +143,7 @@ class ExerciseDraftCard extends ConsumerWidget {
                   child: TextButton.icon(
                     onPressed: () => controller.addSet(exercise.id),
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add set'),
+                    label: Text(context.l10n.draftAddSet),
                   ),
                 ),
                 Container(
@@ -154,11 +160,17 @@ class ExerciseDraftCard extends ConsumerWidget {
     );
   }
 
-  String _summary(int completed, int total, double volumeKg, WeightUnit unit) {
+  String _summary(
+    AppLocalizations l10n,
+    int completed,
+    int total,
+    double volumeKg,
+    WeightUnit unit,
+  ) {
     if (total == 0) {
-      return 'No sets yet';
+      return l10n.draftNoSetsYet;
     }
-    final String sets = '$completed/$total sets';
+    final String sets = l10n.draftSetsProgress(completed, total);
     return completed == 0
         ? sets
         : '$sets · ${UnitFormatters.volume(volumeKg, unit)}';
@@ -216,15 +228,21 @@ class _SetTableHeader extends StatelessWidget {
     return ExcludeSemantics(
       child: Row(
         children: <Widget>[
-          SizedBox(width: _setNumberWidth, child: label('SET')),
+          SizedBox(
+            width: _setNumberWidth,
+            child: label(context.l10n.draftColumnSet),
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(child: label(unit.label.toUpperCase())),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(child: label('REPS')),
+          Expanded(child: label(context.l10n.draftColumnReps)),
           const SizedBox(width: AppSpacing.sm),
           SizedBox(
             width: AppSpacing.minTapTarget,
-            child: label('DONE', align: TextAlign.center),
+            child: label(
+              context.l10n.draftColumnDone,
+              align: TextAlign.center,
+            ),
           ),
           const SizedBox(width: _rowMenuWidth),
         ],
@@ -277,7 +295,7 @@ class _InlineRestTimerState extends State<InlineRestTimer> {
       return TextButton.icon(
         onPressed: _start,
         icon: const Icon(Icons.timer_outlined, size: 18),
-        label: const Text('Rest'),
+        label: Text(context.l10n.draftRest),
       );
     }
 
@@ -286,7 +304,9 @@ class _InlineRestTimerState extends State<InlineRestTimer> {
       children: <Widget>[
         Flexible(
           child: Text(
-            complete ? 'Done' : UnitFormatters.duration(snapshot.remaining),
+            complete
+                ? context.l10n.actionDone
+                : UnitFormatters.duration(snapshot.remaining),
             style: AppTypography.cardMetric(
               scheme,
               size: AppTypography.metricSizeSm,
@@ -298,13 +318,17 @@ class _InlineRestTimerState extends State<InlineRestTimer> {
           IconButton(
             onPressed: running ? _pause : _resume,
             icon: Icon(running ? Icons.pause : Icons.play_arrow),
-            tooltip: running ? 'Pause rest' : 'Resume rest',
+            tooltip: running
+                ? context.l10n.draftPauseRest
+                : context.l10n.draftResumeRest,
             visualDensity: VisualDensity.compact,
           ),
         IconButton(
           onPressed: complete ? _start : _reset,
           icon: Icon(complete ? Icons.refresh : Icons.stop),
-          tooltip: complete ? 'Restart rest' : 'Stop rest',
+          tooltip: complete
+              ? context.l10n.draftRestartRest
+              : context.l10n.draftStopRest,
           visualDensity: VisualDensity.compact,
         ),
       ],
@@ -449,7 +473,8 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
           Expanded(
             child: _NumberField(
               controller: _weightController,
-              semanticLabel: 'Set $index weight in ${unit.label}',
+              semanticLabel:
+                  context.l10n.draftSetWeightSemantic(index, unit.label),
               decimal: true,
               onChanged: (String value) {
                 final double? entered = double.tryParse(value);
@@ -478,7 +503,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
           Expanded(
             child: _NumberField(
               controller: _repsController,
-              semanticLabel: 'Set $index reps',
+              semanticLabel: context.l10n.draftSetRepsSemantic(index),
               onChanged: (String value) {
                 final int? reps = int.tryParse(value);
                 if (reps == null || reps < 0 || reps > _maxReps) {
@@ -510,7 +535,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
           SizedBox(
             width: _rowMenuWidth,
             child: PopupMenuButton<_SetAction>(
-              tooltip: 'Set $index options',
+              tooltip: context.l10n.draftSetOptionsSemantic(index),
               icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
               padding: EdgeInsets.zero,
               onSelected: (_SetAction action) => switch (action) {
@@ -520,28 +545,28 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
                 _SetAction.remove =>
                   widget.controller.removeSet(widget.exerciseId, widget.set.id),
               },
-              itemBuilder: (_) => const <PopupMenuEntry<_SetAction>>[
+              itemBuilder: (_) => <PopupMenuEntry<_SetAction>>[
                 PopupMenuItem<_SetAction>(
                   value: _SetAction.details,
                   child: ListTile(
-                    leading: Icon(Icons.speed_outlined),
-                    title: Text('RPE and rest time'),
+                    leading: const Icon(Icons.speed_outlined),
+                    title: Text(context.l10n.draftRpeAndRest),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
                 PopupMenuItem<_SetAction>(
                   value: _SetAction.duplicate,
                   child: ListTile(
-                    leading: Icon(Icons.copy_outlined),
-                    title: Text('Duplicate set'),
+                    leading: const Icon(Icons.copy_outlined),
+                    title: Text(context.l10n.draftDuplicateSet),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
                 PopupMenuItem<_SetAction>(
                   value: _SetAction.remove,
                   child: ListTile(
-                    leading: Icon(Icons.remove_circle_outline),
-                    title: Text('Remove set'),
+                    leading: const Icon(Icons.remove_circle_outline),
+                    title: Text(context.l10n.draftRemoveSet),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -566,7 +591,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
       final result = await showDialog<(int?, int?)>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Set ${widget.index} details'),
+          title: Text(context.l10n.draftSetDetailsTitle(widget.index)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -574,20 +599,21 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
                 controller: rpeController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'RPE (1–10)'),
+                decoration:
+                    InputDecoration(labelText: context.l10n.draftRpeField),
               ),
               TextField(
                 controller: restController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    labelText: 'Rest before set (seconds)'),
+                decoration: InputDecoration(
+                    labelText: context.l10n.draftRestBeforeSetField),
               ),
             ],
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel')),
+                child: Text(context.l10n.actionCancel)),
             FilledButton(
               onPressed: () {
                 final rpe = double.tryParse(rpeController.text);
@@ -601,7 +627,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
                   rest,
                 ));
               },
-              child: const Text('Save'),
+              child: Text(context.l10n.actionSave),
             ),
           ],
         ),

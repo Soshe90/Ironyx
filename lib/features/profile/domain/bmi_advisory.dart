@@ -1,3 +1,5 @@
+import '../../../core/l10n/l10n_extension.dart';
+
 /// Body-mass-index bands, used only to sanity-check what the user typed.
 enum BmiBand { underweight, healthy, overweight, obese }
 
@@ -35,16 +37,12 @@ abstract final class BmiAdvisory {
   static String? message({
     required double? weightKg,
     required double? heightCm,
+    required AppLocalizations l10n,
   }) {
     return switch (band(weightKg: weightKg, heightCm: heightCm)) {
       null || BmiBand.healthy => null,
-      BmiBand.underweight =>
-        'The entered values show some degree of underweight. Please check '
-            'your weight and height input data for errors and confirm.',
-      BmiBand.overweight ||
-      BmiBand.obese =>
-        'The entered values show some degree of overweight. Please check '
-            'your weight and height input data for errors and confirm.',
+      BmiBand.underweight => l10n.profileBmiUnderweight,
+      BmiBand.overweight || BmiBand.obese => l10n.profileBmiOverweight,
     };
   }
 }

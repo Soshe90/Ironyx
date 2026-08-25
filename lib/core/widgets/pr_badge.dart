@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n_extension.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
@@ -34,7 +35,7 @@ class PrBadge extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xxs),
           Text(
-            'PR',
+            context.l10n.prBadge,
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppColors.personalRecord,
               fontWeight: FontWeight.w700,

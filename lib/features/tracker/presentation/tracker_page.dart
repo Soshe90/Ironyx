@@ -7,6 +7,7 @@ import '../../../core/database/tables/workouts.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -46,7 +47,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
         ref.watch(personalRecordWorkoutIdsProvider).value ?? const <String>{};
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tracker')),
+      appBar: AppBar(title: Text(context.l10n.navTracker)),
       body: PageBody(
         gutter: false,
         child: CustomScrollView(
@@ -62,7 +63,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                         onPressed: () =>
                             context.pushNamed(Routes.activeWorkoutName),
                         icon: const Icon(Icons.play_arrow),
-                        label: const Text('Start workout'),
+                        label: Text(context.l10n.dashboardStartWorkout),
                       )
                     : _ResumeWorkoutBanner(
                         exerciseCount: draft.exercises.length,
@@ -73,9 +74,9 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
               padding: context.sliverGutter,
               sliver: SliverToBoxAdapter(
                 child: SectionHeader(
-                  title: 'Programs',
-                  subtitle: 'Reusable day templates to start a session from',
-                  actionLabel: 'New',
+                  title: context.l10n.trackerPrograms,
+                  subtitle: context.l10n.trackerProgramsSubtitle,
+                  actionLabel: context.l10n.trackerNew,
                   onAction: () => context.pushNamed(Routes.programNewName),
                 ),
               ),
@@ -91,13 +92,12 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                'No programs yet',
+                                context.l10n.trackerNoPrograms,
                                 style: Theme.of(context).textTheme.titleSmall,
                               ),
                               const SizedBox(height: AppSpacing.xs),
                               Text(
-                                'Build a program to preload a workout with '
-                                'its exercises and target sets.',
+                                context.l10n.trackerNoProgramsMessage,
                                 style: AppTypography.caption(
                                   Theme.of(context),
                                 ),
@@ -112,7 +112,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                                       onPressed: () => context
                                           .pushNamed(Routes.programNewName),
                                       icon: const Icon(Icons.add),
-                                      label: const Text('New program'),
+                                      label: Text(context.l10n.trackerNewProgram),
                                     ),
                                   ),
                                   const SizedBox(width: AppSpacing.sm),
@@ -154,24 +154,25 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
             ),
             SliverPadding(
               padding: context.sliverGutter,
-              sliver: const SliverToBoxAdapter(
+              sliver: SliverToBoxAdapter(
                 child: Row(
-                  children: [
-                    Expanded(child: SectionHeader(title: 'History')),
-                    WorkoutXlsxImportAction(),
+                  children: <Widget>[
+                    Expanded(
+                      child: SectionHeader(title: context.l10n.trackerHistory),
+                    ),
+                    const WorkoutXlsxImportAction(),
                   ],
                 ),
               ),
             ),
             historyAsync.when(
               data: (workouts) => workouts.isEmpty
-                  ? const SliverFillRemaining(
+                  ? SliverFillRemaining(
                       hasScrollBody: false,
                       child: EmptyState(
                         icon: Icons.history,
-                        title: 'No workouts yet',
-                        message: 'Finish a workout and it will show up here, '
-                            'with your volume and any personal records.',
+                        title: context.l10n.trackerNoWorkouts,
+                        message: context.l10n.trackerNoWorkoutsMessage,
                       ),
                     )
                   : SliverMainAxisGroup(
@@ -216,7 +217,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
               error: (error, _) => SliverFillRemaining(
                 hasScrollBody: false,
                 child: ErrorView(
-                  title: 'Failed to load history',
+                  title: context.l10n.trackerHistoryLoadFailed,
                   details: error.toString(),
                   onRetry: () => ref.invalidate(workoutHistoryStreamProvider),
                 ),
@@ -291,8 +292,10 @@ class _ProgramTile extends StatelessWidget {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.md,
       ),
-      semanticLabel: '$name, $dayCount '
-          'day${dayCount == 1 ? '' : 's'}',
+      semanticLabel: context.l10n.trackerProgramSemantic(
+        name,
+        context.l10n.dayCount(dayCount),
+      ),
       child: Row(
         children: [
           Icon(Icons.event_note_outlined, color: scheme.onSurfaceVariant),
@@ -305,7 +308,7 @@ class _ProgramTile extends StatelessWidget {
                 Text(name, style: theme.textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  description ?? '$dayCount day${dayCount == 1 ? '' : 's'}',
+                  description ?? context.l10n.dayCount(dayCount),
                   style: AppTypography.caption(theme),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -332,7 +335,7 @@ class _ResumeWorkoutBanner extends StatelessWidget {
 
     return AppCard(
       onTap: () => context.pushNamed(Routes.activeWorkoutName),
-      semanticLabel: 'Resume in-progress workout',
+      semanticLabel: context.l10n.trackerResumeSemantic,
       child: Row(
         children: [
           Icon(Icons.play_circle_outline, color: scheme.primary),
@@ -343,15 +346,16 @@ class _ResumeWorkoutBanner extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Workout in progress',
+                  context.l10n.dashboardWorkoutInProgress,
                   style: theme.textTheme.titleSmall,
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   exerciseCount == 0
-                      ? 'Tap to resume'
-                      : '$exerciseCount exercise'
-                          '${exerciseCount == 1 ? '' : 's'} logged · tap to resume',
+                      ? context.l10n.trackerTapToResume
+                      : context.l10n.trackerResumeWithExercises(
+                          context.l10n.exerciseCount(exerciseCount),
+                        ),
                   style: AppTypography.caption(theme),
                 ),
               ],
@@ -378,8 +382,8 @@ class _HistorySliverList extends StatelessWidget {
       itemBuilder: (context, index) {
         final workout = workouts[index];
         final showHeader = index == 0 ||
-            DateFormatters.relativeDay(workouts[index - 1].startedAt) !=
-                DateFormatters.relativeDay(workout.startedAt);
+            DateFormatters.of(context).relativeDay(workouts[index - 1].startedAt) !=
+                DateFormatters.of(context).relativeDay(workout.startedAt);
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: Column(
@@ -392,7 +396,7 @@ class _HistorySliverList extends StatelessWidget {
                     bottom: AppSpacing.sm,
                   ),
                   child: Text(
-                    DateFormatters.relativeDay(workout.startedAt).toUpperCase(),
+                    DateFormatters.of(context).relativeDay(workout.startedAt).toUpperCase(),
                     style: AppTypography.eyebrow(Theme.of(context)),
                   ),
                 ),
@@ -432,9 +436,15 @@ class _WorkoutHistoryTile extends ConsumerWidget {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.md,
       ),
-      semanticLabel: 'Workout on ${DateFormatters.full(workout.startedAt)}, '
-          '${UnitFormatters.volume(workout.totalVolumeKg, unit)} volume'
-          '${isPersonalRecord ? ', personal record' : ''}',
+      semanticLabel: isPersonalRecord
+          ? context.l10n.trackerWorkoutSemanticPr(
+              DateFormatters.of(context).full(workout.startedAt),
+              UnitFormatters.volume(workout.totalVolumeKg, unit),
+            )
+          : context.l10n.trackerWorkoutSemantic(
+              DateFormatters.of(context).full(workout.startedAt),
+              UnitFormatters.volume(workout.totalVolumeKg, unit),
+            ),
       child: Row(
         children: [
           Expanded(
@@ -445,7 +455,7 @@ class _WorkoutHistoryTile extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      DateFormatters.time(workout.startedAt),
+                      DateFormatters.of(context).time(workout.startedAt),
                       style: theme.textTheme.titleSmall,
                     ),
                     if (isPersonalRecord) ...[
@@ -457,7 +467,7 @@ class _WorkoutHistoryTile extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   workout.durationSeconds == null
-                      ? 'No duration recorded'
+                      ? context.l10n.trackerNoDuration
                       : UnitFormatters.durationShort(
                           Duration(seconds: workout.durationSeconds!),
                         ),

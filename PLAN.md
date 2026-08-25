@@ -120,15 +120,18 @@ and five near-duplicate cable-fly entries that had been sharing images.
 ### Technical tidy-up
 
 - [ ] **acct** — Supabase dashboard → Authentication → URL Configuration →
-      add `com.fittrack.fittrack://login-callback` to **Redirect URLs**.
+      add `com.soshe90.fittrack://login-callback` to **Redirect URLs**.
       Until this is done the Phase 0 deep link does nothing: Supabase
       silently ignores an unlisted `redirect_to` and falls back to the Site
       URL. Also change Site URL off `http://localhost:3000`.
-- [ ] **dev** — Change the bundle id from the template placeholder
-      `com.fittrack.fittrack` to something you own (`com.soshe90.fittrack`).
-      Must happen **before** first publish — it is immutable afterwards, and
-      changing it means a new listing with zero reviews. Note this also
-      changes the deep-link scheme in three files.
+- [x] **dev** — Bundle id changed 2026-08-24 from the template placeholder
+      `com.fittrack.fittrack` to `com.soshe90.fittrack`, across
+      `android/app/build.gradle.kts` (namespace + applicationId), the Kotlin
+      package directory and `MainActivity.kt`, `AndroidManifest.xml`'s
+      intent filter, `ios/Runner/Info.plist`'s `CFBundleURLTypes`,
+      `ios/Runner.xcodeproj/project.pbxproj`'s `PRODUCT_BUNDLE_IDENTIFIER`,
+      and `lib/core/config/deep_links.dart`. The Supabase Redirect URLs
+      entry above still needs the matching update.
 - [ ] **dev** — Fix the 6 pre-existing test failures (5 in
       `library_page_test.dart`, 1 in `program_editor_page_test.dart`). Known
       and confirmed against a clean HEAD; already tracked at `TODO.md:425`.

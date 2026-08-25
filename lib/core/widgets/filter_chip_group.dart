@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n_extension.dart';
 import '../theme/app_spacing.dart';
 
 /// A labelled row of single-select filter chips, plus an "All" chip that
@@ -45,7 +46,7 @@ class FilterChipGroup<T extends Object> extends StatelessWidget {
           runSpacing: AppSpacing.xs,
           children: [
             FilterChip(
-              label: const Text('All'),
+              label: Text(context.l10n.filterAll),
               selected: value == null,
               onSelected: (_) => onChanged(null),
               showCheckmark: false,

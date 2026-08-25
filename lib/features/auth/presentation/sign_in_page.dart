@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/database_providers.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../domain/auth_controller.dart';
 import '../domain/auth_service.dart';
 import '../domain/auth_validators.dart';
+import 'auth_failure_messages.dart';
 import 'widgets/auth_form_scaffold.dart';
 
 /// Signs an existing account in. Reached from Settings; never forced.
@@ -36,36 +38,39 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+
     return AuthFormScaffold(
-      title: 'Sign in',
-      intro: 'Your workouts stay on this device either way — an account just '
-          'keeps your details with you.',
+      title: l10n.authSignInTitle,
+      intro: l10n.authSignInIntro,
       formKey: _formKey,
       busy: _busy,
       errorMessage: _error,
-      primaryLabel: 'Sign in',
+      primaryLabel: l10n.authSignInTitle,
       onSubmit: _submit,
       fields: <Widget>[
         TextFormField(
           controller: _email,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: InputDecoration(labelText: l10n.authFieldEmail),
           keyboardType: TextInputType.emailAddress,
           autofillHints: const <String>[AutofillHints.email],
           textInputAction: TextInputAction.next,
           autocorrect: false,
-          validator: AuthValidators.email,
+          validator: (String? value) => AuthValidators.email(value, l10n),
         ),
         TextFormField(
           controller: _password,
           decoration: InputDecoration(
-            labelText: 'Password',
+            labelText: l10n.authFieldPassword,
             suffixIcon: IconButton(
               icon: Icon(
                 _obscure
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
               ),
-              tooltip: _obscure ? 'Show password' : 'Hide password',
+              tooltip: _obscure
+                  ? l10n.authShowPassword
+                  : l10n.authHidePassword,
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
@@ -73,7 +78,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
           autofillHints: const <String>[AutofillHints.password],
           textInputAction: TextInputAction.done,
           // Presence only — see AuthValidators.signInPassword.
-          validator: AuthValidators.signInPassword,
+          validator: (String? value) =>
+              AuthValidators.signInPassword(value, l10n),
           onFieldSubmitted: (_) => _submit(),
         ),
       ],
@@ -83,14 +89,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
             onPressed: _busy
                 ? null
                 : () => context.pushNamed(Routes.forgotPasswordName),
-            child: const Text('Forgot password?'),
+            child: Text(l10n.authForgotPasswordLink),
           ),
           const SizedBox(height: AppSpacing.xs),
           TextButton(
             onPressed: _busy
                 ? null
                 : () => context.pushReplacementNamed(Routes.signUpName),
-            child: const Text('No account? Create one'),
+            child: Text(l10n.authNoAccountCreateOne),
           ),
         ],
       ),
@@ -100,6 +106,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final AppLocalizations l10n = context.l10n;
     setState(() {
       _busy = true;
       _error = null;
@@ -120,9 +127,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       if (!mounted) return;
       context.pop();
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Signed in')));
+          .showSnackBar(SnackBar(content: Text(l10n.authSignedIn)));
     } on AuthFailure catch (failure) {
-      if (mounted) setState(() => _error = failure.message);
+      if (mounted) setState(() => _error = failure.messageFor(l10n));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

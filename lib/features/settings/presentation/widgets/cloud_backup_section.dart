@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/formatters/date_formatters.dart';
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/section_header.dart';
@@ -10,6 +11,7 @@ import '../../../auth/domain/auth_controller.dart';
 import '../../../auth/domain/auth_service.dart';
 import '../../../backup/domain/cloud_backup_controller.dart';
 import '../../../backup/domain/cloud_backup_service.dart';
+import '../../../backup/presentation/cloud_backup_failure_messages.dart';
 
 /// Back up and restore the whole database against the signed-in account.
 ///
@@ -35,33 +37,30 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
     final AuthUser? user = ref.watch(authControllerProvider);
     final AsyncValue<CloudBackupInfo?> status =
         ref.watch(cloudBackupStatusProvider);
+    final AppLocalizations l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const SectionHeader(
-          title: 'Account backup',
-          subtitle: 'Temporary, while the app is in testing — one backup per '
-              'account, replaced each time you back up',
+        SectionHeader(
+          title: l10n.backupSectionTitle,
+          subtitle: l10n.backupSectionSubtitle,
         ),
         AppCard(
           padding: EdgeInsets.zero,
           child: Column(
             children: <Widget>[
               if (user == null)
-                const ListTile(
-                  leading: Icon(Icons.cloud_off_outlined),
-                  title: Text('Sign in to back up'),
-                  subtitle: Text(
-                    'A backup is stored with your account, so you can '
-                    'reinstall the app and sign in to get your data back.',
-                  ),
+                ListTile(
+                  leading: const Icon(Icons.cloud_off_outlined),
+                  title: Text(l10n.backupSignInTitle),
+                  subtitle: Text(l10n.backupSignInSubtitle),
                 )
               else ...<Widget>[
                 ListTile(
                   leading: const Icon(Icons.cloud_done_outlined),
-                  title: const Text('Last backup'),
-                  subtitle: Text(_statusLine(status)),
+                  title: Text(l10n.backupLastBackup),
+                  subtitle: Text(_statusLine(context, status)),
                 ),
                 ListTile(
                   leading: _isBackingUp
@@ -71,19 +70,19 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.backup_outlined),
-                  title: Text(_isBackingUp ? 'Backing up…' : 'Back up now'),
+                  title: Text(_isBackingUp
+                      ? l10n.backupInProgress
+                      : l10n.backupNowTitle),
                   subtitle: Text(_isBackingUp
-                      ? 'Preparing and uploading your data'
-                      : 'Uploads everything on this device'),
+                      ? l10n.backupInProgressSubtitle
+                      : l10n.backupNowSubtitle),
                   enabled: !_isBackingUp,
                   onTap: _isBackingUp ? null : () => _backUp(context, ref),
                 ),
                 ListTile(
                   leading: const Icon(Icons.settings_backup_restore),
-                  title: const Text('Restore from my account'),
-                  subtitle: const Text(
-                    'Replaces the data on this device with your backup',
-                  ),
+                  title: Text(l10n.backupRestoreTitle),
+                  subtitle: Text(l10n.backupRestoreSubtitle),
                   // Nothing to restore, so don't offer a button that can
                   // only produce an error. `.value`, not `.valueOrNull` —
                   // Riverpod 3 dropped the latter.
@@ -99,43 +98,54 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
     );
   }
 
-  String _statusLine(AsyncValue<CloudBackupInfo?> status) => status.when(
-        loading: () => 'Checking…',
-        error: (error, _) => error is CloudBackupFailure
-            ? error.message
-            : 'Couldn\'t check for a backup.',
-        data: (info) => info == null
-            ? 'No backup yet'
-            : '${DateFormatters.full(info.updatedAt)} '
-                'at ${DateFormatters.time(info.updatedAt)} · '
-                '${_readableSize(info.sizeBytes)}',
-      );
+  String _statusLine(BuildContext context, AsyncValue<CloudBackupInfo?> status) {
+    final AppLocalizations l10n = context.l10n;
+    final DateFormatters dates = DateFormatters.of(context);
 
-  String _readableSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return status.when(
+      loading: () => l10n.backupChecking,
+      error: (error, _) => error is CloudBackupFailure
+          ? error.messageFor(l10n)
+          : l10n.backupCouldNotCheck,
+      data: (info) => info == null
+          ? l10n.backupNoneYet
+          : l10n.backupStatusLine(
+              dates.full(info.updatedAt),
+              dates.time(info.updatedAt),
+              _readableSize(context, info.sizeBytes),
+            ),
+    );
+  }
+
+  String _readableSize(BuildContext context, int bytes) {
+    final AppLocalizations l10n = context.l10n;
+    if (bytes < 1024) return l10n.sizeBytes(bytes);
+    if (bytes < 1024 * 1024) return l10n.sizeKilobytes((bytes / 1024).round());
+    return l10n.sizeMegabytes((bytes / (1024 * 1024)).toStringAsFixed(1));
   }
 
   Future<void> _backUp(BuildContext context, WidgetRef ref) async {
     if (_isBackingUp) return;
     setState(() => _isBackingUp = true);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(content: Text('Backing up…')));
+    // Captured before the first `await`: `context.l10n` after one is an
+    // across-async-gap lookup, and this widget can be disposed mid-upload.
+    final AppLocalizations l10n = context.l10n;
+    messenger.showSnackBar(SnackBar(content: Text(l10n.backupInProgress)));
 
     CloudBackupInfo? info;
     String? failureMessage;
     try {
       info = await ref.read(cloudBackupControllerProvider.notifier).backUpNow();
     } on CloudBackupFailure catch (failure) {
-      failureMessage = failure.message;
+      failureMessage = failure.messageFor(l10n);
     } on Object catch (error) {
       // Anything reaching here is unmapped, i.e. a bug rather than a
       // condition the user can fix. Log it: the generic message below is all
       // the user should see, but a silent generic message is also all a
       // developer saw the last time this branch fired.
       if (kDebugMode) debugPrint('[backup] $error');
-      failureMessage = 'Couldn’t complete the backup. Please try again.';
+      failureMessage = l10n.backupFailedRetry;
     } finally {
       messenger.hideCurrentSnackBar();
       if (mounted) setState(() => _isBackingUp = false);
@@ -145,31 +155,27 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(info == null
-            ? failureMessage ?? 'Couldn’t complete the backup.'
-            : 'Backed up (${_readableSize(info.sizeBytes)})'),
+            ? failureMessage ?? l10n.backupFailed
+            : l10n.backupSucceeded(_readableSize(context, info.sizeBytes))),
       ),
     );
   }
 
   Future<void> _restore(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l10n = context.l10n;
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restore from your account?'),
-        content: const Text(
-          'Everything currently on this device — workouts, programs, '
-          'templates, body metrics — is replaced by your backup.\n\n'
-          'A snapshot of the current data is saved first, so you can undo '
-          'this from Data management.',
-        ),
+        title: Text(l10n.backupRestoreConfirmTitle),
+        content: Text(l10n.backupRestoreConfirmBody),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Restore'),
+            child: Text(l10n.backupRestoreAction),
           ),
         ],
       ),
@@ -177,18 +183,16 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
     if (confirmed != true || !context.mounted) return;
 
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(content: Text('Restoring…')));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.backupRestoring)));
     try {
       await ref.read(cloudBackupControllerProvider.notifier).restoreFromCloud();
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Restored from your account')),
-        );
+        ..showSnackBar(SnackBar(content: Text(l10n.backupRestored)));
     } on CloudBackupFailure catch (failure) {
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failure.message)));
+        ..showSnackBar(SnackBar(content: Text(failure.messageFor(l10n))));
     }
   }
 }

@@ -16,31 +16,17 @@ part 'progress_providers.g.dart';
 /// lower bound for it, which is what makes imported historical data show up
 /// instead of being clipped to a fixed recent window.
 /// Windows are *rolling* — "the last 30 days", not "this calendar month" —
-/// because [since] is `now - days`. [description] exists so page copy has to
-/// state that rather than drifting into calendar language the maths does not
-/// implement.
+/// because [since] is `now - days`. User-facing range labels and descriptions
+/// are selected in the presentation layer, where the active locale is known.
 enum ProgressRange {
-  month(30, '1M', 'last 30 days', 'the 30 before'),
-  quarter(90, '3M', 'last 90 days', 'the 90 before'),
-  year(365, '1Y', 'last 12 months', 'the 12 before'),
-  all(null, 'All', 'all time', null);
+  month(30),
+  quarter(90),
+  year(365),
+  all(null);
 
-  const ProgressRange(
-    this.days,
-    this.label,
-    this.description,
-    this.previousDescription,
-  );
+  const ProgressRange(this.days);
 
   final int? days;
-  final String label;
-
-  /// The window in words, e.g. `last 90 days`.
-  final String description;
-
-  /// The equal-length window immediately before it, or null for all-time —
-  /// which has no preceding window to compare against.
-  final String? previousDescription;
 
   /// Lower bound for the DAO queries, recomputed per read.
   DateTime? get since =>

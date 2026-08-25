@@ -1,0 +1,960 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "FitTrack",
+  "@appTitle": {
+    "description": "The application name, shown in the OS task switcher."
+  },
+
+  "actionSave": "Save",
+  "actionCancel": "Cancel",
+  "actionDelete": "Delete",
+  "actionEdit": "Edit",
+  "actionDone": "Done",
+  "actionRetry": "Retry",
+  "actionClose": "Close",
+  "actionAdd": "Add",
+  "actionContinue": "Continue",
+  "actionBack": "Back",
+  "actionNext": "Next",
+  "actionRemove": "Remove",
+  "actionConfirm": "Confirm",
+  "actionSkip": "Skip",
+
+  "commonToday": "Today",
+  "commonYesterday": "Yesterday",
+  "commonError": "Something went wrong",
+  "commonLoading": "Loading",
+
+  "navHome": "Home",
+  "navLibrary": "Library",
+  "navProgress": "Progress",
+  "navTimer": "Timer",
+  "navSettings": "Settings",
+
+  "errorTryAgain": "Try again",
+  "metricNoDataYet": "No data yet",
+  "metricCouldNotLoad": "Could not load",
+  "filterAll": "All",
+  "prBadge": "PR",
+  "@prBadge": {
+    "description": "Badge on a workout that set a new estimated-1RM personal record. Kept short: it sits in a pill barely wider than the text."
+  },
+
+  "settingsLanguageTitle": "Language",
+  "settingsLanguageSubtitle": "Changes apply immediately, no restart needed",
+  "settingsLanguageSystem": "Match device",
+  "settingsAppearanceTitle": "Appearance",
+  "settingsAppearanceSubtitle": "Dark mode is a first-class theme, not an inversion",
+  "settingsThemeSystem": "System",
+  "settingsThemeLight": "Light",
+  "settingsThemeDark": "Dark",
+  "settingsUnitsTitle": "Units",
+  "settingsUnitsSubtitle": "Applies everywhere weights are shown or entered",
+  "settingsUnitKilograms": "Kilograms (kg)",
+  "settingsUnitPounds": "Pounds (lb)",
+  "settingsFeedbackTitle": "Feedback",
+  "settingsFeedbackSubtitle": "Cues when a timer phase ends",
+  "settingsSoundCues": "Sound cues",
+  "settingsSoundCuesSubtitle": "Play a tone on phase change",
+  "settingsHaptics": "Haptics",
+  "settingsHapticsSubtitle": "Vibrate on phase change",
+  "settingsDataTitle": "Data",
+  "settingsDataSubtitle": "FitTrack stores everything on this device",
+  "settingsStorageNote": "Your training data never leaves this device unless you export it yourself.",
+
+  "authErrorWrongCredentials": "That email and password don't match an account.",
+  "authErrorEmailAlreadyRegistered": "There's already an account with that email. Try signing in.",
+  "authErrorWeakPassword": "That password is too weak. Use at least 8 characters.",
+  "authErrorEmailRejected": "That email address wasn't accepted. Try a different one.",
+  "authErrorSignUpDisabled": "New accounts aren't being accepted right now.",
+  "authErrorEmailNotConfirmed": "Confirm your email first — check your inbox for the link.",
+  "authErrorRateLimited": "Too many attempts. Wait a minute and try again.",
+  "authErrorOffline": "Couldn't reach the server. Check your connection and try again.",
+  "authErrorNotConfigured": "Accounts aren't available in this build.",
+  "authErrorUnknown": "Something went wrong. Try again.",
+
+  "backupErrorNotSignedIn": "Sign in first — a backup is stored with your account.",
+  "backupErrorNotConfigured": "Backup isn't available in this build.",
+  "backupErrorNotProvisioned": "Backup isn't set up on the server yet. Run the SQL in docs/cloud_backup_setup.sql against your Supabase project.",
+  "backupErrorNoBackupYet": "There's no backup stored for this account yet.",
+  "backupErrorOffline": "Couldn't reach the server. Check your connection and try again.",
+  "backupErrorCorrupt": "That backup couldn't be read. It may have been made by a newer version of the app.",
+  "backupErrorUnknown": "Something went wrong. Try again.",
+
+  "backupSectionTitle": "Account backup",
+  "backupSectionSubtitle": "Temporary, while the app is in testing — one backup per account, replaced each time you back up",
+  "backupSignInTitle": "Sign in to back up",
+  "backupSignInSubtitle": "A backup is stored with your account, so you can reinstall the app and sign in to get your data back.",
+  "backupLastBackup": "Last backup",
+  "backupChecking": "Checking…",
+  "backupCouldNotCheck": "Couldn't check for a backup.",
+  "backupNoneYet": "No backup yet",
+  "backupStatusLine": "{date} at {time} · {size}",
+  "@backupStatusLine": {
+    "description": "Subtitle summarising the most recent backup.",
+    "placeholders": {
+      "date": { "type": "String", "example": "3 Aug 2026" },
+      "time": { "type": "String", "example": "9:41 AM" },
+      "size": { "type": "String", "example": "412 KB" }
+    }
+  },
+  "backupNowTitle": "Back up now",
+  "backupNowSubtitle": "Uploads everything on this device",
+  "backupInProgress": "Backing up…",
+  "backupInProgressSubtitle": "Preparing and uploading your data",
+  "backupFailed": "Couldn't complete the backup.",
+  "backupFailedRetry": "Couldn't complete the backup. Please try again.",
+  "backupSucceeded": "Backed up ({size})",
+  "@backupSucceeded": {
+    "placeholders": {
+      "size": { "type": "String", "example": "412 KB" }
+    }
+  },
+  "backupRestoreTitle": "Restore from my account",
+  "backupRestoreSubtitle": "Replaces the data on this device with your backup",
+  "backupRestoreConfirmTitle": "Restore from your account?",
+  "backupRestoreConfirmBody": "Everything currently on this device — workouts, programs, templates, body metrics — is replaced by your backup.\n\nA snapshot of the current data is saved first, so you can undo this from Data management.",
+  "backupRestoreAction": "Restore",
+  "backupRestoring": "Restoring…",
+  "backupRestored": "Restored from your account",
+
+  "actionGotIt": "Got it",
+
+  "navTracker": "Tracker",
+  "routeNotFoundTitle": "Not found",
+  "routeNotFoundBody": "No route for {uri}",
+  "@routeNotFoundBody": {
+    "placeholders": {
+      "uri": { "type": "String" }
+    }
+  },
+
+  "dayCount": "{count, plural, =1{1 day} other{{count} days}}",
+  "@dayCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "trackerPrograms": "Programs",
+  "trackerProgramsSubtitle": "Reusable day templates to start a session from",
+  "trackerNew": "New",
+  "trackerNewProgram": "New program",
+  "trackerNoPrograms": "No programs yet",
+  "trackerNoProgramsMessage": "Build a program to preload a workout with its exercises and target sets.",
+  "trackerHistory": "History",
+  "trackerNoWorkouts": "No workouts yet",
+  "trackerNoWorkoutsMessage": "Finish a workout and it will show up here, with your volume and any personal records.",
+  "trackerHistoryLoadFailed": "Failed to load history",
+  "trackerProgramSemantic": "{name}, {days}",
+  "@trackerProgramSemantic": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "days": { "type": "String", "example": "4 days" }
+    }
+  },
+  "trackerResumeSemantic": "Resume in-progress workout",
+  "trackerTapToResume": "Tap to resume",
+  "trackerResumeWithExercises": "{exercises} logged · tap to resume",
+  "@trackerResumeWithExercises": {
+    "placeholders": {
+      "exercises": { "type": "String", "example": "3 exercises" }
+    }
+  },
+  "trackerWorkoutSemantic": "Workout on {date}, {volume} volume",
+  "@trackerWorkoutSemantic": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "volume": { "type": "String" }
+    }
+  },
+  "trackerWorkoutSemanticPr": "Workout on {date}, {volume} volume, personal record",
+  "@trackerWorkoutSemanticPr": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "volume": { "type": "String" }
+    }
+  },
+  "trackerNoDuration": "No duration recorded",
+
+  "actionUndo": "Undo",
+  "statVolume": "Volume",
+  "statDuration": "Duration",
+  "statExercises": "Exercises",
+  "statSets": "Sets",
+
+  "workoutDetailTitle": "Workout",
+  "workoutEditTitle": "Edit workout",
+  "workoutEditTooltip": "Edit workout",
+  "workoutDeleteTooltip": "Delete workout",
+  "workoutNotFound": "Workout not found",
+  "workoutNotFoundMessage": "It may have already been deleted.",
+  "workoutLoadFailed": "Failed to load workout",
+  "workoutDeleteConfirmTitle": "Delete workout?",
+  "workoutDeleteConfirmBody": "This cannot be undone.",
+  "workoutDateTime": "{date} · {time}",
+  "@workoutDateTime": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "workoutUnknownExercise": "Unknown exercise",
+  "workoutVolumeLine": "Volume {volume}",
+  "@workoutVolumeLine": {
+    "placeholders": {
+      "volume": { "type": "String" }
+    }
+  },
+  "workoutTopSet": "TOP SET",
+  "workoutFirstTimeLogged": "First time logged · est. 1RM {oneRm}",
+  "@workoutFirstTimeLogged": {
+    "placeholders": {
+      "oneRm": { "type": "String" }
+    }
+  },
+  "workoutOneRmWithPrevious": "Est. 1RM {oneRm} · previous best {previous}",
+  "@workoutOneRmWithPrevious": {
+    "placeholders": {
+      "oneRm": { "type": "String" },
+      "previous": { "type": "String" }
+    }
+  },
+  "workoutSetSemantic": "Set {index}, {weight} for {reps} reps{completion}{warmup}",
+  "@workoutSetSemantic": {
+    "description": "Screen-reader label for one logged set. The last two placeholders already include their leading comma, and warmup is empty for a working set.",
+    "placeholders": {
+      "index": { "type": "int" },
+      "weight": { "type": "String" },
+      "reps": { "type": "int" },
+      "completion": { "type": "String", "example": ", completed" },
+      "warmup": { "type": "String", "example": ", warm-up" }
+    }
+  },
+  "workoutSetCompleted": ", completed",
+  "workoutSetNotCompleted": ", not completed",
+  "workoutSetWarmup": ", warm-up",
+  "workoutNoExercisesLeft": "No exercises left",
+  "workoutNoExercisesLeftMessage": "Add at least one exercise before saving.",
+  "workoutAddExercise": "Add exercise",
+  "workoutSaveChanges": "Save changes",
+  "workoutUpdated": "Workout updated",
+  "workoutSaveChangesFailed": "Could not save changes: {error}",
+  "@workoutSaveChangesFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "categoryStrength": "Strength",
+  "categoryCardio": "Cardio",
+  "categoryMobility": "Mobility",
+  "categoryBalance": "Balance",
+  "categoryPlyometric": "Plyometric",
+  "categoryOther": "Other",
+  "difficultyBeginner": "Beginner",
+  "difficultyIntermediate": "Intermediate",
+  "difficultyAdvanced": "Advanced",
+  "forceTypePush": "Push",
+  "forceTypePull": "Pull",
+  "forceTypeIsometric": "Isometric",
+  "mechanicCompound": "Compound",
+  "mechanicIsolation": "Isolation",
+  "patternHorizontalPush": "Horizontal Push",
+  "patternVerticalPush": "Vertical Push",
+  "patternHorizontalPull": "Horizontal Pull",
+  "patternVerticalPull": "Vertical Pull",
+  "patternKneeDominant": "Knee Dominant",
+  "patternHipDominant": "Hip Dominant",
+  "patternCarry": "Carry",
+  "patternRotation": "Rotation",
+  "patternAntiRotation": "Anti-Rotation",
+  "patternOther": "Other",
+
+  "calendarPreviousMonth": "Previous month",
+  "calendarNextMonth": "Next month",
+  "calendarDayWithWorkout": "{day}, has a workout",
+  "@calendarDayWithWorkout": {
+    "placeholders": {
+      "day": { "type": "int" }
+    }
+  },
+
+  "draftRemoveExercise": "Remove {name}",
+  "@draftRemoveExercise": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "draftReorderExercise": "Reorder {name}",
+  "@draftReorderExercise": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "draftAddSet": "Add set",
+  "draftNoSetsYet": "No sets yet",
+  "draftSetsProgress": "{completed}/{total} sets",
+  "@draftSetsProgress": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "draftColumnSet": "SET",
+  "draftColumnReps": "REPS",
+  "draftColumnDone": "DONE",
+  "draftRest": "Rest",
+  "draftPauseRest": "Pause rest",
+  "draftResumeRest": "Resume rest",
+  "draftRestartRest": "Restart rest",
+  "draftStopRest": "Stop rest",
+  "draftSetWeightSemantic": "Set {index} weight in {unit}",
+  "@draftSetWeightSemantic": {
+    "placeholders": {
+      "index": { "type": "int" },
+      "unit": { "type": "String", "example": "kg" }
+    }
+  },
+  "draftSetRepsSemantic": "Set {index} reps",
+  "@draftSetRepsSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftSetOptionsSemantic": "Set {index} options",
+  "@draftSetOptionsSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftRpeAndRest": "RPE and rest time",
+  "draftDuplicateSet": "Duplicate set",
+  "draftRemoveSet": "Remove set",
+  "draftSetDetailsTitle": "Set {index} details",
+  "@draftSetDetailsTitle": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftRpeField": "RPE (1–10)",
+  "draftRestBeforeSetField": "Rest before set (seconds)",
+
+  "importXlsxAction": "Import XLSX",
+  "importXlsxPickerTitle": "Choose your XLSX workout log",
+  "importXlsxWrongType": "Please choose an .xlsx file.",
+  "importXlsxReadFailed": "Could not read this XLSX file: {error}",
+  "@importXlsxReadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "importXlsxDone": "Imported {count} workouts.",
+  "@importXlsxDone": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "importXlsxDoneWithSkips": "Imported {count} workouts ({skipped} already in history skipped).",
+  "@importXlsxDoneWithSkips": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "skipped": { "type": "int" }
+    }
+  },
+  "importXlsxUnitTitle": "What unit is the workbook using?",
+  "importXlsxUnitBody": "The imported values are converted to kilograms for storage. This workbook looks like it uses pounds (lb).",
+  "importXlsxUnitKg": "Kilograms",
+  "importXlsxUnitLb": "Pounds (recommended)",
+  "importXlsxConfirmTitle": "Import workout history?",
+  "importXlsxConfirmSummary": "{workouts} workouts · {sets} sets\n{firstDate} → {lastDate}\nWeights interpreted as {unit} and stored as kg.",
+  "@importXlsxConfirmSummary": {
+    "placeholders": {
+      "workouts": { "type": "int" },
+      "sets": { "type": "int" },
+      "firstDate": { "type": "String" },
+      "lastDate": { "type": "String" },
+      "unit": { "type": "String", "example": "lb" }
+    }
+  },
+  "importXlsxNoDates": "No dates",
+  "importXlsxDuplicateNote": "{duplicates} of {total} workouts already appear in your history (same date, exercises, and sets) and will be skipped.",
+  "@importXlsxDuplicateNote": {
+    "placeholders": {
+      "duplicates": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "importXlsxUnknownExercises": "These exercises are not in the catalogue and will be added as custom exercises:",
+  "importXlsxConfirmAction": "Import",
+
+  "activeWorkoutDiscardTooltip": "Discard workout",
+  "activeWorkoutAddFirstExercise": "Add your first exercise",
+  "activeWorkoutAddFirstExerciseMessage": "Pick a movement and start logging sets. Your draft is saved as you go.",
+  "activeWorkoutFinish": "Finish workout",
+  "activeWorkoutSaved": "Workout saved",
+  "activeWorkoutSaveFailed": "Could not save workout: {error}",
+  "@activeWorkoutSaveFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "activeWorkoutDiscardTitle": "Discard workout?",
+  "activeWorkoutDiscardBody": "Your current draft will be removed.",
+  "activeWorkoutDiscardAction": "Discard",
+  "activeWorkoutDiscarded": "Workout discarded",
+  "activeWorkoutElapsedSemantic": "Elapsed time {time}",
+  "@activeWorkoutElapsedSemantic": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+
+  "timerPhaseWork": "Work",
+  "timerPhaseRest": "Rest",
+  "timerPhasePrepare": "Prepare",
+  "timerPhaseCooldown": "Cooldown",
+  "timerPhaseDone": "Done",
+  "timerNotificationTitle": "{phase} phase",
+  "@timerNotificationTitle": {
+    "description": "Title of the notification posted when a timer phase is about to start.",
+    "placeholders": {
+      "phase": { "type": "String", "example": "Rest" }
+    }
+  },
+  "timerNotificationBody": "{phase} starts now",
+  "@timerNotificationBody": {
+    "placeholders": {
+      "phase": { "type": "String" }
+    }
+  },
+  "timerEndTooltip": "End timer",
+  "timerSkipTooltip": "Skip interval",
+  "timerPauseSemantic": "Pause timer",
+  "timerResumeSemantic": "Resume timer",
+  "timerQuickStartTitle": "Quick start",
+  "timerQuickStartSubtitle": "Tap a preset to begin immediately",
+  "timerSavedPresets": "Saved presets",
+  "timerCustomTitle": "Custom",
+  "timerCustomSubtitle": "Build an interval and start or save it",
+  "timerPresetSaved": "Preset saved.",
+  "timerFeedbackSubtitle": "Also available in Settings",
+  "timerNoSavedPresets": "No saved presets yet. Build one below and tap \"Save preset\" to keep it here.",
+  "timerPresetsLoadFailed": "Unable to load saved presets",
+  "timerPresetSemantic": "Start {name}, {duration} total",
+  "@timerPresetSemantic": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
+  "intervalCount": "{count, plural, =1{1 interval} other{{count} intervals}}",
+  "@intervalCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "timerPositiveValuesRequired": "Work, rest and rounds must be positive.",
+  "timerFieldWork": "Work (s)",
+  "timerFieldRest": "Rest (s)",
+  "timerFieldRounds": "Rounds",
+  "timerFieldWarmup": "Warm-up (s)",
+  "timerFieldCooldown": "Cool-down (s)",
+  "timerStartCustom": "Start custom",
+  "timerSavePreset": "Save preset",
+  "timerPresetStrength": "Strength",
+  "timerPresetFormula": "{work}s work / {rest}s rest × {rounds}",
+  "@timerPresetFormula": {
+    "description": "One-line summary of a timer preset's structure.",
+    "placeholders": {
+      "work": { "type": "int" },
+      "rest": { "type": "int" },
+      "rounds": { "type": "int" }
+    }
+  },
+  "timerComplete": "Complete",
+  "timerIntervalOf": "Interval {current} of {total}",
+  "@timerIntervalOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "timerNotificationsOff": "Notifications are off — alerts will not fire if the app is fully backgrounded. The timer still runs.",
+
+  "exerciseCount": "{count, plural, =1{1 exercise} other{{count} exercises}}",
+  "@exerciseCount": {
+    "description": "Number of exercises in a workout draft.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "setsLoggedCount": "{count, plural, =1{1 set logged} other{{count} sets logged}}",
+  "@setsLoggedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sessionCount": "{count, plural, =1{1 session} other{{count} sessions}}",
+  "@sessionCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "greetingMorning": "Good morning",
+  "greetingAfternoon": "Good afternoon",
+  "greetingEvening": "Good evening",
+
+  "dashboardInProgressBadge": "IN PROGRESS",
+  "dashboardWorkoutInProgress": "Workout in progress",
+  "dashboardReadyToTrain": "Ready to train",
+  "dashboardReadyToTrainCaption": "Start a session and log your sets as you go.",
+  "dashboardResumeWorkout": "Resume workout",
+  "dashboardStartWorkout": "Start workout",
+  "dashboardStartFromProgram": "Start from a program",
+  "dashboardNoExercisesYet": "No exercises added yet.",
+  "dashboardDraftSummary": "{exercises} · {sets}",
+  "@dashboardDraftSummary": {
+    "description": "Joins the exercise and set counts on the in-progress workout card.",
+    "placeholders": {
+      "exercises": { "type": "String", "example": "3 exercises" },
+      "sets": { "type": "String", "example": "8 sets logged" }
+    }
+  },
+  "dashboardThisWeek": "This week",
+  "dashboardThisWeekLoadFailed": "Could not load this week",
+  "dashboardThisWeekSemantic": "This week, {volume}, {sessions}",
+  "@dashboardThisWeekSemantic": {
+    "description": "Screen-reader label for the weekly summary card.",
+    "placeholders": {
+      "volume": { "type": "String", "example": "12,400 kg" },
+      "sessions": { "type": "String", "example": "4 sessions" }
+    }
+  },
+  "dashboardThisWeekSemanticLoading": "This week, loading",
+  "dashboardThisWeekSemanticError": "This week, failed to load",
+  "dashboardNoRecentTraining": "{weeks, plural, =1{No training in the last week} other{No training in the last {weeks} weeks}}",
+  "@dashboardNoRecentTraining": {
+    "placeholders": {
+      "weeks": { "type": "int" }
+    }
+  },
+  "dashboardNoRecentTrainingCaption": "Log a workout and your weekly volume, streak and trends will appear here. Older history is on the Progress tab.",
+  "dashboardVolumeEyebrow": "VOLUME",
+  "dashboardStatSessions": "Sessions",
+  "dashboardStatStreak": "Streak",
+  "dashboardStatLastWeek": "Last week",
+  "dashboardStreakWeeks": "{count} wk",
+  "@dashboardStreakWeeks": {
+    "description": "Streak length in weeks, abbreviated to fit a narrow stat cell.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dashboardRecent": "Recent",
+  "dashboardNothingYet": "Nothing yet",
+  "dashboardLastWorkout": "Last workout",
+  "dashboardLastTimer": "Last timer",
+  "dashboardEstOneRm": "Est. 1RM",
+  "dashboardLogALiftToSeeThis": "Log a lift to see this",
+  "dashboardBodyWeight": "Body weight",
+  "dashboardNotRecorded": "Not recorded",
+  "dashboardRowSemantic": "{title}, {value}, {caption}",
+  "@dashboardRowSemantic": {
+    "description": "Screen-reader label for a dashboard row or tile.",
+    "placeholders": {
+      "title": { "type": "String" },
+      "value": { "type": "String" },
+      "caption": { "type": "String" }
+    }
+  },
+  "dashboardRowSemanticLoading": "{title}, loading",
+  "@dashboardRowSemanticLoading": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "dashboardRowSemanticError": "{title}, failed to load",
+  "@dashboardRowSemanticError": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "dashboardRowSemanticNoData": "no data",
+
+  "unitCentimetres": "cm",
+  "@unitCentimetres": {
+    "description": "Height unit suffix. Left Latin in every locale, matching the kg/lb abbreviations used throughout the app."
+  },
+
+  "profileIntro": "To tailor your program and progress tracking, FitTrack uses a few personal details. They stay on this device.",
+  "profileLoadFailed": "Failed to load your details",
+  "profileName": "Name",
+  "profileDateOfBirth": "Date of Birth",
+  "profileSex": "Sex",
+  "profileWeight": "Weight",
+  "profileHeight": "Height",
+  "profileHeightCm": "{value} cm",
+  "@profileHeightCm": {
+    "placeholders": {
+      "value": { "type": "int" }
+    }
+  },
+  "profileNotSet": "Not set",
+  "profileSexMale": "Male",
+  "profileSexFemale": "Female",
+  "profileSexPreferNotToSay": "Prefer not to say",
+  "profileSaved": "Personal details saved",
+  "profileSaveFailed": "Could not save your details: {error}",
+  "@profileSaveFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "profileEnterANumber": "Enter a number.",
+  "profileEnterValueBetween": "Enter a value between {min} and {max}.",
+  "@profileEnterValueBetween": {
+    "placeholders": {
+      "min": { "type": "String", "example": "90" },
+      "max": { "type": "String", "example": "250" }
+    }
+  },
+  "profileBmiUnderweight": "The entered values show some degree of underweight. Please check your weight and height input data for errors and confirm.",
+  "profileBmiOverweight": "The entered values show some degree of overweight. Please check your weight and height input data for errors and confirm.",
+
+  "welcomeTagline": "Your training, tracked.",
+  "welcomeFeatureLogTitle": "Log every set and rep",
+  "welcomeFeatureLogDetail": "Weight, reps and rest, recorded as you lift.",
+  "welcomeFeatureProgramsTitle": "Follow or build programs",
+  "welcomeFeatureProgramsDetail": "Start from a built-in split or write your own.",
+  "welcomeFeatureTimerTitle": "A rest timer that keeps time",
+  "welcomeFeatureTimerDetail": "Runs in the background, with sound and haptics.",
+  "welcomeFeatureChartsTitle": "Charts that show progress",
+  "welcomeFeatureChartsDetail": "Volume, estimated 1RM and body measurements.",
+  "welcomeCreateAccount": "Create a free account",
+  "welcomeHaveAccount": "I already have an account",
+  "welcomeContinueAsGuest": "Continue without an account",
+  "welcomeGetStarted": "Get started",
+  "welcomeDataNotice": "Your workouts stay on this device. Uninstalling deletes them — save a backup from Settings any time.",
+  "welcomeDataNoticeWithAccounts": "Your workouts stay on this device, account or not. Uninstalling deletes them — save a backup from Settings any time. A free account keeps your profile.",
+
+  "authSignInTitle": "Sign in",
+  "authSignInIntro": "Your workouts stay on this device either way — an account just keeps your details with you.",
+  "authSignedIn": "Signed in",
+  "authSignOut": "Sign out",
+  "authSignedOut": "Signed out",
+  "authSignOutConfirmTitle": "Sign out?",
+  "authSignOutConfirmBody": "Your workouts, programs and personal details stay on this device. Only the account link is removed.",
+  "authCreateAccountTitle": "Create account",
+  "authCreateAccountIntro": "Optional. Everything you have already logged stays exactly where it is.",
+  "authFieldEmail": "Email",
+  "authFieldPassword": "Password",
+  "authFieldConfirmPassword": "Confirm password",
+  "authShowPassword": "Show password",
+  "authHidePassword": "Hide password",
+  "authPasswordHelper": "At least {count} characters",
+  "@authPasswordHelper": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "authForgotPasswordLink": "Forgot password?",
+  "authNoAccountCreateOne": "No account? Create one",
+  "authHaveAccountSignIn": "Already have an account? Sign in",
+  "authCheckEmailTitle": "Check your email",
+  "authCheckEmailBody": "We sent a confirmation link to {email}. Open it, then come back and sign in.",
+  "@authCheckEmailBody": {
+    "placeholders": {
+      "email": { "type": "String", "example": "user@example.com" }
+    }
+  },
+  "authResetPasswordTitle": "Reset password",
+  "authResetIntro": "Enter the email you signed up with and we'll send a reset link.",
+  "authResetSentIntro": "If that address has an account, a reset link is on its way. The link opens in your browser.",
+  "authResetSendLink": "Send reset link",
+  "authResetSendAgain": "Send again",
+  "authBackToSignIn": "Back to sign in",
+
+  "authValidatorEmailEmpty": "Enter your email.",
+  "authValidatorEmailInvalid": "Enter a valid email address.",
+  "authValidatorPasswordEmpty": "Enter a password.",
+  "authValidatorPasswordTooShort": "Use at least {count} characters.",
+  "@authValidatorPasswordTooShort": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "authValidatorSignInPasswordEmpty": "Enter your password.",
+  "authValidatorConfirmPasswordEmpty": "Re-enter your password.",
+  "authValidatorPasswordsDoNotMatch": "Passwords don't match.",
+
+  "accountSectionTitle": "Account",
+  "accountSectionSubtitle": "Optional — your workouts are stored on this device either way",
+  "accountUnavailableTitle": "Accounts unavailable",
+  "accountUnavailableSubtitle": "This build has no sign-in configured.",
+  "accountSignInSubtitle": "Keep your details with your account",
+  "accountEmailNotConfirmedTitle": "Email not confirmed",
+  "accountEmailNotConfirmedSubtitle": "Open the link we sent to finish setting up your account.",
+  "accountPersonalDetailsTitle": "Personal details",
+  "accountPersonalDetailsSubtitle": "Name, date of birth, sex, height",
+  "accountShowWelcomeTitle": "Show welcome screen",
+  "accountShowWelcomeSubtitle": "The intro shown on first launch",
+
+  "sizeBytes": "{count} B",
+  "@sizeBytes": {
+    "description": "A file size in bytes. The unit stays Latin in every language, matching how storage sizes are written in practice.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sizeKilobytes": "{count} KB",
+  "@sizeKilobytes": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sizeMegabytes": "{count} MB",
+  "@sizeMegabytes": {
+    "placeholders": {
+      "count": { "type": "String", "example": "1.4" }
+    }
+  },
+
+  "programTitle": "Program",
+  "programEditTitle": "Edit program",
+  "programNewTitle": "New program",
+  "programEditTooltip": "Edit program",
+  "programDeleteTooltip": "Delete program",
+  "programLoadFailed": "Failed to load program",
+  "programNotFound": "Program not found",
+  "programNotFoundMessage": "It may have been deleted.",
+  "programGiveName": "Give the program a name.",
+  "programAddDayValidation": "Add at least one day.",
+  "programDayNeedsExercise": "Every day needs at least one exercise.",
+  "programDeleteTitle": "Delete program?",
+  "programDeleteBody": "This permanently deletes the program and its days. Workouts you already logged from it are not affected.",
+  "programDetails": "Details",
+  "programNameField": "Program name",
+  "programDescriptionField": "Description (optional)",
+  "programDays": "Days",
+  "programDaysRequired": "A program needs at least one day to be saved",
+  "programAddDay": "Add day",
+  "programDayLabel": "DAY {position}",
+  "@programDayLabel": {
+    "placeholders": { "position": { "type": "int" } }
+  },
+  "programDayOptions": "Day {position} options",
+  "@programDayOptions": {
+    "placeholders": { "position": { "type": "int" } }
+  },
+  "programMoveUp": "Move up",
+  "programMoveDown": "Move down",
+  "programRemoveDay": "Remove day",
+  "programDayNameField": "Day name",
+  "programAddExercise": "Add exercise",
+  "programNoExercises": "No exercises yet",
+  "programExerciseOptions": "{name} options",
+  "@programExerciseOptions": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "programRemoveExercise": "Remove exercise",
+  "programSetsField": "sets",
+  "programRepsField": "reps",
+  "programType": "Type",
+  "programBuiltIn": "Built-in",
+  "programCustom": "Custom",
+  "programDaysSubtitle": "Starting a day preloads its exercises and target sets",
+  "programNoDays": "No days yet",
+  "programNoDaysMessage": "Edit this program to add a training day.",
+  "programWorkoutInProgress": "Workout in progress",
+  "programWorkoutInProgressBody": "You already have a workout in progress. Starting this one will discard it and its logged sets.",
+  "programDiscardAndStart": "Discard & start",
+  "programStart": "Start",
+  "programTargetSets": "{count, plural, =1{1 set} other{{count} sets}}",
+  "@programTargetSets": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "libraryTitle": "Exercise library",
+  "libraryClearFilters": "Clear filters",
+  "librarySearchHint": "Search exercises",
+  "libraryClearSearch": "Clear search",
+  "libraryLoadFailed": "Failed to load exercises",
+  "libraryFilterMuscle": "Muscle",
+  "libraryFilterEquipment": "Equipment",
+  "libraryFilterPattern": "Movement pattern",
+  "libraryFilterBy": "Filter by {filter}",
+  "@libraryFilterBy": {
+    "placeholders": { "filter": { "type": "String" } }
+  },
+  "libraryFilterAllOf": "All {filter}",
+  "@libraryFilterAllOf": {
+    "placeholders": { "filter": { "type": "String" } }
+  },
+  "libraryNoResults": "No exercises found",
+  "libraryNoResultsMessage": "Try changing your search or filters.",
+  "libraryBodyweight": "Bodyweight",
+  "libraryExerciseNotFound": "Exercise not found",
+  "librarySearchYoutube": "Search for {name} on YouTube",
+  "@librarySearchYoutube": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "libraryInstructions": "Instructions",
+  "libraryVideoDemo": "Video demo",
+  "librarySearchOnYoutube": "Search on YouTube",
+  "libraryYoutubeOpenFailed": "Could not open YouTube",
+
+  "progressRangeLabel": "{range, select, month{1M} quarter{3M} year{1Y} all{All} other{All}}",
+  "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },
+  "progressStrengthChangeTitle": "Strength change",
+  "progressStrengthSubtitle": "{range, select, month{Best lift in the last 30 days vs the 30 days before} quarter{Best lift in the last 90 days vs the 90 days before} year{Best lift in the last 12 months vs the 12 months before} all{Your best lift ever, per exercise} other{Your best lift ever, per exercise}}",
+  "@progressStrengthSubtitle": { "placeholders": { "range": { "type": "String" } } },
+  "progressEstimatedOneRmTitle": "Estimated 1RM",
+  "progressEstimatedOneRmSubtitle": "Epley estimate from your heaviest logged sets",
+  "progressWeeklyVolumeTitle": "Weekly volume",
+  "progressWeeklyVolumeSubtitle": "{range, select, month{Every week in the last 30 days, including untrained ones} quarter{Every week in the last 90 days, including untrained ones} year{Every week in the last 12 months, including untrained ones} all{Every week on record, including untrained ones} other{Every week on record, including untrained ones}}",
+  "@progressWeeklyVolumeSubtitle": { "placeholders": { "range": { "type": "String" } } },
+  "progressConsistencyTitle": "Consistency",
+  "progressEffortRecoveryTitle": "Effort and recovery",
+  "progressTrainingBalanceTitle": "Training balance",
+  "progressWorkoutFrequencyTitle": "Workout frequency",
+  "progressWeeklyVolumeByMuscleTitle": "Weekly volume by muscle",
+  "progressRepRangeDistributionTitle": "Rep-range distribution",
+  "progressTrainingDaysTitle": "Training days",
+  "progressVolumeByMuscleGroupTitle": "Volume by muscle group",
+  "progressBodyMetricsTitle": "Body metrics",
+  "progressBodyMetricsSubtitle": "Weight and body fat over time",
+  "progressStrengthEmpty": "Log some working sets to see how each lift is moving.",
+  "progressRelativeStrengthTitle": "Relative strength",
+  "progressRelativeStrengthSubtitle": "Estimated 1RM ÷ latest body weight",
+  "progressRelativeStrengthRatio": "{ratio}×",
+  "@progressRelativeStrengthRatio": { "placeholders": { "ratio": { "type": "String" } } },
+  "progressStrengthSemantic": "{exercise}, {estimate}, {direction, select, up{up {percent} percent} down{down {percent} percent} other{changed by {percent} percent}}",
+  "@progressStrengthSemantic": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" }, "direction": { "type": "String" }, "percent": { "type": "int" } } },
+  "progressStrengthSemanticNoChange": "{exercise}, {estimate}",
+  "@progressStrengthSemanticNoChange": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" } } },
+  "progressStrengthNewThisPeriod": "New this period",
+  "progressStrengthPreviousBest": "was {estimate}",
+  "@progressStrengthPreviousBest": { "placeholders": { "estimate": { "type": "String" } } },
+  "progressInsightsSemantic": "Progress insights",
+  "progressInsightsTitle": "Insights",
+  "progressInsightsEmpty": "Keep logging workouts to unlock personalized progress insights.",
+  "progressInsightTargetStrength": "Strength",
+  "progressInsightTargetVolume": "Volume",
+  "progressInsightTargetConsistency": "Consistency",
+  "progressInsightTargetBalance": "Balance",
+  "progressInsightStrengthHeadline": "{direction, select, up{{exercise} is up {percent}%} down{{exercise} is down {percent}%} other{{exercise} changed by {percent}%}}",
+  "@progressInsightStrengthHeadline": { "placeholders": { "direction": { "type": "String" }, "exercise": { "type": "String" }, "percent": { "type": "int" } } },
+  "progressInsightStrengthFigure": "{estimate} estimated 1RM",
+  "@progressInsightStrengthFigure": { "placeholders": { "estimate": { "type": "String" } } },
+  "progressInsightConsistencyHeadline": "Training consistency is slipping",
+  "progressInsightConsistencyFigure": "{average} sessions per week",
+  "@progressInsightConsistencyFigure": { "placeholders": { "average": { "type": "String" } } },
+  "progressInsightVolumeHeadline": "Weekly volume is trending down",
+  "progressInsightVolumeFigure": "{percent}% below the earlier weeks",
+  "@progressInsightVolumeFigure": { "placeholders": { "percent": { "type": "int" } } },
+  "progressInsightPersonalRecordsHeadline": "New personal records are stacking up",
+  "progressInsightPersonalRecordsFigure": "{count, plural, =1{1 recent personal record} other{{count} recent personal records}}",
+  "@progressInsightPersonalRecordsFigure": { "placeholders": { "count": { "type": "int" } } },
+  "progressInsightNeglectedHeadline": "{muscle} has been neglected",
+  "@progressInsightNeglectedHeadline": { "placeholders": { "muscle": { "type": "String" } } },
+  "progressInsightNeglectedFigure": "Under 10% of the previous volume",
+  "progressInsightSubtitle": "{figure} · See {target}",
+  "@progressInsightSubtitle": { "placeholders": { "figure": { "type": "String" }, "target": { "type": "String" } } },
+  "progressInsightSemantic": "{headline}. {figure}. See the {target} section.",
+  "@progressInsightSemantic": { "placeholders": { "headline": { "type": "String" }, "figure": { "type": "String" }, "target": { "type": "String" } } },
+  "progressChartLoadFailed": "Could not load this chart",
+  "progressOneRmEmpty": "Complete weighted sets to see strength trends.",
+  "progressExerciseField": "Exercise",
+  "progressExerciseWithSessions": "{exercise} · {sessions}",
+  "@progressExerciseWithSessions": { "placeholders": { "exercise": { "type": "String" }, "sessions": { "type": "String" } } },
+  "progressExerciseRangeEmpty": "No completed sets for this exercise in this range.",
+  "progressOneRmFromSessions": "From {estimate} over {count, plural, =1{1 session} other{{count} sessions}}",
+  "@progressOneRmFromSessions": { "placeholders": { "estimate": { "type": "String" }, "count": { "type": "int" } } },
+  "progressOneRmMonthlyTrend": "{change}/month · {count, plural, =1{1 session} other{{count} sessions}}",
+  "@progressOneRmMonthlyTrend": { "placeholders": { "change": { "type": "String" }, "count": { "type": "int" } } },
+  "progressOneDataPoint": "One data point in this range",
+  "progressSessionVolumeTitle": "Session volume load",
+  "progressSessionVolumeSubtitle": "Working-set volume for the selected lift",
+  "progressVolumeEmpty": "Complete a workout to see volume.",
+  "progressVolumeActiveWeeks": "Across {activeWeeks, plural, =0{no active weeks} =1{1 active week} other{{activeWeeks} active weeks}} out of {totalWeeks, plural, =1{1 week} other{{totalWeeks} weeks}}",
+  "@progressVolumeActiveWeeks": { "placeholders": { "activeWeeks": { "type": "int" }, "totalWeeks": { "type": "int" } } },
+  "progressCurrentStreak": "Current streak",
+  "progressLongestStreak": "Longest streak",
+  "progressAdherenceTarget": "Adherence · {target}/wk",
+  "@progressAdherenceTarget": { "placeholders": { "target": { "type": "int" } } },
+  "progressRpeEmpty": "Record RPE on completed sets to see effort and load together.",
+  "progressSessionRpeTitle": "Session RPE vs volume",
+  "progressSessionRpeValue": "RPE {rpe} · {volume}",
+  "@progressSessionRpeValue": { "placeholders": { "rpe": { "type": "String" }, "volume": { "type": "String" } } },
+  "progressRestEmpty": "Record rest before sets to see your recovery pattern.",
+  "progressRestTimeTitle": "Rest time",
+  "progressAverageRestSeconds": "{seconds, plural, =1{1 sec average} other{{seconds} sec average}}",
+  "@progressAverageRestSeconds": { "placeholders": { "seconds": { "type": "int" } } },
+  "progressPushPull": "Push / pull",
+  "progressUpperLower": "Upper / lower",
+  "progressReferenceBand": "Reference band: 0.75–1.33",
+  "progressRatioInsufficient": "Insufficient data",
+  "progressRatioBalanced": "balanced",
+  "progressRatioOutsideBand": "outside reference band",
+  "progressRatioValueStatus": "{ratio} · {status}",
+  "@progressRatioValueStatus": { "placeholders": { "ratio": { "type": "String" }, "status": { "type": "String" } } },
+  "progressRatioSemantic": "{label}: {ratio}, {status}",
+  "@progressRatioSemantic": { "placeholders": { "label": { "type": "String" }, "ratio": { "type": "String" }, "status": { "type": "String" } } },
+  "progressRatioInsufficientSemantic": "{label}: insufficient data",
+  "@progressRatioInsufficientSemantic": { "placeholders": { "label": { "type": "String" } } },
+  "progressWeeklyMuscleEmpty": "Complete working sets to compare muscle volume over time.",
+  "progressRepRangeOneToFive": "1–5 reps",
+  "progressRepRangeSixToTwelve": "6–12 reps",
+  "progressRepRangeThirteenPlus": "13+ reps",
+  "progressWeekdayShort": "{weekday, select, monday{M} tuesday{T} wednesday{W} thursday{T} friday{F} saturday{S} sunday{S} other{?}}",
+  "@progressWeekdayShort": { "placeholders": { "weekday": { "type": "String" } } },
+  "progressWeekdayFull": "{weekday, select, monday{Monday} tuesday{Tuesday} wednesday{Wednesday} thursday{Thursday} friday{Friday} saturday{Saturday} sunday{Sunday} other{Unknown day}}",
+  "@progressWeekdayFull": { "placeholders": { "weekday": { "type": "String" } } },
+  "progressWeekdaySemantic": "{weekday}: {trainingDays, plural, =0{no training days} =1{1 training day} other{{trainingDays} training days}}, {workouts, plural, =0{no workouts} =1{1 workout} other{{workouts} workouts}}",
+  "@progressWeekdaySemantic": { "placeholders": { "weekday": { "type": "String" }, "trainingDays": { "type": "int" }, "workouts": { "type": "int" } } },
+  "progressFrequencyEmpty": "Complete workouts to see your weekly frequency.",
+  "progressAveragePerWeek": "{average} / week",
+  "@progressAveragePerWeek": { "placeholders": { "average": { "type": "String" } } },
+  "progressFrequencySummary": "{workouts, plural, =0{No workouts} =1{1 workout} other{{workouts} workouts}} across {weeks, plural, =1{1 week} other{{weeks} weeks}} · trained in {activeWeeks, plural, =0{no weeks} =1{1 week} other{{activeWeeks} weeks}}",
+  "@progressFrequencySummary": { "placeholders": { "workouts": { "type": "int" }, "weeks": { "type": "int" }, "activeWeeks": { "type": "int" } } },
+  "progressWorkoutCount": "{count, plural, =0{No workouts} =1{1 workout} other{{count} workouts}}",
+  "@progressWorkoutCount": { "placeholders": { "count": { "type": "int" } } },
+  "progressWeekOf": "Week of {date}",
+  "@progressWeekOf": { "placeholders": { "date": { "type": "String" } } },
+  "progressMuscleGroupEmpty": "Complete a workout to see your muscle-group split.",
+  "progressOtherMuscles": "Other",
+  "progressMostTrained": "Most trained · {volume}",
+  "@progressMostTrained": { "placeholders": { "volume": { "type": "String" } } },
+  "progressChartInteractionHelp": "Tap or hover a bar for details.",
+  "progressMuscleVolumeDetail": "{muscle}: {volume}",
+  "@progressMuscleVolumeDetail": { "placeholders": { "muscle": { "type": "String" }, "volume": { "type": "String" } } },
+  "progressNoMeasurementsTitle": "No measurements yet",
+  "progressNoMeasurementsMessage": "Track weight and body fat over time.",
+  "progressNoMeasurementsInRange": "{range, select, month{Nothing was logged in the last 30 days.} quarter{Nothing was logged in the last 90 days.} year{Nothing was logged in the last 12 months.} all{No measurements have been logged yet.} other{No measurements have been logged yet.}}",
+  "@progressNoMeasurementsInRange": { "placeholders": { "range": { "type": "String" } } },
+  "progressLogMeasurement": "Log measurement",
+  "progressBodyFatValue": "{percentage}% body fat",
+  "@progressBodyFatValue": { "placeholders": { "percentage": { "type": "String" } } },
+  "progressBmiSummary": "BMI {value} · {category}",
+  "@progressBmiSummary": { "placeholders": { "value": { "type": "String" }, "category": { "type": "String" } } },
+  "progressBmiUnderweight": "Underweight",
+  "progressBmiHealthy": "Healthy range",
+  "progressBmiOverweight": "Overweight",
+  "progressBmiObesity": "Obesity range",
+  "progressViewAllMeasurements": "View all measurements ({count, plural, =1{1 more} other{{count} more}})",
+  "@progressViewAllMeasurements": { "placeholders": { "count": { "type": "int" } } },
+  "progressMeasurementsTitle": "Measurements",
+  "progressMeasurementsLoadFailed": "Could not load measurements",
+  "progressMeasurementOptions": "Measurement options",
+  "progressBodyMetricDateAndFat": "{date} · {percentage}% body fat",
+  "@progressBodyMetricDateAndFat": { "placeholders": { "date": { "type": "String" }, "percentage": { "type": "String" } } },
+  "progressEditMeasurement": "Edit measurement",
+  "progressWeightField": "Weight ({unit})",
+  "@progressWeightField": { "placeholders": { "unit": { "type": "String" } } },
+  "progressBodyFatOptionalField": "Body fat % (optional)",
+  "progressMetricSemantic": "{label}: {value}",
+  "@progressMetricSemantic": { "placeholders": { "label": { "type": "String" }, "value": { "type": "String" } } }
+}

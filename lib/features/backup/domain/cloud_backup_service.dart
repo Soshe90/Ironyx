@@ -49,26 +49,10 @@ class CloudBackupFailure implements Exception {
 
   final CloudBackupFailureKind kind;
 
-  /// The backend's own message, kept for logs, never shown verbatim.
+  /// The backend's own message, kept for logs, never shown verbatim. The
+  /// user-facing wording comes from `CloudBackupFailureL10n.messageFor` in
+  /// the presentation layer, which is where the translations live.
   final String? detail;
-
-  String get message => switch (kind) {
-        CloudBackupFailureKind.notSignedIn =>
-          'Sign in first — a backup is stored with your account.',
-        CloudBackupFailureKind.notConfigured =>
-          'Backup isn\'t available in this build.',
-        CloudBackupFailureKind.notProvisioned =>
-          'Backup isn\'t set up on the server yet. Run the SQL in '
-              'docs/cloud_backup_setup.sql against your Supabase project.',
-        CloudBackupFailureKind.noBackupYet =>
-          'There\'s no backup stored for this account yet.',
-        CloudBackupFailureKind.offline =>
-          'Couldn\'t reach the server. Check your connection and try again.',
-        CloudBackupFailureKind.corrupt =>
-          'That backup couldn\'t be read. It may have been made by a newer '
-              'version of the app.',
-        CloudBackupFailureKind.unknown => 'Something went wrong. Try again.',
-      };
 
   @override
   String toString() => 'CloudBackupFailure(${kind.name}'

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/tables/exercises.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
@@ -21,17 +22,18 @@ class WorkoutEditPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = context.l10n;
     final provider = editWorkoutProvider(workoutId);
     final draftAsync = ref.watch(provider);
     final notifier = ref.read(provider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit workout')),
+      appBar: AppBar(title: Text(l10n.workoutEditTitle)),
       body: draftAsync.when(
         data: (draft) => _EditWorkoutBody(draft: draft, notifier: notifier),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
-          title: 'Failed to load workout',
+          title: l10n.workoutLoadFailed,
           details: error.toString(),
           onRetry: () => ref.invalidate(provider),
         ),
@@ -48,6 +50,7 @@ class _EditWorkoutBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
     final bool hasExercises = draft.exercises.isNotEmpty;
 
     return Column(
@@ -62,9 +65,9 @@ class _EditWorkoutBody extends StatelessWidget {
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.fitness_center_outlined,
-                      title: 'No exercises left',
-                      message: 'Add at least one exercise before saving.',
-                      actionLabel: 'Add exercise',
+                      title: l10n.workoutNoExercisesLeft,
+                      message: l10n.workoutNoExercisesLeftMessage,
+                      actionLabel: l10n.workoutAddExercise,
                       onAction: () => _addExercise(context, notifier),
                     ),
                   )
@@ -98,7 +101,7 @@ class _EditWorkoutBody extends StatelessWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => _addExercise(context, notifier),
                         icon: const Icon(Icons.add),
-                        label: const Text('Add exercise'),
+                        label: Text(l10n.workoutAddExercise),
                       ),
                     ),
                   ),
@@ -111,7 +114,7 @@ class _EditWorkoutBody extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: hasExercises ? () => _save(context, notifier) : null,
             icon: const Icon(Icons.check),
-            label: const Text('Save changes'),
+            label: Text(l10n.workoutSaveChanges),
           ),
         ),
       ],
@@ -134,16 +137,17 @@ class _EditWorkoutBody extends StatelessWidget {
   }
 
   Future<void> _save(BuildContext context, EditWorkoutNotifier notifier) async {
+    final AppLocalizations l10n = context.l10n;
     try {
       await notifier.save();
       if (!context.mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       context.pop();
-      messenger.showSnackBar(const SnackBar(content: Text('Workout updated')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.workoutUpdated)));
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save changes: $error')),
+          SnackBar(content: Text(l10n.workoutSaveChangesFailed('$error'))),
         );
       }
     }

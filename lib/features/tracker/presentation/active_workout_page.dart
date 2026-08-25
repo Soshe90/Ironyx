@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -54,6 +55,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
     final WorkoutDraft? draft = ref.watch(activeWorkoutProvider);
     final ActiveWorkoutNotifier notifier =
         ref.read(activeWorkoutProvider.notifier);
@@ -70,14 +72,14 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.close),
-          tooltip: 'Close',
+          tooltip: l10n.actionClose,
           onPressed: () => context.pop(),
         ),
         title: _SessionClock(startedAt: draft.startedAt),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Discard workout',
+            tooltip: l10n.activeWorkoutDiscardTooltip,
             onPressed: () => _confirmDiscard(context, notifier),
           ),
         ],
@@ -102,10 +104,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                   hasScrollBody: false,
                   child: EmptyState(
                     icon: Icons.fitness_center_outlined,
-                    title: 'Add your first exercise',
-                    message: 'Pick a movement and start logging sets. Your '
-                        'draft is saved as you go.',
-                    actionLabel: 'Add exercise',
+                    title: l10n.activeWorkoutAddFirstExercise,
+                    message: l10n.activeWorkoutAddFirstExerciseMessage,
+                    actionLabel: l10n.workoutAddExercise,
                     onAction: () => _addExercise(context, notifier),
                   ),
                 )
@@ -141,7 +142,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                     child: OutlinedButton.icon(
                       onPressed: () => _addExercise(context, notifier),
                       icon: const Icon(Icons.add),
-                      label: const Text('Add exercise'),
+                      label: Text(l10n.workoutAddExercise),
                     ),
                   ),
                 ),
@@ -153,7 +154,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
         child: FilledButton.icon(
           onPressed: hasExercises ? () => _save(context, notifier) : null,
           icon: const Icon(Icons.check),
-          label: const Text('Finish workout'),
+          label: Text(l10n.activeWorkoutFinish),
         ),
       ),
     );
@@ -178,16 +179,17 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     BuildContext context,
     ActiveWorkoutNotifier notifier,
   ) async {
+    final AppLocalizations l10n = context.l10n;
     try {
       await notifier.save();
       if (!context.mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       context.pop();
-      messenger.showSnackBar(const SnackBar(content: Text('Workout saved')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.activeWorkoutSaved)));
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save workout: $error')),
+          SnackBar(content: Text(l10n.activeWorkoutSaveFailed('$error'))),
         );
       }
     }
@@ -197,19 +199,20 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     BuildContext context,
     ActiveWorkoutNotifier notifier,
   ) async {
+    final AppLocalizations l10n = context.l10n;
     final discard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Discard workout?'),
-        content: const Text('Your current draft will be removed.'),
+        title: Text(l10n.activeWorkoutDiscardTitle),
+        content: Text(l10n.activeWorkoutDiscardBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton.tonal(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
+            child: Text(l10n.activeWorkoutDiscardAction),
           ),
         ],
       ),
@@ -222,10 +225,10 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     context.pop();
     messenger.showSnackBar(
       SnackBar(
-        content: const Text('Workout discarded'),
+        content: Text(l10n.activeWorkoutDiscarded),
         duration: AppDuration.undoWindow,
         action: SnackBarAction(
-          label: 'Undo',
+          label: l10n.actionUndo,
           onPressed: () {
             notifier.cancelScheduledDiscard();
             router.pushNamed(Routes.activeWorkoutName);
@@ -275,7 +278,7 @@ class _SessionClockState extends State<_SessionClock> {
         UnitFormatters.duration(elapsed.isNegative ? Duration.zero : elapsed);
 
     return Semantics(
-      label: 'Elapsed time $text',
+      label: context.l10n.activeWorkoutElapsedSemantic(text),
       child: ExcludeSemantics(
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -327,12 +330,15 @@ class _SessionTotals extends ConsumerWidget {
     return StatStrip(
       stats: <Stat>[
         Stat(
-          label: 'Volume',
+          label: context.l10n.statVolume,
           value: UnitFormatters.volume(volumeKg, unit),
           emphasis: true,
         ),
-        Stat(label: 'Sets', value: '$completedSets'),
-        Stat(label: 'Exercises', value: '${draft.exercises.length}'),
+        Stat(label: context.l10n.statSets, value: '$completedSets'),
+        Stat(
+          label: context.l10n.statExercises,
+          value: '${draft.exercises.length}',
+        ),
       ],
     );
   }

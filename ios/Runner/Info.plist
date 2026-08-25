@@ -23,10 +23,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.fittrack.fittrack.auth</string>
+			<string>com.soshe90.fittrack.auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.fittrack.fittrack</string>
+				<string>com.soshe90.fittrack</string>
 			</array>
 		</dict>
 	</array>

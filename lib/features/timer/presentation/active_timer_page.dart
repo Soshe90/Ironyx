@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters/unit_formatters.dart';
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/page_body.dart';
 import '../domain/timer_controller.dart';
 import '../domain/timer_engine.dart';
 import '../domain/timer_preset.dart';
+import 'timer_preset_labels.dart';
 
 /// Full-screen running timer (root route, ADR-3). The bottom bar is hidden so
 /// a mid-set tap cannot dismiss the session accidentally.
@@ -37,10 +39,10 @@ class ActiveTimerPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(controller.preset.name),
+        title: Text(controller.preset.displayName(context.l10n)),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          tooltip: 'End timer',
+          tooltip: context.l10n.timerEndTooltip,
           onPressed: controller.stop,
         ),
       ),
@@ -53,7 +55,8 @@ class ActiveTimerPage extends ConsumerWidget {
               // reads above it as an eyebrow rather than as a footnote.
               const Spacer(),
               Text(
-                _intervalLabel(snapshot, controller.preset).toUpperCase(),
+                _intervalLabel(context, snapshot, controller.preset)
+                    .toUpperCase(),
                 style: AppTypography.eyebrow(Theme.of(context)),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -76,10 +79,17 @@ class ActiveTimerPage extends ConsumerWidget {
     );
   }
 
-  String _intervalLabel(TimerSnapshot snapshot, TimerPreset preset) {
-    if (snapshot.isComplete) return 'Complete';
-    final int current = snapshot.currentIndex + 1;
-    return 'Interval $current of ${preset.totalIntervals}';
+  String _intervalLabel(
+    BuildContext context,
+    TimerSnapshot snapshot,
+    TimerPreset preset,
+  ) {
+    final AppLocalizations l10n = context.l10n;
+    if (snapshot.isComplete) return l10n.timerComplete;
+    return l10n.timerIntervalOf(
+      snapshot.currentIndex + 1,
+      preset.totalIntervals,
+    );
   }
 }
 
@@ -147,7 +157,9 @@ class _PhaseLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String label = snapshot.currentPhase?.type.label ?? 'Done';
+    final AppLocalizations l10n = context.l10n;
+    final String label =
+        snapshot.currentPhase?.type.label(l10n) ?? l10n.timerPhaseDone;
     return Text(
       label,
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -184,13 +196,15 @@ class _Controls extends StatelessWidget {
       children: [
         IconButton.filledTonal(
           icon: const Icon(Icons.skip_next),
-          tooltip: 'Skip interval',
+          tooltip: context.l10n.timerSkipTooltip,
           onPressed: onSkip,
         ),
         const SizedBox(width: AppSpacing.xl),
         Semantics(
           button: true,
-          label: isRunning ? 'Pause timer' : 'Resume timer',
+          label: isRunning
+              ? context.l10n.timerPauseSemantic
+              : context.l10n.timerResumeSemantic,
           child: FilledButton(
             onPressed: isRunning ? onPause : onResume,
             style: FilledButton.styleFrom(
@@ -206,7 +220,7 @@ class _Controls extends StatelessWidget {
         const SizedBox(width: AppSpacing.xl),
         IconButton.filledTonal(
           icon: const Icon(Icons.stop),
-          tooltip: 'End timer',
+          tooltip: context.l10n.timerEndTooltip,
           onPressed: onEnd,
         ),
       ],
@@ -243,8 +257,7 @@ class _PermissionDeniedBannerState extends State<_PermissionDeniedBanner> {
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              'Notifications are off — alerts will not fire if the app is '
-              'fully backgrounded. The timer still runs.',
+              context.l10n.timerNotificationsOff,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onErrorContainer,
                   ),
@@ -252,7 +265,7 @@ class _PermissionDeniedBannerState extends State<_PermissionDeniedBanner> {
           ),
           IconButton(
             icon: Icon(Icons.close, color: scheme.onErrorContainer),
-            tooltip: 'Dismiss',
+            tooltip: context.l10n.actionClose,
             onPressed: () => setState(() => _dismissed = true),
           ),
         ],

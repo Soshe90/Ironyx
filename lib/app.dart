@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/l10n/locale_controller.dart';
 import 'core/providers.dart';
 import 'core/router/app_router.dart';
 import 'core/router/routes.dart';
@@ -13,6 +14,7 @@ import 'core/theme/theme_mode_controller.dart';
 import 'features/auth/domain/auth_controller.dart';
 import 'features/auth/domain/auth_service.dart';
 import 'features/onboarding/domain/onboarding_controller.dart';
+import 'l10n/app_localizations.dart';
 
 class FitTrackApp extends ConsumerStatefulWidget {
   const FitTrackApp({this.router, super.key});
@@ -50,6 +52,7 @@ class _FitTrackAppState extends ConsumerState<FitTrackApp> {
   @override
   Widget build(BuildContext context) {
     final ThemeMode themeMode = ref.watch(themeModeControllerProvider);
+    final Locale? locale = ref.watch(localeControllerProvider);
 
     // Kicks off the idempotent exercise seeder (M2) once per launch. It's a
     // keepAlive provider that no screen otherwise reads, so nothing would
@@ -82,11 +85,20 @@ class _FitTrackAppState extends ConsumerState<FitTrackApp> {
     });
 
     return MaterialApp.router(
-      title: 'FitTrack',
+      // `onGenerateTitle` rather than `title`: it runs with a context that can
+      // reach `Localizations`, so the name the OS task switcher shows follows
+      // the app's language.
+      onGenerateTitle: (BuildContext context) =>
+          AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
+      // Null means "follow the device", which is what `basicLocaleListResolution`
+      // already does with the platform's preferred locale list.
+      locale: locale,
+      supportedLocales: kSupportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: _router,
     );
   }

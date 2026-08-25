@@ -8,6 +8,7 @@ import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/tables/body_metrics.dart';
 import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/formatters/unit_formatters.dart';
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -28,6 +29,7 @@ class BodyMetricTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
+    final String date = DateFormatters.of(context).full(entry.date);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -45,12 +47,16 @@ class BodyMetricTile extends ConsumerWidget {
             ),
           ),
           subtitle: Text(
-            '${DateFormatters.full(entry.date)}'
-            '${entry.bodyFatPercentage == null ? '' : ' · ${entry.bodyFatPercentage!.toStringAsFixed(1)}% body fat'}',
+            entry.bodyFatPercentage == null
+                ? date
+                : context.l10n.progressBodyMetricDateAndFat(
+                    date,
+                    entry.bodyFatPercentage!.toStringAsFixed(1),
+                  ),
             style: AppTypography.caption(theme),
           ),
           trailing: PopupMenuButton<String>(
-            tooltip: 'Measurement options',
+            tooltip: context.l10n.progressMeasurementOptions,
             onSelected: (String action) {
               if (action == 'edit') {
                 showBodyMetricEditor(context, ref, unit: unit, entry: entry);
@@ -59,9 +65,15 @@ class BodyMetricTile extends ConsumerWidget {
                 ref.read(bodyMetricsDaoProvider).deleteByDate(entry.date);
               }
             },
-            itemBuilder: (context) => const <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-              PopupMenuItem<String>(value: 'delete', child: Text('Delete')),
+            itemBuilder: (context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'edit',
+                child: Text(context.l10n.actionEdit),
+              ),
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: Text(context.l10n.actionDelete),
+              ),
             ],
           ),
         ),
@@ -98,13 +110,17 @@ Future<void> showBodyMetricEditor(
     final bool? saved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(entry == null ? 'Log measurement' : 'Edit measurement'),
+        title: Text(
+          entry == null
+              ? context.l10n.progressLogMeasurement
+              : context.l10n.progressEditMeasurement,
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              DateFormatters.full(date),
+              DateFormatters.of(context).full(date),
               style: AppTypography.caption(Theme.of(context)),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -115,7 +131,7 @@ Future<void> showBodyMetricEditor(
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: 'Weight (${unit.label})',
+                labelText: context.l10n.progressWeightField(unit.label),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -124,8 +140,8 @@ Future<void> showBodyMetricEditor(
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(
-                labelText: 'Body fat % (optional)',
+              decoration: InputDecoration(
+                labelText: context.l10n.progressBodyFatOptionalField,
               ),
             ),
           ],
@@ -133,11 +149,11 @@ Future<void> showBodyMetricEditor(
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Save'),
+            child: Text(context.l10n.actionSave),
           ),
         ],
       ),

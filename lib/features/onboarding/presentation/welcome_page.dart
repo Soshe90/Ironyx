@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -32,6 +33,7 @@ class WelcomePage extends ConsumerWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final bool accountsAvailable = ref.watch(authAvailableProvider);
+    final AppLocalizations l10n = context.l10n;
 
     // Leaves the welcome screen for [routeName], or straight to the
     // dashboard when it is null. The dashboard is always pushed first so
@@ -71,7 +73,7 @@ class WelcomePage extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'FitTrack',
+                      l10n.appTitle,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w600,
@@ -80,32 +82,32 @@ class WelcomePage extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Your training, tracked.',
+                      l10n.welcomeTagline,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
-                    const _Feature(
+                    _Feature(
                       icon: Icons.checklist_rtl,
-                      title: 'Log every set and rep',
-                      detail: 'Weight, reps and rest, recorded as you lift.',
+                      title: l10n.welcomeFeatureLogTitle,
+                      detail: l10n.welcomeFeatureLogDetail,
                     ),
-                    const _Feature(
+                    _Feature(
                       icon: Icons.calendar_month_outlined,
-                      title: 'Follow or build programs',
-                      detail: 'Start from a built-in split or write your own.',
+                      title: l10n.welcomeFeatureProgramsTitle,
+                      detail: l10n.welcomeFeatureProgramsDetail,
                     ),
-                    const _Feature(
+                    _Feature(
                       icon: Icons.timer_outlined,
-                      title: 'A rest timer that keeps time',
-                      detail: 'Runs in the background, with sound and haptics.',
+                      title: l10n.welcomeFeatureTimerTitle,
+                      detail: l10n.welcomeFeatureTimerDetail,
                     ),
-                    const _Feature(
+                    _Feature(
                       icon: Icons.show_chart,
-                      title: 'Charts that show progress',
-                      detail: 'Volume, estimated 1RM and body measurements.',
+                      title: l10n.welcomeFeatureChartsTitle,
+                      detail: l10n.welcomeFeatureChartsDetail,
                     ),
                   ],
                 ),
@@ -124,22 +126,22 @@ class WelcomePage extends ConsumerWidget {
                 if (accountsAvailable) ...<Widget>[
                   FilledButton(
                     onPressed: () => leave(Routes.signUpName),
-                    child: const Text('Create a free account'),
+                    child: Text(l10n.welcomeCreateAccount),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   OutlinedButton(
                     onPressed: () => leave(Routes.signInName),
-                    child: const Text('I already have an account'),
+                    child: Text(l10n.welcomeHaveAccount),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextButton(
                     onPressed: leave,
-                    child: const Text('Continue without an account'),
+                    child: Text(l10n.welcomeContinueAsGuest),
                   ),
                 ] else
                   FilledButton(
                     onPressed: leave,
-                    child: const Text('Get started'),
+                    child: Text(l10n.welcomeGetStarted),
                   ),
               ],
             ),
@@ -226,11 +228,8 @@ class _DataNotice extends StatelessWidget {
           Expanded(
             child: Text(
               accountsAvailable
-                  ? 'Your workouts stay on this device, account or not. '
-                      'Uninstalling deletes them — save a backup from '
-                      'Settings any time. A free account keeps your profile.'
-                  : 'Your workouts stay on this device. Uninstalling deletes '
-                      'them — save a backup from Settings any time.',
+                  ? context.l10n.welcomeDataNoticeWithAccounts
+                  : context.l10n.welcomeDataNotice,
               style: AppTypography.caption(theme),
             ),
           ),

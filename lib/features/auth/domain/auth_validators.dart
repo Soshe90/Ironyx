@@ -1,8 +1,15 @@
+import '../../../core/l10n/l10n_extension.dart';
+
 /// Client-side checks for the auth forms.
 ///
 /// Pure and synchronous so the forms can validate on every keystroke without
 /// a round trip. These catch typos early; they are not a security boundary —
 /// the backend re-validates everything.
+///
+/// Each takes the [AppLocalizations] to phrase its failure with, rather than
+/// returning a bare `bool`: the caller would only have to map the failure
+/// back onto a message anyway, and doing it here keeps the rule and its
+/// wording next to each other.
 abstract final class AuthValidators {
   /// Shortest password Supabase accepts by default. Matching it here means
   /// the user sees the rule before submitting rather than after.
@@ -15,18 +22,18 @@ abstract final class AuthValidators {
   static final RegExp _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
 
   /// Returns null when valid, or a message to show under the field.
-  static String? email(String? value) {
+  static String? email(String? value, AppLocalizations l10n) {
     final String trimmed = (value ?? '').trim();
-    if (trimmed.isEmpty) return 'Enter your email.';
-    if (!_emailPattern.hasMatch(trimmed)) return 'Enter a valid email address.';
+    if (trimmed.isEmpty) return l10n.authValidatorEmailEmpty;
+    if (!_emailPattern.hasMatch(trimmed)) return l10n.authValidatorEmailInvalid;
     return null;
   }
 
-  static String? password(String? value) {
+  static String? password(String? value, AppLocalizations l10n) {
     final String password = value ?? '';
-    if (password.isEmpty) return 'Enter a password.';
+    if (password.isEmpty) return l10n.authValidatorPasswordEmpty;
     if (password.length < minPasswordLength) {
-      return 'Use at least $minPasswordLength characters.';
+      return l10n.authValidatorPasswordTooShort(minPasswordLength);
     }
     return null;
   }
@@ -34,12 +41,16 @@ abstract final class AuthValidators {
   /// Sign-in only checks presence: an existing account may predate a rule
   /// change, and "your password is too short" on the *sign-in* screen is
   /// both wrong and alarming.
-  static String? signInPassword(String? value) =>
-      (value ?? '').isEmpty ? 'Enter your password.' : null;
+  static String? signInPassword(String? value, AppLocalizations l10n) =>
+      (value ?? '').isEmpty ? l10n.authValidatorSignInPasswordEmpty : null;
 
-  static String? confirmPassword(String? value, String original) {
-    if ((value ?? '').isEmpty) return 'Re-enter your password.';
-    if (value != original) return 'Passwords don\'t match.';
+  static String? confirmPassword(
+    String? value,
+    String original,
+    AppLocalizations l10n,
+  ) {
+    if ((value ?? '').isEmpty) return l10n.authValidatorConfirmPasswordEmpty;
+    if (value != original) return l10n.authValidatorPasswordsDoNotMatch;
     return null;
   }
 }

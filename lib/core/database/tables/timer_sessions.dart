@@ -127,11 +127,6 @@ abstract class TimerInterval with _$TimerInterval {
 /// Timer interval type enum — stored as TEXT in the DB.
 enum TimerIntervalType { work, rest, prepare, cooldown }
 
-extension TimerIntervalTypeX on TimerIntervalType {
-  String get label => switch (this) {
-        TimerIntervalType.work => 'Work',
-        TimerIntervalType.rest => 'Rest',
-        TimerIntervalType.prepare => 'Prepare',
-        TimerIntervalType.cooldown => 'Cooldown',
-      };
-}
+// The display names for these live on `TimerPhaseType` in the timer's own
+// domain layer, which is the enum the UI and the notification scheduler both
+// work with. This one is only ever written to and read from the database.

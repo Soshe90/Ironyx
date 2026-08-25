@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n_extension.dart';
 import '../theme/app_spacing.dart';
 
 /// Failure state with a retry affordance.
@@ -9,14 +10,17 @@ import '../theme/app_spacing.dart';
 /// user and a support burden to you.
 class ErrorView extends StatelessWidget {
   const ErrorView({
-    this.title = 'Something went wrong',
+    this.title,
     this.details,
     this.onRetry,
     this.compact = false,
     super.key,
   });
 
-  final String title;
+  /// Defaults to the generic failure message. Null rather than a literal
+  /// default because the fallback is localized, and a parameter default has
+  /// to be `const` — there is no `context` to resolve it against yet.
+  final String? title;
   final String? details;
   final VoidCallback? onRetry;
 
@@ -41,7 +45,7 @@ class ErrorView extends StatelessWidget {
         ),
         SizedBox(height: compact ? AppSpacing.sm : AppSpacing.lg),
         Text(
-          title,
+          title ?? context.l10n.commonError,
           style:
               compact ? theme.textTheme.bodySmall : theme.textTheme.titleMedium,
           textAlign: compact ? TextAlign.start : TextAlign.center,
@@ -59,11 +63,14 @@ class ErrorView extends StatelessWidget {
         if (onRetry != null) ...<Widget>[
           SizedBox(height: compact ? AppSpacing.sm : AppSpacing.xl),
           if (compact)
-            TextButton(onPressed: onRetry, child: const Text('Retry'))
+            TextButton(
+              onPressed: onRetry,
+              child: Text(context.l10n.actionRetry),
+            )
           else
             FilledButton.tonal(
               onPressed: onRetry,
-              child: const Text('Try again'),
+              child: Text(context.l10n.errorTryAgain),
             ),
         ],
       ],
