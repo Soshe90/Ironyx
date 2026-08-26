@@ -148,10 +148,13 @@ and five near-duplicate cable-fly entries that had been sharing images.
 learning.**
 
 - [ ] **acct** — Play Developer account. $25, one time.
-- [ ] **dev** — Signing keystore. Current release builds use the **debug
-      key** (`android/app/build.gradle:37`), which Play will reject. Generate
-      a real one, store `android/key.properties` outside git, and **back the
-      keystore up** — losing it means never updating this listing again.
+- [x] **dev** — Signing keystore. Generated 2026-08-26:
+      `android/upload-keystore.jks` (alias `fittrack_upload`), credentials in
+      `android/key.properties` (both gitignored, neither backed up anywhere
+      else yet). `build.gradle.kts` uses it for `release` builds when present,
+      falling back to the debug key otherwise. **Still need to back the
+      keystore up somewhere durable** — losing it means never updating this
+      listing again once published.
 - [ ] **dev** — Store listing: icon, feature graphic, screenshots, short and
       full description.
 - [ ] **acct** — ASO. The highest-return free work available: title,
