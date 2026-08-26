@@ -101,6 +101,7 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
             for (final ex in exerciseRows)
               ProgramDayExercise(
                 exerciseId: ex.readTable(templateExercisesTable).exerciseId,
+                exerciseSlug: ex.readTable(exercisesTable).slug,
                 exerciseName: ex.readTable(exercisesTable).name,
                 targetSets: ex.readTable(templateExercisesTable).targetSets,
                 targetReps: ex.readTable(templateExercisesTable).targetReps,
@@ -266,6 +267,7 @@ class ProgramDay {
 class ProgramDayExercise {
   const ProgramDayExercise({
     required this.exerciseId,
+    required this.exerciseSlug,
     required this.exerciseName,
     required this.targetSets,
     this.targetReps,
@@ -274,6 +276,10 @@ class ProgramDayExercise {
   });
 
   final String exerciseId;
+
+  /// `ExercisesTable.slug` — the key `kExerciseNamesAr` translates by, so a
+  /// display site can localize [exerciseName] without a second query.
+  final String exerciseSlug;
   final String exerciseName;
   final int targetSets;
   final String? targetReps;

@@ -122,8 +122,10 @@ void main() {
     expect(detail.days, hasLength(2));
     expect(detail.days[0].dayName, 'Workout A');
     expect(detail.days[0].exercises.single.exerciseName, 'Back Squat');
+    expect(detail.days[0].exercises.single.exerciseSlug, 'squat');
     expect(detail.days[0].exercises.single.targetReps, '6-8');
     expect(detail.days[1].exercises.single.exerciseName, 'Barbell Bench Press');
+    expect(detail.days[1].exercises.single.exerciseSlug, 'bench');
   });
 
   test('watchAll reports day count per program', () async {

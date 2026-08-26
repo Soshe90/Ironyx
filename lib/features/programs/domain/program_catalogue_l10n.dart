@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../../../core/database/daos/program_dao.dart';
 import '../../../core/database/tables/programs.dart';
 import '../../../core/l10n/l10n_extension.dart';
+import '../../library/domain/exercise_catalogue_ar.dart';
 import 'program_catalogue_ar.dart';
 
 /// Localized display copy for a built-in program row.
@@ -42,6 +43,16 @@ extension ProgramL10n on Program {
 extension ProgramDayL10n on ProgramDay {
   String displayDayName(BuildContext context) =>
       _lookup(context, kProgramDayNamesAr, templateId) ?? dayName;
+}
+
+/// Localized display copy for one exercise row within a program day.
+///
+/// Reuses the exercise catalogue's own translation table — a program's
+/// exercises are catalogue exercises, the same ones the library page shows,
+/// so they carry the same Arabic names rather than a program-specific copy.
+extension ProgramDayExerciseL10n on ProgramDayExercise {
+  String displayName(BuildContext context) =>
+      _lookup(context, kExerciseNamesAr, exerciseSlug) ?? exerciseName;
 }
 
 /// The Arabic name for [key], or null in any other language.

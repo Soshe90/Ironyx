@@ -198,6 +198,7 @@ class _ProgramDetailBody extends ConsumerWidget {
       );
       if (replace != true || !context.mounted) return;
       await ref.read(activeWorkoutProvider.notifier).discard();
+      if (!context.mounted) return;
     }
 
     final notifier = ref.read(activeWorkoutProvider.notifier);
@@ -205,7 +206,7 @@ class _ProgramDetailBody extends ConsumerWidget {
       for (final exercise in day.exercises)
         TemplateExerciseInput(
           exerciseId: exercise.exerciseId,
-          name: exercise.exerciseName,
+          name: exercise.displayName(context),
           targetSets: exercise.targetSets,
         ),
     ]);
@@ -319,7 +320,7 @@ class _DayCard extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        exercise.exerciseName,
+                        exercise.displayName(context),
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),
