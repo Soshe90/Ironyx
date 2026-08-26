@@ -41,9 +41,7 @@ class ProgramImportService {
     final setsIndex = header.indexOf('sets');
     final repsIndex = header.indexOf('reps');
     if (programIndex < 0 || dayIndex < 0 || exerciseIndex < 0) {
-      throw const ProgramImportException(
-        'The first row must contain "program", "day", and "exercise" columns.',
-      );
+      throw const ProgramImportException();
     }
 
     final exerciseNameToId = await _exerciseNameToId(db);
@@ -121,7 +119,10 @@ class ProgramImportService {
           ProgramsTableCompanion.insert(
             id: _uuid.v4(),
             name: program.name,
-            description: Value('Imported · ${program.days.length} days'),
+            // No auto-generated description: `description` is a freeform
+            // field the user can edit (see program_editor_page.dart), and
+            // the day count it would restate already renders localized in
+            // the detail page's StatStrip.
             splitType: const Value('custom'),
             createdAt: now,
             updatedAt: now,
@@ -233,14 +234,13 @@ class ProgramImportService {
   }
 }
 
-/// Thrown when a spreadsheet is structurally invalid (shown to the user).
+/// Thrown when a spreadsheet is missing the required header columns.
+///
+/// Carries no message: this is a service class with no `BuildContext`, and
+/// the previous hardcoded-English message shipped verbatim to the UI even
+/// under Arabic. The catch site resolves the localized copy instead.
 class ProgramImportException implements Exception {
-  const ProgramImportException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
+  const ProgramImportException();
 }
 
 /// Result of parsing a spreadsheet, before writing to the database.

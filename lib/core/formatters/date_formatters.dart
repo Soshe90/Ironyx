@@ -76,10 +76,14 @@ final class DateFormatters {
   ///   emits `1,234` for `ar` \u2014 so leaving dates alone would put the two
   ///   numbering systems side by side on the same screen.
   String _format(DateFormat format, DateTime date) =>
-      _toWesternDigits(format.format(date).replaceAll('\u202f', ' '));
+      toWesternDigits(format.format(date).replaceAll('\u202f', ' '));
 
   /// U+0660..U+0669 (Arabic-Indic) mapped back onto ASCII `0`..`9`.
-  static String _toWesternDigits(String value) {
+  ///
+  /// Public so callers formatting a date outside the fixed set above (e.g.
+  /// a raw `DateFormat('MMMM yyyy', locale)`) can still follow the app's
+  /// Western-digit policy without duplicating this table.
+  static String toWesternDigits(String value) {
     const int arabicZero = 0x0660;
     return String.fromCharCodes(<int>[
       for (final int unit in value.codeUnits)

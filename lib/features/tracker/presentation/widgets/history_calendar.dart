@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 
@@ -60,7 +61,9 @@ class HistoryCalendar extends StatelessWidget {
             ),
             Expanded(
               child: Text(
-                _monthYear(context.localeName).format(visibleMonth),
+                DateFormatters.toWesternDigits(
+                  _monthYear(context.localeName).format(visibleMonth),
+                ),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -78,7 +81,7 @@ class HistoryCalendar extends StatelessWidget {
         ),
         Row(
           children: <Widget>[
-            for (final label in _weekdayLabels())
+            for (final label in _weekdayLabels(context.localeName))
               Expanded(
                 child: Center(
                   child: Text(
@@ -128,8 +131,8 @@ class HistoryCalendar extends StatelessWidget {
 
   /// Locale-aware Mon-Sun labels, anchored to a known Monday (2024-01-01)
   /// rather than hard-coding English names.
-  static List<String> _weekdayLabels() {
-    final DateFormat weekday = DateFormat.E();
+  static List<String> _weekdayLabels(String locale) {
+    final DateFormat weekday = DateFormat.E(locale);
     return [
       for (var i = 0; i < 7; i++) weekday.format(DateTime(2024, 1, 1 + i)),
     ];

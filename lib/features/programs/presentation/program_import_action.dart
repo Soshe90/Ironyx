@@ -46,9 +46,9 @@ class ProgramImportAction extends ConsumerWidget {
     final ProgramImportResult result;
     try {
       result = await service.parse(csv, db);
-    } on ProgramImportException catch (e) {
+    } on ProgramImportException {
       if (!context.mounted) return;
-      _showMessage(context, e.message);
+      _showMessage(context, context.l10n.programImportInvalidHeader);
       return;
     }
 
