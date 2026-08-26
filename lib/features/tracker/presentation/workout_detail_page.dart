@@ -20,6 +20,7 @@ import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/pr_badge.dart';
 import '../../../core/widgets/stat_strip.dart';
 import '../../../core/widgets/trend_badge.dart';
+import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../../progress/domain/progress_providers.dart';
 
 /// Read-only summary of a saved workout, with edit and delete actions.
@@ -112,6 +113,7 @@ class _WorkoutDetailBody extends ConsumerWidget {
     final DateFormatters dates = DateFormatters.of(context);
     final workout = details.workout;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
     final bool isPr = ref
             .watch(personalRecordWorkoutIdsProvider)
             .value
@@ -169,8 +171,13 @@ class _WorkoutDetailBody extends ConsumerWidget {
             _ExerciseBreakdown(
               exerciseId: exercise.exerciseId,
               workoutId: workoutId,
-              name: details.exerciseNames[exercise.id] ??
-                  l10n.workoutUnknownExercise,
+              name: localizedExerciseName(
+                context,
+                slugsById,
+                exercise.exerciseId,
+                details.exerciseNames[exercise.id] ??
+                    l10n.workoutUnknownExercise,
+              ),
               sets: details.setsByExercise[exercise.id] ?? const <WorkoutSet>[],
               unit: unit,
             ),

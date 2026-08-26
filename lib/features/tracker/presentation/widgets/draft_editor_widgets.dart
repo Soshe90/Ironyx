@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/database_providers.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../library/domain/exercise_catalogue_l10n.dart';
 import '../../../timer/domain/timer_engine.dart';
 import '../../../timer/domain/timer_preset.dart';
 import '../../domain/draft_editor_controller.dart';
@@ -51,6 +53,12 @@ class ExerciseDraftCard extends ConsumerWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final String displayName = localizedExerciseName(
+      context,
+      ref.watch(exerciseSlugsByIdProvider),
+      exercise.exerciseId,
+      exercise.name,
+    );
 
     final int completed =
         exercise.sets.where((DraftSet s) => s.isCompleted).length;
@@ -86,7 +94,7 @@ class ExerciseDraftCard extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Text(
-                        exercise.name,
+                        displayName,
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),
@@ -107,14 +115,14 @@ class ExerciseDraftCard extends ConsumerWidget {
                 IconButton(
                   onPressed: () => controller.removeExercise(exercise.id),
                   icon: const Icon(Icons.close),
-                  tooltip: context.l10n.draftRemoveExercise(exercise.name),
+                  tooltip: context.l10n.draftRemoveExercise(displayName),
                   visualDensity: VisualDensity.compact,
                 ),
                 if (dragHandleIndex != null)
                   ReorderableDragStartListener(
                     index: dragHandleIndex!,
                     child: Tooltip(
-                      message: context.l10n.draftReorderExercise(exercise.name),
+                      message: context.l10n.draftReorderExercise(displayName),
                       child: Icon(
                         Icons.drag_indicator,
                         color: scheme.onSurfaceVariant,
