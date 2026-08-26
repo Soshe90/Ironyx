@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/daos/workout_dao.dart';
+import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/database/tables/timer_sessions.dart';
 import '../../../core/database/tables/workouts.dart';
@@ -22,6 +23,7 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/sparkline.dart';
 import '../../../core/widgets/stat_strip.dart';
 import '../../../core/widgets/trend_badge.dart';
+import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../../tracker/domain/active_workout_notifier.dart';
 import '../domain/dashboard_providers.dart';
 import 'widgets/summary_card.dart';
@@ -603,6 +605,8 @@ class _OneRmCard extends ConsumerWidget {
     final AsyncValue<MostLoggedOneRM?> oneRmAsync =
         ref.watch(dashboardMostLoggedOneRMProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final Map<String, String> slugsById =
+        ref.watch(exerciseSlugsByIdProvider);
 
     return SummaryCard(
       title: context.l10n.dashboardEstOneRm,
@@ -613,7 +617,14 @@ class _OneRmCard extends ConsumerWidget {
       metric: oneRmAsync.value == null
           ? null
           : UnitFormatters.weight(oneRmAsync.value!.currentKg, unit),
-      caption: oneRmAsync.value?.exerciseName,
+      caption: oneRmAsync.value == null
+          ? null
+          : localizedExerciseName(
+              context,
+              slugsById,
+              oneRmAsync.value!.exerciseId,
+              oneRmAsync.value!.exerciseName,
+            ),
       emptyCaption: context.l10n.dashboardLogALiftToSeeThis,
       trend: oneRmAsync.value == null
           ? null

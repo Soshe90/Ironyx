@@ -82,6 +82,29 @@ Stream<List<ExerciseSummary>> allExercisesStream(Ref ref) =>
           (_) => ref.watch(exerciseDaoProvider).watchAll(),
         );
 
+/// `ExercisesTable.slug` by id, derived from [allExercisesStream].
+///
+/// Several analytics queries (Progress, Dashboard) denormalize an
+/// exercise's English `name` straight into their result rows for display,
+/// the same way `ProgramDayExercise` used to — there is no slug to
+/// translate by without a second lookup. This is that lookup, built once
+/// from the catalogue already being streamed for the Library, rather than
+/// adding a slug column to every one of those queries individually.
+///
+/// A plain derived value, not itself a stream: it recomputes automatically
+/// whenever [allExercisesStream] emits, same as any other `ref.watch`
+/// dependency, without the extra `AsyncValue` unwrapping a second stream
+/// provider would put on every caller.
+@Riverpod(keepAlive: true)
+Map<String, String> exerciseSlugsById(Ref ref) {
+  final List<ExerciseSummary> summaries =
+      ref.watch(allExercisesStreamProvider).value ?? const <ExerciseSummary>[];
+  return {
+    for (final ExerciseSummary summary in summaries)
+      summary.exercise.id: summary.exercise.slug,
+  };
+}
+
 /// Stream of exercises matching a search query (name or alias).
 @Riverpod(keepAlive: true)
 Stream<List<ExerciseSummary>> exercisesSearchStream(

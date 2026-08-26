@@ -875,6 +875,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         GROUP BY w.id, w.started_at
       )
       SELECT
+        (SELECT exercise_id FROM set_counts) AS exercise_id,
         (SELECT name FROM exercises_table
           WHERE id = (SELECT exercise_id FROM set_counts)) AS exercise_name,
         best_1rm
@@ -890,11 +891,13 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       },
     ).watch().map((rows) {
       if (rows.isEmpty) return null;
+      final String exerciseId = rows.first.read<String>('exercise_id');
       final String exerciseName = rows.first.read<String>('exercise_name');
       final double currentKg = rows.first.read<double>('best_1rm');
       final double? previousKg =
           rows.length > 1 ? rows[1].read<double>('best_1rm') : null;
       return MostLoggedOneRM(
+        exerciseId: exerciseId,
         exerciseName: exerciseName,
         currentKg: currentKg,
         trend: previousKg == null
@@ -1128,11 +1131,13 @@ enum OneRMTrend { up, down, flat }
 /// Est. 1RM for the most-logged exercise, for the Progress dashboard card.
 class MostLoggedOneRM {
   const MostLoggedOneRM({
+    required this.exerciseId,
     required this.exerciseName,
     required this.currentKg,
     required this.trend,
   });
 
+  final String exerciseId;
   final String exerciseName;
   final double currentKg;
   final OneRMTrend trend;

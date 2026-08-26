@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/daos/workout_dao.dart';
+import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/database/tables/profiles.dart';
 import '../../../core/formatters/date_formatters.dart';
@@ -23,6 +24,7 @@ import '../../../core/widgets/metric_explainer.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/trend_badge.dart';
+import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../domain/bmi.dart';
 import '../domain/progress_insights.dart';
 import '../domain/progress_providers.dart';
@@ -176,6 +178,8 @@ class _StrengthChangeSection extends ConsumerWidget {
     final AsyncValue<List<StrengthChange>> async =
         ref.watch(strengthChangeProvider(range));
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final Map<String, String> slugsById =
+        ref.watch(exerciseSlugsByIdProvider);
 
     return async.when(
       loading: () => const _ChartLoading(),
@@ -198,7 +202,16 @@ class _StrengthChangeSection extends ConsumerWidget {
           child: Column(
             children: <Widget>[
               for (final StrengthChange row in rows)
-                _StrengthRow(row: row, unit: unit),
+                _StrengthRow(
+                  row: row,
+                  unit: unit,
+                  displayName: localizedExerciseName(
+                    context,
+                    slugsById,
+                    row.exerciseId,
+                    row.exerciseName,
+                  ),
+                ),
             ],
           ),
         );
@@ -213,6 +226,8 @@ class _RelativeStrengthSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final Map<String, String> slugsById =
+        ref.watch(exerciseSlugsByIdProvider);
     return ref.watch(relativeStrengthsProvider(range)).when(
           loading: () => const SizedBox.shrink(),
           error: (_, __) => const SizedBox.shrink(),
@@ -247,7 +262,14 @@ class _RelativeStrengthSection extends ConsumerWidget {
                         for (final row in rows.take(6))
                           ListTile(
                             dense: true,
-                            title: Text(row.exerciseName),
+                            title: Text(
+                              localizedExerciseName(
+                                context,
+                                slugsById,
+                                row.exerciseId,
+                                row.exerciseName,
+                              ),
+                            ),
                             trailing: Text(
                               context.l10n.progressRelativeStrengthRatio(
                                 row.ratio.toStringAsFixed(2),
@@ -263,10 +285,15 @@ class _RelativeStrengthSection extends ConsumerWidget {
 }
 
 class _StrengthRow extends StatelessWidget {
-  const _StrengthRow({required this.row, required this.unit});
+  const _StrengthRow({
+    required this.row,
+    required this.unit,
+    required this.displayName,
+  });
 
   final StrengthChange row;
   final WeightUnit unit;
+  final String displayName;
 
   @override
   Widget build(BuildContext context) {
@@ -288,11 +315,11 @@ class _StrengthRow extends StatelessWidget {
     return Semantics(
       label: change == null
           ? l10n.progressStrengthSemanticNoChange(
-              row.exerciseName,
+              displayName,
               currentEstimate,
             )
           : l10n.progressStrengthSemantic(
-              row.exerciseName,
+              displayName,
               currentEstimate,
               change > 0 ? 'up' : 'down',
               (change.abs() * 100).round(),
@@ -308,7 +335,7 @@ class _StrengthRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      row.exerciseName,
+                      displayName,
                       style: theme.textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -650,6 +677,8 @@ class _OneRmSection extends ConsumerWidget {
     final AsyncValue<List<LoggedExercise>> exercises =
         ref.watch(loggedExercisesProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final Map<String, String> slugsById =
+        ref.watch(exerciseSlugsByIdProvider);
 
     return exercises.when(
       loading: () => const _ChartLoading(),
@@ -690,7 +719,12 @@ class _OneRmSection extends ConsumerWidget {
                 value: item.exerciseId,
                 child: Text(
                   context.l10n.progressExerciseWithSessions(
-                    item.exerciseName,
+                    localizedExerciseName(
+                      context,
+                      slugsById,
+                      item.exerciseId,
+                      item.exerciseName,
+                    ),
                     context.l10n.sessionCount(item.sessionCount),
                   ),
                   overflow: TextOverflow.ellipsis,

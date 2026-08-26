@@ -46,6 +46,26 @@ extension EquipmentL10n on Equipment {
 String localizedEquipmentName(BuildContext context, String name) =>
     _lookup(context, kEquipmentNamesAr, name) ?? name;
 
+/// Translates an exercise name for a query result that denormalized it
+/// (e.g. `StrengthChange.exerciseName`, `LoggedExercise.exerciseName`)
+/// rather than joining back to `Exercise` for [ExerciseL10n.displayName].
+///
+/// [slugsById] is `exerciseSlugsByIdProvider`'s map — built once from the
+/// full catalogue rather than adding a slug column to every analytics
+/// query that currently only selects a name. Falls back to [fallbackName]
+/// when the exercise isn't in the catalogue (a user-created exercise, or
+/// the map hasn't loaded yet).
+String localizedExerciseName(
+  BuildContext context,
+  Map<String, String> slugsById,
+  String exerciseId,
+  String fallbackName,
+) {
+  final String? slug = slugsById[exerciseId];
+  if (slug == null) return fallbackName;
+  return _lookup(context, kExerciseNamesAr, slug) ?? fallbackName;
+}
+
 /// Arabic instruction steps for all exercises in the bundled catalogue.
 const Map<String, List<String>> kExerciseInstructionsAr =
     <String, List<String>>{
