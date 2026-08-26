@@ -65,7 +65,7 @@ LICENSE = "Public domain (Unlicense)"
 ATTRIBUTION = "Free Exercise DB (yuhonas)"
 
 # Images are shipped at this width and quality. Upstream ships ~800px JPEGs
-# at ~70KB; two per exercise across 150 exercises is ~21MB of APK, which is
+# at ~70KB; two per exercise across 251 exercises is ~35MB of APK, which is
 # a real cost to install conversion. 600px/q80 lands around a third of that
 # and is still sharper than the display size in the exercise detail sheet.
 IMAGE_WIDTH = 600
@@ -170,7 +170,7 @@ class Pick:
 
 
 # --- The catalogue ---------------------------------------------------------
-# 151 entries. Ordered by muscle group so the file reads like the library.
+# 301 entries. Ordered by muscle group so the file reads like the library.
 # Where a `name` override appears, it is usually there to preserve an id
 # from the previous seed; see the module docstring for why that matters.
 
@@ -194,6 +194,18 @@ CURATION: list[Pick] = [
     Pick("Pushups", "horizontalPush", "Push-Up"),
     Pick("Dips - Chest Version", "horizontalPush", "Dip"),
     Pick("Straight-Arm Dumbbell Pullover", "other"),
+    Pick("Cable Chest Press", "horizontalPush"),
+    Pick("Incline Cable Chest Press", "horizontalPush"),
+    Pick("Standing Cable Chest Press", "horizontalPush"),
+    Pick("Dumbbell Bench Press with Neutral Grip", "horizontalPush"),
+    Pick("Dumbbell Floor Press", "horizontalPush"),
+    Pick("Close-Grip Dumbbell Press", "horizontalPush"),
+    Pick("Decline Dumbbell Flyes", "horizontalPush"),
+    Pick("Incline Push-Up", "horizontalPush"),
+    Pick("Decline Push-Up", "horizontalPush"),
+    Pick("Push-Up Wide", "horizontalPush"),
+    Pick("Single-Arm Cable Crossover", "horizontalPush"),
+    Pick("Svend Press", "horizontalPush"),
     # -- Back -------------------------------------------------------------
     Pick("Barbell Deadlift", "hipDominant", "Deadlift"),
     Pick("Sumo Deadlift", "hipDominant"),
@@ -217,6 +229,18 @@ CURATION: list[Pick] = [
     Pick("Chin-Up", "verticalPull"),
     Pick("Straight-Arm Pulldown", "other"),
     Pick("Hyperextensions (Back Extensions)", "hipDominant", "Back Extension"),
+    Pick("Band Assisted Pull-Up", "verticalPull"),
+    Pick("One Arm Lat Pulldown", "verticalPull"),
+    Pick("Full Range-Of-Motion Lat Pulldown", "verticalPull"),
+    Pick("Rope Straight-Arm Pulldown", "verticalPull"),
+    Pick("Kneeling High Pulley Row", "horizontalPull"),
+    Pick("Kneeling Single-Arm High Pulley Row", "horizontalPull"),
+    Pick("Elevated Cable Rows", "horizontalPull"),
+    Pick("Leverage High Row", "horizontalPull"),
+    Pick("Leverage Iso Row", "horizontalPull"),
+    Pick("Suspended Row", "horizontalPull"),
+    Pick("Inverted Row with Straps", "horizontalPull"),
+    Pick("Scapular Pull-Up", "verticalPull"),
     # -- Shoulders --------------------------------------------------------
     Pick("Standing Military Press", "verticalPush", "Overhead Press"),
     Pick("Dumbbell Shoulder Press", "verticalPush", "Dumbbell Overhead Press"),
@@ -237,6 +261,18 @@ CURATION: list[Pick] = [
     Pick("Band Pull Apart", "other", "Band Pull-Apart"),
     Pick("Battling Ropes", "other", "Battle Rope Waves"),
     Pick("Kettlebell Turkish Get-Up (Squat style)", "other", "Turkish Get-Up"),
+    Pick("Cable Shoulder Press", "verticalPush"),
+    Pick("Seated Cable Shoulder Press", "verticalPush"),
+    Pick("Standing Dumbbell Press", "verticalPush"),
+    Pick("Standing Alternating Dumbbell Press", "verticalPush"),
+    Pick("Kettlebell Arnold Press", "verticalPush"),
+    Pick("Dumbbell One-Arm Shoulder Press", "verticalPush"),
+    Pick("Lateral Raise - With Bands", "other"),
+    Pick("Front Cable Raise", "other"),
+    Pick("Dumbbell Scaption", "other"),
+    Pick("External Rotation with Band", "other"),
+    Pick("Cable Internal Rotation", "other"),
+    Pick("Cuban Press", "verticalPush"),
     # -- Arms: biceps -----------------------------------------------------
     Pick("Barbell Curl", "other"),
     Pick("EZ-Bar Curl", "other"),
@@ -250,6 +286,16 @@ CURATION: list[Pick] = [
     Pick("Reverse Barbell Curl", "other", "Reverse Curl"),
     Pick("Zottman Curl", "other"),
     Pick("Spider Curl", "other"),
+    Pick("Alternate Hammer Curl", "other"),
+    Pick("Cross Body Hammer Curl", "other"),
+    Pick("Drag Curl", "other"),
+    Pick("High Cable Curls", "other"),
+    Pick("Cable Preacher Curl", "other"),
+    Pick("Machine Bicep Curl", "other"),
+    Pick("Preacher Hammer Dumbbell Curl", "other"),
+    Pick("Seated Dumbbell Curl", "other"),
+    Pick("Standing Concentration Curl", "other"),
+    Pick("Two-Arm Dumbbell Preacher Curl", "other"),
     # -- Arms: triceps ----------------------------------------------------
     Pick("Triceps Pushdown - Rope Attachment", "other", "Tricep Pushdown"),
     Pick("Triceps Pushdown - V-Bar Attachment", "other"),
@@ -261,6 +307,14 @@ CURATION: list[Pick] = [
     Pick("Dips - Triceps Version", "other", "Tricep Dip"),
     Pick("Bench Dips", "other"),
     Pick("Machine Triceps Extension", "other"),
+    Pick("Band Skull Crusher", "other"),
+    Pick("Cable Incline Triceps Extension", "other"),
+    Pick("Cable One Arm Tricep Extension", "other"),
+    Pick("Dip Machine", "other"),
+    Pick("JM Press", "horizontalPush"),
+    Pick("Lying Dumbbell Tricep Extension", "other"),
+    Pick("Reverse Grip Triceps Pushdown", "other"),
+    Pick("Tate Press", "other"),
     # -- Legs -------------------------------------------------------------
     Pick("Barbell Squat", "kneeDominant", "Back Squat"),
     Pick("Front Barbell Squat", "kneeDominant", "Front Squat"),
@@ -290,6 +344,21 @@ CURATION: list[Pick] = [
     Pick("Smith Single-Leg Split Squat", "kneeDominant", "Bulgarian Split Squat"),
     Pick("Dumbbell Step Ups", "kneeDominant", "Step-Up"),
     Pick("Thigh Adductor", "other"),
+    Pick("Barbell Full Squat", "kneeDominant"),
+    Pick("Dumbbell Squat", "kneeDominant"),
+    Pick("Plie Dumbbell Squat", "kneeDominant"),
+    Pick("Narrow Stance Leg Press", "kneeDominant"),
+    Pick("Wide Stance Barbell Squat", "kneeDominant"),
+    Pick("Dumbbell Rear Lunge", "kneeDominant"),
+    Pick("Bodyweight Walking Lunge", "kneeDominant"),
+    Pick("Barbell Step Ups", "kneeDominant"),
+    Pick("Elevated Back Lunge", "kneeDominant"),
+    Pick("Single-Leg Leg Extension", "kneeDominant"),
+    Pick("Standing Leg Curl", "hipDominant"),
+    Pick("Ball Leg Curl", "hipDominant"),
+    Pick("Floor Glute-Ham Raise", "hipDominant"),
+    Pick("Natural Glute Ham Raise", "hipDominant"),
+    Pick("Kettlebell One-Legged Deadlift", "hipDominant"),
     # -- Glutes -----------------------------------------------------------
     Pick("Barbell Hip Thrust", "hipDominant", "Hip Thrust"),
     Pick("Barbell Glute Bridge", "hipDominant", "Glute Bridge"),
@@ -299,6 +368,11 @@ CURATION: list[Pick] = [
     Pick("Glute Kickback", "hipDominant"),
     Pick("Thigh Abductor", "other"),
     Pick("Step-up with Knee Raise", "kneeDominant"),
+    Pick("Physioball Hip Bridge", "hipDominant"),
+    Pick("Hip Extension with Bands", "hipDominant"),
+    Pick("Hip Lift with Band", "hipDominant"),
+    Pick("Monster Walk", "other"),
+    Pick("Platform Hamstring Slides", "hipDominant"),
     # -- Core -------------------------------------------------------------
     Pick("Plank", "antiRotation"),
     Pick("Side Bridge", "antiRotation", "Side Plank"),
@@ -315,6 +389,18 @@ CURATION: list[Pick] = [
     Pick("Russian Twist", "rotation"),
     Pick("Standing Cable Wood Chop", "rotation"),
     Pick("Mountain Climbers", "other"),
+    Pick("3/4 Sit-Up", "other"),
+    Pick("Ab Crunch Machine", "other"),
+    Pick("Air Bike", "other"),
+    Pick("Alternate Heel Touchers", "other"),
+    Pick("Cross-Body Crunch", "rotation"),
+    Pick("Exercise Ball Crunch", "other"),
+    Pick("Flat Bench Lying Leg Raise", "other"),
+    Pick("Hanging Pike", "other"),
+    Pick("Jackknife Sit-Up", "other"),
+    Pick("Landmine 180's", "rotation"),
+    Pick("Pallof Press With Rotation", "rotation"),
+    Pick("Stomach Vacuum", "other"),
     # -- Calves -----------------------------------------------------------
     Pick("Standing Calf Raises", "other", "Calf Raise"),
     Pick("Seated Calf Raise", "other"),
@@ -341,6 +427,79 @@ CURATION: list[Pick] = [
     Pick("Sled Push", "carry"),
     Pick("One-Arm Kettlebell Swings", "hipDominant"),
     Pick("Kettlebell Sumo High Pull", "hipDominant"),
+    # -- Conditioning / mobility -----------------------------------------
+    Pick("Bicycling, Stationary", "other"),
+    Pick("Elliptical Trainer", "other"),
+    Pick("Jogging, Treadmill", "other"),
+    Pick("Recumbent Bike", "other"),
+    Pick("Rope Jumping", "other"),
+    Pick("Rowing, Stationary", "horizontalPull"),
+    Pick("Stairmaster", "other"),
+    Pick("Walking, Treadmill", "other"),
+    Pick("Bench Jump", "kneeDominant"),
+    Pick("Front Box Jump", "kneeDominant"),
+    Pick("Knee Tuck Jump", "kneeDominant"),
+    Pick("Lateral Bound", "kneeDominant"),
+    Pick("World's Greatest Stretch", "other"),
+    Pick("Inchworm", "other"),
+    # -- Batch 3 (50 more, added 2026-08-26) -------------------------------
+    # -- Chest --------------------------------------------------------------
+    Pick("Wide-Grip Barbell Bench Press", "horizontalPush"),
+    Pick("Smith Machine Decline Press", "horizontalPush"),
+    Pick("One Arm Dumbbell Bench Press", "horizontalPush"),
+    Pick("Push-Ups With Feet Elevated", "horizontalPush", "Feet-Elevated Push-Up"),
+    # -- Back -----------------------------------------------------------------
+    Pick("Weighted Pull Ups", "verticalPull", "Weighted Pull-Up"),
+    Pick("Muscle Up", "verticalPull"),
+    Pick("Incline Bench Pull", "horizontalPull"),
+    Pick("Seated One-arm Cable Pulley Rows", "horizontalPull", "Seated One-Arm Cable Row"),
+    Pick("Superman", "hipDominant"),
+    Pick("Reverse Hyperextension", "hipDominant"),
+    # -- Shoulders --------------------------------------------------------
+    Pick("Seated Barbell Military Press", "verticalPush", "Seated Barbell Overhead Press"),
+    Pick("Front Plate Raise", "other", "Plate Front Raise"),
+    Pick("Cable Rope Rear-Delt Rows", "horizontalPull", "Cable Rear-Delt Row"),
+    Pick("Dumbbell Lying Rear Lateral Raise", "other", "Lying Rear Delt Raise"),
+    Pick("External Rotation", "other", "Shoulder External Rotation"),
+    Pick("Barbell Rear Delt Row", "horizontalPull"),
+    # -- Arms -----------------------------------------------------------------
+    Pick("Close-Grip Standing Barbell Curl", "other"),
+    Pick("Standing Dumbbell Reverse Curl", "other", "Standing Reverse Dumbbell Curl"),
+    Pick("Dumbbell Alternate Bicep Curl", "other", "Alternating Standing Dumbbell Curl"),
+    Pick("Incline Hammer Curls", "other", "Incline Hammer Curl"),
+    Pick("Parallel Bar Dip", "other"),
+    Pick("Weighted Bench Dip", "other"),
+    Pick("Standing Overhead Barbell Triceps Extension", "other"),
+    Pick("Kneeling Cable Triceps Extension", "other"),
+    Pick("Wrist Circles", "other"),
+    Pick("Seated Palms-Down Barbell Wrist Curl", "other", "Seated Barbell Wrist Curl"),
+    # -- Legs / glutes ------------------------------------------------------
+    Pick("Narrow Stance Squats", "kneeDominant", "Narrow Stance Squat"),
+    Pick("Jefferson Squats", "kneeDominant", "Jefferson Squat"),
+    Pick("Weighted Sissy Squat", "kneeDominant", "Sissy Squat"),
+    Pick("Chair Squat", "kneeDominant"),
+    Pick("Smith Machine Pistol Squat", "kneeDominant"),
+    Pick("Standing Long Jump", "kneeDominant"),
+    Pick("Romanian Deadlift from Deficit", "hipDominant", "Deficit Romanian Deadlift"),
+    Pick("Seated Band Hamstring Curl", "hipDominant", "Band Seated Leg Curl"),
+    Pick("Good Morning off Pins", "hipDominant"),
+    Pick("Wide Stance Stiff Legs", "hipDominant", "Wide-Stance Stiff-Leg Deadlift"),
+    Pick("Butt Lift (Bridge)", "hipDominant", "Bodyweight Glute Bridge"),
+    Pick("Kneeling Squat", "kneeDominant"),
+    Pick("Barbell Seated Calf Raise", "other", "Seated Barbell Calf Raise"),
+    Pick("Calf Raise On A Dumbbell", "other", "Single-Leg Dumbbell Calf Raise"),
+    # -- Core -----------------------------------------------------------------
+    Pick("Barbell Ab Rollout", "antiRotation"),
+    Pick("Cable Reverse Crunch", "other"),
+    Pick("Weighted Crunches", "other", "Weighted Crunch"),
+    Pick("Toe Touchers", "other", "Toe Touch"),
+    Pick("Standing Cable Lift", "rotation"),
+    Pick("Plate Twist", "rotation", "Weighted Plate Twist"),
+    # -- Conditioning ------------------------------------------------------
+    Pick("Box Jump (Multiple Response)", "kneeDominant", "Box Jump"),
+    Pick("Yoke Walk", "carry"),
+    Pick("Tire Flip", "hipDominant"),
+    Pick("Rope Climb", "verticalPull"),
 ]
 
 
@@ -390,7 +549,7 @@ def build_media(pick: Pick, upstream: dict, dry_run: bool) -> list[dict]:
         cached = fetch(FEDB_IMAGE_URL + remote, CACHE / "images" / remote)
         # Flattened to a single directory on purpose. Flutter's `assets:`
         # entries are not recursive, so upstream's one-folder-per-exercise
-        # layout would need all 150 directories listed in pubspec.yaml —
+        # layout would need all 251 directories listed in pubspec.yaml —
         # a list that silently rots the first time this script is re-run
         # with a different curation. Upstream ids are unique, so
         # "<id>_<n>.jpg" is collision-free and one entry covers the lot.

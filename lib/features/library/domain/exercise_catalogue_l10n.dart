@@ -9,6 +9,11 @@ import 'exercise_instructions_ar_1.dart';
 import 'exercise_instructions_ar_2.dart';
 import 'exercise_instructions_ar_3.dart';
 import 'exercise_instructions_ar_4.dart';
+import 'exercise_instructions_ar_5.dart';
+import 'exercise_instructions_ar_6.dart';
+import 'exercise_instructions_ar_7.dart';
+import 'exercise_instructions_ar_8.dart';
+import 'exercise_instructions_ar_9.dart';
 
 /// Localized display names for catalogue rows.
 ///
@@ -48,6 +53,11 @@ const Map<String, List<String>> kExerciseInstructionsAr =
   ...kExerciseInstructionsAr2,
   ...kExerciseInstructionsAr3,
   ...kExerciseInstructionsAr4,
+  ...kExerciseInstructionsAr5,
+  ...kExerciseInstructionsAr6,
+  ...kExerciseInstructionsAr7,
+  ...kExerciseInstructionsAr8,
+  ...kExerciseInstructionsAr9,
 };
 
 /// Returns translated instruction steps when the active locale is Arabic.
