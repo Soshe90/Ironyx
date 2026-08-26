@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/pump_app.dart';
+import '../helpers/stub_seeders.dart';
 
 /// End-to-end coverage for the program builder: creating a custom program
 /// from the Tracker tab, and editing it afterwards.
@@ -48,8 +49,13 @@ void main() {
       await pumpApp(
         tester,
         initialLocation: Routes.tracker,
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          ...stubSeeders(),
+        ],
         prefs: seededPrefs,
+        // Programs and the exercise picker both read Drift streams.
+        awaitDatabase: true,
       );
       await tester.pumpAndSettle();
 
@@ -125,8 +131,13 @@ void main() {
       await pumpApp(
         tester,
         initialLocation: Routes.tracker,
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          ...stubSeeders(),
+        ],
         prefs: seededPrefs,
+        // Programs and the exercise picker both read Drift streams.
+        awaitDatabase: true,
       );
       await tester.pumpAndSettle();
 
@@ -193,8 +204,13 @@ void main() {
       await pumpApp(
         tester,
         initialLocation: Routes.tracker,
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          ...stubSeeders(),
+        ],
         prefs: seededPrefs,
+        // Programs and the exercise picker both read Drift streams.
+        awaitDatabase: true,
       );
       await tester.pumpAndSettle();
 

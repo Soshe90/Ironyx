@@ -120,7 +120,9 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Align(
-              alignment: Alignment.centerLeft,
+              // Directional: this pins the filter to the *start* of the
+              // sheet, which is the right-hand edge under an RTL locale.
+              alignment: AlignmentDirectional.centerStart,
               child: FilterChipGroup<Muscle>(
                 label: context.l10n.libraryFilterMuscle,
                 value:

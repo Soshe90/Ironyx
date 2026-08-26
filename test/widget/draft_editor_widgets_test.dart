@@ -2,6 +2,7 @@ import 'package:fittrack/core/providers.dart';
 import 'package:fittrack/features/tracker/domain/draft_editor_controller.dart';
 import 'package:fittrack/features/tracker/domain/workout_draft.dart';
 import 'package:fittrack/features/tracker/presentation/widgets/draft_editor_widgets.dart';
+import 'package:fittrack/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +18,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
-        child: MaterialApp(home: _DraftHarness(key: harnessKey)),
+        child: MaterialApp(
+          // The card reads `context.l10n`, so it needs the app's delegates.
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: _DraftHarness(key: harnessKey),
+        ),
       ),
     );
 

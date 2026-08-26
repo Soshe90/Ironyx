@@ -6,7 +6,10 @@ void main() {
     final result = calculateBmi(weightKg: 81, heightCm: 180);
     expect(result, isNotNull);
     expect(result!.value, closeTo(25, .01));
-    expect(result.category, 'Overweight');
+    // An enum, not a display string: the wording is localized at the point
+    // of display (see `progressBmiOverweight`), so the domain layer only
+    // carries the band.
+    expect(result.category, BmiCategory.overweight);
   });
 
   test('returns null for missing or invalid measurements', () {

@@ -98,7 +98,8 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
     );
   }
 
-  String _statusLine(BuildContext context, AsyncValue<CloudBackupInfo?> status) {
+  String _statusLine(
+      BuildContext context, AsyncValue<CloudBackupInfo?> status) {
     final AppLocalizations l10n = context.l10n;
     final DateFormatters dates = DateFormatters.of(context);
 

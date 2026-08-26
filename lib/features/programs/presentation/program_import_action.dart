@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/program_import_service.dart';
 import '../domain/program_providers.dart';
@@ -18,14 +19,14 @@ class ProgramImportAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
       icon: const Icon(Icons.upload_file_outlined),
-      tooltip: 'Import programs from CSV',
+      tooltip: context.l10n.programImportTooltip,
       onPressed: () => _run(context, ref),
     );
   }
 
   Future<void> _run(BuildContext context, WidgetRef ref) async {
     final PlatformFile? picked = await FilePicker.pickFile(
-      dialogTitle: 'Choose a program spreadsheet',
+      dialogTitle: context.l10n.programImportPickerTitle,
       type: FileType.custom,
       allowedExtensions: ['csv'],
     );
@@ -36,7 +37,7 @@ class ProgramImportAction extends ConsumerWidget {
       csv = utf8.decode(await picked.readAsBytes());
     } catch (_) {
       if (!context.mounted) return;
-      _showMessage(context, 'Could not read the selected file.');
+      _showMessage(context, context.l10n.dataImportUnreadable);
       return;
     }
 
@@ -58,7 +59,7 @@ class ProgramImportAction extends ConsumerWidget {
     await service.apply(db, result);
     ref.invalidate(programSummariesProvider);
     if (!context.mounted) return;
-    _showMessage(context, 'Programs imported.');
+    _showMessage(context, context.l10n.programImportDone);
   }
 
   Future<bool?> _confirm(
@@ -68,19 +69,22 @@ class ProgramImportAction extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Import programs?'),
+        title: Text(context.l10n.programImportConfirmTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${result.programs.length} programs · '
-                '${result.totalDays} days · ${result.totalExercises} exercises',
+                context.l10n.programImportSummary(
+                  result.programs.length,
+                  result.totalDays,
+                  result.totalExercises,
+                ),
               ),
               if (result.unknownExercises.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                const Text('Skipped unknown exercises:'),
+                Text(context.l10n.programImportSkippedUnknown),
                 const SizedBox(height: 8),
                 for (final name in result.unknownExercises) Text('• $name'),
               ],
@@ -90,13 +94,13 @@ class ProgramImportAction extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: result.programs.isEmpty
                 ? null
                 : () => Navigator.pop(context, true),
-            child: const Text('Import'),
+            child: Text(context.l10n.importXlsxConfirmAction),
           ),
         ],
       ),

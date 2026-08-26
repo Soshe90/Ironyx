@@ -1,5 +1,8 @@
 import 'package:fittrack/features/auth/domain/auth_controller.dart';
 import 'package:fittrack/features/auth/domain/auth_service.dart';
+import 'package:fittrack/features/auth/presentation/auth_failure_messages.dart';
+import 'package:fittrack/l10n/app_localizations.dart';
+import 'package:fittrack/l10n/app_localizations_en.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -136,14 +139,15 @@ void main() {
     // through to "Something went wrong. Try again.", which tells the user
     // nothing about which field to fix. This guards the whole enum against
     // the same omission.
+    final AppLocalizations l10n = AppLocalizationsEn();
     final messages = <String>{};
     for (final kind in AuthFailureKind.values) {
-      final String message = AuthFailure(kind).message;
+      final String message = AuthFailure(kind).messageFor(l10n);
       expect(message, isNotEmpty, reason: kind.name);
       if (kind != AuthFailureKind.unknown) {
         expect(
           message,
-          isNot(const AuthFailure(AuthFailureKind.unknown).message),
+          isNot(const AuthFailure(AuthFailureKind.unknown).messageFor(l10n)),
           reason: '${kind.name} falls back to the generic message',
         );
       }

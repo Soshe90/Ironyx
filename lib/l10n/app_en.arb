@@ -232,6 +232,13 @@
       "warmup": { "type": "String", "example": ", warm-up" }
     }
   },
+  "workoutWarmupLabel": "warm-up",
+  "draftSetCompleteSemantic": "Set {index} complete",
+  "@draftSetCompleteSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
   "workoutSetCompleted": ", completed",
   "workoutSetNotCompleted": ", not completed",
   "workoutSetWarmup": ", warm-up",
@@ -246,6 +253,99 @@
       "error": { "type": "String" }
     }
   },
+
+  "actionOk": "OK",
+
+  "dataExportTitle": "Export data",
+  "dataExportSubtitle": "Back up your workouts, timers, and progress",
+  "dataExportJson": "JSON backup (can be imported later)",
+  "dataExportCsv": "CSV spreadsheet (workouts and sets only)",
+  "dataExportSaveDialog": "Save export",
+  "dataExportSaved": "Export saved",
+  "dataImportTitle": "Import data",
+  "dataImportSubtitle": "Restore from a backup file",
+  "dataImportPickerTitle": "Choose a FitTrack backup",
+  "dataImportUnreadable": "Could not read the selected file.",
+  "dataImportBackupTitle": "Import backup",
+  "dataImportNoWorkoutData": "This backup contains no workout data.",
+  "dataImportModeMerge": "Merge",
+  "dataImportModeMergeSubtitle": "Keep existing data, add this on top",
+  "dataImportModeReplace": "Replace",
+  "dataImportModeReplaceSubtitle": "Erase everything currently on this device first",
+  "dataImportComplete": "Import complete",
+  "dataImportFailed": "Import failed: {error}",
+  "@dataImportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "dataImportProblemTitle": "Import problem",
+  "dataImportIntegrityWarning": "{details}. The file may be partial, truncated, or hand-edited.",
+  "@dataImportIntegrityWarning": {
+    "description": "Shown when a backup's table list does not match this build's schema. {details} is a pre-joined list of the specific problems.",
+    "placeholders": {
+      "details": { "type": "String", "example": "Missing 2 database tables" }
+    }
+  },
+  "dataImportMissingTables": "{count, plural, =1{Missing 1 database table} other{Missing {count} database tables}}",
+  "@dataImportMissingTables": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dataImportUnknownTables": "{count, plural, =1{1 unknown table} other{{count} unknown tables}}",
+  "@dataImportUnknownTables": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dataSnapshotTitle": "Restore pre-import snapshot",
+  "dataSnapshotSubtitle": "Undo a recent import",
+  "dataSnapshotNone": "There are no recent import snapshots.",
+  "dataSnapshotDialogTitle": "Restore snapshot",
+  "dataSnapshotConfirmTitle": "Restore snapshot?",
+  "dataSnapshotConfirmBody": "This replaces current user data with the state saved before that import.",
+  "dataSnapshotRestored": "Snapshot restored",
+  "dataSnapshotRestoreFailed": "Snapshot restore failed: {error}",
+  "@dataSnapshotRestoreFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "programImportTooltip": "Import programs from CSV",
+  "programImportPickerTitle": "Choose a program spreadsheet",
+  "programImportDone": "Programs imported.",
+  "programImportConfirmTitle": "Import programs?",
+  "programImportSummary": "{programs} programs \u00b7 {days} days \u00b7 {exercises} exercises",
+  "@programImportSummary": {
+    "placeholders": {
+      "programs": { "type": "int" },
+      "days": { "type": "int" },
+      "exercises": { "type": "int" }
+    }
+  },
+  "programImportSkippedUnknown": "Skipped unknown exercises:",
+  "dataAllDeleted": "All data deleted",
+  "dataDeleteAllConfirmTitle": "Delete all data?",
+  "dataDeleteAllConfirmBody": "This permanently deletes every workout, timer session, program, template, and body-metrics entry (built-in programs will be restored). The exercise library is kept. This cannot be undone.",
+  "dataDeleteConfirmWord": "DELETE",
+  "@dataDeleteConfirmWord": {
+    "description": "The word the user must type to unlock the delete-all button. Translate it: it is compared against what they type, so it has to be a word they can enter on their own keyboard."
+  },
+  "dataDeleteAllTypeToConfirm": "Type {word} to confirm",
+  "@dataDeleteAllTypeToConfirm": {
+    "placeholders": {
+      "word": { "type": "String", "example": "DELETE" }
+    }
+  },
+  "dataDeleteEverything": "Delete everything",
+  "dataDeleteAllTitle": "Delete all data",
+  "dataDeleteAllSubtitle": "Workouts, timers, programs, templates, body metrics",
+  "dataTableWorkouts": "workouts",
+  "dataTableWorkoutSets": "workout sets",
+  "dataTableTimerSessions": "timer sessions",
+  "dataTableBodyMetrics": "body metrics",
+  "dataTableTemplates": "templates",
 
   "categoryStrength": "Strength",
   "categoryCardio": "Cardio",
@@ -698,6 +798,10 @@
   "accountEmailNotConfirmedTitle": "Email not confirmed",
   "accountEmailNotConfirmedSubtitle": "Open the link we sent to finish setting up your account.",
   "accountPersonalDetailsTitle": "Personal details",
+  "profilePageTitle": "Personal Details",
+  "@profilePageTitle": {
+    "description": "App-bar title of the personal-details screen. Title-cased, unlike the settings row that navigates to it."
+  },
   "accountPersonalDetailsSubtitle": "Name, date of birth, sex, height",
   "accountShowWelcomeTitle": "Show welcome screen",
   "accountShowWelcomeSubtitle": "The intro shown on first launch",
@@ -777,7 +881,7 @@
     "placeholders": { "count": { "type": "int" } }
   },
 
-  "libraryTitle": "Exercise library",
+  "libraryTitle": "Exercise Library",
   "libraryClearFilters": "Clear filters",
   "librarySearchHint": "Search exercises",
   "libraryClearSearch": "Clear search",
@@ -794,7 +898,7 @@
     "placeholders": { "filter": { "type": "String" } }
   },
   "libraryNoResults": "No exercises found",
-  "libraryNoResultsMessage": "Try changing your search or filters.",
+  "libraryNoResultsMessage": "Try adjusting your search or filters.",
   "libraryBodyweight": "Bodyweight",
   "libraryExerciseNotFound": "Exercise not found",
   "librarySearchYoutube": "Search for {name} on YouTube",

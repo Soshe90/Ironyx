@@ -27,6 +27,10 @@ void main() {
     testWidgets('selecting a mode updates the app theme', (tester) async {
       await pumpApp(tester, initialLocation: '/settings');
 
+      // Settings grew a Language section above Appearance, so the theme
+      // control now starts below the fold and the ListView has not built it
+      // yet.
+      await tester.scrollUntilVisible(find.text('Dark'), 200);
       await tester.tap(find.text('Dark'));
       await tester.pumpAndSettle();
 

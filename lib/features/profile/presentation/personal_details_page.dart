@@ -55,7 +55,7 @@ class PersonalDetailsPage extends ConsumerWidget {
         ref.watch(profileControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.accountPersonalDetailsTitle)),
+      appBar: AppBar(title: Text(context.l10n.profilePageTitle)),
       body: draftAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(

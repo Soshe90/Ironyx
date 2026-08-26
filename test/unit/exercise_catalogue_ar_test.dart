@@ -65,6 +65,27 @@ void main() {
       }
     });
 
+    test('translates the instructions for every seeded exercise', () {
+      expect(kExerciseInstructionsAr.keys.toSet(), idsOf('exercises'));
+    });
+
+    test('keeps instruction step counts identical to the seed', () {
+      // `localizedExerciseInstructions` falls back to the stored English as a
+      // whole when the counts differ, so a mismatch here silently reverts
+      // that exercise rather than showing half-translated steps.
+      for (final dynamic row in seed['exercises'] as List<dynamic>) {
+        final Map<String, dynamic> exercise = row as Map<String, dynamic>;
+        final String slug = exercise['slug'] as String;
+        final List<dynamic> english =
+            (exercise['instructions'] as List<dynamic>?) ?? <dynamic>[];
+        expect(
+          kExerciseInstructionsAr[slug]?.length,
+          english.length,
+          reason: slug,
+        );
+      }
+    });
+
     test('leaves no name still in Latin script', () {
       // Catches a row copy-pasted from the seed and never translated. Latin
       // letters are the signal — digits and punctuation are fine, and some

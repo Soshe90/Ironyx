@@ -46,8 +46,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       formKey: _formKey,
       busy: _busy,
       errorMessage: _error,
-      primaryLabel:
-          _sent ? l10n.authResetSendAgain : l10n.authResetSendLink,
+      primaryLabel: _sent ? l10n.authResetSendAgain : l10n.authResetSendLink,
       onSubmit: _submit,
       fields: <Widget>[
         TextFormField(

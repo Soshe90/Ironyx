@@ -21,10 +21,13 @@ final class DateFormatters {
   /// are read from `build` methods that run on every frame of a scroll.
   static final Map<String, DateFormatters> _cache = <String, DateFormatters>{};
 
-  factory DateFormatters.of(BuildContext context) {
-    final AppLocalizations l10n = context.l10n;
-    return _cache.putIfAbsent(l10n.localeName, () => DateFormatters._(l10n));
-  }
+  factory DateFormatters.of(BuildContext context) =>
+      DateFormatters.forLocalizations(context.l10n);
+
+  /// The context-free form, for tests and for the rare caller that already
+  /// holds an [AppLocalizations] (see `appLocalizationsProvider`).
+  factory DateFormatters.forLocalizations(AppLocalizations l10n) =>
+      _cache.putIfAbsent(l10n.localeName, () => DateFormatters._(l10n));
 
   final AppLocalizations _l10n;
   final DateFormat _dayMonth;

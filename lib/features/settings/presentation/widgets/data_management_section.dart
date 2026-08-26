@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/services/data_export_service.dart';
 import '../../domain/export_envelope.dart';
@@ -22,33 +23,36 @@ class DataManagementSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = context.l10n;
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
         ListTile(
           leading: const Icon(Icons.upload_file_outlined),
-          title: const Text('Export data'),
-          subtitle: const Text('Back up your workouts, timers, and progress'),
+          title: Text(l10n.dataExportTitle),
+          subtitle: Text(l10n.dataExportSubtitle),
           onTap: () => _export(context, ref),
         ),
         ListTile(
           leading: const Icon(Icons.download_outlined),
-          title: const Text('Import data'),
-          subtitle: const Text('Restore from a backup file'),
+          title: Text(l10n.dataImportTitle),
+          subtitle: Text(l10n.dataImportSubtitle),
           onTap: () => _import(context, ref),
         ),
         ListTile(
           leading: const Icon(Icons.restore_outlined),
-          title: const Text('Restore pre-import snapshot'),
-          subtitle: const Text('Undo a recent import'),
+          title: Text(l10n.dataSnapshotTitle),
+          subtitle: Text(l10n.dataSnapshotSubtitle),
           onTap: () => _restoreSnapshot(context, ref),
         ),
         ListTile(
           leading: Icon(Icons.delete_forever_outlined, color: scheme.error),
-          title: Text('Delete all data', style: TextStyle(color: scheme.error)),
-          subtitle:
-              const Text('Workouts, timers, programs, templates, body metrics'),
+          title: Text(
+            l10n.dataDeleteAllTitle,
+            style: TextStyle(color: scheme.error),
+          ),
+          subtitle: Text(l10n.dataDeleteAllSubtitle),
           onTap: () => _deleteAll(context, ref),
         ),
       ],
@@ -56,18 +60,19 @@ class DataManagementSection extends ConsumerWidget {
   }
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l10n = context.l10n;
     final _ExportFormat? format = await showDialog<_ExportFormat>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Export data'),
+        title: Text(context.l10n.dataExportTitle),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, _ExportFormat.json),
-            child: const Text('JSON backup (can be imported later)'),
+            child: Text(context.l10n.dataExportJson),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, _ExportFormat.csv),
-            child: const Text('CSV spreadsheet (workouts and sets only)'),
+            child: Text(context.l10n.dataExportCsv),
           ),
         ],
       ),
@@ -98,18 +103,19 @@ class DataManagementSection extends ConsumerWidget {
       fileName: fileName,
       bytes: bytes,
       mimeType: mimeType,
-      dialogTitle: 'Save export',
+      dialogTitle: l10n.dataExportSaveDialog,
     );
     if (!context.mounted) return;
     if (savedUri != null) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Export saved')));
+          .showSnackBar(SnackBar(content: Text(l10n.dataExportSaved)));
     }
   }
 
   Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l10n = context.l10n;
     final PlatformFile? picked = await FilePicker.pickFile(
-      dialogTitle: 'Choose a FitTrack backup',
+      dialogTitle: l10n.dataImportPickerTitle,
       type: FileType.custom,
       allowedExtensions: ['json'],
     );
@@ -120,7 +126,7 @@ class DataManagementSection extends ConsumerWidget {
       content = utf8.decode(await picked.readAsBytes());
     } catch (_) {
       if (!context.mounted) return;
-      await _showError(context, 'Could not read the selected file.');
+      await _showError(context, l10n.dataImportUnreadable);
       return;
     }
 
@@ -158,19 +164,20 @@ class DataManagementSection extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    final AppLocalizations l10n = context.l10n;
     final service = ref.read(dataExportServiceProvider);
     final supportDir = await getApplicationSupportDirectory();
     final snapshots = await service.listSnapshots(supportDir.path);
     if (!context.mounted) return;
     if (snapshots.isEmpty) {
-      await _showError(context, 'There are no recent import snapshots.');
+      await _showError(context, l10n.dataSnapshotNone);
       return;
     }
 
     final File? selected = await showDialog<File>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Restore snapshot'),
+        title: Text(l10n.dataSnapshotDialogTitle),
         children: [
           for (final snapshot in snapshots)
             SimpleDialogOption(
@@ -187,18 +194,16 @@ class DataManagementSection extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restore snapshot?'),
-        content: const Text(
-          'This replaces current user data with the state saved before that import.',
-        ),
+        title: Text(l10n.dataSnapshotConfirmTitle),
+        content: Text(l10n.dataSnapshotConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Restore'),
+            child: Text(l10n.backupRestoreAction),
           ),
         ],
       ),
@@ -213,11 +218,11 @@ class DataManagementSection extends ConsumerWidget {
       );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Snapshot restored')),
+        SnackBar(content: Text(l10n.dataSnapshotRestored)),
       );
     } catch (e) {
       if (!context.mounted) return;
-      await _showError(context, 'Snapshot restore failed: $e');
+      await _showError(context, l10n.dataSnapshotRestoreFailed('$e'));
     }
   }
 
@@ -228,6 +233,7 @@ class DataManagementSection extends ConsumerWidget {
     ImportEnvelope envelope,
     ImportMode mode,
   ) async {
+    final AppLocalizations l10n = context.l10n;
     unawaited(
       showDialog<void>(
         context: context,
@@ -248,11 +254,11 @@ class DataManagementSection extends ConsumerWidget {
       if (!context.mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Import complete')));
+          .showSnackBar(SnackBar(content: Text(l10n.dataImportComplete)));
     } catch (e) {
       if (!context.mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      await _showError(context, 'Import failed: $e');
+      await _showError(context, l10n.dataImportFailed('$e'));
     }
   }
 
@@ -276,27 +282,31 @@ class DataManagementSection extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Import backup'),
+          title: Text(context.l10n.dataImportBackupTitle),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (final table in highlights)
-                  Text('${counts[table]} ${_friendlyName(table)}'),
+                  Text('${counts[table]} ${_friendlyName(context, table)}'),
                 if (highlights.isEmpty)
-                  const Text('This backup contains no workout data.'),
+                  Text(context.l10n.dataImportNoWorkoutData),
                 if (missingTables.isNotEmpty || unknownTables.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
-                    '${[
-                      if (missingTables.isNotEmpty)
-                        'Missing ${missingTables.length} database '
-                            '${missingTables.length == 1 ? 'table' : 'tables'}',
-                      if (unknownTables.isNotEmpty)
-                        '${unknownTables.length} unknown '
-                            '${unknownTables.length == 1 ? 'table' : 'tables'}',
-                    ].join('; ')}. The file may be partial, truncated, or hand-edited.',
+                    context.l10n.dataImportIntegrityWarning(
+                      <String>[
+                        if (missingTables.isNotEmpty)
+                          context.l10n.dataImportMissingTables(
+                            missingTables.length,
+                          ),
+                        if (unknownTables.isNotEmpty)
+                          context.l10n.dataImportUnknownTables(
+                            unknownTables.length,
+                          ),
+                      ].join('; '),
+                    ),
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
@@ -305,20 +315,20 @@ class DataManagementSection extends ConsumerWidget {
                 RadioGroup<ImportMode>(
                   groupValue: mode,
                   onChanged: (value) => setState(() => mode = value!),
-                  child: const Column(
-                    children: [
+                  child: Column(
+                    children: <Widget>[
                       RadioListTile<ImportMode>(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('Merge'),
-                        subtitle: Text('Keep existing data, add this on top'),
+                        title: Text(context.l10n.dataImportModeMerge),
+                        subtitle:
+                            Text(context.l10n.dataImportModeMergeSubtitle),
                         value: ImportMode.merge,
                       ),
                       RadioListTile<ImportMode>(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('Replace'),
-                        subtitle: Text(
-                          'Erase everything currently on this device first',
-                        ),
+                        title: Text(context.l10n.dataImportModeReplace),
+                        subtitle:
+                            Text(context.l10n.dataImportModeReplaceSubtitle),
                         value: ImportMode.replace,
                       ),
                     ],
@@ -330,11 +340,11 @@ class DataManagementSection extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.actionCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, mode),
-              child: const Text('Import'),
+              child: Text(context.l10n.importXlsxConfirmAction),
             ),
           ],
         ),
@@ -342,19 +352,31 @@ class DataManagementSection extends ConsumerWidget {
     );
   }
 
-  String _friendlyName(String rawTableName) =>
-      rawTableName.replaceAll('_table', '').replaceAll('_', ' ');
+  /// Turns a raw drift table name into something readable in a summary.
+  ///
+  /// The five tables a backup actually carries get a translated name; anything
+  /// else falls back to de-snake-casing the identifier, which is what this
+  /// did for every table before.
+  String _friendlyName(BuildContext context, String rawTableName) =>
+      switch (rawTableName) {
+        'workouts_table' => context.l10n.dataTableWorkouts,
+        'workout_sets_table' => context.l10n.dataTableWorkoutSets,
+        'timer_sessions_table' => context.l10n.dataTableTimerSessions,
+        'body_metrics_table' => context.l10n.dataTableBodyMetrics,
+        'templates_table' => context.l10n.dataTableTemplates,
+        _ => rawTableName.replaceAll('_table', '').replaceAll('_', ' '),
+      };
 
   Future<void> _showError(BuildContext context, String message) =>
       showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Import problem'),
+          title: Text(context.l10n.dataImportProblemTitle),
           content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: Text(context.l10n.actionOk),
             ),
           ],
         ),
@@ -378,7 +400,7 @@ class DataManagementSection extends ConsumerWidget {
     await ref.read(programSeederProvider.future);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('All data deleted')));
+        .showSnackBar(SnackBar(content: Text(context.l10n.dataAllDeleted)));
   }
 }
 
@@ -404,37 +426,40 @@ class _DeleteAllDialogState extends State<_DeleteAllDialog> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final AppLocalizations l10n = context.l10n;
+    final String confirmWord = l10n.dataDeleteConfirmWord;
     return AlertDialog(
-      title: const Text('Delete all data?'),
+      title: Text(l10n.dataDeleteAllConfirmTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'This permanently deletes every workout, timer session, '
-            'program, template, and body-metrics entry (built-in programs '
-            'will be restored). The exercise library is kept. This cannot '
-            'be undone.',
-          ),
+          Text(l10n.dataDeleteAllConfirmBody),
           const SizedBox(height: 16),
-          Text('Type DELETE to confirm', style: TextStyle(color: scheme.error)),
+          Text(
+            l10n.dataDeleteAllTypeToConfirm(confirmWord),
+            style: TextStyle(color: scheme.error),
+          ),
           TextField(
             controller: _controller,
             autofocus: true,
+            // Compared against the localized word shown just above, so the
+            // gate always asks for something the user can actually read and
+            // type on their own keyboard.
             onChanged: (value) =>
-                setState(() => _canConfirm = value == 'DELETE'),
+                setState(() => _canConfirm = value.trim() == confirmWord),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(l10n.actionCancel),
         ),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: scheme.error),
           onPressed: _canConfirm ? () => Navigator.pop(context, true) : null,
-          child: const Text('Delete everything'),
+          child: Text(l10n.dataDeleteEverything),
         ),
       ],
     );

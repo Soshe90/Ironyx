@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/pump_app.dart';
+import '../helpers/stub_seeders.dart';
 
 void main() {
   group('LibraryPage', () {
@@ -137,10 +138,15 @@ void main() {
 
     Future<void> pumpLibrary(WidgetTester tester) => pumpApp(
           tester,
-          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            ...stubSeeders(),
+          ],
           initialLocation: '/library',
           prefs: seededPrefs,
           surfaceSize: surface,
+          // This screen is entirely Drift-stream driven.
+          awaitDatabase: true,
         );
 
     testWidgets('displays exercise list', (tester) async {

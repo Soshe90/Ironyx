@@ -112,7 +112,8 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                                       onPressed: () => context
                                           .pushNamed(Routes.programNewName),
                                       icon: const Icon(Icons.add),
-                                      label: Text(context.l10n.trackerNewProgram),
+                                      label:
+                                          Text(context.l10n.trackerNewProgram),
                                     ),
                                   ),
                                   const SizedBox(width: AppSpacing.sm),
@@ -382,7 +383,8 @@ class _HistorySliverList extends StatelessWidget {
       itemBuilder: (context, index) {
         final workout = workouts[index];
         final showHeader = index == 0 ||
-            DateFormatters.of(context).relativeDay(workouts[index - 1].startedAt) !=
+            DateFormatters.of(context)
+                    .relativeDay(workouts[index - 1].startedAt) !=
                 DateFormatters.of(context).relativeDay(workout.startedAt);
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -396,7 +398,9 @@ class _HistorySliverList extends StatelessWidget {
                     bottom: AppSpacing.sm,
                   ),
                   child: Text(
-                    DateFormatters.of(context).relativeDay(workout.startedAt).toUpperCase(),
+                    DateFormatters.of(context)
+                        .relativeDay(workout.startedAt)
+                        .toUpperCase(),
                     style: AppTypography.eyebrow(Theme.of(context)),
                   ),
                 ),

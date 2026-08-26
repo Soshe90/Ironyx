@@ -317,11 +317,13 @@ class _CustomBuilderState extends ConsumerState<_CustomBuilder> {
           Row(
             children: <Widget>[
               Expanded(
-                child: _NumberField(label: l10n.timerFieldWork, controller: _work),
+                child:
+                    _NumberField(label: l10n.timerFieldWork, controller: _work),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: _NumberField(label: l10n.timerFieldRest, controller: _rest),
+                child:
+                    _NumberField(label: l10n.timerFieldRest, controller: _rest),
               ),
             ],
           ),

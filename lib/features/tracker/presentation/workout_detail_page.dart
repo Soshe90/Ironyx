@@ -390,7 +390,10 @@ class _SetLine extends StatelessWidget {
               ),
               if (set.isWarmup) ...<Widget>[
                 const SizedBox(width: AppSpacing.sm),
-                Text('warm-up', style: AppTypography.eyebrow(theme)),
+                Text(
+                  context.l10n.workoutWarmupLabel,
+                  style: AppTypography.eyebrow(theme),
+                ),
               ],
             ],
           ),

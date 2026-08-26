@@ -227,6 +227,13 @@
       "warmup": { "type": "String" }
     }
   },
+  "workoutWarmupLabel": "\u0625\u062d\u0645\u0627\u0621",
+  "draftSetCompleteSemantic": "\u0627\u0644\u0645\u062c\u0645\u0648\u0639\u0629 {index} \u0645\u0643\u062a\u0645\u0644\u0629",
+  "@draftSetCompleteSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
   "workoutSetCompleted": "، مكتملة",
   "workoutSetNotCompleted": "، غير مكتملة",
   "workoutSetWarmup": "، إحماء",
@@ -241,6 +248,95 @@
       "error": { "type": "String" }
     }
   },
+
+  "actionOk": "حسنًا",
+
+  "dataExportTitle": "تصدير البيانات",
+  "dataExportSubtitle": "انسخ تمارينك ومؤقّتاتك وتقدّمك احتياطيًا",
+  "dataExportJson": "نسخة JSON (يمكن استيرادها لاحقًا)",
+  "dataExportCsv": "جدول CSV (التمارين والمجموعات فقط)",
+  "dataExportSaveDialog": "حفظ الملف المُصدَّر",
+  "dataExportSaved": "تم حفظ الملف المُصدَّر",
+  "dataImportTitle": "استيراد البيانات",
+  "dataImportSubtitle": "استعادة من ملف نسخة احتياطية",
+  "dataImportPickerTitle": "اختر نسخة احتياطية من FitTrack",
+  "dataImportUnreadable": "تعذّرت قراءة الملف المحدَّد.",
+  "dataImportBackupTitle": "استيراد نسخة احتياطية",
+  "dataImportNoWorkoutData": "لا تحتوي هذه النسخة الاحتياطية على بيانات تمارين.",
+  "dataImportModeMerge": "دمج",
+  "dataImportModeMergeSubtitle": "الإبقاء على البيانات الحالية وإضافة هذه فوقها",
+  "dataImportModeReplace": "استبدال",
+  "dataImportModeReplaceSubtitle": "محو كل ما على هذا الجهاز أولًا",
+  "dataImportComplete": "اكتمل الاستيراد",
+  "dataImportFailed": "فشل الاستيراد: {error}",
+  "@dataImportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "dataImportProblemTitle": "مشكلة في الاستيراد",
+  "dataImportIntegrityWarning": "{details}. قد يكون الملف ناقصًا أو مبتورًا أو مُعدَّلًا يدويًا.",
+  "@dataImportIntegrityWarning": {
+    "placeholders": {
+      "details": { "type": "String" }
+    }
+  },
+  "dataImportMissingTables": "{count, plural, zero{لا جداول ناقصة} one{جدول قاعدة بيانات واحد ناقص} two{جدولا قاعدة بيانات ناقصان} few{{count} جداول قاعدة بيانات ناقصة} many{{count} جدول قاعدة بيانات ناقصًا} other{{count} جدول قاعدة بيانات ناقص}}",
+  "@dataImportMissingTables": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dataImportUnknownTables": "{count, plural, zero{لا جداول غير معروفة} one{جدول واحد غير معروف} two{جدولان غير معروفين} few{{count} جداول غير معروفة} many{{count} جدولًا غير معروف} other{{count} جدول غير معروف}}",
+  "@dataImportUnknownTables": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dataSnapshotTitle": "استعادة نسخة ما قبل الاستيراد",
+  "dataSnapshotSubtitle": "التراجع عن استيراد حديث",
+  "dataSnapshotNone": "لا توجد نسخ محفوظة من عمليات استيراد حديثة.",
+  "dataSnapshotDialogTitle": "استعادة نسخة محفوظة",
+  "dataSnapshotConfirmTitle": "استعادة النسخة المحفوظة؟",
+  "dataSnapshotConfirmBody": "سيحلّ هذا محلّ بيانات المستخدم الحالية بالحالة المحفوظة قبل ذلك الاستيراد.",
+  "dataSnapshotRestored": "تمت استعادة النسخة المحفوظة",
+  "dataSnapshotRestoreFailed": "فشلت استعادة النسخة المحفوظة: {error}",
+  "@dataSnapshotRestoreFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "programImportTooltip": "\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0628\u0631\u0627\u0645\u062c \u0645\u0646 CSV",
+  "programImportPickerTitle": "\u0627\u062e\u062a\u0631 \u062c\u062f\u0648\u0644 \u0628\u0631\u0627\u0645\u062c",
+  "programImportDone": "\u062a\u0645 \u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0627\u0644\u0628\u0631\u0627\u0645\u062c.",
+  "programImportConfirmTitle": "\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0627\u0644\u0628\u0631\u0627\u0645\u062c\u061f",
+  "programImportSummary": "{programs} \u0628\u0631\u0646\u0627\u0645\u062c \u00b7 {days} \u064a\u0648\u0645 \u00b7 {exercises} \u062a\u0645\u0631\u064a\u0646",
+  "@programImportSummary": {
+    "placeholders": {
+      "programs": { "type": "int" },
+      "days": { "type": "int" },
+      "exercises": { "type": "int" }
+    }
+  },
+  "programImportSkippedUnknown": "\u062a\u064f\u062e\u0637\u0651\u064a\u062a \u062a\u0645\u0627\u0631\u064a\u0646 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629:",
+  "dataAllDeleted": "تم حذف كل البيانات",
+  "dataDeleteAllConfirmTitle": "حذف كل البيانات؟",
+  "dataDeleteAllConfirmBody": "سيحذف هذا نهائيًا كل تمرين وجلسة مؤقّت وبرنامج وقالب وقياس جسم (ستُستعاد البرامج المدمجة). تبقى مكتبة التمارين كما هي. لا يمكن التراجع عن هذا.",
+  "dataDeleteConfirmWord": "حذف",
+  "dataDeleteAllTypeToConfirm": "اكتب {word} للتأكيد",
+  "@dataDeleteAllTypeToConfirm": {
+    "placeholders": {
+      "word": { "type": "String" }
+    }
+  },
+  "dataDeleteEverything": "حذف كل شيء",
+  "dataDeleteAllTitle": "حذف كل البيانات",
+  "dataDeleteAllSubtitle": "التمارين والمؤقّتات والبرامج والقوالب وقياسات الجسم",
+  "dataTableWorkouts": "تمرين",
+  "dataTableWorkoutSets": "مجموعة تمرين",
+  "dataTableTimerSessions": "جلسة مؤقّت",
+  "dataTableBodyMetrics": "قياس جسم",
+  "dataTableTemplates": "قالب",
 
   "categoryStrength": "قوة",
   "categoryCardio": "هوائي",
@@ -683,6 +779,7 @@
   "accountEmailNotConfirmedTitle": "البريد الإلكتروني غير مؤكَّد",
   "accountEmailNotConfirmedSubtitle": "افتح الرابط الذي أرسلناه لإكمال إعداد حسابك.",
   "accountPersonalDetailsTitle": "البيانات الشخصية",
+  "profilePageTitle": "البيانات الشخصية",
   "accountPersonalDetailsSubtitle": "الاسم، تاريخ الميلاد، الجنس، الطول",
   "accountShowWelcomeTitle": "عرض شاشة الترحيب",
   "accountShowWelcomeSubtitle": "المقدّمة التي تظهر عند أول تشغيل",

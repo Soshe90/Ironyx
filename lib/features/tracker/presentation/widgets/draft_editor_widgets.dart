@@ -737,7 +737,7 @@ class _SetDoneButton extends StatelessWidget {
     // State is carried by the fill, not by hue alone: an unlogged set is a
     // hollow tonal square, a logged one is a solid primary square.
     return Semantics(
-      label: 'Set $index complete',
+      label: context.l10n.draftSetCompleteSemantic(index),
       toggled: done,
       container: true,
       child: Material(

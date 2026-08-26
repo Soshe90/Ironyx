@@ -72,9 +72,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
               ),
-              tooltip: _obscure
-                  ? l10n.authShowPassword
-                  : l10n.authHidePassword,
+              tooltip: _obscure ? l10n.authShowPassword : l10n.authHidePassword,
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),

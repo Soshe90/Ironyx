@@ -1,5 +1,6 @@
 import 'package:fittrack/core/database/app_database.dart';
 import 'package:fittrack/core/database/daos/timer_dao.dart';
+import 'package:fittrack/core/l10n/l10n_provider.dart';
 import 'package:fittrack/core/providers.dart';
 import 'package:fittrack/core/services/haptics_service.dart';
 import 'package:fittrack/core/services/notification_service.dart';
@@ -8,6 +9,7 @@ import 'package:fittrack/core/services/wakelock_service.dart';
 import 'package:fittrack/features/timer/domain/timer_controller.dart';
 import 'package:fittrack/features/timer/domain/timer_preset.dart';
 import 'package:fittrack/features/timer/domain/timer_settings_controller.dart';
+import 'package:fittrack/l10n/app_localizations_en.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -74,6 +76,12 @@ void main() {
           timerAudioServiceProvider.overrideWithValue(mockAudio),
           wakelockServiceProvider.overrideWithValue(mockWakelock),
           timerSettingsControllerProvider.overrideWithValue(mockSettings),
+          // Boundary notifications carry translated text, so the controller
+          // resolves localizations while scheduling them. Pinned to English
+          // here rather than reached through SharedPreferences, which this
+          // test has no reason to stand up.
+          appLocalizationsProvider
+              .overrideWith((_) async => AppLocalizationsEn()),
         ],
       );
 

@@ -1,7 +1,12 @@
 import 'package:fittrack/features/profile/domain/bmi_advisory.dart';
+import 'package:fittrack/l10n/app_localizations.dart';
+import 'package:fittrack/l10n/app_localizations_en.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  // The advisory wording is localized now; the bands themselves are not.
+  final AppLocalizations l10n = AppLocalizationsEn();
+
   group('bmi', () {
     test('computes the standard kg/m^2 value', () {
       // 94 kg at 172 cm — the numbers from the reference screenshot.
@@ -39,17 +44,22 @@ void main() {
 
   group('message', () {
     test('stays silent for a healthy reading and for incomplete input', () {
-      expect(BmiAdvisory.message(weightKg: 70, heightCm: 175), isNull);
-      expect(BmiAdvisory.message(weightKg: null, heightCm: 175), isNull);
-      expect(BmiAdvisory.message(weightKg: 70, heightCm: null), isNull);
+      expect(
+          BmiAdvisory.message(weightKg: 70, heightCm: 175, l10n: l10n), isNull);
+      expect(BmiAdvisory.message(weightKg: null, heightCm: 175, l10n: l10n),
+          isNull);
+      expect(BmiAdvisory.message(weightKg: 70, heightCm: null, l10n: l10n),
+          isNull);
     });
 
     test('asks the user to check their input rather than judging them', () {
-      final String? high = BmiAdvisory.message(weightKg: 94, heightCm: 172);
+      final String? high =
+          BmiAdvisory.message(weightKg: 94, heightCm: 172, l10n: l10n);
       expect(high, contains('overweight'));
       expect(high, contains('check'));
 
-      final String? low = BmiAdvisory.message(weightKg: 45, heightCm: 175);
+      final String? low =
+          BmiAdvisory.message(weightKg: 45, heightCm: 175, l10n: l10n);
       expect(low, contains('underweight'));
       expect(low, contains('check'));
     });
