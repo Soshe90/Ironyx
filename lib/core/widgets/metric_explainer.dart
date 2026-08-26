@@ -64,6 +64,10 @@ Future<void> showMetricExplainer(
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: false,
+    // Above the shell's navigator, not inside it. Nested, the scrim stops at
+    // the bottom navigation bar and leaves it lit under a dimmed page, which
+    // reads as a rendering fault rather than a deliberate layer.
+    useRootNavigator: true,
     builder: (_) => _MetricExplainerSheet(explainer: explainer),
   );
 }
@@ -198,6 +202,33 @@ class _FormulaCard extends StatelessWidget {
   final String formula;
   final String? example;
 
+  /// Lays out one whitespace-separated token per [Text].
+  ///
+  /// A single [Text] cannot render `1RM = الوزن × (1 + التكرارات ÷ 30)` in the
+  /// order it was written. Forcing the paragraph to LTR settles which end the
+  /// line starts at, but not what happens inside it: every Arabic word is a
+  /// strong RTL run, the neutral operators around it get absorbed into that
+  /// run, and the whole tail comes out mirrored — `= 1RM` migrates to the far
+  /// right and the worked example scrambles outright.
+  ///
+  /// Splitting on spaces makes each token its own bidi paragraph, so a word
+  /// still shapes correctly internally while the order between tokens belongs
+  /// to the [Wrap] and its explicit direction. The spacing stands in for the
+  /// spaces that were split out.
+  Widget _tokens(String source, TextStyle style) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      textDirection: TextDirection.ltr,
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: <Widget>[
+        for (final String token in source.split(' '))
+          if (token.isNotEmpty) Text(token, style: style),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -219,10 +250,9 @@ class _FormulaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
+            _tokens(
               formula,
-              textAlign: TextAlign.center,
-              style: AppTypography.numeric(
+              AppTypography.numeric(
                 theme.textTheme.titleMedium!.copyWith(
                   color: scheme.onSurface,
                   fontWeight: FontWeight.w600,
@@ -234,10 +264,9 @@ class _FormulaCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               Divider(color: scheme.outlineVariant, height: 1),
               const SizedBox(height: AppSpacing.md),
-              Text(
+              _tokens(
                 example!,
-                textAlign: TextAlign.center,
-                style: AppTypography.numeric(
+                AppTypography.numeric(
                   theme.textTheme.bodyMedium!.copyWith(
                     color: scheme.primary,
                     height: 1.4,

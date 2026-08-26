@@ -14,6 +14,15 @@ const MetricExplainer _explainer = MetricExplainer(
   caveat: 'An estimate, not a target.',
 );
 
+/// Mirrors the shape of the shipped Arabic string: Latin `1RM`, an `=`, then
+/// Arabic words interleaved with neutral operators. That mix is what the bidi
+/// algorithm reorders if the formula is rendered as one paragraph.
+const MetricExplainer _arabicExplainer = MetricExplainer(
+  title: 'الحد الأقصى',
+  summary: 'أثقل وزن يمكنك رفعه مرة واحدة.',
+  formula: '1RM = الوزن × (1 + التكرارات ÷ 30)',
+);
+
 void main() {
   group('MetricExplainer', () {
     testWidgets('SectionHeader shows no info button without an explainer',
@@ -36,10 +45,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(_explainer.summary), findsOneWidget);
-      expect(find.text(_explainer.formula!), findsOneWidget);
-      expect(find.text(_explainer.example!), findsOneWidget);
       expect(find.text(_explainer.points.single), findsOneWidget);
       expect(find.text(_explainer.caveat!), findsOneWidget);
+      // The formula and example are split into one Text per token, so assert
+      // on the tokens rather than the whole string.
+      expect(find.text('1RM'), findsOneWidget);
+      expect(find.text('weight'), findsOneWidget);
+      expect(find.text('101'), findsOneWidget);
     });
 
     testWidgets('the dismiss button closes the sheet', (tester) async {
@@ -78,11 +90,14 @@ void main() {
       expect(find.text('How to read it'), findsNothing);
     });
 
-    testWidgets('lays the formula out left-to-right under an RTL locale',
+    testWidgets('keeps the formula in written order under an RTL locale',
         (tester) async {
       await pumpWidgetUnderTest(
         tester,
-        const SectionHeader(title: 'الحد الأقصى', explainer: _explainer),
+        const SectionHeader(
+          title: 'الحد الأقصى',
+          explainer: _arabicExplainer,
+        ),
         locale: const Locale('ar'),
       );
 
@@ -95,16 +110,17 @@ void main() {
       await tester.tap(find.byType(MetricInfoButton));
       await tester.pumpAndSettle();
 
-      // ...but the formula must not, or the bidi algorithm reorders the
-      // operands and `weight × (1 + reps ÷ 30)` comes out backwards.
-      expect(
-        Directionality.of(tester.element(find.text(_explainer.formula!))),
-        TextDirection.ltr,
-      );
-      expect(
-        Directionality.of(tester.element(find.text(_explainer.example!))),
-        TextDirection.ltr,
-      );
+      // ...but the formula must read left to right, in the order it was
+      // written. Asserting on position rather than on Directionality: an
+      // earlier version forced the paragraph to LTR, which satisfied a
+      // directionality check while still rendering `= 1RM` at the far right,
+      // because the Arabic words inside were their own RTL runs.
+      final double lhs = tester.getTopLeft(find.text('1RM')).dx;
+      final double firstOperand = tester.getTopLeft(find.text('الوزن')).dx;
+      final double lastOperand = tester.getTopLeft(find.text('30)')).dx;
+
+      expect(lhs, lessThan(firstOperand));
+      expect(firstOperand, lessThan(lastOperand));
     });
   });
 }
