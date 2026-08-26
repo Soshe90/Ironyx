@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -5,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/daos/program_dao.dart';
 import '../../../core/database/database_providers.dart';
+import '../../../core/theme/app_spacing.dart';
 import 'program_draft.dart';
 
 part 'program_editor_controller.g.dart';
@@ -15,22 +18,66 @@ const _uuid = Uuid();
 /// [programId] is null, or an existing one loaded from the DB. Built-in
 /// programs are editable; saving one converts it to a custom program.
 ///
-/// Not persisted incrementally like `ActiveWorkoutNotifier`'s draft — a
-/// half-built program isn't useful to resume later the way a half-logged
-/// workout is, so this stays in memory until [save].
+/// Auto-saves on a debounce once the draft is structurally valid (a named
+/// program with at least one day that each have at least one exercise) —
+/// the same rule [ProgramEditorPage._save] enforces before allowing an
+/// explicit save. A brand new program's first auto-save inserts a real row
+/// and remembers its id ([_persistedId]); every write after that, auto-save
+/// or explicit, updates that same row rather than inserting another.
 @riverpod
 class ProgramEditorController extends _$ProgramEditorController {
+  /// Captured once so a dispose-time flush can still reach the database
+  /// after this (autoDispose) provider's own `ref` has stopped being valid
+  /// to read from. `programDaoProvider` is `keepAlive`, so the DAO instance
+  /// itself outlives this notifier regardless.
+  late final ProgramDao _dao;
+
+  /// The id of the row this draft has actually been written to, or null if
+  /// it never has been. Starts as [programId] (an existing program being
+  /// edited) and, for a brand new one, is set the moment the first
+  /// insert-worthy auto-save fires.
+  String? _persistedId;
+
+  /// Mirrors `state.value`, but as a plain field rather than a getter that
+  /// runs through `Ref`. Riverpod forbids touching `state`/`ref` from
+  /// inside a dispose callback (`_debugCallbackStack` assertion) — this is
+  /// what the [build] dispose hook reads instead to flush a pending edit.
+  ProgramDraft? _latestDraft;
+
+  Timer? _autoSaveTimer;
+  bool _dirty = false;
+
   @override
   Future<ProgramDraft> build(String? programId) async {
+    _dao = ref.read(programDaoProvider);
+    _persistedId = programId;
+    ref.onDispose(() {
+      _autoSaveTimer?.cancel();
+      // The debounce window may not have elapsed yet when the user
+      // navigates away right after an edit — flush whatever is pending
+      // rather than silently dropping it.
+      if (_dirty) {
+        _dirty = false;
+        final draft = _latestDraft;
+        if (draft != null && _isSaveWorthy(draft)) {
+          unawaited(_persist(draft));
+        }
+      }
+    });
+
     if (programId == null) {
-      return const ProgramDraft(name: '', days: []);
+      const draft = ProgramDraft(name: '', days: []);
+      _latestDraft = draft;
+      return draft;
     }
     final ProgramDetail? detail =
         await ref.watch(programDaoProvider).getDetail(programId);
     if (detail == null) {
-      return const ProgramDraft(name: '', days: []);
+      const draft = ProgramDraft(name: '', days: []);
+      _latestDraft = draft;
+      return draft;
     }
-    return ProgramDraft(
+    final draft = ProgramDraft(
       name: detail.program.name,
       description: detail.program.description,
       splitType: detail.program.splitType,
@@ -52,6 +99,8 @@ class ProgramEditorController extends _$ProgramEditorController {
           ),
       ],
     );
+    _latestDraft = draft;
+    return draft;
   }
 
   void setName(String name) => _update((d) => d.copyWith(name: name));
@@ -162,21 +211,49 @@ class ProgramEditorController extends _$ProgramEditorController {
         return day.copyWith(exercises: exercises);
       });
 
-  /// Saves the draft — inserting a new program, or replacing an existing
-  /// one's metadata and days — and returns the program's id.
+  /// Explicit save: cancels any pending debounce and writes immediately, so
+  /// the caller's returned id and the confirmation it shows both reflect
+  /// the true DB state rather than racing the debounce timer.
   Future<String> save() async {
+    _autoSaveTimer?.cancel();
+    _dirty = false;
     final ProgramDraft? draft = state.value;
     if (draft == null) throw StateError('Program draft is not loaded yet.');
+    return _persist(draft);
+  }
 
-    final ProgramDao dao = ref.read(programDaoProvider);
+  /// Same structural rule [ProgramEditorPage._save] validates before
+  /// allowing an explicit save — applied here silently, since auto-save has
+  /// no UI to surface a "give it a name" message to.
+  bool _isSaveWorthy(ProgramDraft draft) =>
+      draft.name.trim().isNotEmpty &&
+      draft.days.isNotEmpty &&
+      draft.days.every((day) => day.exercises.isNotEmpty);
+
+  void _scheduleAutoSave() {
+    _dirty = true;
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(AppDuration.autoSaveDebounce, () {
+      _dirty = false;
+      final draft = _latestDraft;
+      if (draft == null || !_isSaveWorthy(draft)) return;
+      unawaited(_persist(draft));
+    });
+  }
+
+  /// Inserts a new program on the first write, remembering [_persistedId]
+  /// so every write after that — auto-save or explicit — updates the same
+  /// row instead of inserting another one.
+  Future<String> _persist(ProgramDraft draft) async {
     final DateTime now = DateTime.now().toUtc();
     final List<ProgramDayInsert> days = [
       for (var i = 0; i < draft.days.length; i++)
         _buildDayInsert(draft.days[i], orderIndex: i, now: now),
     ];
 
-    if (programId == null) {
-      return dao.insertProgram(
+    final String? existingId = _persistedId;
+    if (existingId == null) {
+      final String newId = await _dao.insertProgram(
         ProgramsTableCompanion.insert(
           id: _uuid.v4(),
           name: draft.name,
@@ -188,16 +265,18 @@ class ProgramEditorController extends _$ProgramEditorController {
         ),
         days,
       );
+      _persistedId = newId;
+      return newId;
     }
 
-    await dao.updateProgramWithDays(
-      programId!,
+    await _dao.updateProgramWithDays(
+      existingId,
       name: draft.name,
       description: draft.description,
       splitType: draft.splitType,
       days: days,
     );
-    return programId!;
+    return existingId;
   }
 
   ProgramDayInsert _buildDayInsert(
@@ -236,14 +315,22 @@ class ProgramEditorController extends _$ProgramEditorController {
   }
 
   Future<void> delete() async {
-    if (programId == null) return;
-    await ref.read(programDaoProvider).deleteProgram(programId!);
+    // Cancelled first: a pending auto-save must not resurrect the row a
+    // moment after this deletes it.
+    _autoSaveTimer?.cancel();
+    _dirty = false;
+    final String? id = _persistedId;
+    if (id == null) return;
+    await _dao.deleteProgram(id);
   }
 
   void _update(ProgramDraft Function(ProgramDraft) fn) {
     final draft = state.value;
     if (draft == null) return;
-    state = AsyncData(fn(draft));
+    final updated = fn(draft);
+    state = AsyncData(updated);
+    _latestDraft = updated;
+    _scheduleAutoSave();
   }
 
   void _updateDay(String dayId, ProgramDraftDay Function(ProgramDraftDay) fn) {

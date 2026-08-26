@@ -33,6 +33,16 @@ abstract final class AppDuration {
   /// Debounce for text inputs that write into shared state (ADR-5).
   static const Duration inputDebounce = Duration(milliseconds: 300);
 
+  /// Debounce for background auto-save writes to the database.
+  ///
+  /// Longer than [inputDebounce] on purpose: a weight/reps field already
+  /// settles its in-memory state after [inputDebounce], so stacking an
+  /// equal delay on top of that would just double the wait without
+  /// coalescing anything new. This window is what actually absorbs a burst
+  /// of edits (weight, then reps, then marking a set complete) into one
+  /// write instead of three.
+  static const Duration autoSaveDebounce = Duration(milliseconds: 600);
+
   /// Window during which a discarded workout can be undone.
   ///
   /// Longer than a normal snackbar on purpose. Discarding a workout throws

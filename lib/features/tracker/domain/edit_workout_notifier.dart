@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/workout_sets.dart';
+import '../../../core/theme/app_spacing.dart';
 import 'draft_editor_controller.dart';
 import 'workout_draft.dart';
 
@@ -14,22 +18,52 @@ part 'edit_workout_notifier.g.dart';
 const _uuid = Uuid();
 
 /// Loads a previously saved workout into an editable [WorkoutDraft] and
-/// writes the revised exercises/sets back on [save].
+/// writes the revised exercises/sets back — automatically, on a debounce,
+/// as well as explicitly via [save].
 ///
 /// Scoped to the edit screen (autoDispose) — unlike [ActiveWorkoutNotifier]
-/// there is no draft to restore after a kill, because the source of truth
-/// is already durable in the database.
+/// there is no local draft to restore after a kill, because every edit is
+/// already durable in the database within [AppDuration.autoSaveDebounce].
 @riverpod
 class EditWorkoutNotifier extends _$EditWorkoutNotifier
     implements DraftEditorController {
+  /// Captured once so a dispose-time flush can still reach the database
+  /// after this (autoDispose) provider's own `ref` has stopped being valid
+  /// to read from. `workoutDaoProvider` is `keepAlive`, so the DAO instance
+  /// itself outlives this notifier regardless.
+  late final WorkoutDao _dao;
+
+  /// Mirrors `state.value`, but as a plain field rather than a getter that
+  /// runs through `Ref`. Riverpod forbids touching `state`/`ref` from
+  /// inside a dispose callback (`_debugCallbackStack` assertion) — this is
+  /// what the [build] dispose hook reads instead to flush a pending edit.
+  WorkoutDraft? _latestDraft;
+
+  Timer? _autoSaveTimer;
+  bool _dirty = false;
+
   @override
   Future<WorkoutDraft> build(String workoutId) async {
-    final details =
-        await ref.watch(workoutDaoProvider).getWithDetails(workoutId);
+    _dao = ref.read(workoutDaoProvider);
+    ref.onDispose(() {
+      _autoSaveTimer?.cancel();
+      // The debounce window may not have elapsed yet when the user
+      // navigates away right after an edit — flush whatever is pending
+      // rather than silently dropping it.
+      if (_dirty) {
+        _dirty = false;
+        final draft = _latestDraft;
+        if (draft != null) unawaited(_writeDraftToDb(draft));
+      }
+    });
+
+    final details = await ref.watch(workoutDaoProvider).getWithDetails(
+          workoutId,
+        );
     if (details == null) {
       throw StateError('Workout $workoutId not found');
     }
-    return WorkoutDraft(
+    final draft = WorkoutDraft(
       id: details.workout.id,
       startedAt: details.workout.startedAt,
       exercises: [
@@ -55,6 +89,8 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
           ),
       ],
     );
+    _latestDraft = draft;
+    return draft;
   }
 
   @override
@@ -64,7 +100,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
   }) async {
     final draft = state.value;
     if (draft == null) return;
-    state = AsyncData(
+    _setDraft(
       draft.copyWith(
         exercises: [
           ...draft.exercises,
@@ -83,7 +119,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
   Future<void> removeExercise(String exerciseId) async {
     final draft = state.value;
     if (draft == null) return;
-    state = AsyncData(
+    _setDraft(
       draft.copyWith(
         exercises: draft.exercises.where((e) => e.id != exerciseId).toList(),
       ),
@@ -103,7 +139,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
     final targetIndex =
         newIndex > exercises.length ? exercises.length : newIndex;
     exercises.insert(targetIndex, exercise);
-    state = AsyncData(draft.copyWith(exercises: exercises));
+    _setDraft(draft.copyWith(exercises: exercises));
   }
 
   @override
@@ -172,7 +208,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
   ) {
     final draft = state.value;
     if (draft == null) return;
-    state = AsyncData(
+    _setDraft(
       draft.copyWith(
         exercises: draft.exercises
             .map(
@@ -184,10 +220,41 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
     );
   }
 
-  /// Writes the edited exercises and sets back in one transaction.
+  /// Explicit save: cancels any pending debounce and writes immediately, so
+  /// the "Save changes" button's confirmation reflects the true DB state
+  /// the instant it's shown rather than racing the debounce timer.
   Future<void> save() async {
+    _autoSaveTimer?.cancel();
+    _dirty = false;
     final draft = state.value;
     if (draft == null || draft.exercises.isEmpty) return;
+    await _writeDraftToDb(draft);
+    ref.invalidate(workoutDetailProvider(draft.id));
+  }
+
+  void _setDraft(WorkoutDraft draft) {
+    state = AsyncData(draft);
+    _latestDraft = draft;
+    _scheduleAutoSave();
+  }
+
+  void _scheduleAutoSave() {
+    _dirty = true;
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(AppDuration.autoSaveDebounce, () {
+      _dirty = false;
+      final draft = _latestDraft;
+      if (draft != null) unawaited(_writeDraftToDb(draft));
+    });
+  }
+
+  /// Writes the edited exercises and sets back in one transaction.
+  ///
+  /// Uses [_dao] rather than `ref.read` so this still runs from the
+  /// dispose-time flush, after this provider's own `ref` is no longer safe
+  /// to touch.
+  Future<void> _writeDraftToDb(WorkoutDraft draft) async {
+    if (draft.exercises.isEmpty) return;
 
     final workoutExercises = <WorkoutExercisesTableCompanion>[];
     final workoutSets = <WorkoutSetsTableCompanion>[];
@@ -227,12 +294,11 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
       }
     }
 
-    await ref.read(workoutDaoProvider).updateWorkout(
-          workoutId: draft.id,
-          totalVolumeKg: totalVolumeKg,
-          exercises: workoutExercises,
-          sets: workoutSets,
-        );
-    ref.invalidate(workoutDetailProvider(draft.id));
+    await _dao.updateWorkout(
+      workoutId: draft.id,
+      totalVolumeKg: totalVolumeKg,
+      exercises: workoutExercises,
+      sets: workoutSets,
+    );
   }
 }
