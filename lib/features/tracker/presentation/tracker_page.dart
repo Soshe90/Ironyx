@@ -17,6 +17,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/pr_badge.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../programs/domain/program_catalogue_l10n.dart';
 import '../../programs/domain/program_providers.dart';
 import '../../programs/presentation/program_import_action.dart';
 import '../domain/active_workout_notifier.dart';
@@ -136,8 +137,12 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                             padding:
                                 const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: _ProgramTile(
-                              name: summary.program.name,
-                              description: summary.program.description,
+                              name: summary.program.displayName(context),
+                              description: summary.program
+                                  .localizedDescription(
+                                context,
+                                summary.dayCount,
+                              ),
                               dayCount: summary.dayCount,
                               onTap: () => _openProgram(
                                 context,

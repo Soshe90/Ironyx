@@ -828,6 +828,15 @@
   },
 
   "programTitle": "Program",
+  "programSplitFullBody": "Full body",
+  "programSplitUpperLower": "Upper / lower",
+  "programSplitPpl": "Push / pull / legs",
+  "programWeeklyFrequency": "{count, plural, =1{1 day/week} other{{count} days/week}}",
+  "@programWeeklyFrequency": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "programEditTitle": "Edit program",
   "programNewTitle": "New program",
   "programEditTooltip": "Edit program",

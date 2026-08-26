@@ -805,6 +805,10 @@
   },
 
   "programTitle": "البرنامج",
+  "programSplitFullBody": "الجسم كامل",
+  "programSplitUpperLower": "علوي / سفلي",
+  "programSplitPpl": "دفع / سحب / أرجل",
+  "programWeeklyFrequency": "{count, plural, zero{لا أيام في الأسبوع} one{يوم واحد في الأسبوع} two{يومان في الأسبوع} few{{count} أيام في الأسبوع} many{{count} يومًا في الأسبوع} other{{count} يوم في الأسبوع}}",
   "programEditTitle": "تعديل البرنامج",
   "programNewTitle": "برنامج جديد",
   "programEditTooltip": "تعديل البرنامج",

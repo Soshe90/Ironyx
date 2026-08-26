@@ -17,6 +17,7 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/stat_strip.dart';
 import '../../tracker/domain/active_workout_notifier.dart';
 import '../../tracker/domain/workout_draft.dart';
+import '../domain/program_catalogue_l10n.dart';
 import '../domain/program_providers.dart';
 
 /// Read-only view of a program: its ordered day-templates (Workout A/B/C…),
@@ -120,11 +121,12 @@ class _ProgramDetailBody extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         children: [
           Text(
-            program.name,
+            program.displayName(context),
             style: theme.textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w600),
           ),
-          if (program.description case final description?)
+          if (program.localizedDescription(context, detail.days.length)
+              case final description?)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
               child: Text(description, style: AppTypography.caption(theme)),
@@ -264,7 +266,7 @@ class _DayCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      day.dayName,
+                      day.displayDayName(context),
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
