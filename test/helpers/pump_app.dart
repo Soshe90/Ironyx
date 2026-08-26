@@ -68,6 +68,7 @@ Future<void> pumpWidgetUnderTest(
   Widget child, {
   ThemeData? theme,
   Size surfaceSize = const Size(400, 800),
+  Locale? locale,
 }) async {
   tester.view.physicalSize = surfaceSize;
   tester.view.devicePixelRatio = 1.0;
@@ -78,6 +79,8 @@ Future<void> pumpWidgetUnderTest(
     ProviderScope(
       child: MaterialApp(
         theme: theme,
+        // Null falls back to the platform locale, which is `en` under test.
+        locale: locale,
         // Widgets under test read `context.l10n`, which needs the same
         // delegates the real app installs.
         localizationsDelegates: AppLocalizations.localizationsDelegates,

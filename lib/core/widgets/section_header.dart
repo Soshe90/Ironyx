@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_spacing.dart';
+import 'metric_explainer.dart';
 
 /// Titles a group of content, with an optional trailing action.
 ///
@@ -12,6 +13,7 @@ class SectionHeader extends StatelessWidget {
     this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.explainer,
     super.key,
   });
 
@@ -19,6 +21,12 @@ class SectionHeader extends StatelessWidget {
   final String? subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// When set, an info button appears in the header's trailing slot and opens
+  /// this. Sits there rather than inline after the title because the 48dp tap
+  /// target is taller than a title line, and inline it would set the height of
+  /// the text column and open a gap under every explained heading.
+  final MetricExplainer? explainer;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +58,7 @@ class SectionHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (explainer != null) MetricInfoButton(explainer: explainer!),
           if (actionLabel != null && onAction != null) ...<Widget>[
             const SizedBox(width: AppSpacing.sm),
             TextButton(onPressed: onAction, child: Text(actionLabel!)),

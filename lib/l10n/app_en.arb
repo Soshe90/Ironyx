@@ -1060,5 +1060,62 @@
   "@progressWeightField": { "placeholders": { "unit": { "type": "String" } } },
   "progressBodyFatOptionalField": "Body fat % (optional)",
   "progressMetricSemantic": "{label}: {value}",
-  "@progressMetricSemantic": { "placeholders": { "label": { "type": "String" }, "value": { "type": "String" } } }
+  "@progressMetricSemantic": { "placeholders": { "label": { "type": "String" }, "value": { "type": "String" } } },
+
+  "metricExplainerTooltip": "What is {metric}?",
+  "@metricExplainerTooltip": { "placeholders": { "metric": { "type": "String" } } },
+  "metricExplainerHowToRead": "How to read it",
+  "metricExplainerDismiss": "Got it",
+
+  "explainerOneRmSummary": "\"1RM\" is your one-rep max — the heaviest weight you could lift for a single repetition. Actually testing it is tiring and a little risky, so the app estimates it from the sets you already log. \"Epley\" is simply the name of the formula used, after the coach who published it in 1985.",
+  "explainerOneRmFormula": "1RM = weight × (1 + reps ÷ 30)",
+  "explainerOneRmExample": "80 kg × 8 reps → 101 kg",
+  "explainerOneRmPoint1": "It puts a heavy set of three and a lighter set of ten on the same scale, so you can see progress however you trained that day.",
+  "explainerOneRmPoint2": "Only sets of 1–12 reps are used. Past that the formula drifts too far to be worth showing.",
+  "explainerOneRmPoint3": "A rising line means you are getting stronger — including when the weight stayed the same and you added reps.",
+  "explainerOneRmCaveat": "This is an estimate, not a target. Don't walk up to the bar and try the number cold.",
+
+  "explainerRelativeStrengthSummary": "Your estimated 1RM divided by your body weight — strength per kilo of you. Lifting 100 kg means something rather different at 60 kg body weight than it does at 100 kg.",
+  "explainerRelativeStrengthFormula": "Relative strength = 1RM ÷ body weight",
+  "explainerRelativeStrengthExample": "101 kg ÷ 80 kg → 1.26 ×",
+  "explainerRelativeStrengthPoint1": "1.0 × means you can lift your own body weight in that exercise.",
+  "explainerRelativeStrengthPoint2": "It climbs if you get stronger, and also if you get lighter while holding the same strength.",
+  "explainerRelativeStrengthCaveat": "Needs a recent body weight logged under Body metrics — without one there is nothing to divide by.",
+
+  "explainerVolumeSummary": "Volume is the total weight you moved: every set's weight multiplied by its reps, added up. It is the usual shorthand for how much work a session or a week actually contained.",
+  "explainerVolumeFormula": "Volume = weight × reps, added up",
+  "explainerVolumeExample": "80 kg × 8 + 80 kg × 6 → 1,120 kg",
+  "explainerVolumePoint1": "Rising volume week over week means you are training more. Whether that is better depends on whether you are recovering from it.",
+  "explainerVolumePoint2": "Body-weight sets carry no external load, so they are not counted here.",
+  "explainerVolumePoint3": "Watch for sudden jumps rather than high totals — a steep week-to-week rise is the pattern that tends to precede niggles.",
+
+  "explainerRpeSummary": "RPE stands for Rate of Perceived Exertion: how hard a set felt to you, on a 1–10 scale, recorded right after you finish it. It is the simplest way to capture something the weight on the bar does not tell you.",
+  "explainerRpeFormula": "10 = nothing left · 8 ≈ 2 reps left · 6 = comfortable",
+  "explainerRpePoint1": "Plotted against volume it shows whether the same work is starting to feel easier, which is what adapting looks like.",
+  "explainerRpePoint2": "RPE creeping up at an unchanged weight is an early sign of accumulated fatigue.",
+  "explainerRpeCaveat": "It is subjective, and that is fine — being consistent with yourself matters more than matching anyone else's scale.",
+
+  "explainerRepRangeSummary": "How your sets are spread across rep ranges. Different ranges bias different adaptations, so this shows what you have actually been training rather than what you intended to.",
+  "explainerRepRangeFormula": "1–5 strength · 6–12 size · 13+ endurance",
+  "explainerRepRangePoint1": "1–5 reps: the heaviest loads, driving maximal strength.",
+  "explainerRepRangePoint2": "6–12 reps: the classic muscle-growth range, where most programmes spend their time.",
+  "explainerRepRangePoint3": "13+ reps: lighter work for muscular endurance and joint-friendly volume.",
+  "explainerRepRangeCaveat": "There is no correct split — it depends on your goal. Treat this as a mirror, not a score.",
+
+  "explainerBalanceSummary": "Compares the volume you gave opposing movement patterns: pushing against pulling, and upper body against lower. Imbalances that run for months are where nagging aches usually begin.",
+  "explainerBalanceFormula": "Push / pull = push volume ÷ pull volume",
+  "explainerBalanceExample": "Reference band 0.75 – 1.33",
+  "explainerBalancePoint1": "Near 1.0 means both sides got roughly equal work.",
+  "explainerBalancePoint2": "Above 1.33 is push-heavy, below 0.75 is pull-heavy. The upper/lower ratio reads the same way.",
+  "explainerBalanceCaveat": "A deliberate imbalance is fine for a training block. It is the one you did not choose that is worth correcting.",
+
+  "explainerConsistencySummary": "Whether you are showing up. A streak counts consecutive weeks in which you logged at least your weekly session target.",
+  "explainerConsistencyPoint1": "The target comes from your profile, so the streak is measured against your plan rather than a fixed number.",
+  "explainerConsistencyPoint2": "Longest streak is your record across your whole history, not only the range selected above.",
+  "explainerConsistencyCaveat": "Over a year, turning up regularly predicts progress better than any single session does.",
+
+  "explainerStrengthChangeSummary": "Your best estimated 1RM for each exercise in the selected window, set against the window immediately before it.",
+  "explainerStrengthChangePoint1": "Green means the best lift improved on the previous period; red means it fell back.",
+  "explainerStrengthChangePoint2": "With \"All time\" selected there is no earlier window to compare against, so it simply shows your best ever per exercise.",
+  "explainerStrengthChangeCaveat": "A drop often just means you trained that lift lighter this period — not that you lost strength."
 }

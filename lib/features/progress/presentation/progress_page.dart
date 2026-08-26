@@ -19,6 +19,7 @@ import '../../../core/widgets/chart_gestures.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
+import '../../../core/widgets/metric_explainer.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/trend_badge.dart';
@@ -26,6 +27,7 @@ import '../domain/bmi.dart';
 import '../domain/progress_insights.dart';
 import '../domain/progress_providers.dart';
 import '../domain/strength_analytics.dart';
+import 'progress_explainers.dart';
 import 'widgets/body_metric_widgets.dart';
 
 /// Height of a full chart. One value for all of them, so the page has a
@@ -86,6 +88,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               SectionHeader(
                 title: l10n.progressStrengthChangeTitle,
                 subtitle: l10n.progressStrengthSubtitle(range.name),
+                explainer: ProgressExplainers.strengthChange(l10n),
               ),
               _StrengthChangeSection(range: range),
               _RelativeStrengthSection(range: range),
@@ -93,6 +96,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               SectionHeader(
                 title: l10n.progressEstimatedOneRmTitle,
                 subtitle: l10n.progressEstimatedOneRmSubtitle,
+                explainer: ProgressExplainers.oneRm(l10n),
               ),
               _OneRmSection(
                 range: range,
@@ -105,17 +109,27 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               SectionHeader(
                 title: l10n.progressWeeklyVolumeTitle,
                 subtitle: l10n.progressWeeklyVolumeSubtitle(range.name),
+                explainer: ProgressExplainers.volume(l10n),
               ),
               _VolumeSection(range: range),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.progressConsistencyTitle),
+              SectionHeader(
+                title: l10n.progressConsistencyTitle,
+                explainer: ProgressExplainers.consistency(l10n),
+              ),
               _ConsistencySection(range: range),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.progressEffortRecoveryTitle),
+              SectionHeader(
+                title: l10n.progressEffortRecoveryTitle,
+                explainer: ProgressExplainers.rpe(l10n),
+              ),
               _RpeSection(range: range),
               _RestSection(range: range),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.progressTrainingBalanceTitle),
+              SectionHeader(
+                title: l10n.progressTrainingBalanceTitle,
+                explainer: ProgressExplainers.balance(l10n),
+              ),
               _BalanceSection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(title: l10n.progressWorkoutFrequencyTitle),
@@ -124,7 +138,10 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               SectionHeader(title: l10n.progressWeeklyVolumeByMuscleTitle),
               _WeeklyMuscleSection(range: range),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.progressRepRangeDistributionTitle),
+              SectionHeader(
+                title: l10n.progressRepRangeDistributionTitle,
+                explainer: ProgressExplainers.repRange(l10n),
+              ),
               _RepRangeSection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(title: l10n.progressTrainingDaysTitle),
@@ -207,9 +224,20 @@ class _RelativeStrengthSection extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          context.l10n.progressRelativeStrengthTitle,
-                          style: Theme.of(context).textTheme.titleSmall,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                context.l10n.progressRelativeStrengthTitle,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                            MetricInfoButton(
+                              explainer: ProgressExplainers.relativeStrength(
+                                context.l10n,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
