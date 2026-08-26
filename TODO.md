@@ -422,7 +422,7 @@ Triggered by comparing FitTrack's exercise library/3D-model screens against Musc
 - [x] `dart run build_runner build` (passes; this installed build_runner no longer accepts `--delete-conflicting-outputs`.)
 - [x] `flutter analyze --fatal-infos --fatal-warnings` (passes.)
 - [x] `dart analyze` (passes.)
-- [ ] `flutter test --coverage` (currently has 6 pre-existing Library widget failures plus one migration fixture failure; the migration fixture failure was fixed and passes in isolation, but the full suite still needs a clean rerun.)
+- [x] `flutter test` (green as of 2026-08-26: 337 passed, 1 skipped, 0 failed. The 6 long-standing Library/program-editor widget failures and the migration fixture failure are all fixed. Not re-run with `--coverage`; no coverage threshold is enforced anywhere.)
 - [x] `flutter build apk --debug` (passes.)
 - [x] `flutter build web --release` (passes.)
 - [x] iOS build verified on macOS. **External validation required:** macOS/Xcode is unavailable in this Linux environment.

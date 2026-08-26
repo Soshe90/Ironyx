@@ -132,9 +132,10 @@ and five near-duplicate cable-fly entries that had been sharing images.
       `ios/Runner.xcodeproj/project.pbxproj`'s `PRODUCT_BUNDLE_IDENTIFIER`,
       and `lib/core/config/deep_links.dart`. The Supabase Redirect URLs
       entry above still needs the matching update.
-- [ ] **dev** — Fix the 6 pre-existing test failures (5 in
-      `library_page_test.dart`, 1 in `program_editor_page_test.dart`). Known
-      and confirmed against a clean HEAD; already tracked at `TODO.md:425`.
+- [x] **dev** — Fix the 6 pre-existing test failures (5 in
+      `library_page_test.dart`, 1 in `program_editor_page_test.dart`). Fixed
+      during the Arabic localization work; `flutter test` now reports 337
+      passed, 1 skipped, 0 failed (verified 2026-08-26).
 - [ ] **dev** — Real-device validation from `TODO.md` Priority 2: force-kill
       recovery, timer across backgrounding, wakelock release, notification
       rescheduling.
@@ -397,6 +398,6 @@ unzip -p build/app/outputs/flutter-apk/app-release.apk \
   | grep -a "supabase.co"
 ```
 
-**Pre-existing test failures.** 6 as of 2026-08-23 (5 `library_page_test`, 1
-`program_editor_page_test`), confirmed against a clean HEAD worktree. New
-failures are yours; these are not.
+**Pre-existing test failures.** None as of 2026-08-26. The 6 long-standing
+failures (5 `library_page_test`, 1 `program_editor_page_test`) were fixed with
+the Arabic localization work; the suite is green, so any failure is now yours.
