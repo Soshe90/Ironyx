@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/body_metrics_dao.dart';
-import 'package:fittrack/core/database/daos/profile_dao.dart';
-import 'package:fittrack/core/database/database_providers.dart';
-import 'package:fittrack/core/router/routes.dart';
-import 'package:fittrack/features/profile/presentation/widgets/value_pill.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/body_metrics_dao.dart';
+import 'package:ironyx/core/database/daos/profile_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/features/profile/presentation/widgets/value_pill.dart';
 
 import '../helpers/pump_app.dart';
 

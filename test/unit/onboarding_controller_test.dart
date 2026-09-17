@@ -1,7 +1,7 @@
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/features/onboarding/domain/onboarding_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/features/onboarding/domain/onboarding_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

@@ -10,6 +10,7 @@ import '../domain/auth_controller.dart';
 import '../domain/auth_service.dart';
 import '../domain/auth_validators.dart';
 import 'auth_failure_messages.dart';
+import 'widgets/account_conflict_flow.dart';
 import 'widgets/auth_form_scaffold.dart';
 
 /// Signs an existing account in. Reached from Settings; never forced.
@@ -116,6 +117,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 email: _email.text,
                 password: _password.text,
               );
+
+      if (!mounted) return;
+      // A different account than whatever this device was last linked to:
+      // resolve that before attaching, since `linkAccount` alone would
+      // silently reassign this device's existing training data.
+      if (!await resolveAccountConflict(context, ref, user)) return;
+
       // Attach the account to the profile that already holds this device's
       // history, rather than starting a second one.
       await ref

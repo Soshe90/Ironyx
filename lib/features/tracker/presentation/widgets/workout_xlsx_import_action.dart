@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/error_reporting.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/services/workout_xlsx_import_service.dart';
@@ -49,10 +50,11 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
         ref.read(appDatabaseProvider),
         sourceUnit: sourceUnit,
       );
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      reportError(error, stackTrace, context: 'WorkoutXlsxImportService.parse');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.importXlsxReadFailed('$error'))),
+          SnackBar(content: Text(context.l10n.importXlsxReadFailed)),
         );
       }
       return;
@@ -62,10 +64,24 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     final confirmed = await _confirm(context, result, sourceUnit);
     if (confirmed != true || !context.mounted) return;
 
-    await const WorkoutXlsxImportService().apply(
-      ref.read(appDatabaseProvider),
-      result,
-    );
+    try {
+      await const WorkoutXlsxImportService().apply(
+        ref.read(appDatabaseProvider),
+        result,
+      );
+    } on Object catch (error, stackTrace) {
+      // `apply()` runs inside a single transaction, so a failure here rolls
+      // everything back rather than leaving a half-imported log — but
+      // nothing previously caught it, so it would have surfaced as an
+      // unhandled exception straight out of this tap handler.
+      reportError(error, stackTrace, context: 'WorkoutXlsxImportService.apply');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.importXlsxApplyFailed)),
+        );
+      }
+      return;
+    }
     ref.invalidate(workoutHistoryStreamProvider);
     ref.invalidate(personalRecordWorkoutIdsProvider);
     if (!context.mounted) return;

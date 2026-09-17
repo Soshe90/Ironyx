@@ -156,7 +156,17 @@ class PlatformNotificationService implements NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
-      iOS: DarwinNotificationDetails(),
+      // Explicit `present*: true`: iOS otherwise only shows a local
+      // notification while the app is backgrounded — silently swallowing it
+      // if fired while the timer screen is still open, which given a rest
+      // timer someone is actively watching is the common case, not the edge
+      // case. Android has no equivalent foreground/background distinction
+      // for a shown notification.
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
     );
     try {
       await _plugin.show(0, title, body, details);
@@ -182,7 +192,14 @@ class PlatformNotificationService implements NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
-      iOS: DarwinNotificationDetails(),
+      // See the matching comment in `showCompletion` — without this, a
+      // boundary notification that fires while the timer screen is still
+      // open on iOS is silently dropped rather than shown.
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
     );
     try {
       await _plugin.zonedSchedule(

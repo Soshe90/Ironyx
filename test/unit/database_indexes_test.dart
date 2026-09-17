@@ -1,5 +1,5 @@
-import 'package:fittrack/core/database/app_database.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
 
 /// Confirms the indexes ADR-1's query paths depend on actually land in the
 /// generated SQLite schema, rather than trusting the migration source alone.

@@ -1,5 +1,5 @@
-import 'package:fittrack/core/formatters/unit_formatters.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/formatters/unit_formatters.dart';
 
 void main() {
   group('UnitFormatters', () {

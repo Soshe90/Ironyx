@@ -1,9 +1,9 @@
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/core/theme/app_spacing.dart';
-import 'package:fittrack/features/tracker/domain/active_workout_notifier.dart';
-import 'package:fittrack/features/tracker/domain/workout_draft.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/theme/app_spacing.dart';
+import 'package:ironyx/features/tracker/domain/active_workout_notifier.dart';
+import 'package:ironyx/features/tracker/domain/workout_draft.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -281,6 +281,64 @@ void main() {
       expect(draft.exercises[0].name, 'Back Squat');
       expect(draft.exercises[0].sets, hasLength(3));
       expect(draft.exercises[1].sets, hasLength(2));
+    });
+
+    test('startFromTemplate carries superset groups into the draft', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.startFromTemplate(const [
+        TemplateExerciseInput(
+          exerciseId: 'squat',
+          name: 'Back Squat',
+          targetSets: 3,
+          supersetGroupId: 'g1',
+        ),
+        TemplateExerciseInput(
+          exerciseId: 'bench',
+          name: 'Bench Press',
+          targetSets: 3,
+          supersetGroupId: 'g1',
+        ),
+      ]);
+
+      final draft = container.read(activeWorkoutProvider)!;
+      expect(draft.exercises[0].supersetGroupId, 'g1');
+      expect(draft.exercises[1].supersetGroupId, 'g1');
+    });
+
+    test('grouping and ungrouping exercises persists across restore', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'squat', name: 'Squat');
+      await notifier.addExercise(exerciseId: 'press', name: 'Press');
+      final exercises = container.read(activeWorkoutProvider)!.exercises;
+
+      await notifier.groupWithPrevious(exercises[1].id);
+      var draft = container.read(activeWorkoutProvider)!;
+      final groupId = draft.exercises[0].supersetGroupId;
+      expect(groupId, isNotNull);
+      expect(draft.exercises[1].supersetGroupId, groupId);
+
+      final restored = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
+        ],
+      );
+      addTearDown(restored.dispose);
+      expect(
+        restored.read(activeWorkoutProvider)!.exercises[0].supersetGroupId,
+        groupId,
+      );
+      expect(
+        restored.read(activeWorkoutProvider)!.exercises[1].supersetGroupId,
+        groupId,
+      );
+
+      await notifier.ungroupFromSuperset(exercises[1].id);
+      draft = container.read(activeWorkoutProvider)!;
+      expect(draft.exercises[0].supersetGroupId, isNull);
+      expect(draft.exercises[1].supersetGroupId, isNull);
     });
   });
 }

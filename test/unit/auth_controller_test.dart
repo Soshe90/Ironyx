@@ -1,10 +1,10 @@
-import 'package:fittrack/features/auth/domain/auth_controller.dart';
-import 'package:fittrack/features/auth/domain/auth_service.dart';
-import 'package:fittrack/features/auth/presentation/auth_failure_messages.dart';
-import 'package:fittrack/l10n/app_localizations.dart';
-import 'package:fittrack/l10n/app_localizations_en.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/features/auth/domain/auth_controller.dart';
+import 'package:ironyx/features/auth/domain/auth_service.dart';
+import 'package:ironyx/features/auth/presentation/auth_failure_messages.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
+import 'package:ironyx/l10n/app_localizations_en.dart';
 
 import '../helpers/fake_auth_service.dart';
 

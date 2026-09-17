@@ -23,6 +23,16 @@ abstract class DraftExercise with _$DraftExercise {
     required String name,
     required List<DraftSet> sets,
     @Default(false) bool isWarmup,
+
+    /// Whether this exercise logs a held duration instead of reps, e.g. a
+    /// plank. Copied from the exercise catalogue at add-time (ADR-6:
+    /// catalogue lookups shouldn't be needed to render an already-built
+    /// draft).
+    @Default(false) bool isTimeBased,
+
+    /// Groups consecutive exercises into a superset. Null means standalone;
+    /// exercises sharing a non-null value are performed back-to-back.
+    String? supersetGroupId,
   }) = _DraftExercise;
 }
 
@@ -36,6 +46,7 @@ abstract class DraftSet with _$DraftSet {
     @Default(false) bool isWarmup,
     int? rpeTimes10,
     int? restSeconds,
+    int? durationSeconds,
   }) = _DraftSet;
 }
 
@@ -49,6 +60,8 @@ class TemplateExerciseInput {
     required this.exerciseId,
     required this.name,
     required this.targetSets,
+    this.isTimeBased = false,
+    this.supersetGroupId,
   });
 
   final String exerciseId;
@@ -56,4 +69,10 @@ class TemplateExerciseInput {
 
   /// Number of empty set rows to pre-create (1 when unknown).
   final int targetSets;
+
+  /// Whether this exercise logs a held duration instead of reps.
+  final bool isTimeBased;
+
+  /// Superset group, copied through to the preloaded [DraftExercise].
+  final String? supersetGroupId;
 }

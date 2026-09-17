@@ -1,10 +1,10 @@
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/database_providers.dart';
-import 'package:fittrack/core/router/scaffold_with_nav_bar.dart';
-import 'package:fittrack/features/dashboard/presentation/dashboard_page.dart';
-import 'package:fittrack/features/tracker/presentation/active_workout_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/router/scaffold_with_nav_bar.dart';
+import 'package:ironyx/features/dashboard/presentation/dashboard_page.dart';
+import 'package:ironyx/features/tracker/presentation/active_workout_page.dart';
 
 import '../helpers/pump_app.dart';
 

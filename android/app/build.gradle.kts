@@ -19,7 +19,7 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.soshe90.fittrack"
+    namespace = "com.soshe90.ironyx"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.soshe90.fittrack"
+        applicationId = "com.soshe90.ironyx"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

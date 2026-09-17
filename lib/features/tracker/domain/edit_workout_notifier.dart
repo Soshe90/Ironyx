@@ -73,6 +73,8 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
             exerciseId: exercise.exerciseId,
             name: details.exerciseNames[exercise.id] ?? 'Unknown exercise',
             isWarmup: exercise.isWarmup,
+            isTimeBased: details.exerciseIsTimeBased[exercise.id] ?? false,
+            supersetGroupId: exercise.supersetGroupId,
             sets: [
               for (final set in details.setsByExercise[exercise.id] ??
                   const <WorkoutSet>[])
@@ -84,6 +86,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
                   isWarmup: set.isWarmup,
                   rpeTimes10: set.rpeTimes10,
                   restSeconds: set.restSeconds,
+                  durationSeconds: set.durationSeconds,
                 ),
             ],
           ),
@@ -97,6 +100,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
   Future<void> addExercise({
     required String exerciseId,
     required String name,
+    bool isTimeBased = false,
   }) async {
     final draft = state.value;
     if (draft == null) return;
@@ -108,6 +112,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
             id: _uuid.v4(),
             exerciseId: exerciseId,
             name: name,
+            isTimeBased: isTimeBased,
             sets: [DraftSet(id: _uuid.v4())],
           ),
         ],
@@ -140,6 +145,63 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
         newIndex > exercises.length ? exercises.length : newIndex;
     exercises.insert(targetIndex, exercise);
     _setDraft(draft.copyWith(exercises: exercises));
+  }
+
+  @override
+  Future<void> groupWithPrevious(String exerciseId) async {
+    final draft = state.value;
+    if (draft == null) return;
+    final index = draft.exercises.indexWhere((e) => e.id == exerciseId);
+    if (index <= 0) return;
+    final previous = draft.exercises[index - 1];
+    final current = draft.exercises[index];
+    if (previous.supersetGroupId != null &&
+        previous.supersetGroupId == current.supersetGroupId) {
+      return;
+    }
+    final groupId = previous.supersetGroupId ?? _uuid.v4();
+    _setDraft(
+      draft.copyWith(
+        exercises: [
+          for (final exercise in draft.exercises)
+            if (exercise.id == previous.id)
+              exercise.copyWith(supersetGroupId: groupId)
+            else if (exercise.id == current.id)
+              exercise.copyWith(supersetGroupId: groupId)
+            else
+              exercise,
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<void> ungroupFromSuperset(String exerciseId) async {
+    final draft = state.value;
+    if (draft == null) return;
+    final index = draft.exercises.indexWhere((e) => e.id == exerciseId);
+    if (index < 0) return;
+    final current = draft.exercises[index];
+    if (current.supersetGroupId == null) return;
+    final groupId = current.supersetGroupId!;
+    final withoutCurrent = draft.exercises
+        .map((e) => e.id == current.id ? e.copyWith(supersetGroupId: null) : e)
+        .toList();
+    final remaining =
+        withoutCurrent.where((e) => e.supersetGroupId == groupId).toList();
+    _setDraft(
+      draft.copyWith(
+        exercises: remaining.length != 1
+            ? withoutCurrent
+            : [
+                for (final exercise in withoutCurrent)
+                  if (exercise.supersetGroupId == groupId)
+                    exercise.copyWith(supersetGroupId: null)
+                  else
+                    exercise,
+              ],
+      ),
+    );
   }
 
   @override
@@ -183,6 +245,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
     bool? isWarmup,
     int? rpeTimes10,
     int? restSeconds,
+    int? durationSeconds,
   }) async {
     _updateExercise(
       exerciseId,
@@ -196,6 +259,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
             isWarmup: isWarmup ?? set.isWarmup,
             rpeTimes10: rpeTimes10 ?? set.rpeTimes10,
             restSeconds: restSeconds ?? set.restSeconds,
+            durationSeconds: durationSeconds ?? set.durationSeconds,
           );
         }).toList(),
       ),
@@ -271,6 +335,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
           exerciseId: exercise.exerciseId,
           orderIndex: exerciseIndex,
           isWarmup: Value(exercise.isWarmup),
+          supersetGroupId: Value(exercise.supersetGroupId),
         ),
       );
       for (var setIndex = 0; setIndex < exercise.sets.length; setIndex++) {
@@ -284,6 +349,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
             reps: set.reps,
             rpeTimes10: Value(set.rpeTimes10),
             restSeconds: Value(set.restSeconds),
+            durationSeconds: Value(set.durationSeconds),
             isCompleted: Value(set.isCompleted),
             isWarmup: Value(set.isWarmup || exercise.isWarmup),
           ),

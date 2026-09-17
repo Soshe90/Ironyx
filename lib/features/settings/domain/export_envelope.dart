@@ -43,7 +43,7 @@ class ImportEnvelope {
 
   /// Parses and validates the envelope header. Throws
   /// [ImportValidationException] with a user-facing message if the file
-  /// isn't a FitTrack export or carries an unrecognized [formatVersion].
+  /// isn't a Ironyx export or carries an unrecognized [formatVersion].
   factory ImportEnvelope.parse(String jsonContent,
       {required int currentFormatVersion}) {
     final Object? decoded;
@@ -51,21 +51,21 @@ class ImportEnvelope {
       decoded = jsonDecode(jsonContent);
     } on FormatException {
       throw ImportValidationException(
-          'This file is not a valid FitTrack export.');
+          'This file is not a valid Ironyx export.');
     }
     if (decoded is! Map<String, dynamic>) {
       throw ImportValidationException(
-          'This file is not a valid FitTrack export.');
+          'This file is not a valid Ironyx export.');
     }
 
     final Object? rawFormatVersion = decoded['formatVersion'];
     if (rawFormatVersion is! int) {
       throw ImportValidationException(
-          'This file is not a valid FitTrack export.');
+          'This file is not a valid Ironyx export.');
     }
     if (rawFormatVersion > currentFormatVersion) {
       throw ImportValidationException(
-        'This backup was made with a newer version of FitTrack '
+        'This backup was made with a newer version of Ironyx '
         '(format $rawFormatVersion). Update the app before importing.',
       );
     }
@@ -85,13 +85,13 @@ class ImportEnvelope {
         rawExportedAt is! String ||
         DateTime.tryParse(rawExportedAt) == null) {
       throw ImportValidationException(
-          'This file is not a valid FitTrack export.');
+          'This file is not a valid Ironyx export.');
     }
 
     final Object? rawTables = decoded['tables'];
     if (rawTables is! Map<String, dynamic>) {
       throw ImportValidationException(
-          'This file is not a valid FitTrack export.');
+          'This file is not a valid Ironyx export.');
     }
     final Map<String, List<Map<String, Object?>>> tables;
     try {
@@ -104,7 +104,7 @@ class ImportEnvelope {
       };
     } on TypeError {
       throw ImportValidationException(
-          'This file is not a valid FitTrack export.');
+          'This file is not a valid Ironyx export.');
     }
 
     return ImportEnvelope(

@@ -11,6 +11,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
@@ -119,6 +120,9 @@ class _WorkoutDetailBody extends ConsumerWidget {
             .value
             ?.contains(workoutId) ??
         false;
+    final List<String?> supersetLabelsForWorkout = supersetLabels(
+      [for (final exercise in details.exercises) exercise.supersetGroupId],
+    );
 
     return PageBody(
       child: ListView(
@@ -167,19 +171,25 @@ class _WorkoutDetailBody extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
-          for (final exercise in details.exercises)
+          for (var i = 0; i < details.exercises.length; i++)
             _ExerciseBreakdown(
-              exerciseId: exercise.exerciseId,
+              exerciseId: details.exercises[i].exerciseId,
               workoutId: workoutId,
               name: localizedExerciseName(
                 context,
                 slugsById,
-                exercise.exerciseId,
-                details.exerciseNames[exercise.id] ??
+                details.exercises[i].exerciseId,
+                details.exerciseNames[details.exercises[i].id] ??
                     l10n.workoutUnknownExercise,
               ),
-              sets: details.setsByExercise[exercise.id] ?? const <WorkoutSet>[],
+              sets: details.setsByExercise[details.exercises[i].id] ??
+                  const <WorkoutSet>[],
               unit: unit,
+              supersetLabel: supersetLabelsForWorkout[i],
+              isRunStart: details.exercises[i].supersetGroupId != null &&
+                  (i == 0 ||
+                      details.exercises[i - 1].supersetGroupId !=
+                          details.exercises[i].supersetGroupId),
             ),
         ],
       ),
@@ -200,6 +210,8 @@ class _ExerciseBreakdown extends ConsumerWidget {
     required this.name,
     required this.sets,
     required this.unit,
+    this.supersetLabel,
+    this.isRunStart = false,
   });
 
   final String exerciseId;
@@ -207,6 +219,12 @@ class _ExerciseBreakdown extends ConsumerWidget {
   final String name;
   final List<WorkoutSet> sets;
   final WeightUnit unit;
+
+  /// Letter ("A", "B", …) shown next to the name for a superset member.
+  final String? supersetLabel;
+
+  /// Whether this exercise begins a superset run (shows the "SUPERSET" tag).
+  final bool isRunStart;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -237,10 +255,50 @@ class _ExerciseBreakdown extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Expanded(
-                  child: Text(
-                    name,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (isRunStart)
+                        Text(
+                          context.l10n.draftSuperset,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            color: scheme.primary,
+                          ),
+                        ),
+                      Row(
+                        children: <Widget>[
+                          if (supersetLabel != null) ...<Widget>[
+                            Container(
+                              width: AppSpacing.lg,
+                              height: AppSpacing.lg,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: scheme.secondaryContainer,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: Text(
+                                supersetLabel!,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: scheme.onSecondaryContainer,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: theme.textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 if (performance != null && performance.isPersonalRecord)

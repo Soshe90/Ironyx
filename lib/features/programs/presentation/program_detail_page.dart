@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/daos/program_dao.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
@@ -208,6 +209,8 @@ class _ProgramDetailBody extends ConsumerWidget {
           exerciseId: exercise.exerciseId,
           name: exercise.displayName(context),
           targetSets: exercise.targetSets,
+          isTimeBased: exercise.isTimeBased,
+          supersetGroupId: exercise.supersetGroupId,
         ),
     ]);
     if (context.mounted) {
@@ -236,6 +239,9 @@ class _DayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final List<String?> labels = supersetLabels(
+      [for (final exercise in day.exercises) exercise.supersetGroupId],
+    );
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,44 +312,112 @@ class _DayCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Divider(height: 1, color: scheme.outlineVariant),
             const SizedBox(height: AppSpacing.md),
-            for (final exercise in day.exercises)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.fitness_center,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        exercise.displayName(context),
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      _targetLabel(context, exercise),
-                      style: AppTypography.numeric(
-                        theme.textTheme.bodySmall ?? const TextStyle(),
-                      ).copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
+            for (var i = 0; i < day.exercises.length; i++)
+              _DayExerciseLine(
+                exercise: day.exercises[i],
+                label: labels[i],
+                isRunStart: day.exercises[i].supersetGroupId != null &&
+                    (i == 0 ||
+                        day.exercises[i - 1].supersetGroupId !=
+                            day.exercises[i].supersetGroupId),
               ),
           ],
         ],
       ),
     );
   }
+}
 
-  String _targetLabel(BuildContext context, ProgramDayExercise exercise) {
-    final reps = exercise.targetReps;
-    return reps == null
-        ? context.l10n.programTargetSets(exercise.targetSets)
-        : '${exercise.targetSets} × $reps';
+/// One exercise line in a read-only program day, with a superset letter and
+/// a "SUPERSET" marker at the start of each contiguous group.
+class _DayExerciseLine extends StatelessWidget {
+  const _DayExerciseLine({
+    required this.exercise,
+    required this.label,
+    required this.isRunStart,
+  });
+
+  final ProgramDayExercise exercise;
+  final String? label;
+  final bool isRunStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (label != null)
+            _DaySupersetChip(label: label!)
+          else
+            Icon(
+              Icons.fitness_center,
+              size: 16,
+              color: scheme.onSurfaceVariant,
+            ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                if (isRunStart)
+                  Text(
+                    context.l10n.programSuperset,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: scheme.primary,
+                    ),
+                  ),
+                Text(
+                  exercise.displayName(context),
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            exercise.targetReps == null
+                ? context.l10n.programTargetSets(exercise.targetSets)
+                : '${exercise.targetSets} × ${exercise.targetReps}',
+            style: AppTypography.numeric(
+              theme.textTheme.bodySmall ?? const TextStyle(),
+            ).copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DaySupersetChip extends StatelessWidget {
+  const _DaySupersetChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      width: AppSpacing.lg,
+      height: AppSpacing.lg,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: scheme.onSecondaryContainer,
+        ),
+      ),
+    );
   }
 }

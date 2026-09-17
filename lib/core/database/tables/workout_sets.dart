@@ -10,8 +10,10 @@ part 'workout_sets.freezed.dart';
 /// WorkoutSet table — one row per set within a workout exercise.
 ///
 /// Weight is stored in **kilograms** (ADR-1).
-/// Reps=0 with weight>0 denotes a "weight only" entry (e.g. isometric hold).
 /// Reps>0 with weight=0 denotes bodyweight reps.
+/// For a time-based exercise (`ExercisesTable.isTimeBased`), [reps] is 0 and
+/// the hold is recorded in [durationSeconds] instead; [weightKg] still holds
+/// any added load (e.g. a weighted plank).
 class WorkoutSetsTable extends Table {
   /// Stable UUID.
   TextColumn get id => text()();
@@ -46,6 +48,10 @@ class WorkoutSetsTable extends Table {
   /// Rest time taken before this set, in seconds. Null = not tracked.
   IntColumn get restSeconds => integer().nullable()();
 
+  /// Held duration for a time-based (isometric) set, in seconds. Null for
+  /// ordinary rep-based sets; see `ExercisesTable.isTimeBased`.
+  IntColumn get durationSeconds => integer().nullable()();
+
   /// Optional note for this specific set.
   TextColumn get note => text().nullable()();
 
@@ -68,6 +74,7 @@ abstract class WorkoutSet with _$WorkoutSet {
     required bool isCompleted,
     required bool isWarmup,
     int? restSeconds,
+    int? durationSeconds,
     String? note,
   }) = _WorkoutSet;
 
@@ -81,6 +88,7 @@ abstract class WorkoutSet with _$WorkoutSet {
         isCompleted: row.isCompleted,
         isWarmup: row.isWarmup,
         restSeconds: row.restSeconds,
+        durationSeconds: row.durationSeconds,
         note: row.note,
       );
 

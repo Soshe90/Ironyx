@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/error_reporting.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/services/data_export_service.dart';
@@ -90,11 +91,11 @@ class DataManagementSection extends ConsumerWidget {
     switch (format) {
       case _ExportFormat.json:
         content = await service.buildJsonExport(db);
-        fileName = 'fittrack_backup_$timestamp.json';
+        fileName = 'ironyx_backup_$timestamp.json';
         mimeType = 'application/json';
       case _ExportFormat.csv:
         content = await service.buildCsvExport(db);
-        fileName = 'fittrack_export_$timestamp.csv';
+        fileName = 'ironyx_export_$timestamp.csv';
         mimeType = 'text/csv';
     }
 
@@ -220,9 +221,11 @@ class DataManagementSection extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.dataSnapshotRestored)),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace,
+          context: 'DataManagementSection.restoreSnapshot');
       if (!context.mounted) return;
-      await _showError(context, l10n.dataSnapshotRestoreFailed('$e'));
+      await _showError(context, l10n.dataSnapshotRestoreFailed);
     }
   }
 
@@ -234,13 +237,38 @@ class DataManagementSection extends ConsumerWidget {
     ImportMode mode,
   ) async {
     final AppLocalizations l10n = context.l10n;
+    // Captured from the dialog's own `builder`, not the outer Settings
+    // context: closing time needs to know whether *this* route is still
+    // there to pop, which `context.mounted` (Settings' own context) cannot
+    // tell — Settings stays mounted the whole time regardless of what
+    // happens to the dialog on top of it.
+    BuildContext? progressContext;
     unawaited(
       showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (dialogContext) {
+          progressContext = dialogContext;
+          // The barrier already blocks a tap outside; `canPop: false` closes
+          // the other way out — the Android system back button — which
+          // `barrierDismissible` does nothing about. Without this, backing
+          // out mid-import leaves the import running unattended, and the
+          // `Navigator...pop()` below then has no dialog left to close and
+          // pops whatever route Settings is actually showing instead.
+          return const PopScope(
+            canPop: false,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        },
       ),
     );
+
+    void closeProgressDialog() {
+      final BuildContext? dialogContext = progressContext;
+      if (dialogContext != null && dialogContext.mounted) {
+        Navigator.of(dialogContext).pop();
+      }
+    }
 
     try {
       final AppDatabase db = ref.read(appDatabaseProvider);
@@ -251,14 +279,15 @@ class DataManagementSection extends ConsumerWidget {
         mode: mode,
         snapshotDirPath: supportDir.path,
       );
+      closeProgressDialog();
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.dataImportComplete)));
-    } catch (e) {
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'DataManagementSection.runImport');
+      closeProgressDialog();
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      await _showError(context, l10n.dataImportFailed('$e'));
+      await _showError(context, l10n.dataImportFailed);
     }
   }
 
@@ -395,6 +424,17 @@ class DataManagementSection extends ConsumerWidget {
     // Programs (built-in and user) were deleted along with their templates
     // above — reset the seed marker and reseed so built-ins come back the
     // same way the exercise catalogue survives a delete-all.
+    //
+    // This exact sequence is also used by the account-conflict "erase and
+    // continue" flow (`account_conflict_flow.dart`), where it once produced
+    // a hung `Future` under a specific widget-test pump interleaving with
+    // `programSeederProvider` also watched app-wide by `app.dart`. It did
+    // not reproduce here across several real end-to-end runs of this exact
+    // button (`test/widget/settings_page_test.dart`, "tapping Delete
+    // everything..."), so it looks like a test-harness artifact rather
+    // than a reachable bug — but
+    // it was never fully explained. See TODO.md's A2.14 for the
+    // reproduction, in case this ever hangs for real.
     await ref.read(programSeederProvider.notifier).resetSeedVersion();
     ref.invalidate(programSeederProvider);
     await ref.read(programSeederProvider.future);

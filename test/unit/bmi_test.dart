@@ -1,5 +1,5 @@
-import 'package:fittrack/features/progress/domain/bmi.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/features/progress/domain/bmi.dart';
 
 void main() {
   test('calculates BMI and category from metric source values', () {

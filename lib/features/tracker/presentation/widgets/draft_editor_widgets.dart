@@ -22,6 +22,9 @@ import '../../domain/workout_draft.dart';
 const double _maxWeightKg = 1000;
 const int _maxReps = 100;
 
+/// Longest hold, in seconds, a time-based set row will accept (30 minutes).
+const int _maxDurationSeconds = 1800;
+
 /// One exercise within a draft, with its sets. Shared by the active-session
 /// screen and the edit screen — both back it with a [DraftEditorController].
 ///
@@ -33,6 +36,9 @@ class ExerciseDraftCard extends ConsumerWidget {
     required this.controller,
     this.position,
     this.dragHandleIndex,
+    this.supersetLabel,
+    this.isInSuperset = false,
+    this.canGroupWithPrevious = false,
     super.key,
   });
 
@@ -47,6 +53,17 @@ class ExerciseDraftCard extends ConsumerWidget {
   /// which is invisible to a screen reader and easy to trigger by accident
   /// while reaching for a set field.
   final int? dragHandleIndex;
+
+  /// Letter ("A", "B", …) shown in the leading chip instead of [position]
+  /// when this exercise is part of a superset.
+  final String? supersetLabel;
+
+  /// Whether this exercise is currently part of a superset.
+  final bool isInSuperset;
+
+  /// Whether "group with above" is available (there is an exercise above and
+  /// this one isn't already grouped with it).
+  final bool canGroupWithPrevious;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -84,8 +101,8 @@ class ExerciseDraftCard extends ConsumerWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                if (position != null) ...<Widget>[
-                  _PositionChip(position: position!),
+                if (position != null || supersetLabel != null) ...<Widget>[
+                  _PositionChip(label: supersetLabel ?? '$position'),
                   const SizedBox(width: AppSpacing.md),
                 ],
                 Expanded(
@@ -98,6 +115,10 @@ class ExerciseDraftCard extends ConsumerWidget {
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),
+                      if (isInSuperset) ...<Widget>[
+                        const SizedBox(height: AppSpacing.xxs),
+                        _SupersetTag(label: context.l10n.draftSuperset),
+                      ],
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         _summary(
@@ -111,6 +132,36 @@ class ExerciseDraftCard extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
+                PopupMenuButton<_DraftCardAction>(
+                  tooltip: context.l10n.draftExerciseOptions(displayName),
+                  icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                  onSelected: (_DraftCardAction action) => switch (action) {
+                    _DraftCardAction.groupWithAbove =>
+                      controller.groupWithPrevious(exercise.id),
+                    _DraftCardAction.ungroup =>
+                      controller.ungroupFromSuperset(exercise.id),
+                  },
+                  itemBuilder: (_) => <PopupMenuEntry<_DraftCardAction>>[
+                    PopupMenuItem<_DraftCardAction>(
+                      value: _DraftCardAction.groupWithAbove,
+                      enabled: canGroupWithPrevious,
+                      child: ListTile(
+                        leading: const Icon(Icons.vertical_align_top),
+                        title: Text(context.l10n.draftGroupWithAbove),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem<_DraftCardAction>(
+                      value: _DraftCardAction.ungroup,
+                      enabled: isInSuperset,
+                      child: ListTile(
+                        leading: const Icon(Icons.vertical_align_center),
+                        title: Text(context.l10n.draftUngroup),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
                 IconButton(
                   onPressed: () => controller.removeExercise(exercise.id),
@@ -133,7 +184,7 @@ class ExerciseDraftCard extends ConsumerWidget {
             ),
             if (exercise.sets.isNotEmpty) ...<Widget>[
               const SizedBox(height: AppSpacing.md),
-              _SetTableHeader(unit: unit),
+              _SetTableHeader(unit: unit, isTimeBased: exercise.isTimeBased),
               const SizedBox(height: AppSpacing.xs),
               for (int i = 0; i < exercise.sets.length; i++)
                 DraftSetRow(
@@ -142,6 +193,7 @@ class ExerciseDraftCard extends ConsumerWidget {
                   set: exercise.sets[i],
                   index: i + 1,
                   controller: controller,
+                  isTimeBased: exercise.isTimeBased,
                 ),
             ],
             const SizedBox(height: AppSpacing.xs),
@@ -185,11 +237,11 @@ class ExerciseDraftCard extends ConsumerWidget {
   }
 }
 
-/// The exercise's ordinal within the workout.
+/// The exercise's ordinal (or superset letter) within the workout.
 class _PositionChip extends StatelessWidget {
-  const _PositionChip({required this.position});
+  const _PositionChip({required this.label});
 
-  final int position;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +258,7 @@ class _PositionChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: Text(
-          '$position',
+          label,
           style: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: scheme.onSurfaceVariant,
@@ -217,11 +269,46 @@ class _PositionChip extends StatelessWidget {
   }
 }
 
+/// A small uppercase pill marking a superset member.
+class _SupersetTag extends StatelessWidget {
+  const _SupersetTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: scheme.onSecondaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
+/// Actions on the overflow menu of an exercise card.
+enum _DraftCardAction { groupWithAbove, ungroup }
+
 /// Names the set-row columns once, so each row can drop its field labels.
 class _SetTableHeader extends StatelessWidget {
-  const _SetTableHeader({required this.unit});
+  const _SetTableHeader({required this.unit, required this.isTimeBased});
 
   final WeightUnit unit;
+  final bool isTimeBased;
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +330,13 @@ class _SetTableHeader extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(child: label(unit.label.toUpperCase())),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(child: label(context.l10n.draftColumnReps)),
+          Expanded(
+            child: label(
+              isTimeBased
+                  ? context.l10n.draftColumnDuration
+                  : context.l10n.draftColumnReps,
+            ),
+          ),
           const SizedBox(width: AppSpacing.sm),
           SizedBox(
             width: AppSpacing.minTapTarget,
@@ -397,6 +490,7 @@ class DraftSetRow extends ConsumerStatefulWidget {
     required this.set,
     required this.index,
     required this.controller,
+    this.isTimeBased = false,
     super.key,
   });
 
@@ -408,6 +502,9 @@ class DraftSetRow extends ConsumerStatefulWidget {
   final int index;
   final DraftEditorController controller;
 
+  /// Whether this row logs a held duration instead of reps.
+  final bool isTimeBased;
+
   @override
   ConsumerState<DraftSetRow> createState() => _DraftSetRowState();
 }
@@ -415,6 +512,7 @@ class DraftSetRow extends ConsumerStatefulWidget {
 class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   late final TextEditingController _weightController;
   late final TextEditingController _repsController;
+  late final TextEditingController _durationController;
 
   /// The unit the text field currently holds a value in. When the user
   /// switches kg/lb mid-workout the displayed number has to be rewritten,
@@ -422,12 +520,15 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   WeightUnit? _renderedUnit;
   Timer? _weightDebounce;
   Timer? _repsDebounce;
+  Timer? _durationDebounce;
 
   @override
   void initState() {
     super.initState();
     _weightController = TextEditingController();
     _repsController = TextEditingController(text: _repsText(widget.set.reps));
+    _durationController =
+        TextEditingController(text: _durationText(widget.set.durationSeconds));
   }
 
   @override
@@ -436,14 +537,17 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
     if (oldWidget.set.id != widget.set.id) return;
     _sync(_weightController, _weightText(widget.set.weightKg, _renderedUnit));
     _sync(_repsController, _repsText(widget.set.reps));
+    _sync(_durationController, _durationText(widget.set.durationSeconds));
   }
 
   @override
   void dispose() {
     _weightDebounce?.cancel();
     _repsDebounce?.cancel();
+    _durationDebounce?.cancel();
     _weightController.dispose();
     _repsController.dispose();
+    _durationController.dispose();
     super.dispose();
   }
 
@@ -509,26 +613,49 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: _NumberField(
-              controller: _repsController,
-              semanticLabel: context.l10n.draftSetRepsSemantic(index),
-              onChanged: (String value) {
-                final int? reps = int.tryParse(value);
-                if (reps == null || reps < 0 || reps > _maxReps) {
-                  _repsDebounce?.cancel();
-                  return;
-                }
-                _repsDebounce?.cancel();
-                _repsDebounce = Timer(AppDuration.inputDebounce, () {
-                  if (!mounted) return;
-                  widget.controller.updateSet(
-                    widget.exerciseId,
-                    widget.set.id,
-                    reps: reps,
-                  );
-                });
-              },
-            ),
+            child: widget.isTimeBased
+                ? _NumberField(
+                    controller: _durationController,
+                    semanticLabel: context.l10n.draftSetDurationSemantic(index),
+                    onChanged: (String value) {
+                      final int? seconds = int.tryParse(value);
+                      if (seconds == null ||
+                          seconds < 0 ||
+                          seconds > _maxDurationSeconds) {
+                        _durationDebounce?.cancel();
+                        return;
+                      }
+                      _durationDebounce?.cancel();
+                      _durationDebounce = Timer(AppDuration.inputDebounce, () {
+                        if (!mounted) return;
+                        widget.controller.updateSet(
+                          widget.exerciseId,
+                          widget.set.id,
+                          durationSeconds: seconds,
+                        );
+                      });
+                    },
+                  )
+                : _NumberField(
+                    controller: _repsController,
+                    semanticLabel: context.l10n.draftSetRepsSemantic(index),
+                    onChanged: (String value) {
+                      final int? reps = int.tryParse(value);
+                      if (reps == null || reps < 0 || reps > _maxReps) {
+                        _repsDebounce?.cancel();
+                        return;
+                      }
+                      _repsDebounce?.cancel();
+                      _repsDebounce = Timer(AppDuration.inputDebounce, () {
+                        if (!mounted) return;
+                        widget.controller.updateSet(
+                          widget.exerciseId,
+                          widget.set.id,
+                          reps: reps,
+                        );
+                      });
+                    },
+                  ),
           ),
           const SizedBox(width: AppSpacing.sm),
           _SetDoneButton(
@@ -660,6 +787,9 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   }
 
   static String _repsText(int reps) => reps == 0 ? '' : '$reps';
+
+  static String _durationText(int? seconds) =>
+      seconds == null || seconds == 0 ? '' : '$seconds';
 
   static String _weightText(double kg, WeightUnit? unit) {
     if (kg == 0) return '';

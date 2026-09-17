@@ -35,5 +35,6 @@ abstract class ProgramDraftExercise with _$ProgramDraftExercise {
     required String name,
     required int targetSets,
     String? targetReps,
+    String? supersetGroupId,
   }) = _ProgramDraftExercise;
 }

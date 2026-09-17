@@ -5,10 +5,19 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
+    <!-- allowBackup defaults to true, which would hand Android's Auto Backup
+         (and, on 12+, the same opt-out also covers device-to-device
+         migration) a copy of this app's SharedPreferences — including the
+         Supabase session's refresh token, stored in plaintext by
+         supabase_flutter, not the Keystore — plus the SQLite database
+         itself, containing training history and personal details. Google
+         Drive is not a place either of those should end up. The app already
+         has its own export file and cloud-restore feature for this. -->
     <application
-        android:label="FitTrack"
+        android:label="Ironyx"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -42,7 +51,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
-                    android:scheme="com.soshe90.fittrack"
+                    android:scheme="com.soshe90.ironyx"
                     android:host="login-callback"/>
             </intent-filter>
         </activity>

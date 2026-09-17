@@ -22,12 +22,12 @@ Fix `flutter doctor` completely now. An unsigned Android toolchain or a missing 
 ```bash
 flutter create \
   --org com.yourdomain \
-  --project-name fittrack \
+  --project-name ironyx \
   --platforms=android,ios,web \
   --description "Offline-first workout tracker" \
-  fittrack
+  ironyx
 
-cd fittrack
+cd ironyx
 ```
 
 > ⚠️ **`--org` is effectively permanent.** It becomes the Android `applicationId` and the iOS bundle identifier. Changing it after a store submission means a new app listing and no upgrade path for existing users. Use a reverse-domain you actually control. Same for `--project-name`: lowercase with underscores, no hyphens, and it cannot be a Dart reserved word or a pub package name you might later depend on.
@@ -157,7 +157,7 @@ Option 2 is cleaner, since M1 replaces all of it anyway. Do not weaken `analysis
 Replace the generated README with something a future you can use:
 
 ```markdown
-# FitTrack
+# Ironyx
 
 Offline-first workout tracker. Flutter — Android, iOS, Web.
 

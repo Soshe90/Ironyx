@@ -9,6 +9,7 @@ import '../domain/auth_controller.dart';
 import '../domain/auth_service.dart';
 import '../domain/auth_validators.dart';
 import 'auth_failure_messages.dart';
+import 'widgets/account_conflict_flow.dart';
 import 'widgets/auth_form_scaffold.dart';
 
 /// Creates an account, then sends the user on to Personal Details.
@@ -125,9 +126,16 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         case SignUpOutcome.signedIn:
           final AuthUser? user = ref.read(authControllerProvider);
           if (user != null) {
-            await ref
-                .read(profileDaoProvider)
-                .linkAccount(userId: user.id, email: user.email);
+            // A different account than whatever this device was last linked
+            // to: resolve that before attaching, since `linkAccount` alone
+            // would silently reassign this device's existing training data.
+            if (await resolveAccountConflict(context, ref, user)) {
+              await ref
+                  .read(profileDaoProvider)
+                  .linkAccount(userId: user.id, email: user.email);
+            } else {
+              return;
+            }
           }
           if (!mounted) return;
           // Straight into Personal Details — the natural next step, and

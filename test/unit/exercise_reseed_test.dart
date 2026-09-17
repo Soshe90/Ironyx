@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
 
 /// A seed-content update must never crash — or silently loop forever on
 /// every launch — just because a user already logged a workout against one

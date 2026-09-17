@@ -94,6 +94,7 @@ class ProgramEditorController extends _$ProgramEditorController {
                   name: exercise.exerciseName,
                   targetSets: exercise.targetSets,
                   targetReps: exercise.targetReps,
+                  supersetGroupId: exercise.supersetGroupId,
                 ),
             ],
           ),
@@ -211,6 +212,70 @@ class ProgramEditorController extends _$ProgramEditorController {
         return day.copyWith(exercises: exercises);
       });
 
+  /// Groups [exerciseRowId] into the same superset as the exercise directly
+  /// above it, creating a new group if the one above is standalone.
+  ///
+  /// The group id is shared by reference: joining an existing group adopts
+  /// its id, so a third exercise can extend a two-exercise superset.
+  void groupWithPrevious(String dayId, String exerciseRowId) => _updateDay(
+        dayId,
+        (day) {
+          final index = day.exercises.indexWhere((x) => x.id == exerciseRowId);
+          if (index <= 0) return day;
+          final previous = day.exercises[index - 1];
+          final current = day.exercises[index];
+          if (previous.supersetGroupId != null &&
+              previous.supersetGroupId == current.supersetGroupId) {
+            return day; // Already grouped together.
+          }
+          final groupId = previous.supersetGroupId ?? _uuid.v4();
+          return day.copyWith(
+            exercises: [
+              for (final exercise in day.exercises)
+                if (exercise.id == previous.id)
+                  exercise.copyWith(supersetGroupId: groupId)
+                else if (exercise.id == current.id)
+                  exercise.copyWith(supersetGroupId: groupId)
+                else
+                  exercise,
+            ],
+          );
+        },
+      );
+
+  /// Removes [exerciseRowId] from its superset. If that leaves a single
+  /// stranded member behind, it is made standalone too — a superset of one
+  /// has no meaning.
+  void ungroupFromSuperset(String dayId, String exerciseRowId) => _updateDay(
+        dayId,
+        (day) {
+          final index = day.exercises.indexWhere((x) => x.id == exerciseRowId);
+          if (index < 0) return day;
+          final current = day.exercises[index];
+          if (current.supersetGroupId == null) return day;
+          final groupId = current.supersetGroupId!;
+          final withoutCurrent = day.exercises
+              .map((x) =>
+                  x.id == current.id ? x.copyWith(supersetGroupId: null) : x)
+              .toList();
+          final remaining = withoutCurrent
+              .where((x) => x.supersetGroupId == groupId)
+              .toList();
+          if (remaining.length != 1) {
+            return day.copyWith(exercises: withoutCurrent);
+          }
+          return day.copyWith(
+            exercises: [
+              for (final exercise in withoutCurrent)
+                if (exercise.supersetGroupId == groupId)
+                  exercise.copyWith(supersetGroupId: null)
+                else
+                  exercise,
+            ],
+          );
+        },
+      );
+
   /// Explicit save: cancels any pending debounce and writes immediately, so
   /// the caller's returned id and the confirmation it shows both reflect
   /// the true DB state rather than racing the debounce timer.
@@ -309,6 +374,7 @@ class ProgramEditorController extends _$ProgramEditorController {
             orderIndex: j,
             targetSets: day.exercises[j].targetSets,
             targetReps: Value(day.exercises[j].targetReps),
+            supersetGroupId: Value(day.exercises[j].supersetGroupId),
           ),
       ],
     );

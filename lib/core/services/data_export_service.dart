@@ -1,13 +1,47 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show compute;
+
 import '../../features/settings/domain/export_envelope.dart';
 import '../database/app_database.dart';
+import '../error_reporting.dart';
 
 /// App version written into every export envelope (ADR-7). Kept as a plain
 /// constant rather than pulling in `package_info_plus` — the app has no
 /// other use for a runtime version lookup yet.
 const String kAppVersion = '0.1.0';
+
+/// Plain data handed to [_encodeExportEnvelope] on a background isolate via
+/// [compute]. Has to be a top-level function, not a closure, so this is a
+/// record rather than captured locals.
+typedef _ExportEnvelopeData = (
+  Map<String, List<Map<String, Object?>>> tables,
+  int dbSchemaVersion,
+  String exportedAt,
+  bool indent,
+);
+
+/// Builds and encodes the export envelope. Run via [compute] rather than
+/// called directly — `JsonEncoder.withIndent` over a year of training data is
+/// a non-trivial, non-yielding chunk of CPU work, and this keeps it off the
+/// UI isolate. `compute`, not `Isolate.run`: browsers have no real isolate
+/// primitive to spawn, so `compute` is Flutter's own cross-platform-safe
+/// wrapper for exactly this — a true background isolate on native platforms,
+/// running inline in place on web rather than failing there.
+String _encodeExportEnvelope(_ExportEnvelopeData data) {
+  final (tables, dbSchemaVersion, exportedAt, indent) = data;
+  final Map<String, Object?> envelope = {
+    'formatVersion': DataExportService.formatVersion,
+    'dbSchemaVersion': dbSchemaVersion,
+    'appVersion': kAppVersion,
+    'exportedAt': exportedAt,
+    'tables': tables,
+  };
+  final JsonEncoder encoder =
+      indent ? const JsonEncoder.withIndent('  ') : const JsonEncoder();
+  return encoder.convert(envelope);
+}
 
 /// Reads, writes, and applies the ADR-7 versioned export envelope, and the
 /// destructive "delete all data" flow. The only file this ADR allows
@@ -66,9 +100,17 @@ class DataExportService {
   };
 
   /// Full database dump as the versioned JSON envelope.
-  Future<String> buildJsonExport(AppDatabase db) {
-    return db.transaction(() async {
-      final Map<String, List<Map<String, Object?>>> tables = {};
+  ///
+  /// [indent] defaults to on for a human-readable export file. The cloud
+  /// backup path (the only other caller of this shape) turns it off: that
+  /// payload is gzipped immediately and never read directly, and skipping
+  /// indentation roughly halves what there is to compress.
+  Future<String> buildJsonExport(AppDatabase db, {bool indent = true}) async {
+    final Map<String, List<Map<String, Object?>>> tables = {};
+    // The reads stay on the calling isolate — Drift's executor is bound to
+    // it — but the encode below, over everything read here, does not need
+    // to be.
+    await db.transaction(() async {
       for (final table in db.allTables) {
         final rows = await db
             .customSelect(
@@ -76,16 +118,30 @@ class DataExportService {
             .get();
         tables[table.actualTableName] = rows.map((r) => r.data).toList();
       }
-
-      final Map<String, Object?> envelope = {
-        'formatVersion': formatVersion,
-        'dbSchemaVersion': db.schemaVersion,
-        'appVersion': kAppVersion,
-        'exportedAt': DateTime.now().toUtc().toIso8601String(),
-        'tables': tables,
-      };
-      return const JsonEncoder.withIndent('  ').convert(envelope);
     });
+
+    final String json = await compute(
+      _encodeExportEnvelope,
+      (
+        tables,
+        db.schemaVersion,
+        DateTime.now().toUtc().toIso8601String(),
+        indent,
+      ),
+    );
+    // Doesn't block anything — a large export is still a valid one — but a
+    // year of hard training is ~1.4MB (see `SupabaseCloudBackupService`'s
+    // comment), so multiple orders of magnitude past that is worth having a
+    // record of once a crash reporter exists, rather than only finding out
+    // from a slow upload or an OOM report with no context.
+    if (json.length > 20 * 1024 * 1024) {
+      reportError(
+        'Export payload is unusually large: ${json.length} bytes.',
+        null,
+        context: 'DataExportService.buildJsonExport',
+      );
+    }
+    return json;
   }
 
   /// One row per completed set, flattened for opening in a spreadsheet.
@@ -135,7 +191,7 @@ class DataExportService {
 
   /// Parses and validates an export file's contents. Throws
   /// [ImportValidationException] (safe to show directly to the user) if the
-  /// file isn't a valid, current-version FitTrack export.
+  /// file isn't a valid, current-version Ironyx export.
   ImportEnvelope parseImport(String jsonContent) => ImportEnvelope.parse(
         jsonContent,
         currentFormatVersion: formatVersion,
@@ -274,7 +330,9 @@ class DataExportService {
       if (mode == ImportMode.replace) {
         for (final tableName in tableOrder.reversed) {
           if (skipInReplace(tableName)) continue;
-          await db.customStatement('DELETE FROM $tableName');
+          await db.customStatement(
+            'DELETE FROM ${_quoteIdentifier(tableName)}',
+          );
         }
       }
 
@@ -291,10 +349,11 @@ class DataExportService {
         final String placeholders = List.filled(columns.length, '?').join(', ');
         final String columnList = columns.map(_quoteIdentifier).join(', ');
 
+        final String quotedTableName = _quoteIdentifier(tableName);
         final String sql = switch (mode) {
           ImportMode.replace =>
-            'INSERT INTO $tableName ($columnList) VALUES ($placeholders)',
-          ImportMode.merge => 'INSERT INTO $tableName ($columnList) '
+            'INSERT INTO $quotedTableName ($columnList) VALUES ($placeholders)',
+          ImportMode.merge => 'INSERT INTO $quotedTableName ($columnList) '
               'VALUES ($placeholders) ON CONFLICT(id) DO UPDATE SET '
               '${columns.where((c) => c != 'id').map((c) => '${_quoteIdentifier(c)} = excluded.${_quoteIdentifier(c)}').join(', ')}',
         };
@@ -304,6 +363,12 @@ class DataExportService {
         }
       }
     });
+    // `customStatement` never notifies Drift's stream queries (see its own
+    // doc comment), so without this every `watch()` in the app — workout
+    // history, Progress, Dashboard — would keep showing the pre-import data
+    // until the process restarts, even though the rows underneath just
+    // changed inside the transaction above.
+    db.markTablesUpdated(db.allTables);
 
     if (createSnapshot) {
       await _cleanupSnapshots(snapshotDirPath);
@@ -481,10 +546,10 @@ class DataExportService {
     if (validateIdentifier &&
         column.type == 'TEXT' &&
         value is String &&
-        !_isValidIdentifier(value)) {
+        !_hasSafeIdentifierShape(value)) {
       throw ImportValidationException(
         'Invalid $tableName row ${rowIndex + 1}: column "${column.name}" '
-        'must contain a valid UUID or legacy identifier.',
+        'must be a UUID or a plain alphanumeric identifier.',
       );
     }
     final valid = switch (column.type) {
@@ -569,10 +634,10 @@ class DataExportService {
               envelope.tables[tableName]![rowIndex][foreignKey.column];
           if (value is String &&
               !catalogueTableNames.contains(foreignKey.parentTable) &&
-              !_isValidIdentifier(value)) {
+              !_hasSafeIdentifierShape(value)) {
             throw ImportValidationException(
               'Invalid $tableName row ${rowIndex + 1}: ${foreignKey.column} '
-              'must contain a valid UUID or legacy identifier.',
+              'must be a UUID or a plain alphanumeric identifier.',
             );
           }
           if (value is String && !available.contains(value)) {
@@ -587,7 +652,16 @@ class DataExportService {
     }
   }
 
-  bool _isValidIdentifier(String value) {
+  /// Whether [value] looks like a UUID or a plain alphanumeric identifier —
+  /// not a check against the actual set of ids this app has ever issued.
+  /// Every id this app has ever generated (`Uuid().v4()`) or shipped in seed
+  /// data (`ex_001`, `chest`, `builtin_full_body`, the `local_profile` /
+  /// `custom` sentinels) happens to match one of the two shapes below, but
+  /// so does any other alphanumeric string — this is a shape sanity check
+  /// on import data, not a lookup against known ids. There is no injection
+  /// risk either way: every value here is bound as a query parameter, never
+  /// interpolated into SQL.
+  bool _hasSafeIdentifierShape(String value) {
     if (value == 'local_profile' || value == 'custom') return true;
     if (RegExp(r'^[A-Za-z0-9_]+$').hasMatch(value)) return true;
     return RegExp(
@@ -614,18 +688,25 @@ class DataExportService {
   /// Deletes only the five root tables; every child table (workout
   /// exercises/sets, timer intervals, program↔template links, template
   /// exercises) cascades via its `onDelete: KeyAction.cascade` foreign key.
-  Future<void> deleteAllUserData(AppDatabase db) => db.transaction(() async {
-        await db.customStatement('DELETE FROM workouts_table');
-        await db.customStatement('DELETE FROM timer_sessions_table');
-        await db.customStatement('DELETE FROM timer_presets_table');
-        await db.customStatement('DELETE FROM programs_table');
-        await db.customStatement('DELETE FROM templates_table');
-        await db.customStatement('DELETE FROM body_metrics_table');
-        // Includes the account association: "delete all my data" must not
-        // leave the next person to open the app looking at someone else's
-        // name and email.
-        await db.customStatement('DELETE FROM profiles_table');
-      });
+  Future<void> deleteAllUserData(AppDatabase db) async {
+    await db.transaction(() async {
+      await db.customStatement('DELETE FROM workouts_table');
+      await db.customStatement('DELETE FROM timer_sessions_table');
+      await db.customStatement('DELETE FROM timer_presets_table');
+      await db.customStatement('DELETE FROM programs_table');
+      await db.customStatement('DELETE FROM templates_table');
+      await db.customStatement('DELETE FROM body_metrics_table');
+      // Includes the account association: "delete all my data" must not
+      // leave the next person to open the app looking at someone else's
+      // name and email.
+      await db.customStatement('DELETE FROM profiles_table');
+    });
+    // See the matching comment in `_applyImport`: `customStatement` never
+    // notifies stream queries, so without this every `watch()` — Tracker
+    // history, Progress, Dashboard — would keep showing the just-deleted
+    // rows until the app restarts.
+    db.markTablesUpdated(db.allTables);
+  }
 
   Future<void> writeStringToFile(String path, String content) =>
       File(path).writeAsString(content);

@@ -1,6 +1,6 @@
 # Asset licences
 
-Every non-code asset shipped inside the FitTrack binary, where it came
+Every non-code asset shipped inside the Ironyx binary, where it came
 from, and what its licence requires of us.
 
 This file is enforced, not decorative: `tool/check_asset_licenses.dart`

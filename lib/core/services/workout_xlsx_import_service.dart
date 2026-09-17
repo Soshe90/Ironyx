@@ -29,6 +29,11 @@ class WorkoutXlsxImportService {
 
     for (final sheet in excel.tables.values) {
       final rows = sheet.rows;
+      // A blank or near-empty sheet (common as a trailing tab in a real
+      // workbook) has no header row group to read a date from. Row 0 is
+      // that header, rows from index 2 on are data — fewer than that and
+      // there is nothing here to import, not a malformed file.
+      if (rows.length < 3) continue;
       for (final groupStart in _workoutGroupColumns) {
         final date = _dateValue(_rowCell(rows[0], groupStart));
         if (date == null) continue;
@@ -164,11 +169,18 @@ class WorkoutXlsxImportService {
             continue;
           }
           final id = _uuid.v4();
+          // `_normalize` strips everything outside `[a-z0-9]`, so a non-Latin
+          // name (e.g. Arabic) normalizes to the empty string — the id
+          // suffix still keeps the slug unique, but `-imported-a1b2c3d4`
+          // with no prefix reads as a display bug rather than a name that
+          // just doesn't romanize.
+          final String normalizedName = _normalize(exercise.name);
+          final String slugPrefix =
+              normalizedName.isEmpty ? 'exercise' : normalizedName;
           await db.into(db.exercisesTable).insert(
                 ExercisesTableCompanion.insert(
                   id: id,
-                  slug:
-                      '${_normalize(exercise.name)}-imported-${id.substring(0, 8)}',
+                  slug: '$slugPrefix-imported-${id.substring(0, 8)}',
                   name: exercise.name,
                   category: 'other',
                   difficulty: 'intermediate',

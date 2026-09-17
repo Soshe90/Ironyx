@@ -178,8 +178,7 @@ class _StrengthChangeSection extends ConsumerWidget {
     final AsyncValue<List<StrengthChange>> async =
         ref.watch(strengthChangeProvider(range));
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
-    final Map<String, String> slugsById =
-        ref.watch(exerciseSlugsByIdProvider);
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
 
     return async.when(
       loading: () => const _ChartLoading(),
@@ -226,8 +225,7 @@ class _RelativeStrengthSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final Map<String, String> slugsById =
-        ref.watch(exerciseSlugsByIdProvider);
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
     return ref.watch(relativeStrengthsProvider(range)).when(
           loading: () => const SizedBox.shrink(),
           error: (_, __) => const SizedBox.shrink(),
@@ -388,16 +386,27 @@ class _InsightsSection extends ConsumerWidget {
     final volume = ref.watch(weeklyVolumeSeriesProvider(range));
     final frequency = ref.watch(workoutFrequencySeriesProvider(range));
     final muscles = ref.watch(muscleGroupSeriesProvider(range));
+    final previousMuscles = ref.watch(previousMuscleGroupSeriesProvider(range));
+    final personalRecords = ref.watch(recentPersonalRecordsProvider(range));
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
 
     if (strength.isLoading ||
         volume.isLoading ||
         frequency.isLoading ||
-        muscles.isLoading) {
+        muscles.isLoading ||
+        previousMuscles.isLoading ||
+        personalRecords.isLoading) {
       return const _ChartLoading();
     }
     Object? error;
-    for (final value in [strength, volume, frequency, muscles]) {
+    for (final value in [
+      strength,
+      volume,
+      frequency,
+      muscles,
+      previousMuscles,
+      personalRecords,
+    ]) {
       if (value.hasError) {
         error = value.error;
         break;
@@ -411,6 +420,8 @@ class _InsightsSection extends ConsumerWidget {
           ref.invalidate(weeklyVolumeSeriesProvider(range));
           ref.invalidate(workoutFrequencySeriesProvider(range));
           ref.invalidate(muscleGroupSeriesProvider(range));
+          ref.invalidate(previousMuscleGroupSeriesProvider(range));
+          ref.invalidate(recentPersonalRecordsProvider(range));
         },
       );
     }
@@ -420,7 +431,8 @@ class _InsightsSection extends ConsumerWidget {
       volume: volume.value ?? const [],
       frequency: frequency.value ?? const [],
       currentMuscleVolume: muscles.value ?? const [],
-      previousMuscleVolume: const [],
+      previousMuscleVolume: previousMuscles.value ?? const [],
+      recentPersonalRecords: personalRecords.value ?? 0,
     );
     return Semantics(
       container: true,
@@ -677,8 +689,7 @@ class _OneRmSection extends ConsumerWidget {
     final AsyncValue<List<LoggedExercise>> exercises =
         ref.watch(loggedExercisesProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
-    final Map<String, String> slugsById =
-        ref.watch(exerciseSlugsByIdProvider);
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
 
     return exercises.when(
       loading: () => const _ChartLoading(),
@@ -1011,6 +1022,25 @@ Widget _axisDate(BuildContext context, ThemeData theme, DateTime date) =>
       ),
     );
 
+/// Weekly bars represent Monday through Sunday, so a start date alone can
+/// make a Sunday workout appear to have been logged on the prior Monday.
+Widget _weeklyAxisDate(
+  BuildContext context,
+  ThemeData theme,
+  DateTime weekStart,
+) {
+  final formatter = DateFormatters.of(context);
+  final weekEnd = weekStart.add(const Duration(days: 6));
+  return Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.xs),
+    child: Text(
+      '${formatter.axisLabel(weekStart)}–${formatter.axisLabel(weekEnd)}',
+      style: AppTypography.eyebrow(theme),
+      textAlign: TextAlign.center,
+    ),
+  );
+}
+
 /// Tick spacing in days for a time axis covering [span] days, targeting a
 /// handful of labels rather than an unreadable row of them.
 double _dayLabelInterval(double span) {
@@ -1216,6 +1246,17 @@ class _RestSection extends ConsumerWidget {
                               dense: true,
                               title: Text(
                                 DateFormatters.of(context).axisLabel(row.date),
+                              ),
+                              // The sample size is part of the number: a
+                              // session where rest was recorded once reads as
+                              // that session's rest habit without it. It goes
+                              // in the subtitle rather than alongside the
+                              // average — a `ListTile.trailing` holding both
+                              // overflows the tile on a narrow phone.
+                              subtitle: Text(
+                                context.l10n.progressRestFromSets(
+                                  row.recordedSetCount,
+                                ),
                               ),
                               trailing: Text(
                                 context.l10n.progressAverageRestSeconds(
@@ -1423,7 +1464,9 @@ class _WeekdayBar extends StatelessWidget {
                   alignment: Alignment.bottomCenter,
                   child: Container(
                       width: 18,
-                      height: 8.0 + row.trainingDayCount * 10,
+                      height: row.trainingDayCount == 0
+                          ? 0
+                          : 8.0 + row.trainingDayCount * 10,
                       color: Theme.of(context).colorScheme.primary))),
           const SizedBox(height: 4),
           Text(shortLabel),
@@ -1529,6 +1572,7 @@ class _WeeklyBarChart extends StatelessWidget {
             constraints.maxWidth,
             weekStarts.length,
           );
+          final int labelStep = _labelInterval(weekStarts.length).round();
           return BarChart(
             BarChartData(
               gridData: FlGridData(
@@ -1548,13 +1592,24 @@ class _WeeklyBarChart extends StatelessWidget {
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: _axisReserved,
-                    interval: _labelInterval(weekStarts.length),
+                    interval: labelStep.toDouble(),
                     getTitlesWidget: (double value, TitleMeta meta) {
                       final int i = value.toInt();
                       if (i < 0 || i >= weekStarts.length) {
                         return const SizedBox.shrink();
                       }
-                      return _axisDate(context, theme, weekStarts[i]);
+                      // fl_chart's `BarChart` does not reliably honor
+                      // `interval` on a discrete per-bar axis the way
+                      // `LineChart` does on a continuous one (see
+                      // `_dayLabelInterval`'s usage above, which needs no
+                      // such check) — without filtering here too, every bar
+                      // gets a label regardless of `interval`, and on a
+                      // range with more than a handful of weeks they
+                      // overlap into an unreadable smear.
+                      if (i % labelStep != 0) {
+                        return const SizedBox.shrink();
+                      }
+                      return _weeklyAxisDate(context, theme, weekStarts[i]);
                     },
                   ),
                 ),
@@ -1707,100 +1762,120 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
               const SizedBox(height: AppSpacing.sm),
               SizedBox(
                 height: _chartHeight,
-                child: BarChart(
-                  BarChartData(
-                    gridData: FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                      getDrawingHorizontalLine: (_) => FlLine(
-                        color: scheme.outlineVariant,
-                        strokeWidth: 1,
-                      ),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    titlesData: FlTitlesData(
-                      leftTitles: const AxisTitles(),
-                      rightTitles: const AxisTitles(),
-                      topTitles: const AxisTitles(),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: _axisReserved + AppSpacing.md,
-                          getTitlesWidget: (double value, TitleMeta meta) {
-                            final int index = value.toInt();
-                            if (index < 0 || index >= grouped.length) {
-                              return const SizedBox.shrink();
-                            }
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.only(top: AppSpacing.xs),
-                              child: Text(
-                                grouped[index].muscleName,
-                                style: AppTypography.eyebrow(theme),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            );
+                // fl_chart centers each bottom title on its bar's tick but
+                // sizes the title to the Text's own intrinsic width, not to
+                // the slot the bar occupies — a name like "Shoulders" is
+                // wider than its bar's slot and bleeds into the neighboring
+                // label ("CalvesShoulders"). Measuring the available width
+                // here and capping each label to its slot forces a wrap
+                // instead.
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final double slotWidth =
+                        constraints.maxWidth / grouped.length;
+                    return BarChart(
+                      BarChartData(
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                            color: scheme.outlineVariant,
+                            strokeWidth: 1,
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: const AxisTitles(),
+                          rightTitles: const AxisTitles(),
+                          topTitles: const AxisTitles(),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: _axisReserved + AppSpacing.md,
+                              getTitlesWidget: (double value, TitleMeta meta) {
+                                final int index = value.toInt();
+                                if (index < 0 || index >= grouped.length) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.only(top: AppSpacing.xs),
+                                  child: SizedBox(
+                                    width: slotWidth,
+                                    child: Text(
+                                      grouped[index].muscleName,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      style: AppTypography.eyebrow(theme),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        barTouchData: BarTouchData(
+                          longPressDuration: kChartNoLongPress,
+                          // handleBuiltInTouches keeps the canvas tooltip (mouse
+                          // hover and touch tap both drive it, via fl_chart's
+                          // shared FlTouchEvent pipeline); touchCallback
+                          // additionally mirrors the touched bar into the
+                          // plain-text readout above.
+                          touchCallback: (event, response) {
+                            final spot = response?.spot;
+                            setState(() {
+                              _touchedIndex =
+                                  event.isInterestedForInteractions &&
+                                          spot != null
+                                      ? spot.touchedBarGroupIndex
+                                      : null;
+                            });
                           },
-                        ),
-                      ),
-                    ),
-                    barTouchData: BarTouchData(
-                      longPressDuration: kChartNoLongPress,
-                      // handleBuiltInTouches keeps the canvas tooltip (mouse
-                      // hover and touch tap both drive it, via fl_chart's
-                      // shared FlTouchEvent pipeline); touchCallback
-                      // additionally mirrors the touched bar into the
-                      // plain-text readout above.
-                      touchCallback: (event, response) {
-                        final spot = response?.spot;
-                        setState(() {
-                          _touchedIndex =
-                              event.isInterestedForInteractions && spot != null
-                                  ? spot.touchedBarGroupIndex
-                                  : null;
-                        });
-                      },
-                      touchTooltipData: BarTouchTooltipData(
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          final muscle = grouped[group.x];
-                          return BarTooltipItem(
-                            '${muscle.muscleName}\n',
-                            theme.textTheme.labelMedium!.copyWith(
-                              color: scheme.onInverseSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: UnitFormatters.volume(
-                                  muscle.totalVolumeKg,
-                                  unit,
-                                ),
-                                style: theme.textTheme.labelMedium?.copyWith(
+                          touchTooltipData: BarTouchTooltipData(
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              final muscle = grouped[group.x];
+                              return BarTooltipItem(
+                                '${muscle.muscleName}\n',
+                                theme.textTheme.labelMedium!.copyWith(
                                   color: scheme.onInverseSurface,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                    barGroups: [
-                      for (var i = 0; i < grouped.length; i++)
-                        BarChartGroupData(
-                          x: i,
-                          barRods: [
-                            BarChartRodData(
-                              toY: grouped[i].totalVolumeKg,
-                              color: colorFor(i, grouped[i].muscleId),
-                              width: _barWidth,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(AppRadius.sm),
-                              ),
-                            ),
-                          ],
+                                children: [
+                                  TextSpan(
+                                    text: UnitFormatters.volume(
+                                      muscle.totalVolumeKg,
+                                      unit,
+                                    ),
+                                    style:
+                                        theme.textTheme.labelMedium?.copyWith(
+                                      color: scheme.onInverseSurface,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         ),
-                    ],
-                  ),
+                        barGroups: [
+                          for (var i = 0; i < grouped.length; i++)
+                            BarChartGroupData(
+                              x: i,
+                              barRods: [
+                                BarChartRodData(
+                                  toY: grouped[i].totalVolumeKg,
+                                  color: colorFor(i, grouped[i].muscleId),
+                                  width: _barWidth,
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(AppRadius.sm),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

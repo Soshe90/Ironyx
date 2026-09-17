@@ -13,6 +13,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../timer/domain/timer_settings_controller.dart';
+import 'widgets/about_section.dart';
 import 'widgets/account_section.dart';
 import 'widgets/cloud_backup_section.dart';
 import 'widgets/data_management_section.dart';
@@ -154,6 +155,15 @@ class SettingsPage extends ConsumerWidget {
             const AppCard(
               padding: EdgeInsets.zero,
               child: DataManagementSection(),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            SectionHeader(
+              title: l10n.settingsAboutTitle,
+              subtitle: l10n.settingsAboutSubtitle,
+            ),
+            const AppCard(
+              padding: EdgeInsets.zero,
+              child: AboutSection(),
             ),
             const SizedBox(height: AppSpacing.xl),
             const _StorageNote(),

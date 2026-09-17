@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/profile_dao.dart';
-import 'package:fittrack/core/database/tables/profiles.dart';
-import 'package:fittrack/core/services/data_export_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/profile_dao.dart';
+import 'package:ironyx/core/database/tables/profiles.dart';
+import 'package:ironyx/core/services/data_export_service.dart';
 
 void main() {
   late AppDatabase database;
@@ -151,6 +151,33 @@ void main() {
         updatedAt: DateTime.utc(2026),
       );
       expect(profile.ageAt(DateTime.utc(2026)), isNull);
+    });
+  });
+
+  group('hasConflictingAccount', () {
+    test('is false for a fresh install with no profile yet', () async {
+      expect(await dao.hasConflictingAccount('user-2'), isFalse);
+    });
+
+    test('is false for a guest profile that was never linked', () async {
+      await dao.upsert(const ProfilesTableCompanion(displayName: Value('A')));
+      expect(await dao.hasConflictingAccount('user-2'), isFalse);
+    });
+
+    test('is false when the incoming id matches the linked account', () async {
+      await dao.linkAccount(userId: 'user-1', email: 'a@b.co');
+      expect(await dao.hasConflictingAccount('user-1'), isFalse);
+    });
+
+    test('is true when a different account is already linked', () async {
+      await dao.linkAccount(userId: 'user-1', email: 'a@b.co');
+      expect(await dao.hasConflictingAccount('user-2'), isTrue);
+    });
+
+    test('is false again once the previous account is unlinked', () async {
+      await dao.linkAccount(userId: 'user-1', email: 'a@b.co');
+      await dao.unlinkAccount();
+      expect(await dao.hasConflictingAccount('user-2'), isFalse);
     });
   });
 

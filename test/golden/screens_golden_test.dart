@@ -5,16 +5,16 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/body_metrics_dao.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/program_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-import 'package:fittrack/core/database/database_providers.dart';
-import 'package:fittrack/core/router/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/body_metrics_dao.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/program_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/router/routes.dart';
 
 import '../helpers/pump_app.dart';
 

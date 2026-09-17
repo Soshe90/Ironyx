@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/l10n/l10n_extension.dart';
+import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
@@ -52,6 +53,9 @@ class _EditWorkoutBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = context.l10n;
     final bool hasExercises = draft.exercises.isNotEmpty;
+    final List<String?> supersetLabelsForDraft = supersetLabels(
+      [for (final DraftExercise e in draft.exercises) e.supersetGroupId],
+    );
 
     return Column(
       children: <Widget>[
@@ -84,12 +88,21 @@ class _EditWorkoutBody extends StatelessWidget {
                       },
                       itemBuilder: (context, index) {
                         final exercise = draft.exercises[index];
+                        final bool isInSuperset =
+                            exercise.supersetGroupId != null;
+                        final bool canGroupWithPrevious = index > 0 &&
+                            !(exercise.supersetGroupId != null &&
+                                exercise.supersetGroupId ==
+                                    draft.exercises[index - 1].supersetGroupId);
                         return ExerciseDraftCard(
                           key: ValueKey<String>(exercise.id),
                           exercise: exercise,
                           controller: notifier,
                           position: index + 1,
                           dragHandleIndex: index,
+                          supersetLabel: supersetLabelsForDraft[index],
+                          isInSuperset: isInSuperset,
+                          canGroupWithPrevious: canGroupWithPrevious,
                         );
                       },
                     ),
@@ -132,7 +145,11 @@ class _EditWorkoutBody extends StatelessWidget {
       builder: (_) => const ExercisePickerSheet(),
     );
     if (exercise != null) {
-      await notifier.addExercise(exerciseId: exercise.id, name: exercise.name);
+      await notifier.addExercise(
+        exerciseId: exercise.id,
+        name: exercise.name,
+        isTimeBased: exercise.isTimeBased,
+      );
     }
   }
 

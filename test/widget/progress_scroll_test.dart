@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/muscle_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-import 'package:fittrack/core/database/database_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/muscle_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
 
 import '../helpers/pump_app.dart';
 

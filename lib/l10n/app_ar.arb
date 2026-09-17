@@ -1,7 +1,7 @@
 {
   "@@locale": "ar",
 
-  "appTitle": "FitTrack",
+  "appTitle": "Ironyx",
   "@appTitle": {
     "description": "Left in Latin script on purpose: it is the product name, and a transliteration would not match the store listing or the icon."
   },
@@ -57,8 +57,17 @@
   "settingsHaptics": "الاهتزاز",
   "settingsHapticsSubtitle": "اهتزاز عند تغيّر المرحلة",
   "settingsDataTitle": "البيانات",
-  "settingsDataSubtitle": "يحفظ FitTrack كل شيء على هذا الجهاز",
+  "settingsDataSubtitle": "يحفظ Ironyx كل شيء على هذا الجهاز",
   "settingsStorageNote": "لا تغادر بيانات تدريبك هذا الجهاز إلا إذا صدّرتها بنفسك.",
+  "settingsAboutTitle": "حول التطبيق",
+  "settingsAboutSubtitle": "الإصدار، التراخيص، ومصدر بيانات التمارين",
+  "settingsExerciseCreditsTitle": "بيانات التمارين والصور",
+  "settingsExerciseCreditsSubtitle": "من free-exercise-db، وهي مُتاحة للملكية العامة",
+  "settingsExerciseCreditsBody": "اسم كل تمرين وتعليماته وصورته في هذا التطبيق مصدرها free-exercise-db، وهي قاعدة بيانات تمارين للملكية العامة (رخصة Unlicense). لا يوجد أي التزام قانوني بذكر المصدر، لكننا نذكره هنا على أي حال.",
+  "settingsExerciseCreditsViewSource": "عرض المصدر على GitHub",
+  "settingsExerciseCreditsOpenFailed": "تعذّر فتح الرابط",
+  "settingsLicensesTitle": "تراخيص البرمجيات مفتوحة المصدر",
+  "settingsLicensesSubtitle": "البرمجيات الخارجية المستخدمة في بناء Ironyx",
 
   "authErrorWrongCredentials": "لا يطابق هذا البريد الإلكتروني وكلمة المرور أي حساب.",
   "authErrorEmailAlreadyRegistered": "يوجد حساب مسجَّل بهذا البريد الإلكتروني. جرّب تسجيل الدخول.",
@@ -77,6 +86,7 @@
   "backupErrorNoBackupYet": "لا توجد نسخة احتياطية محفوظة لهذا الحساب بعد.",
   "backupErrorOffline": "تعذّر الوصول إلى الخادم. تحقّق من اتصالك وحاول مرة أخرى.",
   "backupErrorCorrupt": "تعذّرت قراءة هذه النسخة الاحتياطية. ربما أُنشئت بإصدار أحدث من التطبيق.",
+  "backupErrorAccountMismatch": "بيانات هذا الجهاز مرتبطة بحساب آخر. سجّل الخروج ثم سجّل الدخول بذلك الحساب قبل إجراء نسخ احتياطي.",
   "backupErrorUnknown": "حدث خطأ ما. حاول مرة أخرى.",
 
   "backupSectionTitle": "النسخ الاحتياطي للحساب",
@@ -259,7 +269,7 @@
   "dataExportSaved": "تم حفظ الملف المُصدَّر",
   "dataImportTitle": "استيراد البيانات",
   "dataImportSubtitle": "استعادة من ملف نسخة احتياطية",
-  "dataImportPickerTitle": "اختر نسخة احتياطية من FitTrack",
+  "dataImportPickerTitle": "اختر نسخة احتياطية من Ironyx",
   "dataImportUnreadable": "تعذّرت قراءة الملف المحدَّد.",
   "dataImportBackupTitle": "استيراد نسخة احتياطية",
   "dataImportNoWorkoutData": "لا تحتوي هذه النسخة الاحتياطية على بيانات تمارين.",
@@ -268,12 +278,7 @@
   "dataImportModeReplace": "استبدال",
   "dataImportModeReplaceSubtitle": "محو كل ما على هذا الجهاز أولًا",
   "dataImportComplete": "اكتمل الاستيراد",
-  "dataImportFailed": "فشل الاستيراد: {error}",
-  "@dataImportFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "dataImportFailed": "تعذّر إكمال الاستيراد. لم يتغيّر شيء على هذا الجهاز — حاول مرة أخرى.",
   "dataImportProblemTitle": "مشكلة في الاستيراد",
   "dataImportIntegrityWarning": "{details}. قد يكون الملف ناقصًا أو مبتورًا أو مُعدَّلًا يدويًا.",
   "@dataImportIntegrityWarning": {
@@ -300,12 +305,7 @@
   "dataSnapshotConfirmTitle": "استعادة النسخة المحفوظة؟",
   "dataSnapshotConfirmBody": "سيحلّ هذا محلّ بيانات المستخدم الحالية بالحالة المحفوظة قبل ذلك الاستيراد.",
   "dataSnapshotRestored": "تمت استعادة النسخة المحفوظة",
-  "dataSnapshotRestoreFailed": "فشلت استعادة النسخة المحفوظة: {error}",
-  "@dataSnapshotRestoreFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "dataSnapshotRestoreFailed": "تعذّرت استعادة هذه النسخة. لم يتغيّر شيء على هذا الجهاز — حاول مرة أخرى.",
   "programImportTooltip": "\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0628\u0631\u0627\u0645\u062c \u0645\u0646 CSV",
   "programImportPickerTitle": "\u0627\u062e\u062a\u0631 \u062c\u062f\u0648\u0644 \u0628\u0631\u0627\u0645\u062c",
   "programImportInvalidHeader": "\u064a\u062c\u0628 \u0623\u0646 \u064a\u062d\u062a\u0648\u064a \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0623\u0639\u0645\u062f\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629: \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c\u060c \u0648\u0627\u0644\u064a\u0648\u0645\u060c \u0648\u0627\u0644\u062a\u0645\u0631\u064a\u0646.",
@@ -385,6 +385,15 @@
       "name": { "type": "String" }
     }
   },
+  "draftSuperset": "سوبر سيت",
+  "draftGroupWithAbove": "ربط بالتمرين السابق",
+  "draftUngroup": "فك التجميع",
+  "draftExerciseOptions": "خيارات {name}",
+  "@draftExerciseOptions": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "draftAddSet": "إضافة مجموعة",
   "draftNoSetsYet": "لا توجد مجموعات بعد",
   "draftSetsProgress": "{completed}/{total} مجموعات",
@@ -396,6 +405,7 @@
   },
   "draftColumnSet": "المجموعة",
   "draftColumnReps": "التكرارات",
+  "draftColumnDuration": "ثانية",
   "draftColumnDone": "تم",
   "draftRest": "راحة",
   "draftPauseRest": "إيقاف الراحة مؤقتًا",
@@ -411,6 +421,12 @@
   },
   "draftSetRepsSemantic": "تكرارات المجموعة {index}",
   "@draftSetRepsSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftSetDurationSemantic": "مدة المجموعة {index} بالثواني",
+  "@draftSetDurationSemantic": {
     "placeholders": {
       "index": { "type": "int" }
     }
@@ -436,12 +452,8 @@
   "importXlsxAction": "استيراد XLSX",
   "importXlsxPickerTitle": "اختر ملف سجلّ تمارينك بصيغة XLSX",
   "importXlsxWrongType": "الرجاء اختيار ملف بصيغة ‎.xlsx‎.",
-  "importXlsxReadFailed": "تعذّرت قراءة ملف XLSX هذا: {error}",
-  "@importXlsxReadFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "importXlsxReadFailed": "تعذّرت قراءة هذا الملف. تأكد من أنه ملف ‎.xlsx‎ المُصدَّر من سجلّ تمارينك.",
+  "importXlsxApplyFailed": "تعذّر حفظ التمارين المستوردة. لم يُحفظ أي شيء — حاول مرة أخرى.",
   "importXlsxDone": "تم استيراد {count} تمرين.",
   "@importXlsxDone": {
     "placeholders": {
@@ -486,12 +498,7 @@
   "activeWorkoutAddFirstExerciseMessage": "اختر حركة وابدأ تسجيل المجموعات. تُحفظ مسوّدتك أولًا بأول.",
   "activeWorkoutFinish": "إنهاء التمرين",
   "activeWorkoutSaved": "تم حفظ التمرين",
-  "activeWorkoutSaveFailed": "تعذّر حفظ التمرين: {error}",
-  "@activeWorkoutSaveFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "activeWorkoutSaveFailed": "تعذّر حفظ تمرينك. مجموعاتك ما زالت هنا — حاول مرة أخرى.",
   "activeWorkoutDiscardTitle": "تجاهل التمرين؟",
   "activeWorkoutDiscardBody": "ستُزال مسوّدتك الحالية.",
   "activeWorkoutDiscardAction": "تجاهل",
@@ -671,7 +678,7 @@
 
   "unitCentimetres": "سم",
 
-  "profileIntro": "لتخصيص برنامجك وتتبّع تقدّمك، يستخدم FitTrack بعض البيانات الشخصية. تبقى هذه البيانات على هذا الجهاز.",
+  "profileIntro": "لتخصيص برنامجك وتتبّع تقدّمك، يستخدم Ironyx بعض البيانات الشخصية. تبقى هذه البيانات على هذا الجهاز.",
   "profileLoadFailed": "تعذّر تحميل بياناتك",
   "profileName": "الاسم",
   "profileDateOfBirth": "تاريخ الميلاد",
@@ -729,6 +736,17 @@
   "authSignedOut": "تم تسجيل الخروج",
   "authSignOutConfirmTitle": "تسجيل الخروج؟",
   "authSignOutConfirmBody": "تبقى تمارينك وبرامجك وبياناتك الشخصية على هذا الجهاز. يُزال ارتباط الحساب فقط.",
+  "authAccountConflictTitle": "حساب مختلف على هذا الجهاز",
+  "authAccountConflictBody": "يحتوي هذا الجهاز بالفعل على سجل تمارين مرتبط بحساب آخر. تسجيل الدخول هنا لن يدمج البيانات. يمكنك الاحتفاظ ببيانات هذا الجهاز وإلغاء تسجيل الدخول، أو حذفها والمتابعة.",
+  "authAccountConflictKeepLocal": "الاحتفاظ ببياناتي",
+  "authAccountConflictEraseAndContinue": "حذف البيانات المحلية والمتابعة",
+  "authAccountConflictCancelledMessage": "تم إلغاء تسجيل الدخول. لم يتغيّر شيء على هذا الجهاز.",
+  "authAccountConflictErasedMessage": "تم حذف البيانات المحلية. أصبح هذا الجهاز الآن مرتبطًا بـ {email}.",
+  "@authAccountConflictErasedMessage": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
   "authCreateAccountTitle": "إنشاء حساب",
   "authCreateAccountIntro": "اختياري. كل ما سجّلته حتى الآن يبقى كما هو تمامًا.",
   "authFieldEmail": "البريد الإلكتروني",
@@ -848,6 +866,9 @@
   "programRemoveExercise": "إزالة التمرين",
   "programSetsField": "المجموعات",
   "programRepsField": "التكرارات",
+  "programSuperset": "سوبر سيت",
+  "programGroupWithAbove": "ربط بالتمرين السابق",
+  "programUngroup": "فك التجميع",
   "programType": "النوع",
   "programBuiltIn": "مدمج",
   "programCustom": "مخصّص",
@@ -892,15 +913,15 @@
   "librarySearchOnYoutube": "البحث على YouTube",
   "libraryYoutubeOpenFailed": "تعذّر فتح YouTube",
 
-  "progressRangeLabel": "{range, select, month{شهر} quarter{3 أشهر} year{سنة} all{الكل} other{الكل}}",
+  "progressRangeLabel": "{range, select, twoWeeks{أسبوعان} month{شهر} quarter{3 أشهر} year{سنة} all{الكل} other{الكل}}",
   "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },
   "progressStrengthChangeTitle": "تغيّر القوة",
-  "progressStrengthSubtitle": "{range, select, month{أفضل رفعة خلال آخر 30 يومًا مقارنةً بالأيام الثلاثين السابقة} quarter{أفضل رفعة خلال آخر 90 يومًا مقارنةً بالأيام التسعين السابقة} year{أفضل رفعة خلال آخر 12 شهرًا مقارنةً بالأشهر الاثني عشر السابقة} all{أفضل رفعة سجّلتها لكل تمرين} other{أفضل رفعة سجّلتها لكل تمرين}}",
+  "progressStrengthSubtitle": "{range, select, twoWeeks{أفضل رفعة خلال آخر 14 يومًا مقارنةً بالأيام الأربعة عشر السابقة} month{أفضل رفعة خلال آخر 30 يومًا مقارنةً بالأيام الثلاثين السابقة} quarter{أفضل رفعة خلال آخر 90 يومًا مقارنةً بالأيام التسعين السابقة} year{أفضل رفعة خلال آخر 12 شهرًا مقارنةً بالأشهر الاثني عشر السابقة} all{أفضل رفعة سجّلتها لكل تمرين} other{أفضل رفعة سجّلتها لكل تمرين}}",
   "@progressStrengthSubtitle": { "placeholders": { "range": { "type": "String" } } },
   "progressEstimatedOneRmTitle": "الحد الأقصى المقدّر لتكرار واحد",
   "progressEstimatedOneRmSubtitle": "تقدير بمعادلة إبلي اعتمادًا على أثقل مجموعاتك المسجّلة",
   "progressWeeklyVolumeTitle": "الحجم التدريبي الأسبوعي",
-  "progressWeeklyVolumeSubtitle": "{range, select, month{كل أسبوع خلال آخر 30 يومًا، بما فيها الأسابيع دون تدريب} quarter{كل أسبوع خلال آخر 90 يومًا، بما فيها الأسابيع دون تدريب} year{كل أسبوع خلال آخر 12 شهرًا، بما فيها الأسابيع دون تدريب} all{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب} other{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب}}",
+  "progressWeeklyVolumeSubtitle": "{range, select, twoWeeks{كل أسبوع خلال آخر 14 يومًا، بما فيها الأسابيع دون تدريب} month{كل أسبوع خلال آخر 30 يومًا، بما فيها الأسابيع دون تدريب} quarter{كل أسبوع خلال آخر 90 يومًا، بما فيها الأسابيع دون تدريب} year{كل أسبوع خلال آخر 12 شهرًا، بما فيها الأسابيع دون تدريب} all{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب} other{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب}}",
   "@progressWeeklyVolumeSubtitle": { "placeholders": { "range": { "type": "String" } } },
   "progressConsistencyTitle": "المواظبة",
   "progressEffortRecoveryTitle": "الجهد والاستشفاء",
@@ -979,6 +1000,8 @@
   "progressRestTimeTitle": "مدة الراحة",
   "progressAverageRestSeconds": "{seconds, plural, zero{متوسط الراحة صفر ثانية} one{متوسط الراحة ثانية واحدة} two{متوسط الراحة ثانيتان} few{متوسط الراحة {seconds} ثوانٍ} many{متوسط الراحة {seconds} ثانيةً} other{متوسط الراحة {seconds} ثانية}}",
   "@progressAverageRestSeconds": { "placeholders": { "seconds": { "type": "int" } } },
+  "progressRestFromSets": "{sets, plural, zero{من صفر مجموعة} one{من مجموعة واحدة} two{من مجموعتين} few{من {sets} مجموعات} many{من {sets} مجموعة} other{من {sets} مجموعة}}",
+  "@progressRestFromSets": { "placeholders": { "sets": { "type": "int" } } },
   "progressPushPull": "الدفع / السحب",
   "progressUpperLower": "الجزء العلوي / السفلي",
   "progressReferenceBand": "النطاق المرجعي: 0.75–1.33",
@@ -1019,7 +1042,7 @@
   "@progressMuscleVolumeDetail": { "placeholders": { "muscle": { "type": "String" }, "volume": { "type": "String" } } },
   "progressNoMeasurementsTitle": "لا توجد قياسات بعد",
   "progressNoMeasurementsMessage": "تتبّع الوزن ونسبة الدهون مع مرور الوقت.",
-  "progressNoMeasurementsInRange": "{range, select, month{لم يُسجَّل أي قياس خلال آخر 30 يومًا.} quarter{لم يُسجَّل أي قياس خلال آخر 90 يومًا.} year{لم يُسجَّل أي قياس خلال آخر 12 شهرًا.} all{لم يُسجَّل أي قياس بعد.} other{لم يُسجَّل أي قياس بعد.}}",
+  "progressNoMeasurementsInRange": "{range, select, twoWeeks{لم يُسجَّل أي قياس خلال آخر 14 يومًا.} month{لم يُسجَّل أي قياس خلال آخر 30 يومًا.} quarter{لم يُسجَّل أي قياس خلال آخر 90 يومًا.} year{لم يُسجَّل أي قياس خلال آخر 12 شهرًا.} all{لم يُسجَّل أي قياس بعد.} other{لم يُسجَّل أي قياس بعد.}}",
   "@progressNoMeasurementsInRange": { "placeholders": { "range": { "type": "String" } } },
   "progressLogMeasurement": "تسجيل قياس",
   "progressBodyFatValue": "نسبة الدهون {percentage}%",

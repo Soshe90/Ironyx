@@ -1,4 +1,4 @@
-package com.soshe90.fittrack
+package com.soshe90.ironyx
 
 import io.flutter.embedding.android.FlutterActivity
 

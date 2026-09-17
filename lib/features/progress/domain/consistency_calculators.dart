@@ -1,4 +1,5 @@
 import '../../../core/database/daos/workout_dao.dart';
+import '../../../core/formatters/date_formatters.dart';
 
 const int defaultWeeklySessionTarget = 3;
 
@@ -43,7 +44,7 @@ ConsistencySummary calculateConsistency(
       run = 0;
     }
   }
-  final currentWeek = _monday(now ?? DateTime.now());
+  final currentWeek = DateFormatters.utcWeekStart(now ?? DateTime.now());
   final lastWeek = currentWeek.subtract(const Duration(days: 7));
   int count(DateTime start) => ordered
       .where((w) => w.weekStart == start)
@@ -54,19 +55,28 @@ ConsistencySummary calculateConsistency(
     current++;
     cursor = cursor.subtract(const Duration(days: 7));
   }
+
+  // `weeks` is zero-filled from the selected range's nominal start (see
+  // `WorkoutDao._fillWeekGaps`) so charts can show "you started partway
+  // through this range" — but adherence is a plain percentage with no
+  // chart alongside it, and counting weeks that pre-date the user's
+  // first-ever workout as missed target understates it for anyone whose
+  // training history is shorter than the range: a lifter two weeks in who
+  // picks "3 months" saw 2/13 weeks hit target read as 15%, not the 100%
+  // they actually managed. The eligible window starts at the first week
+  // with any activity; a week with zero sessions *after* training began is
+  // still a real miss and stays counted.
+  final firstActiveIndex = ordered.indexWhere((week) => week.workoutCount > 0);
+  final eligible = firstActiveIndex == -1
+      ? const <WorkoutFrequency>[]
+      : ordered.sublist(firstActiveIndex);
   final hits =
-      ordered.where((w) => w.workoutCount >= targetSessionsPerWeek).length;
+      eligible.where((w) => w.workoutCount >= targetSessionsPerWeek).length;
   return ConsistencySummary(
       currentStreakWeeks: current,
       longestStreakWeeks: longest,
-      adherenceFraction: hits / ordered.length,
+      adherenceFraction: eligible.isEmpty ? null : hits / eligible.length,
       targetSessionsPerWeek: targetSessionsPerWeek,
-      eligibleWeeks: ordered.length,
+      eligibleWeeks: eligible.length,
       hitTargetWeeks: hits);
-}
-
-DateTime _monday(DateTime date) {
-  final utc = date.toUtc();
-  final day = DateTime.utc(utc.year, utc.month, utc.day);
-  return day.subtract(Duration(days: day.weekday - DateTime.monday));
 }

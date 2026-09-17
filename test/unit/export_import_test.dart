@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-import 'package:fittrack/core/services/data_export_service.dart';
-import 'package:fittrack/features/settings/domain/export_envelope.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/services/data_export_service.dart';
+import 'package:ironyx/features/settings/domain/export_envelope.dart';
 
 /// The M6 exit criterion, verbatim: "Export → wipe → import produces
 /// byte-identical data." Verified here as deep-equal table contents (the
@@ -18,7 +18,7 @@ void main() {
   late Directory snapshotDir;
 
   setUp(() {
-    snapshotDir = Directory.systemTemp.createTempSync('fittrack_export_test');
+    snapshotDir = Directory.systemTemp.createTempSync('ironyx_export_test');
   });
 
   tearDown(() {
@@ -583,5 +583,81 @@ void main() {
       () => service.parseImport('not json'),
       throwsA(isA<ImportValidationException>()),
     );
+  });
+
+  group('stream refresh (writes go through customStatement)', () {
+    test('a replace import notifies existing watch() streams', () async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      addTearDown(database.close);
+      await seed(database);
+
+      final emissions = <int>[];
+      final subscription =
+          database.select(database.workoutsTable).watch().listen(
+                (rows) => emissions.add(rows.length),
+              );
+      await pumpEventQueue();
+      expect(emissions, [1]);
+
+      final envelope = service.parseImport(await service.buildJsonExport(
+        database,
+      ));
+      await service.applyImport(
+        database,
+        ImportEnvelope(
+          formatVersion: envelope.formatVersion,
+          dbSchemaVersion: envelope.dbSchemaVersion,
+          appVersion: envelope.appVersion,
+          exportedAt: envelope.exportedAt,
+          tables: {
+            ...envelope.tables,
+            // Emptied together: a replace import must not leave a
+            // `workout_exercises_table`/`workout_sets_table` row dangling on
+            // a `workouts_table` id that no longer exists in the envelope.
+            'workouts_table': const [],
+            'workout_exercises_table': const [],
+            'workout_sets_table': const [],
+          },
+        ),
+        mode: ImportMode.replace,
+        snapshotDirPath: snapshotDir.path,
+      );
+      await pumpEventQueue();
+
+      expect(
+        emissions,
+        [1, 0],
+        reason: 'the stream must re-emit after a replace import, not keep '
+            'showing the pre-import row',
+      );
+      await subscription.cancel();
+    });
+
+    test('deleteAllUserData notifies existing watch() streams', () async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      addTearDown(database.close);
+      await seed(database);
+
+      final emissions = <int>[];
+      final subscription =
+          database.select(database.workoutsTable).watch().listen(
+                (rows) => emissions.add(rows.length),
+              );
+      await pumpEventQueue();
+      expect(emissions, [1]);
+
+      await service.deleteAllUserData(database);
+      await pumpEventQueue();
+
+      expect(
+        emissions,
+        [1, 0],
+        reason: 'the stream must re-emit after delete-all, not keep showing '
+            'the deleted workout',
+      );
+      await subscription.cancel();
+    });
   });
 }

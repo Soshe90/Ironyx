@@ -66,10 +66,35 @@ class ProfileDao extends DatabaseAccessor<AppDatabase> with _$ProfileDaoMixin {
     );
   }
 
+  /// Whether linking [incomingUserId] would silently reassign this device's
+  /// local training data away from a *different* account it is already
+  /// linked to.
+  ///
+  /// False for a guest profile (never linked), for no profile at all, and
+  /// for a profile already linked to the same account — all ordinary,
+  /// harmless links. True only when a real account switch is about to
+  /// happen on a device that still holds another account's data: the
+  /// history, body metrics and personal details are local and belong to
+  /// whoever was signed in before, and [linkAccount] alone does not clear
+  /// any of that. Callers that get true back must resolve the conflict
+  /// (typically: offer to erase local data first) before calling
+  /// [linkAccount].
+  Future<bool> hasConflictingAccount(String incomingUserId) async {
+    final Profile? profile = await get();
+    return profile != null &&
+        profile.remoteUserId != null &&
+        profile.remoteUserId != incomingUserId;
+  }
+
   /// Associates the local profile with a signed-in account.
   ///
   /// Only touches the account columns — a returning user keeps the name,
   /// date of birth, sex and height they already entered as a guest.
+  ///
+  /// Callers reachable from a screen the user is actively looking at must
+  /// check [hasConflictingAccount] first — this method itself has no way to
+  /// ask "is that okay?", so it will happily reassign a device's data out
+  /// from under the account that owned it.
   Future<void> linkAccount({required String userId, required String email}) =>
       upsert(
         ProfilesTableCompanion(

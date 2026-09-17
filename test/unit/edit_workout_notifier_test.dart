@@ -1,11 +1,11 @@
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-import 'package:fittrack/core/database/database_providers.dart';
-import 'package:fittrack/core/theme/app_spacing.dart';
-import 'package:fittrack/features/tracker/domain/edit_workout_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/theme/app_spacing.dart';
+import 'package:ironyx/features/tracker/domain/edit_workout_notifier.dart';
 
 void main() {
   group('EditWorkoutNotifier auto-save', () {

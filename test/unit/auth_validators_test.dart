@@ -1,7 +1,7 @@
-import 'package:fittrack/features/auth/domain/auth_validators.dart';
-import 'package:fittrack/l10n/app_localizations.dart';
-import 'package:fittrack/l10n/app_localizations_en.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/features/auth/domain/auth_validators.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
+import 'package:ironyx/l10n/app_localizations_en.dart';
 
 void main() {
   // Validators phrase their own failures now, so they take the localizations

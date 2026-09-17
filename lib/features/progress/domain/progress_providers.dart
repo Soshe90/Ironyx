@@ -19,6 +19,7 @@ part 'progress_providers.g.dart';
 /// because [since] is `now - days`. User-facing range labels and descriptions
 /// are selected in the presentation layer, where the active locale is known.
 enum ProgressRange {
+  twoWeeks(14),
   month(30),
   quarter(90),
   year(365),
@@ -129,6 +130,29 @@ Stream<List<MuscleGroupVolume>> muscleGroupSeries(
   ProgressRange range,
 ) =>
     ref.watch(workoutDaoProvider).watchMuscleGroupVolume(since: range.since);
+
+/// Muscle volume in the range immediately preceding the selected range.
+/// All-time has no finite preceding window, so it intentionally returns none.
+@riverpod
+Stream<List<MuscleGroupVolume>> previousMuscleGroupSeries(
+  Ref ref,
+  ProgressRange range,
+) {
+  final since = range.since;
+  if (since == null) return Stream.value(const <MuscleGroupVolume>[]);
+  final duration = Duration(days: range.days!);
+  return ref.watch(workoutDaoProvider).watchMuscleGroupVolume(
+        since: since.subtract(duration),
+        until: since,
+      );
+}
+
+/// Number of PR-setting workouts in the selected range.
+@riverpod
+Stream<int> recentPersonalRecords(Ref ref, ProgressRange range) => ref
+    .watch(workoutDaoProvider)
+    .watchPersonalRecordWorkoutIds(since: range.since)
+    .map((ids) => ids.length);
 
 @riverpod
 Stream<Profile?> progressProfile(Ref ref) =>

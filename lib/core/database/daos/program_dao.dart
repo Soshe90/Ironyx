@@ -108,6 +108,9 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
                 targetRpeTimes10:
                     ex.readTable(templateExercisesTable).targetRpeTimes10,
                 note: ex.readTable(templateExercisesTable).note,
+                isTimeBased: ex.readTable(exercisesTable).isTimeBased,
+                supersetGroupId:
+                    ex.readTable(templateExercisesTable).supersetGroupId,
               ),
           ],
         ),
@@ -273,6 +276,8 @@ class ProgramDayExercise {
     this.targetReps,
     this.targetRpeTimes10,
     this.note,
+    this.isTimeBased = false,
+    this.supersetGroupId,
   });
 
   final String exerciseId;
@@ -285,6 +290,12 @@ class ProgramDayExercise {
   final String? targetReps;
   final int? targetRpeTimes10;
   final String? note;
+
+  /// Whether this exercise logs a held duration instead of reps.
+  final bool isTimeBased;
+
+  /// Superset grouping key, or null when standalone.
+  final String? supersetGroupId;
 }
 
 /// The fully assembled view of one program.

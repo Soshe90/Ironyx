@@ -1,4 +1,4 @@
-name: fittrack
+name: ironyx
 description: "Offline-first workout tracker."
 publish_to: 'none'
 version: 0.1.0+1

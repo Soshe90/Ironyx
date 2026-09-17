@@ -28,7 +28,7 @@ class ExerciseMusclesTable extends Table {
   /// — useful while combining multiple sources, per the data-model plan.
   RealColumn get confidence => real().withDefault(const Constant(1.0))();
 
-  /// Where this muscle mapping came from, e.g. "fittrack" / "wger".
+  /// Where this muscle mapping came from, e.g. "ironyx" / "wger".
   TextColumn get source => text().nullable()();
 
   @override

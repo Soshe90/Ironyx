@@ -1,7 +1,7 @@
-import 'package:fittrack/core/widgets/metric_explainer.dart';
-import 'package:fittrack/core/widgets/section_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/widgets/metric_explainer.dart';
+import 'package:ironyx/core/widgets/section_header.dart';
 
 import '../helpers/pump_app.dart';
 

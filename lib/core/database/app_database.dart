@@ -28,7 +28,7 @@ import 'testing_database_executor.dart';
 
 part 'app_database.g.dart';
 
-/// Drift database for all durable FitTrack data.
+/// Drift database for all durable Ironyx data.
 @DriftDatabase(
   tables: <Type>[
     ExercisesTable,
@@ -57,7 +57,7 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(driftDatabase(name: 'fittrack'));
+  AppDatabase() : super(driftDatabase(name: 'ironyx'));
 
   /// In-memory database used by unit and widget tests.
   AppDatabase.forTesting() : super(createTestingExecutor());
@@ -68,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   Future<void> _createIndexes() async {
     const indexes = [
@@ -202,6 +202,62 @@ class AppDatabase extends _$AppDatabase {
               await m.addColumn(
                 profilesTable,
                 profilesTable.weeklySessionTarget,
+              );
+            }
+          }
+          if (from < 10) {
+            // Time-based (isometric) exercises, e.g. Plank: the catalogue
+            // flags which exercises log a held duration instead of reps, and
+            // logged sets gain a column to store that duration. Guarded by
+            // PRAGMA checks (rather than an unconditional addColumn) so this
+            // step tolerates a simulated test database that only created the
+            // tables its own migration under test cared about.
+            final exerciseColumns =
+                await customSelect('PRAGMA table_info(exercises_table)').get();
+            final hasIsTimeBased = exerciseColumns
+                .any((row) => row.read<String>('name') == 'is_time_based');
+            if (exerciseColumns.isNotEmpty && !hasIsTimeBased) {
+              await m.addColumn(exercisesTable, exercisesTable.isTimeBased);
+            }
+            final setColumns = await customSelect(
+              'PRAGMA table_info(workout_sets_table)',
+            ).get();
+            final hasDurationSeconds = setColumns
+                .any((row) => row.read<String>('name') == 'duration_seconds');
+            if (setColumns.isNotEmpty && !hasDurationSeconds) {
+              await m.addColumn(
+                workoutSetsTable,
+                workoutSetsTable.durationSeconds,
+              );
+            }
+          }
+          if (from < 11) {
+            // Supersets: a nullable grouping key on both template exercises
+            // and logged workout exercises. Exercises sharing a non-null
+            // value are performed back-to-back. Guarded by PRAGMA checks for
+            // the same reason as the v9 -> v10 step.
+            final templateColumns = await customSelect(
+              'PRAGMA table_info(template_exercises_table)',
+            ).get();
+            final hasTemplateSuperset = templateColumns.any(
+              (row) => row.read<String>('name') == 'superset_group_id',
+            );
+            if (templateColumns.isNotEmpty && !hasTemplateSuperset) {
+              await m.addColumn(
+                templateExercisesTable,
+                templateExercisesTable.supersetGroupId,
+              );
+            }
+            final workoutExerciseColumns = await customSelect(
+              'PRAGMA table_info(workout_exercises_table)',
+            ).get();
+            final hasWorkoutSuperset = workoutExerciseColumns.any(
+              (row) => row.read<String>('name') == 'superset_group_id',
+            );
+            if (workoutExerciseColumns.isNotEmpty && !hasWorkoutSuperset) {
+              await m.addColumn(
+                workoutExercisesTable,
+                workoutExercisesTable.supersetGroupId,
               );
             }
           }

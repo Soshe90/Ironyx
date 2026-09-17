@@ -41,3 +41,57 @@ jobs:
 
       - name: Build Web
         run: flutter build web --release
+
+  ios:
+    # Gated on `verify` passing first: macOS runners bill at a 10x minute
+    # multiplier on private repos (PLAN.md Phase 4), so a plain formatting or
+    # analyzer failure should not spend them before the cheap Linux job would
+    # have caught the same thing.
+    needs: verify
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build
+
+      # supabase.json is gitignored (see .gitignore's comment on why: the
+      # anon key is public by design, but the project URL still isn't
+      # committed) and so does not exist on a fresh runner checkout. Writing
+      # it from repository secrets is what lets this build carry real
+      # credentials the way `scripts/build_android.sh` does locally — see
+      # ADR-8 and `SupabaseConfig`. If the two secrets referenced below are
+      # not yet set on this repository (Settings -> Secrets and variables ->
+      # Actions), this degrades to an empty file and the build still
+      # succeeds with accounts compiled out, exactly like the Android debug
+      # build above already does — it will not fail CI either way.
+      - name: Write Supabase credentials
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          cat > supabase.json <<EOF
+          {
+            "SUPABASE_URL": "$SUPABASE_URL",
+            "SUPABASE_ANON_KEY": "$SUPABASE_ANON_KEY"
+          }
+          EOF
+
+      # `--no-codesign`: this proves the app compiles for iOS, which is what
+      # CI is for. Signing (a real Apple Developer certificate and
+      # provisioning profile) is a separate, later step for an actual
+      # TestFlight/App Store upload — see PLAN.md Phase 4's build-host
+      # decision (GitHub Actions vs Codemagic) for that, once the $99/year
+      # program is enrolled.
+      - name: Build iOS (no codesign)
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define-from-file=supabase.json

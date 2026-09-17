@@ -73,11 +73,25 @@ List<ProgressInsight> buildProgressInsights({
     );
   }
 
-  if (frequency.length >= 4) {
-    final active = frequency.where((week) => week.workoutCount > 0).length;
+  // `frequency` is zero-filled from the selected range's nominal start
+  // (see `WorkoutDao._fillWeekGaps`), so it can contain weeks that
+  // pre-date the user's first-ever workout for anyone whose training
+  // history is shorter than the range. Averaging over those inflates
+  // "slipping" for someone who simply hasn't been training as long as a
+  // 3- or 12-month range — mirrors the same clamp in
+  // `calculateConsistency`. Assumed ascending by weekStart, matching every
+  // DAO stream this function is fed from; not re-sorted here so a caller
+  // passing rows in DAO order never risks an unstable sort on tied weeks.
+  final firstActiveWeek =
+      frequency.indexWhere((week) => week.workoutCount > 0);
+  final eligibleWeeks = firstActiveWeek == -1
+      ? const <WorkoutFrequency>[]
+      : frequency.sublist(firstActiveWeek);
+  if (eligibleWeeks.length >= 4) {
+    final active = eligibleWeeks.where((week) => week.workoutCount > 0).length;
     final average =
-        frequency.fold<int>(0, (sum, week) => sum + week.workoutCount) /
-            frequency.length;
+        eligibleWeeks.fold<int>(0, (sum, week) => sum + week.workoutCount) /
+            eligibleWeeks.length;
     if (active >= 2 && average < 1) {
       insights.add(
         ProgressInsight(

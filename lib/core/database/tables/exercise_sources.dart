@@ -19,7 +19,7 @@ class ExerciseSourcesTable extends Table {
   TextColumn get exerciseId =>
       text().references(ExercisesTable, #id, onDelete: KeyAction.cascade)();
 
-  /// e.g. "wger", "free-exercise-db", "liftmanual", "fittrack".
+  /// e.g. "wger", "free-exercise-db", "liftmanual", "ironyx".
   TextColumn get sourceName => text()();
 
   TextColumn get sourceUrl => text().nullable()();

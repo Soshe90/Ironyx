@@ -8,6 +8,7 @@ import '../../../core/config/supabase_config.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/services/data_export_service.dart';
 import '../../auth/domain/auth_controller.dart';
+import '../../auth/domain/auth_service.dart';
 import '../../settings/domain/export_envelope.dart';
 import '../data/supabase_cloud_backup_service.dart';
 import 'cloud_backup_service.dart';
@@ -82,8 +83,21 @@ class CloudBackupController extends _$CloudBackupController {
     final database = ref.read(appDatabaseProvider);
     final CloudBackupService cloud = ref.read(cloudBackupServiceProvider);
     const DataExportService service = DataExportService();
+
+    // Safety net behind the interactive sign-in/sign-up conflict dialog
+    // (`AccountConflictFlow`): that dialog only runs on the two screens that
+    // trigger it, but a session can also change underneath the app via a
+    // deep link (email confirmation), which does not go through either
+    // screen. Uploading here regardless would write this device's data —
+    // possibly still a *different* account's, never wiped — into whichever
+    // account the live session now belongs to.
+    final AuthUser? user = ref.read(authControllerProvider);
+    if (user != null &&
+        await ref.read(profileDaoProvider).hasConflictingAccount(user.id)) {
+      throw const CloudBackupFailure(CloudBackupFailureKind.accountMismatch);
+    }
     final String payload = await service
-        .buildJsonExport(database)
+        .buildJsonExport(database, indent: false)
         .timeout(const Duration(seconds: 45));
 
     final CloudBackupInfo info = await cloud

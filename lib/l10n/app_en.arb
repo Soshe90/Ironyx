@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
 
-  "appTitle": "FitTrack",
+  "appTitle": "Ironyx",
   "@appTitle": {
     "description": "The application name, shown in the OS task switcher."
   },
@@ -60,8 +60,17 @@
   "settingsHaptics": "Haptics",
   "settingsHapticsSubtitle": "Vibrate on phase change",
   "settingsDataTitle": "Data",
-  "settingsDataSubtitle": "FitTrack stores everything on this device",
+  "settingsDataSubtitle": "Ironyx stores everything on this device",
   "settingsStorageNote": "Your training data never leaves this device unless you export it yourself.",
+  "settingsAboutTitle": "About",
+  "settingsAboutSubtitle": "Version, licenses, and where the exercise data comes from",
+  "settingsExerciseCreditsTitle": "Exercise data & photos",
+  "settingsExerciseCreditsSubtitle": "From free-exercise-db, dedicated to the public domain",
+  "settingsExerciseCreditsBody": "Every exercise's name, instructions, and photo in this app comes from free-exercise-db, a public-domain (Unlicense) exercise database. No attribution is legally required, but it's credited here anyway.",
+  "settingsExerciseCreditsViewSource": "View source on GitHub",
+  "settingsExerciseCreditsOpenFailed": "Could not open the link",
+  "settingsLicensesTitle": "Open-source licenses",
+  "settingsLicensesSubtitle": "Third-party software used to build Ironyx",
 
   "authErrorWrongCredentials": "That email and password don't match an account.",
   "authErrorEmailAlreadyRegistered": "There's already an account with that email. Try signing in.",
@@ -80,6 +89,7 @@
   "backupErrorNoBackupYet": "There's no backup stored for this account yet.",
   "backupErrorOffline": "Couldn't reach the server. Check your connection and try again.",
   "backupErrorCorrupt": "That backup couldn't be read. It may have been made by a newer version of the app.",
+  "backupErrorAccountMismatch": "This device's local data is linked to a different account. Sign out, then sign back in with that account before backing up.",
   "backupErrorUnknown": "Something went wrong. Try again.",
 
   "backupSectionTitle": "Account backup",
@@ -264,7 +274,7 @@
   "dataExportSaved": "Export saved",
   "dataImportTitle": "Import data",
   "dataImportSubtitle": "Restore from a backup file",
-  "dataImportPickerTitle": "Choose a FitTrack backup",
+  "dataImportPickerTitle": "Choose a Ironyx backup",
   "dataImportUnreadable": "Could not read the selected file.",
   "dataImportBackupTitle": "Import backup",
   "dataImportNoWorkoutData": "This backup contains no workout data.",
@@ -273,12 +283,7 @@
   "dataImportModeReplace": "Replace",
   "dataImportModeReplaceSubtitle": "Erase everything currently on this device first",
   "dataImportComplete": "Import complete",
-  "dataImportFailed": "Import failed: {error}",
-  "@dataImportFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "dataImportFailed": "Couldn't complete the import. Nothing on this device was changed — try again.",
   "dataImportProblemTitle": "Import problem",
   "dataImportIntegrityWarning": "{details}. The file may be partial, truncated, or hand-edited.",
   "@dataImportIntegrityWarning": {
@@ -306,12 +311,7 @@
   "dataSnapshotConfirmTitle": "Restore snapshot?",
   "dataSnapshotConfirmBody": "This replaces current user data with the state saved before that import.",
   "dataSnapshotRestored": "Snapshot restored",
-  "dataSnapshotRestoreFailed": "Snapshot restore failed: {error}",
-  "@dataSnapshotRestoreFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "dataSnapshotRestoreFailed": "Couldn't restore this snapshot. Nothing on this device was changed — try again.",
   "programImportTooltip": "Import programs from CSV",
   "programImportPickerTitle": "Choose a program spreadsheet",
   "programImportInvalidHeader": "The first row must contain \"program\", \"day\", and \"exercise\" columns.",
@@ -394,6 +394,15 @@
       "name": { "type": "String" }
     }
   },
+  "draftSuperset": "SUPERSET",
+  "draftGroupWithAbove": "Group with above",
+  "draftUngroup": "Ungroup",
+  "draftExerciseOptions": "{name} options",
+  "@draftExerciseOptions": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "draftAddSet": "Add set",
   "draftNoSetsYet": "No sets yet",
   "draftSetsProgress": "{completed}/{total} sets",
@@ -405,6 +414,7 @@
   },
   "draftColumnSet": "SET",
   "draftColumnReps": "REPS",
+  "draftColumnDuration": "SEC",
   "draftColumnDone": "DONE",
   "draftRest": "Rest",
   "draftPauseRest": "Pause rest",
@@ -420,6 +430,12 @@
   },
   "draftSetRepsSemantic": "Set {index} reps",
   "@draftSetRepsSemantic": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "draftSetDurationSemantic": "Set {index} duration in seconds",
+  "@draftSetDurationSemantic": {
     "placeholders": {
       "index": { "type": "int" }
     }
@@ -445,12 +461,8 @@
   "importXlsxAction": "Import XLSX",
   "importXlsxPickerTitle": "Choose your XLSX workout log",
   "importXlsxWrongType": "Please choose an .xlsx file.",
-  "importXlsxReadFailed": "Could not read this XLSX file: {error}",
-  "@importXlsxReadFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "importXlsxReadFailed": "Couldn't read this file. Make sure it's the .xlsx export from your training log.",
+  "importXlsxApplyFailed": "Couldn't save the imported workouts. Nothing was written — try again.",
   "importXlsxDone": "Imported {count} workouts.",
   "@importXlsxDone": {
     "placeholders": {
@@ -495,12 +507,7 @@
   "activeWorkoutAddFirstExerciseMessage": "Pick a movement and start logging sets. Your draft is saved as you go.",
   "activeWorkoutFinish": "Finish workout",
   "activeWorkoutSaved": "Workout saved",
-  "activeWorkoutSaveFailed": "Could not save workout: {error}",
-  "@activeWorkoutSaveFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "activeWorkoutSaveFailed": "Couldn't save your workout. Your sets are still here — try again.",
   "activeWorkoutDiscardTitle": "Discard workout?",
   "activeWorkoutDiscardBody": "Your current draft will be removed.",
   "activeWorkoutDiscardAction": "Discard",
@@ -690,7 +697,7 @@
     "description": "Height unit suffix. Left Latin in every locale, matching the kg/lb abbreviations used throughout the app."
   },
 
-  "profileIntro": "To tailor your program and progress tracking, FitTrack uses a few personal details. They stay on this device.",
+  "profileIntro": "To tailor your program and progress tracking, Ironyx uses a few personal details. They stay on this device.",
   "profileLoadFailed": "Failed to load your details",
   "profileName": "Name",
   "profileDateOfBirth": "Date of Birth",
@@ -748,6 +755,17 @@
   "authSignedOut": "Signed out",
   "authSignOutConfirmTitle": "Sign out?",
   "authSignOutConfirmBody": "Your workouts, programs and personal details stay on this device. Only the account link is removed.",
+  "authAccountConflictTitle": "Different account on this device",
+  "authAccountConflictBody": "This device already has workout history linked to a different account. Signing in here won't merge the two. You can keep this device's local data and cancel signing in, or erase it and continue.",
+  "authAccountConflictKeepLocal": "Keep my data",
+  "authAccountConflictEraseAndContinue": "Erase local data and continue",
+  "authAccountConflictCancelledMessage": "Sign-in cancelled. Nothing on this device changed.",
+  "authAccountConflictErasedMessage": "Local data cleared. This device is now linked to {email}.",
+  "@authAccountConflictErasedMessage": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
   "authCreateAccountTitle": "Create account",
   "authCreateAccountIntro": "Optional. Everything you have already logged stays exactly where it is.",
   "authFieldEmail": "Email",
@@ -876,6 +894,9 @@
   "programRemoveExercise": "Remove exercise",
   "programSetsField": "sets",
   "programRepsField": "reps",
+  "programSuperset": "SUPERSET",
+  "programGroupWithAbove": "Group with above",
+  "programUngroup": "Ungroup",
   "programType": "Type",
   "programBuiltIn": "Built-in",
   "programCustom": "Custom",
@@ -920,15 +941,15 @@
   "librarySearchOnYoutube": "Search on YouTube",
   "libraryYoutubeOpenFailed": "Could not open YouTube",
 
-  "progressRangeLabel": "{range, select, month{1M} quarter{3M} year{1Y} all{All} other{All}}",
+  "progressRangeLabel": "{range, select, twoWeeks{2W} month{1M} quarter{3M} year{1Y} all{All} other{All}}",
   "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },
   "progressStrengthChangeTitle": "Strength change",
-  "progressStrengthSubtitle": "{range, select, month{Best lift in the last 30 days vs the 30 days before} quarter{Best lift in the last 90 days vs the 90 days before} year{Best lift in the last 12 months vs the 12 months before} all{Your best lift ever, per exercise} other{Your best lift ever, per exercise}}",
+  "progressStrengthSubtitle": "{range, select, twoWeeks{Best lift in the last 14 days vs the 14 days before} month{Best lift in the last 30 days vs the 30 days before} quarter{Best lift in the last 90 days vs the 90 days before} year{Best lift in the last 12 months vs the 12 months before} all{Your best lift ever, per exercise} other{Your best lift ever, per exercise}}",
   "@progressStrengthSubtitle": { "placeholders": { "range": { "type": "String" } } },
   "progressEstimatedOneRmTitle": "Estimated 1RM",
   "progressEstimatedOneRmSubtitle": "Epley estimate from your heaviest logged sets",
   "progressWeeklyVolumeTitle": "Weekly volume",
-  "progressWeeklyVolumeSubtitle": "{range, select, month{Every week in the last 30 days, including untrained ones} quarter{Every week in the last 90 days, including untrained ones} year{Every week in the last 12 months, including untrained ones} all{Every week on record, including untrained ones} other{Every week on record, including untrained ones}}",
+  "progressWeeklyVolumeSubtitle": "{range, select, twoWeeks{Every week in the last 14 days, including untrained ones} month{Every week in the last 30 days, including untrained ones} quarter{Every week in the last 90 days, including untrained ones} year{Every week in the last 12 months, including untrained ones} all{Every week on record, including untrained ones} other{Every week on record, including untrained ones}}",
   "@progressWeeklyVolumeSubtitle": { "placeholders": { "range": { "type": "String" } } },
   "progressConsistencyTitle": "Consistency",
   "progressEffortRecoveryTitle": "Effort and recovery",
@@ -1007,6 +1028,8 @@
   "progressRestTimeTitle": "Rest time",
   "progressAverageRestSeconds": "{seconds, plural, =1{1 sec average} other{{seconds} sec average}}",
   "@progressAverageRestSeconds": { "placeholders": { "seconds": { "type": "int" } } },
+  "progressRestFromSets": "{sets, plural, =1{from 1 set} other{from {sets} sets}}",
+  "@progressRestFromSets": { "placeholders": { "sets": { "type": "int" } } },
   "progressPushPull": "Push / pull",
   "progressUpperLower": "Upper / lower",
   "progressReferenceBand": "Reference band: 0.75–1.33",
@@ -1047,7 +1070,7 @@
   "@progressMuscleVolumeDetail": { "placeholders": { "muscle": { "type": "String" }, "volume": { "type": "String" } } },
   "progressNoMeasurementsTitle": "No measurements yet",
   "progressNoMeasurementsMessage": "Track weight and body fat over time.",
-  "progressNoMeasurementsInRange": "{range, select, month{Nothing was logged in the last 30 days.} quarter{Nothing was logged in the last 90 days.} year{Nothing was logged in the last 12 months.} all{No measurements have been logged yet.} other{No measurements have been logged yet.}}",
+  "progressNoMeasurementsInRange": "{range, select, twoWeeks{Nothing was logged in the last 14 days.} month{Nothing was logged in the last 30 days.} quarter{Nothing was logged in the last 90 days.} year{Nothing was logged in the last 12 months.} all{No measurements have been logged yet.} other{No measurements have been logged yet.}}",
   "@progressNoMeasurementsInRange": { "placeholders": { "range": { "type": "String" } } },
   "progressLogMeasurement": "Log measurement",
   "progressBodyFatValue": "{percentage}% body fat",

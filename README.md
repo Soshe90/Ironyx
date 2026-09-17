@@ -1,4 +1,4 @@
-# FitTrack
+# Ironyx
 
 Offline-first workout tracker. Flutter — Android, iOS, Web.
 
@@ -62,7 +62,7 @@ project URL and anon/publishable key, then use any of:
     scripts/build_android.sh bundle    # release AAB for Play
     scripts/build_android.sh install   # release APK, installed on the device
 
-VS Code users can pick the **FitTrack (debug)** launch configuration instead;
+VS Code users can pick the **Ironyx (debug)** launch configuration instead;
 `.vscode/launch.json` passes the same flag.
 
 ## Architecture

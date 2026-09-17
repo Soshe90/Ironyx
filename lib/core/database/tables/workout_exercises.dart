@@ -34,6 +34,11 @@ class WorkoutExercisesTable extends Table {
   /// Optional note specific to this exercise in this workout.
   TextColumn get note => text().nullable()();
 
+  /// Groups consecutive exercises into a superset. Null means the exercise
+  /// stands alone; exercises sharing a non-null value (within one workout)
+  /// are performed back-to-back with no rest between them.
+  TextColumn get supersetGroupId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -48,6 +53,7 @@ abstract class WorkoutExercise with _$WorkoutExercise {
     required int orderIndex,
     required bool isWarmup,
     String? note,
+    String? supersetGroupId,
   }) = _WorkoutExercise;
 
   factory WorkoutExercise.fromDrift(WorkoutExercisesTableData row) =>
@@ -58,5 +64,6 @@ abstract class WorkoutExercise with _$WorkoutExercise {
         orderIndex: row.orderIndex,
         isWarmup: row.isWarmup,
         note: row.note,
+        supersetGroupId: row.supersetGroupId,
       );
 }

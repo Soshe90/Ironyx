@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/error_reporting.dart';
 import 'core/l10n/locale_controller.dart';
 import 'core/providers.dart';
 import 'core/router/app_router.dart';
@@ -16,17 +17,17 @@ import 'features/auth/domain/auth_service.dart';
 import 'features/onboarding/domain/onboarding_controller.dart';
 import 'l10n/app_localizations.dart';
 
-class FitTrackApp extends ConsumerStatefulWidget {
-  const FitTrackApp({this.router, super.key});
+class IronyxApp extends ConsumerStatefulWidget {
+  const IronyxApp({this.router, super.key});
 
   /// Injected by widget tests so they can start at an arbitrary location.
   final GoRouter? router;
 
   @override
-  ConsumerState<FitTrackApp> createState() => _FitTrackAppState();
+  ConsumerState<IronyxApp> createState() => _IronyxAppState();
 }
 
-class _FitTrackAppState extends ConsumerState<FitTrackApp> {
+class _IronyxAppState extends ConsumerState<IronyxApp> {
   /// Built once, on the first frame, from the persisted onboarding flag.
   ///
   /// `read` rather than `watch`: completing onboarding flips that flag, and
@@ -76,12 +77,7 @@ class _FitTrackAppState extends ConsumerState<FitTrackApp> {
       if (next == null || previous?.id == next.id) {
         return;
       }
-      unawaited(
-        ref.read(profileDaoProvider).linkAccount(
-              userId: next.id,
-              email: next.email,
-            ),
-      );
+      unawaited(_linkIfNoConflict(ref, next));
     });
 
     return MaterialApp.router(
@@ -102,4 +98,36 @@ class _FitTrackAppState extends ConsumerState<FitTrackApp> {
       routerConfig: _router,
     );
   }
+}
+
+/// Links [user] to the local profile unless doing so would silently
+/// reassign this device's existing training data away from a *different*
+/// account — see `ProfileDao.hasConflictingAccount`.
+///
+/// Deliberately does not prompt: this listener fires outside any screen's
+/// control (a deep-linked email confirmation can complete while no
+/// interactive auth flow is on screen, or none at all), so there is no
+/// `BuildContext` reliably available to run the same conflict dialog
+/// `SignInPage`/`SignUpPage` show. Skipping the link is the safe default —
+/// it leaves the previous association in place, which keeps
+/// `CloudBackupController.backUpNow`'s own `accountMismatch` guard refusing
+/// to upload rather than quietly attaching this device's data to whichever
+/// account the deep link just authenticated. Signing in again through
+/// Settings resolves it through the interactive flow.
+Future<void> _linkIfNoConflict(WidgetRef ref, AuthUser user) async {
+  final bool conflict =
+      await ref.read(profileDaoProvider).hasConflictingAccount(user.id);
+  if (conflict) {
+    reportError(
+      'Skipped linking ${user.id}: this device is already linked to a '
+      'different account.',
+      null,
+      context: 'AccountLink',
+    );
+    return;
+  }
+  await ref.read(profileDaoProvider).linkAccount(
+        userId: user.id,
+        email: user.email,
+      );
 }

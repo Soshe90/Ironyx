@@ -1,8 +1,7 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
 
 void main() {
   late AppDatabase database;
@@ -63,6 +62,28 @@ void main() {
             role: 'primary',
           ),
         );
+    await database.into(database.exercisesTable).insert(
+          ExercisesTableCompanion.insert(
+            id: 'accessory_push',
+            slug: 'accessory-push',
+            name: 'Tricep Pushdown',
+            category: 'strength',
+            difficulty: 'beginner',
+            movementPattern: 'horizontalPush',
+            seedVersion: 17,
+          ),
+        );
+    await database.into(database.exercisesTable).insert(
+          ExercisesTableCompanion.insert(
+            id: 'accessory_pull',
+            slug: 'accessory-pull',
+            name: 'Face Pull',
+            category: 'strength',
+            difficulty: 'beginner',
+            movementPattern: 'horizontalPull',
+            seedVersion: 17,
+          ),
+        );
   });
 
   tearDown(() => database.close());
@@ -104,8 +125,46 @@ void main() {
         ],
       );
 
-  test('balance ratios use movement patterns and ignore unsupported patterns',
-      () async {
+  /// One workout, one exercise, N sets described as (weight, reps, rpe×10).
+  Future<void> insertSets({
+    required String id,
+    required DateTime date,
+    required String exerciseId,
+    required List<(double, int, int?)> sets,
+  }) =>
+      dao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: id,
+          startedAt: date,
+          endedAt: Value(date.add(const Duration(hours: 1))),
+          totalVolumeKg: Value(
+            sets.fold<double>(0, (sum, s) => sum + s.$1 * s.$2),
+          ),
+        ),
+        [
+          WorkoutExercisesTableCompanion.insert(
+            id: '${id}_exercise',
+            workoutId: id,
+            exerciseId: exerciseId,
+            orderIndex: 0,
+          ),
+        ],
+        [
+          for (final (int index, (double weight, int reps, int? rpe))
+              in sets.indexed)
+            WorkoutSetsTableCompanion.insert(
+              id: '${id}_set_$index',
+              workoutExerciseId: '${id}_exercise',
+              setIndex: index,
+              weightKg: weight,
+              reps: reps,
+              isCompleted: const Value(true),
+              rpeTimes10: Value(rpe),
+            ),
+        ],
+      );
+
+  test('balance ratios include accessory push and pull patterns', () async {
     await insertWorkout(
         id: 'push_workout',
         date: DateTime.utc(2026, 1, 5),
@@ -116,9 +175,21 @@ void main() {
         date: DateTime.utc(2026, 1, 6),
         exerciseId: 'pull',
         reps: 5);
+    await insertWorkout(
+        id: 'accessory_push_workout',
+        date: DateTime.utc(2026, 1, 7),
+        exerciseId: 'accessory_push',
+        reps: 5);
+    await insertWorkout(
+        id: 'accessory_pull_workout',
+        date: DateTime.utc(2026, 1, 8),
+        exerciseId: 'accessory_pull',
+        reps: 10);
+
     final result = await dao.watchBalanceRatios().first;
-    expect(result.pushVolumeKg, result.pullVolumeKg);
-    expect(result.pushPullRatio, 1);
+    expect(result.pushVolumeKg, 200);
+    expect(result.pullVolumeKg, 300);
+    expect(result.pushPullRatio, closeTo(2 / 3, 0.0001));
     expect(result.upperLowerRatio, isNull);
   });
 
@@ -181,6 +252,81 @@ void main() {
     final result = await dao.watchRpeAnalytics().first;
     expect(result.single.averageRpe, 7.5);
     expect(result.single.volumeKg, 100);
+  });
+
+  test('RPE analytics reports whole-session volume when a set has no RPE',
+      () async {
+    await insertSets(
+      id: 'partial_rpe',
+      date: DateTime.utc(2026, 1, 5),
+      exerciseId: 'push',
+      sets: [(20, 10, 70), (20, 10, 90), (20, 10, null)],
+    );
+    final result = await dao.watchRpeAnalytics().first;
+    // Averaged over the two sets that carry an RPE...
+    expect(result.single.averageRpe, 8);
+    // ...but the volume is the session's, matching every other volume
+    // figure in the app rather than dropping the un-rated set's 200 kg.
+    expect(result.single.volumeKg, 600);
+  });
+
+  test('RPE analytics omits a session with no RPE anywhere', () async {
+    await insertSets(
+      id: 'no_rpe',
+      date: DateTime.utc(2026, 1, 5),
+      exerciseId: 'push',
+      sets: [(20, 10, null)],
+    );
+    expect(await dao.watchRpeAnalytics().first, isEmpty);
+  });
+
+  test('session volume load counts sets above the 1RM rep window', () async {
+    await insertSets(
+      id: 'high_rep',
+      date: DateTime.utc(2026, 1, 5),
+      exerciseId: 'push',
+      sets: [(20, 20, null)],
+    );
+    await insertSets(
+      id: 'low_rep',
+      date: DateTime.utc(2026, 1, 6),
+      exerciseId: 'push',
+      sets: [(20, 10, null)],
+    );
+    final result = await dao.watchSessionVolumeLoad('push').first;
+    // A 20-rep session is still work done; only the 1RM estimate needs the
+    // reps-1-12 window, and dropping the session hid it from the history.
+    expect(result.map((row) => row.volumeKg), [400, 200]);
+  });
+
+  test('unloaded sets stay out of every 1RM-derived figure', () async {
+    await insertSets(
+      id: 'bodyweight',
+      date: DateTime.utc(2026, 1, 5),
+      exerciseId: 'push',
+      sets: [(0, 10, null)],
+    );
+    await insertSets(
+      id: 'loaded',
+      date: DateTime.utc(2026, 1, 6),
+      exerciseId: 'pull',
+      sets: [(20, 10, null)],
+    );
+    // Epley over a zero load estimates 0 kg, which is not a strength figure.
+    expect(await dao.watchOneRMSeries('push').first, isEmpty);
+    expect(
+      (await dao.watchLoggedExercises().first).map((row) => row.exerciseId),
+      ['pull'],
+    );
+    expect(
+      (await dao.watchStrengthChange().first).map((row) => row.exerciseId),
+      ['pull'],
+    );
+    // The work itself is still counted where volume is the measure.
+    expect(
+      (await dao.watchSessionVolumeLoad('push').first).single.volumeKg,
+      0,
+    );
   });
 
   test('rest analytics reports average and recorded set count', () async {

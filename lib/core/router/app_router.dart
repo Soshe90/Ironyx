@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,7 +38,10 @@ GoRouter createRouter({String initialLocation = Routes.home}) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation,
-    debugLogDiagnostics: true,
+    // go_router logs every navigation via `dart:developer`, which release
+    // builds do not strip — unguarded, this writes to logcat/Console.app on
+    // every route change in production.
+    debugLogDiagnostics: kDebugMode,
     routes: <RouteBase>[
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

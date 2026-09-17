@@ -1,13 +1,12 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/muscle_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-import 'package:fittrack/core/database/database_providers.dart';
 import 'package:fl_chart/fl_chart.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/muscle_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -122,6 +121,9 @@ void main() {
               weightKg: benchWeight,
               reps: benchReps,
               isCompleted: const Value(true),
+              // Only one of the session's two sets records a rest, so the
+              // rest card has to say what its average is drawn from.
+              restSeconds: const Value(90),
             ),
             WorkoutSetsTableCompanion.insert(
               id: 'set_${i}_row',
@@ -260,6 +262,59 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets(
+        'weekly volume chart caps how many x-axis date labels can render',
+        (tester) async {
+      // Regression guard: fl_chart's `BarChart` does not reliably honor
+      // `SideTitles.interval` on its discrete per-bar axis the way
+      // `LineChart` does on a continuous one. Relying on `interval` alone
+      // once produced every week's date label overlapping into an
+      // unreadable smear on a real device with ~14 weeks of data — this
+      // calls the same `getTitlesWidget` fl_chart itself would call, for
+      // every bar index, and checks that only a handful ever return a real
+      // label rather than `SizedBox.shrink()`.
+      await pumpProgress(tester);
+
+      final BarChart volumeChart =
+          tester.widget<BarChart>(find.byType(BarChart).at(0));
+      final int barCount = volumeChart.data.barGroups.length;
+      expect(
+        barCount,
+        greaterThanOrEqualTo(13),
+        reason: 'this guard is only meaningful with enough bars that '
+            'unfiltered labels would actually collide',
+      );
+
+      final getTitlesWidget =
+          volumeChart.data.titlesData.bottomTitles.sideTitles.getTitlesWidget;
+      final TitleMeta fakeMeta = TitleMeta(
+        min: 0,
+        max: (barCount - 1).toDouble(),
+        parentAxisSize: 300,
+        axisPosition: 0,
+        appliedInterval: 1,
+        sideTitles: volumeChart.data.titlesData.bottomTitles.sideTitles,
+        formattedValue: '',
+        axisSide: AxisSide.bottom,
+      );
+
+      int renderedLabels = 0;
+      for (var i = 0; i < barCount; i++) {
+        final Widget label = getTitlesWidget(i.toDouble(), fakeMeta);
+        if (label is! SizedBox) renderedLabels++;
+      }
+
+      expect(
+        renderedLabels,
+        lessThanOrEqualTo(5),
+        reason: 'every bar got a label instead of a filtered handful — the '
+            'exact overlap this guards against',
+      );
+      expect(renderedLabels, greaterThan(0));
+
+      await disposeApp(tester);
+    });
+
     // A plain `test`, not `testWidgets` — this only awaits a DAO stream, no
     // widgets involved, and `testWidgets` runs its body inside `FakeAsync`,
     // where a `Future`/`Stream` that resolves via a real `Timer` (as
@@ -291,6 +346,9 @@ void main() {
       expect(find.text('Rep-range distribution'), findsOneWidget);
       expect(find.text('Training days'), findsOneWidget);
       expect(find.textContaining('/month'), findsOneWidget);
+      // A rest average is only as good as the number of sets behind it.
+      expect(find.textContaining('90 sec average'), findsWidgets);
+      expect(find.text('from 1 set'), findsWidgets);
 
       await disposeApp(tester);
     });

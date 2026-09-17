@@ -1,4 +1,4 @@
-# FitTrack Plan — Release, Platforms, and Revenue
+# Ironyx Plan — Release, Platforms, and Revenue
 
 The path from "works on my phone" to "published, and possibly earning". Each
 phase has a **gate**: a question to answer before the next phase is worth
@@ -34,6 +34,47 @@ The remaining Phase 1 blockers are cheap by comparison and mostly
 `acct`: privacy policy, Play declarations, a real signing key, and the
 bundle id — the last of which must happen **before** first publish.
 
+**Update — 2026-08-29.** Phase 1's attribution item and Phase 4's three
+`ios/` code gaps plus its CI job are done — see those sections for what
+changed. Nothing here moves "Published: no" or "Platforms: Android only":
+the iOS work is unverified without a Mac to actually run it, and the
+remaining Phase 1/2 blockers are still `acct` items (privacy policy, Play
+Developer account, Apple Developer enrollment) that need you, not more code.
+
+**Update — 2026-09-15.** App renamed **Ironyx → Ironyx**. Cause: a Play
+Store check found "Ironyx" already used by 5+ published apps, one with
+near-identical positioning ("Ironyx - Offline Workout Planner") — a
+solo dev with no ad budget can't win ASO against exact-name duplicates.
+Checked "Ironyx" has no existing Play Store listing. Changed: Android
+manifest label, iOS `CFBundleDisplayName`, both l10n `appTitle` strings
+(and every other user-facing "Ironyx" string — export/import error
+messages, About screen copy), regenerated `app_localizations_*.dart`, and
+the two widget tests asserting on the literal displayed name. Left
+unchanged, deliberately: the `applicationId`/`namespace`
+(`com.soshe90.ironyx`, already fixed once, not worth breaking Play
+listing continuity or Supabase redirect URLs to churn again for a
+cosmetic rename), the Flutter package name (`ironyx` in `pubspec.yaml`,
+purely internal, would touch every import), and the internal `IronyxApp`
+Dart class name (not user-facing). Store listing title/description/ASO
+keywords still need to be written around the new name (Phase 2).
+
+**Update — 2026-09-15 (same day).** On reflection, went further: the
+`applicationId`/bundle id changed too, `com.soshe90.ironyx` →
+**`com.soshe90.ironyx`**. This is the second and *last* time this can move
+— after first Play publish it's permanent. Touched: `build.gradle.kts`
+(namespace + applicationId), the Kotlin package directory (moved
+`.../com/soshe90/ironyx/MainActivity.kt` → `.../ironyx/MainActivity.kt`,
+updated its `package` declaration), `AndroidManifest.xml`'s intent-filter
+scheme, `ios/Runner/Info.plist`'s `CFBundleURLTypes`,
+`ios/Runner.xcodeproj/project.pbxproj`'s `PRODUCT_BUNDLE_IDENTIFIER` (6
+occurrences across targets/configs), and `lib/core/config/deep_links.dart`.
+**Consequence: the Supabase Redirect URLs entry above must be
+`com.soshe90.ironyx://login-callback`, not the `.ironyx` one** — if you
+already added the old one to the Supabase dashboard, add this one instead
+(or in addition, harmlessly, until you're sure nothing still points at the
+old scheme). Verified with `flutter analyze` (clean) and a `flutter clean`
++ debug APK build.
+
 ---
 
 ## Phase 0 — Done 2026-08-23
@@ -51,7 +92,7 @@ bundle id — the last of which must happen **before** first publish.
 - [x] Guest copy tells the truth: workouts are local, uninstall deletes them,
       export from Settings. It does **not** claim an account protects data,
       because under ADR-8 it does not. Revisit when Phase 5 ships.
-- [x] Auth deep link — `com.fittrack.fittrack://login-callback` registered in
+- [x] Auth deep link — `com.ironyx.ironyx://login-callback` registered in
       the Android manifest and iOS `Info.plist`, passed as `emailRedirectTo`
       on signup and password reset. Replaces the `http://localhost:3000`
       dead-end.
@@ -90,8 +131,13 @@ no `ASSETS-LICENSE.md`, which is precisely why it stayed invisible.
 - [x] **dev** — `tool/check_asset_licenses.dart` runs in CI before the
       build and fails on a null licence, an uncleared source, a hotlinked
       image, a missing file, or an unreferenced image shipping in the APK.
-- [ ] **dev** — Surface attribution in-app. Not required by the Unlicense,
-      so this is a courtesy, not a blocker.
+- [x] **dev** — Surface attribution in-app. Not required by the Unlicense,
+      so this is a courtesy, not a blocker. Settings -> About: an "Exercise
+      data & photos" tile (a dialog crediting free-exercise-db, with a link
+      to the source) and an "Open-source licenses" tile (`showLicensePage`,
+      which also lists every package dependency's license automatically —
+      the free-exercise-db credit is registered via `LicenseRegistry` in
+      `main.dart` so it appears there too, not just in the dialog).
 
 Ids were preserved by display name across the rebuild. This was a
 correctness requirement, not tidiness: `name` carries a UNIQUE index and
@@ -120,12 +166,12 @@ and five near-duplicate cable-fly entries that had been sharing images.
 ### Technical tidy-up
 
 - [ ] **acct** — Supabase dashboard → Authentication → URL Configuration →
-      add `com.soshe90.fittrack://login-callback` to **Redirect URLs**.
+      add `com.soshe90.ironyx://login-callback` to **Redirect URLs**.
       Until this is done the Phase 0 deep link does nothing: Supabase
       silently ignores an unlisted `redirect_to` and falls back to the Site
       URL. Also change Site URL off `http://localhost:3000`.
 - [x] **dev** — Bundle id changed 2026-08-24 from the template placeholder
-      `com.fittrack.fittrack` to `com.soshe90.fittrack`, across
+      `com.ironyx.ironyx` to `com.soshe90.ironyx`, across
       `android/app/build.gradle.kts` (namespace + applicationId), the Kotlin
       package directory and `MainActivity.kt`, `AndroidManifest.xml`'s
       intent filter, `ios/Runner/Info.plist`'s `CFBundleURLTypes`,
@@ -149,7 +195,7 @@ learning.**
 
 - [ ] **acct** — Play Developer account. $25, one time.
 - [x] **dev** — Signing keystore. Generated 2026-08-26:
-      `android/upload-keystore.jks` (alias `fittrack_upload`), credentials in
+      `android/upload-keystore.jks` (alias `ironyx_upload`), credentials in
       `android/key.properties` (both gitignored, neither backed up anywhere
       else yet). `build.gradle.kts` uses it for `release` builds when present,
       falling back to the debug key otherwise. **Still need to back the
@@ -223,21 +269,47 @@ minute.
   - **Codemagic** — Flutter-native, ~500 free macOS minutes, far simpler code
     signing and TestFlight upload. Switch here if signing on Actions starts
     eating evenings.
-- [ ] **dev** — `ios/` is the untouched Flutter template. Three known gaps:
-  - [ ] `UIBackgroundModes` → `audio`. Without it iOS suspends the rest
+- [x] **dev** — `ios/` is the untouched Flutter template. Three known gaps:
+  - [x] `UIBackgroundModes` → `audio`. Without it iOS suspends the rest
         timer's audio the moment the app backgrounds. **The welcome screen
         currently advertises "runs in the background, with sound and
         haptics"** — true on Android, false on iOS until this is fixed.
-  - [ ] `flutter_local_notifications` iOS permission request and
-        foreground-presentation setup, neither of which Android needed.
-  - [ ] `file_picker` export/import: `UIFileSharingEnabled` and
+        Added to `ios/Runner/Info.plist`.
+  - [x] `flutter_local_notifications` iOS permission request and
+        foreground-presentation setup, neither of which Android needed. The
+        permission-request half already existed
+        (`NotificationService.requestPermission`/`isPermissionGranted` both
+        had iOS branches). The foreground-presentation half didn't:
+        `DarwinNotificationDetails()` was called with no `present*` flags,
+        which means iOS silently drops a local notification fired while the
+        app is in the foreground — exactly the case for a rest timer someone
+        is actively watching. Both call sites in `notification_service.dart`
+        (`showCompletion`, `scheduleBoundary`) now pass `presentAlert:
+        presentBadge: presentSound: true`.
+  - [x] `file_picker` export/import: `UIFileSharingEnabled` and
         `LSSupportsOpeningDocumentsInPlace` if backups should be reachable in
-        the Files app.
-- [ ] **dev** — CI writes `supabase.json` from repository secrets before
-      building; it is gitignored and will not exist on a runner.
-- [ ] **dev** — Add an iOS job to `.github/workflows/ci.yaml`.
+        the Files app. Added to `Info.plist`.
+- [x] **dev** — CI writes `supabase.json` from repository secrets before
+      building; it is gitignored and will not exist on a runner. New step in
+      the `ios` job of `ci.yaml`, reading `secrets.SUPABASE_URL` /
+      `secrets.SUPABASE_ANON_KEY`. **Still needs an `acct` action**: those two
+      secrets must be added in GitHub -> repo Settings -> Secrets and
+      variables -> Actions before the iOS build carries real credentials —
+      until then it degrades to an accounts-off build (same as the existing
+      Android debug build), which is safe but not the end state.
+- [x] **dev** — Add an iOS job to `.github/workflows/ci.yaml`. Runs on
+      `macos-latest`, gated on the existing `verify` job passing first (macOS
+      minutes are the 10x-cost resource this file already flags), and builds
+      with `--no-codesign` — a compile check, not a signed distributable.
+      Signing for actual TestFlight/App Store upload is separate, later work
+      once the Apple Developer Program decision below is made.
+      **Unverified**: there is no Mac or GitHub Actions run available from
+      this environment, so this workflow has not actually executed. Watch
+      the first real run on GitHub for anything Xcode-version- or
+      CocoaPods-related that only surfaces on an actual macOS runner.
 - [ ] **dev** — Work `TODO.md`'s iOS device checks: audio-session ducking,
-      notifications, wakelock, VoiceOver.
+      notifications, wakelock, VoiceOver. Still needs a physical iPhone or
+      simulator — not something to fake from a compile check.
 
 ---
 

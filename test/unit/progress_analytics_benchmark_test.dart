@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
 
 /// Keeps the Phase 2/4 aggregates honest against the project's representative
 /// history size: 3,000 workouts and 36,000 sets. This is a regression guard,

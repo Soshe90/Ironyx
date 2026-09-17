@@ -63,6 +63,11 @@ class TemplateExercisesTable extends Table {
   /// Optional note for this exercise in the template.
   TextColumn get note => text().nullable()();
 
+  /// Groups consecutive exercises into a superset. Null means the exercise
+  /// stands alone; exercises sharing a non-null value (within one template)
+  /// are performed back-to-back with no rest between them.
+  TextColumn get supersetGroupId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -101,6 +106,7 @@ abstract class TemplateExercise with _$TemplateExercise {
     String? targetReps,
     int? targetRpeTimes10,
     String? note,
+    String? supersetGroupId,
   }) = _TemplateExercise;
 
   factory TemplateExercise.fromDrift(TemplateExercisesTableData row) =>
@@ -113,5 +119,6 @@ abstract class TemplateExercise with _$TemplateExercise {
         targetReps: row.targetReps,
         targetRpeTimes10: row.targetRpeTimes10,
         note: row.note,
+        supersetGroupId: row.supersetGroupId,
       );
 }

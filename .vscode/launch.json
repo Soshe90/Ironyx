@@ -8,14 +8,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "FitTrack (debug)",
+      "name": "Ironyx (debug)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
       "toolArgs": ["--dart-define-from-file=supabase.json"]
     },
     {
-      "name": "FitTrack (profile)",
+      "name": "Ironyx (profile)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
@@ -23,7 +23,7 @@
       "toolArgs": ["--dart-define-from-file=supabase.json"]
     },
     {
-      "name": "FitTrack (release)",
+      "name": "Ironyx (release)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
@@ -31,7 +31,7 @@
       "toolArgs": ["--dart-define-from-file=supabase.json"]
     },
     {
-      "name": "FitTrack (debug, no accounts)",
+      "name": "Ironyx (debug, no accounts)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart"

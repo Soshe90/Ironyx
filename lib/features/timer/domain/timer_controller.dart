@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/daos/timer_dao.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/l10n/l10n_provider.dart';
 import '../../../core/providers.dart';
@@ -163,25 +164,41 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     final TimerEngine? engine = _engine;
     _engine = null;
 
+    // Read before any of the awaits below, which can run past this
+    // notifier being disposed — `ref` itself becomes unusable at that
+    // point, so the DAO has to be captured while it's still guaranteed
+    // safe, or a session completed right as the screen closes would
+    // silently never get written.
+    final TimerDao dao = ref.read(timerDaoProvider);
+
     await _wakelock.disable();
     await _notifications.cancelAll();
-    if (_disposed) return;
 
-    final TimerSettings settings = ref.read(timerSettingsControllerProvider);
-    if (settings.hapticsEnabled) {
-      await ref.read(hapticsServiceProvider).heavy();
-    }
-    if (settings.soundEnabled) {
-      await ref.read(timerAudioServiceProvider).cue(TimerCue.complete);
+    // `ref.mounted`, not `_disposed`: this flag is set from an `onDispose`
+    // callback and is not guaranteed to have landed yet at this exact point
+    // (this was caught by a test disposing the container mid-await right
+    // here — `_disposed` was still false while `ref` itself already
+    // rejected reads). `ref.mounted` is Riverpod's own, always up to date.
+    if (ref.mounted) {
+      final TimerSettings settings = ref.read(timerSettingsControllerProvider);
+      if (settings.hapticsEnabled) {
+        await ref.read(hapticsServiceProvider).heavy();
+      }
+      if (settings.soundEnabled) {
+        await ref.read(timerAudioServiceProvider).cue(TimerCue.complete);
+      }
     }
 
-    await _writeSession(engine);
+    await _writeSession(dao, engine);
     await _audio.dispose();
 
-    if (!_disposed) state = null;
+    // Same reasoning as the `ref.mounted` check above: `_disposed` can still
+    // read false here even though the element has already been torn down,
+    // which throws on the assignment below rather than on a read.
+    if (ref.mounted) state = null;
   }
 
-  Future<void> _writeSession(TimerEngine? engine) async {
+  Future<void> _writeSession(TimerDao dao, TimerEngine? engine) async {
     if (engine == null) return;
 
     final DateTime endedAt = DateTime.now().toUtc();
@@ -208,19 +225,19 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
         ),
     ];
 
-    await ref.read(timerDaoProvider).insertSession(
-          TimerSessionsTableCompanion.insert(
-            id: sessionId,
-            startedAt: _startedAt,
-            endedAt: Value(endedAt),
-            plannedDurationSeconds: _preset.totalDurationSeconds,
-            actualDurationSeconds: Value(actualSeconds),
-            presetName: _preset.name,
-            intervalsCompleted: Value(intervalsCompleted),
-            totalIntervals: totalIntervals,
-          ),
-          intervals,
-        );
+    await dao.insertSession(
+      TimerSessionsTableCompanion.insert(
+        id: sessionId,
+        startedAt: _startedAt,
+        endedAt: Value(endedAt),
+        plannedDurationSeconds: _preset.totalDurationSeconds,
+        actualDurationSeconds: Value(actualSeconds),
+        presetName: _preset.name,
+        intervalsCompleted: Value(intervalsCompleted),
+        totalIntervals: totalIntervals,
+      ),
+      intervals,
+    );
   }
 
   Future<void> _rescheduleBoundaries() async {

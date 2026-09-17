@@ -1,7 +1,7 @@
-import 'package:fittrack/features/profile/domain/bmi_advisory.dart';
-import 'package:fittrack/l10n/app_localizations.dart';
-import 'package:fittrack/l10n/app_localizations_en.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/features/profile/domain/bmi_advisory.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
+import 'package:ironyx/l10n/app_localizations_en.dart';
 
 void main() {
   // The advisory wording is localized now; the bands themselves are not.

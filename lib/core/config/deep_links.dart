@@ -7,7 +7,7 @@
 ///
 /// The scheme is the Android `applicationId` / iOS bundle identifier
 /// verbatim, because a custom scheme is first-come-first-served on a device:
-/// a generic `fittrack://` could be claimed by any other app installed
+/// a generic `ironyx://` could be claimed by any other app installed
 /// alongside this one, and Android resolves the collision by asking the user
 /// which app should handle their login link.
 ///
@@ -18,7 +18,7 @@
 ///   any `redirect_to` it has not been told about and silently falls back to
 ///   the Site URL.
 abstract final class DeepLinks {
-  static const String scheme = 'com.soshe90.fittrack';
+  static const String scheme = 'com.soshe90.ironyx';
 
   static const String _host = 'login-callback';
 

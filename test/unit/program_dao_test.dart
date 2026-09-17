@@ -1,9 +1,9 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/program_dao.dart';
-import 'package:fittrack/core/services/data_export_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/program_dao.dart';
+import 'package:ironyx/core/services/data_export_service.dart';
 import 'package:uuid/uuid.dart';
 
 void main() {
@@ -126,6 +126,49 @@ void main() {
     expect(detail.days[0].exercises.single.targetReps, '6-8');
     expect(detail.days[1].exercises.single.exerciseName, 'Barbell Bench Press');
     expect(detail.days[1].exercises.single.exerciseSlug, 'bench');
+  });
+
+  test('getDetail round-trips the superset grouping id', () async {
+    final now = DateTime.now().toUtc();
+    await programDao.insertProgram(
+      programCompanion(id: 'p_superset'),
+      [
+        ProgramDayInsert(
+          id: 'p_superset_day',
+          dayName: 'Superset Day',
+          orderIndex: 0,
+          template: TemplatesTableCompanion.insert(
+            id: 'p_superset_tpl',
+            name: 'p_superset_tpl',
+            createdAt: now,
+            updatedAt: now,
+          ),
+          exercises: [
+            TemplateExercisesTableCompanion.insert(
+              id: uuid.v4(),
+              templateId: 'p_superset_tpl',
+              exerciseId: 'squat',
+              orderIndex: 0,
+              targetSets: 3,
+              supersetGroupId: const Value('grp-1'),
+            ),
+            TemplateExercisesTableCompanion.insert(
+              id: uuid.v4(),
+              templateId: 'p_superset_tpl',
+              exerciseId: 'bench',
+              orderIndex: 1,
+              targetSets: 3,
+              supersetGroupId: const Value('grp-1'),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final detail = await programDao.getDetail('p_superset');
+    final exercises = detail!.days.single.exercises;
+    expect(exercises[0].supersetGroupId, 'grp-1');
+    expect(exercises[1].supersetGroupId, 'grp-1');
   });
 
   test('watchAll reports day count per program', () async {

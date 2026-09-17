@@ -1,11 +1,10 @@
-import 'package:fittrack/app.dart';
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/core/router/app_router.dart';
-import 'package:fittrack/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/app.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/router/app_router.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Boots the real app with an in-memory preferences store.
@@ -35,7 +34,7 @@ Future<void> pumpApp(
         sharedPreferencesProvider.overrideWithValue(instance),
         ...overrides.cast(),
       ],
-      child: FitTrackApp(
+      child: IronyxApp(
         router: createRouter(initialLocation: initialLocation),
       ),
     ),

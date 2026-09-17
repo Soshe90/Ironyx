@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Fittrack</string>
+	<string>Ironyx</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,15 +23,15 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.soshe90.fittrack.auth</string>
+			<string>com.soshe90.ironyx.auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.soshe90.fittrack</string>
+				<string>com.soshe90.ironyx</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleName</key>
-	<string>fittrack</string>
+	<string>ironyx</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -41,6 +41,27 @@
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- Lets a rest-timer's countdown cue and completion sound keep playing
+	     after the app backgrounds (PLAN.md Phase 4). Without this, iOS
+	     suspends app audio the moment the user locks the screen or switches
+	     apps mid-timer — silently, with no error the app could catch — which
+	     is the opposite of what the timer promises. Android needs no
+	     equivalent: it does not suspend a foreground service's audio this
+	     way. See `TimerAudioService` and `WakelockService`. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<!-- Makes exported/imported backup files (Settings -> Data, via
+	     file_picker) reachable from the iOS Files app, the same way they are
+	     already reachable from Android's system file picker. Without these,
+	     `FilePicker.saveFile`/`pickFile` still work app-side, but the
+	     resulting files are invisible outside the app's own sandbox — no
+	     equivalent restriction exists on Android. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>

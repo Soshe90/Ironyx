@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/l10n/l10n_extension.dart';
+import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../../library/presentation/exercise_picker_sheet.dart';
 import '../domain/program_draft.dart';
 import '../domain/program_editor_controller.dart';
@@ -20,7 +23,7 @@ const int _maxTargetSets = 20;
 
 enum _DayAction { moveUp, moveDown, remove }
 
-enum _ExerciseAction { moveUp, moveDown, remove }
+enum _ExerciseAction { moveUp, moveDown, remove, groupWithAbove, ungroup }
 
 /// Create/edit screen for a custom (non-built-in) program: name, days, and
 /// each day's exercises with target sets/reps.
@@ -270,6 +273,9 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final List<String?> labels = supersetLabels(
+      [for (final exercise in widget.day.exercises) exercise.supersetGroupId],
+    );
 
     return AppCard(
       child: Column(
@@ -339,6 +345,12 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
               exercise: widget.day.exercises[i],
               canMoveUp: i > 0,
               canMoveDown: i < widget.day.exercises.length - 1,
+              supersetLabel: labels[i],
+              isInSuperset: widget.day.exercises[i].supersetGroupId != null,
+              canGroupWithPrevious: i > 0 &&
+                  !(widget.day.exercises[i].supersetGroupId != null &&
+                      widget.day.exercises[i].supersetGroupId ==
+                          widget.day.exercises[i - 1].supersetGroupId),
             ),
           const SizedBox(height: AppSpacing.xs),
           TextButton.icon(
@@ -391,6 +403,9 @@ class _ExerciseEditorRow extends ConsumerStatefulWidget {
     required this.exercise,
     required this.canMoveUp,
     required this.canMoveDown,
+    this.supersetLabel,
+    this.isInSuperset = false,
+    this.canGroupWithPrevious = false,
     super.key,
   });
 
@@ -399,6 +414,15 @@ class _ExerciseEditorRow extends ConsumerStatefulWidget {
   final ProgramDraftExercise exercise;
   final bool canMoveUp;
   final bool canMoveDown;
+
+  /// Letter ("A", "B", …) shown next to the name for a superset member.
+  final String? supersetLabel;
+
+  /// Whether this exercise is currently part of a superset.
+  final bool isInSuperset;
+
+  /// Whether "group with above" is available.
+  final bool canGroupWithPrevious;
 
   @override
   ConsumerState<_ExerciseEditorRow> createState() => _ExerciseEditorRowState();
@@ -433,6 +457,17 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    // `ProgramDraftExercise` only carries the DB's raw English name (no
+    // slug of its own, unlike `ProgramDayExercise` on the read-only detail
+    // page — see the "translate exercise names inside program day cards"
+    // fix), so translation here goes through the id-keyed lookup instead.
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
+    final String displayName = localizedExerciseName(
+      context,
+      slugsById,
+      widget.exercise.exerciseId,
+      widget.exercise.name,
+    );
 
     // Name and controls on one line, the two target fields on the next.
     // Fitting all five across a phone left the fields ~56dp wide, which is
@@ -445,22 +480,49 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
           Row(
             children: <Widget>[
               Expanded(
-                child: Text(
-                  widget.exercise.name,
-                  style: theme.textTheme.bodyLarge,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: <Widget>[
+                    if (widget.isInSuperset) ...<Widget>[
+                      Container(
+                        width: AppSpacing.xl,
+                        height: AppSpacing.xl,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: scheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Text(
+                          widget.supersetLabel!,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                    ],
+                    Expanded(
+                      child: Text(
+                        displayName,
+                        style: theme.textTheme.bodyLarge,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               PopupMenuButton<_ExerciseAction>(
-                tooltip: context.l10n.programExerciseOptions(
-                  widget.exercise.name,
-                ),
+                tooltip: context.l10n.programExerciseOptions(displayName),
                 icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
                 onSelected: (_ExerciseAction action) => switch (action) {
                   _ExerciseAction.moveUp => _notifier.moveExercise(
                       widget.dayId, widget.exercise.id, -1),
                   _ExerciseAction.moveDown =>
                     _notifier.moveExercise(widget.dayId, widget.exercise.id, 1),
+                  _ExerciseAction.groupWithAbove => _notifier.groupWithPrevious(
+                      widget.dayId, widget.exercise.id),
+                  _ExerciseAction.ungroup => _notifier.ungroupFromSuperset(
+                      widget.dayId, widget.exercise.id),
                   _ExerciseAction.remove =>
                     _notifier.removeExercise(widget.dayId, widget.exercise.id),
                 },
@@ -480,6 +542,24 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                     child: ListTile(
                       leading: const Icon(Icons.arrow_downward),
                       title: Text(context.l10n.programMoveDown),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem<_ExerciseAction>(
+                    value: _ExerciseAction.groupWithAbove,
+                    enabled: widget.canGroupWithPrevious,
+                    child: ListTile(
+                      leading: const Icon(Icons.vertical_align_top),
+                      title: Text(context.l10n.programGroupWithAbove),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem<_ExerciseAction>(
+                    value: _ExerciseAction.ungroup,
+                    enabled: widget.isInSuperset,
+                    child: ListTile(
+                      leading: const Icon(Icons.vertical_align_center),
+                      title: Text(context.l10n.programUngroup),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),

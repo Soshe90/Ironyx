@@ -1,10 +1,9 @@
-import 'package:fittrack/app.dart';
-import 'package:fittrack/core/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:ironyx/app.dart';
+import 'package:ironyx/core/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// M1 smoke journey. Expanded in M3 into the three journeys named in the
@@ -26,7 +25,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: const FitTrackApp(),
+        child: const IronyxApp(),
       ),
     );
     await tester.pumpAndSettle();

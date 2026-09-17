@@ -1,6 +1,9 @@
-# FitTrack TODO
+# Ironyx TODO
 
 This checklist captures the production-hardening work identified during the architecture, data-integrity, UX, and release-readiness audit. Prioritize data safety before polish.
+
+> **New work starts at [Audit 2 — production readiness review (2026-08-28)](#audit-2--production-readiness-review-2026-08-28).**
+> Everything above that heading is the first audit and is essentially complete.
 
 ## Priority 0 — Backup and data-integrity safety
 
@@ -379,7 +382,7 @@ restarts the timer.
 
 ## Exploration — Muscle & Motion-style exercise library redesign
 
-Triggered by comparing FitTrack's exercise library/3D-model screens against Muscle & Motion Strength Training. Conclusion: the UI is a ~2-day reskin; the content (filmed+3D-overlay demos, licensed anatomy model) is the actual moat and can't be replicated cheaply or legally. Needs an ADR before M2-scale investment.
+Triggered by comparing Ironyx's exercise library/3D-model screens against Muscle & Motion Strength Training. Conclusion: the UI is a ~2-day reskin; the content (filmed+3D-overlay demos, licensed anatomy model) is the actual moat and can't be replicated cheaply or legally. Needs an ADR before M2-scale investment.
 
 ### ADR-8: media & content-sourcing strategy — **resolved 2026-08-23**
 
@@ -404,7 +407,7 @@ Triggered by comparing FitTrack's exercise library/3D-model screens against Musc
 
 ### UI reskin — **not adopted for v1**
 
-- [x] Keep the existing FitTrack visual language; do not adopt the amber/
+- [x] Keep the existing Ironyx visual language; do not adopt the amber/
       near-black Muscle & Motion reskin without a reference-library product
       decision.
 - [x] Do not add media-first library rows or a dashboard media carousel while
@@ -412,7 +415,7 @@ Triggered by comparing FitTrack's exercise library/3D-model screens against Musc
 
 ### Scope decision — **resolved 2026-08-23**
 
-- [x] FitTrack remains primarily an offline workout tracker with a reference
+- [x] Ironyx remains primarily an offline workout tracker with a reference
       exercise library. A Muscle & Motion-style media/anatomy product is out of
       v1 scope and is not silently being introduced through UI polish.
 
@@ -437,3 +440,854 @@ Triggered by comparing FitTrack's exercise library/3D-model screens against Musc
 - Web release build: passed, with informational font/WASM warnings.
 - Flutter analyzer: blocked in the audit environment by the read-only iOS ephemeral directory.
 - Formatting check: currently reports 19 files requiring formatting.
+
+---
+
+# Audit 2 — production readiness review (2026-08-28)
+
+Second full review: bugs, security, performance, reliability, architecture, code
+quality, data/state, testing, and operability. Findings are ordered by real-world
+impact, not by effort. `flutter analyze` was clean (0 issues) at the time of the
+review, so nothing here is something the analyzer can catch for you.
+
+Two findings were confirmed empirically with throwaway tests (deleted afterwards);
+those are marked **Verified** with the observed output.
+
+## P0 — Must fix before production
+
+**All four items below are done as of 2026-08-28.** `flutter analyze` clean,
+`dart format --set-exit-if-changed` clean, full suite green (362 passed, 1
+skipped — up from the 354 baseline, net new: 2 stream-refresh tests, 5
+`hasConflictingAccount` tests, 1 `accountMismatch` test, 2 account-conflict
+widget tests). One new latent issue was discovered and deferred — see A2.14.
+
+### A2.1 Drift streams go stale after every bulk write — **Fixed, verified**
+
+**Severity:** Critical · **Category:** Bug / Data & State
+**Location:** `lib/core/services/data_export_service.dart:277` (replace `DELETE`),
+`:294` (insert loop), `:617-628` (`deleteAllUserData`)
+
+Every bulk write goes through `db.customStatement(...)`, which Drift explicitly
+documents as not propagating table updates
+(`drift/lib/src/runtime/api/connection_user.dart:428`: *"This method does not
+update stream queries on this drift database."*). Nothing in `lib/` calls
+`markTablesUpdated`, `customUpdate`, or `notifyUpdates` — grep returns zero hits.
+
+The entire read side of this app is Drift `watch()` streams
+(`workoutHistoryStream`, `personalRecordWorkoutIds`, and all ~14 Progress /
+Dashboard analytics providers). So after an import, snapshot restore, cloud
+restore, or **Delete all data**, the database changes but every screen keeps
+rendering the pre-write result set until the app is restarted.
+
+Impact: the user taps "Delete everything", confirms by typing the word, and then
+watches their workouts still sitting in their history. On cloud restore
+(reinstall -> sign in -> restore) the user sees an empty app and concludes the
+restore failed.
+
+**Verified** — a `watch()` on `workoutsTable` holding one row, then
+`deleteAllUserData`, then a direct `select().get()` confirming the table was
+empty:
+
+```
+EMISSIONS AFTER DELETE: [1]
+```
+
+The stream never re-emitted.
+
+- [x] Call `db.markTablesUpdated(db.allTables)` after the transaction in
+      `DataExportService._applyImport`.
+- [x] Call `db.markTablesUpdated(...)` after the transaction in
+      `DataExportService.deleteAllUserData` (workouts, timer sessions, timer
+      presets, programs, templates, body metrics, profiles + their cascaded
+      children). Marks all tables rather than hand-enumerating the cascade
+      graph — over-notifying is harmless, an unlisted cascaded child is not.
+- [x] Verify the fix covers all four entry points: JSON import (merge and
+      replace), snapshot restore, cloud restore, delete-all. All four go
+      through `_applyImport`/`deleteAllUserData`, so one fix in each covers
+      every caller (`applyImport`, `restoreCompleteDatabase`,
+      `restoreSnapshot`, `CloudBackupController.restoreFromCloud`,
+      `DataManagementSection._deleteAll`).
+- [x] Add a regression test that subscribes to a `watch()` stream and asserts it
+      re-emits after `deleteAllUserData` and after `applyImport`. Added to
+      `test/unit/export_import_test.dart`: "a replace import notifies existing
+      watch() streams" and "deleteAllUserData notifies existing watch() streams".
+
+### A2.2 Signing out leaves the previous account's training history on the device — **Fixed**
+
+**Severity:** High · **Category:** Security (privacy) / Data
+**Location:** `lib/features/settings/presentation/widgets/account_section.dart:137`;
+`lib/core/database/daos/profile_dao.dart:83`
+
+`_signOut` calls `authController.signOut()` then `profileDao.unlinkAccount()`,
+which nulls only `remoteUserId` and `email`. Workouts, body metrics, display
+name, date of birth and height all remain. There is no warning on the sign-in
+path either.
+
+Two concrete failures on a shared or handed-down phone:
+
+1. User B signs in after A signed out and sees A's full training history,
+   body-weight series and personal details.
+2. Worse — B taps **Back up now**. `CloudBackupController.backUpNow()` exports the
+   whole local database and upserts it into B's `backups` row. A's data is now
+   permanently in B's cloud slot, and RLS (correctly) will never let A retrieve
+   or delete it.
+
+The RLS policy in `docs/cloud_backup_setup.sql` is correct and does its job at the
+server boundary. The leak is entirely client-side, upstream of it.
+
+Repro: log a workout as guest or as A -> sign out -> sign in as B -> open Tracker
+(A's history is there) -> Settings -> Back up now.
+
+Resolution chosen (of the three options drafted): prompt with keep-local vs.
+start-fresh, on sign-in **and** sign-up, plus a defense-in-depth guard on
+`backUpNow` for the one path that has no interactive screen to prompt from.
+
+- [x] On sign-in, compare the incoming `user.id` against the profile's existing
+      `remoteUserId`. New `ProfileDao.hasConflictingAccount(String)`.
+- [x] If a *different* account previously owned this profile, block silent
+      adoption: prompt "This device has data from another account" with
+      *keep local data* vs. *start fresh* (`deleteAllUserData` + reseed). New
+      `resolveAccountConflict()` in
+      `lib/features/auth/presentation/widgets/account_conflict_flow.dart`,
+      wired into both `SignInPage._submit` and `SignUpPage._submit`
+      (the `SignUpOutcome.signedIn` branch — `confirmationEmailSent` doesn't
+      link yet, so there's nothing to check until confirmation completes).
+      *Keep local data* signs back out (undoing the sign-in/up that already
+      completed) rather than leaving a half-linked state.
+- [x] Keep the guest -> first-account case frictionless — that is the one
+      legitimate adoption path and it must not grow a dialog.
+      `hasConflictingAccount` returns false for `remoteUserId == null`, so a
+      guest profile links exactly as before, no dialog.
+- [x] At minimum (if the full flow is deferred): require explicit confirmation
+      before the first `backUpNow()` for an account whose id does not match the
+      profile's `remoteUserId`. Done as defense-in-depth, not instead of the
+      dialog: `app.dart`'s deep-link listener (email confirmation) has no
+      reliable `BuildContext` to show the dialog from, so it now skips
+      auto-linking on conflict instead of silently relinking
+      (`_linkIfNoConflict`), and `CloudBackupController.backUpNow` throws a
+      new `CloudBackupFailureKind.accountMismatch` if the local profile is
+      still linked to a different account than the live session — this is
+      what actually stops the deep-link path from uploading the wrong
+      device's data, since it has no dialog to fall back on.
+- [x] Add an account-switch data-isolation test. `test/unit/profile_dao_test.dart`
+      (`hasConflictingAccount` group, 5 cases), `test/unit/cloud_backup_test.dart`
+      ("backUpNow refuses when local data is linked to a different account"),
+      `test/widget/account_section_test.dart` (two full sign-in-page flows:
+      keep-local cancels and reverts; erase-and-continue wipes and relinks).
+- [ ] Decide and document whether sign-out should offer "also remove local data
+      from this device" — and reconcile the answer with ADR-8. Not done: this
+      is a separate UX decision (proactive offer on sign-out) rather than the
+      reactive conflict-detection this item was about, and didn't block closing
+      the actual leak. Left open.
+
+### A2.3 `allowBackup` defaults true; refresh token and full training DB go to Google Drive — **Fixed (Android); iOS open**
+
+**Severity:** High · **Category:** Security
+**Location:** `android/app/src/main/AndroidManifest.xml:7` (`<application>`)
+
+`android:allowBackup` is not set, so it defaults to `true`, and there is no
+`android:dataExtractionRules` (Android 12+) or `android:fullBackupContent`.
+Confirmed in the package source that `supabase_flutter` 2.17.2 persists the
+session via `SharedPreferencesLocalStorage`
+(`supabase_flutter/lib/src/supabase.dart:131`) — **plaintext SharedPreferences
+XML, not Keystore-backed secure storage**.
+
+Android Auto Backup therefore uploads to the user's Google Drive: (a) the
+long-lived Supabase refresh token, and (b) `ironyx.sqlite` containing display
+name, email, date of birth, height and the complete body-weight history.
+Restoring that backup onto an attacker-controlled device signed into the victim's
+Google account restores a working authenticated session with no password prompt.
+Health-adjacent PII crossing into third-party cloud storage is also a Play Data
+Safety disclosure obligation.
+
+- [x] Decide the policy: opt out of Auto Backup entirely, or keep it for workout
+      data and exclude the credential store. Chose opt-out — the app already
+      ships export files *and* cloud restore, so nothing is lost.
+- [x] If opting out: set `android:allowBackup="false"` on `<application>` in
+      `android/app/src/main/AndroidManifest.xml`, with a comment explaining why.
+      (`android:fullBackupContent` is redundant once `allowBackup` is false and
+      was left off — Android ignores it in that state.)
+- [ ] If keeping it: ~~add `android:dataExtractionRules`...~~ — not applicable,
+      opted out instead.
+- [ ] Check the iOS equivalent — whether the app container and its
+      SharedPreferences plist are eligible for iCloud/iTunes backup, and set
+      `NSURLIsExcludedFromBackupKey` where appropriate. **Still open.** This
+      needs native Swift/Obj-C changes in `ios/Runner/`, and this environment
+      has no Xcode to build or verify them against (same limitation the
+      "Validation checklist" section already notes for the iOS build). Do this
+      on macOS before an iOS release.
+- [ ] Update the Play Data Safety declaration to match whatever is decided.
+      Still open — a Play Console task, not a code change.
+
+### A2.4 No global error handling and no crash reporting anywhere — **Hooks fixed; reporter backend still open**
+
+**Severity:** High · **Category:** Reliability / Production readiness
+**Location:** `lib/main.dart`
+
+Grepping `lib/` for `FlutterError.onError`, `PlatformDispatcher.instance.onError`,
+`runZonedGuarded`, `ErrorWidget.builder`, Crashlytics and Sentry returns
+**nothing**. The only reporting call in the app is the `FlutterError.reportError`
+inside `_initSupabase`'s catch.
+
+In release, an uncaught async error is swallowed silently and a build error paints
+the grey/red error screen with no record kept. There is zero visibility into what
+breaks on testers' devices — no crash rate, no stack traces, and no way to have
+learned about A2.1 from the field. There are also unguarded async call sites, e.g.
+`workout_xlsx_import_action.dart:65` calls `WorkoutXlsxImportService.apply(...)`
+with no try/catch, so an FK or UNIQUE failure mid-import becomes an unhandled
+exception raised from a tap handler.
+
+Decision made when applying this: wire the hooks through one seam now
+(`reportError()`), defer the actual crash-reporter backend since provisioning
+one (Sentry account, DSN, dependency) is an external-service decision, not
+something to make unilaterally while fixing a bug list.
+
+- [x] Set `FlutterError.onError` in `main()` (present the error, then forward).
+      New `lib/core/error_reporting.dart`'s `reportError()` is the one seam
+      every hook below funnels through; wiring a real backend later touches
+      only that one function.
+- [x] Set `PlatformDispatcher.instance.onError` in `main()`.
+- [x] Set `ErrorWidget.builder` to render the existing `core/widgets/error_view.dart`
+      instead of the default red screen. Wrapped in `Directionality` +
+      `Material` (this can replace a widget above `MaterialApp` itself, so
+      neither ancestor is guaranteed), and passes `title` explicitly rather
+      than `ErrorView`'s l10n-reading default — the fallback for "everything
+      else already failed" cannot itself depend on `Localizations` being
+      mounted.
+- [x] Wrap `WorkoutXlsxImportService.apply(...)` at
+      `workout_xlsx_import_action.dart:65` in a try/catch with a user-facing
+      message. New `importXlsxApplyFailed` l10n string (en + ar), generic
+      rather than raw-exception (didn't want to add a fourth instance of the
+      A2.9 anti-pattern while it's still open).
+- [ ] Choose and wire a crash reporter. Given ADR-8's offline-first posture,
+      Sentry with `beforeSend` scrubbing (or a self-hosted endpoint) fits better
+      than Crashlytics' Firebase dependency. **Still open** — needs a service
+      decision (see above); `reportError()` is the integration point when
+      that's made.
+- [x] Ensure the reporter never transmits an email address — `AuthException`
+      messages can carry one, which is why `SupabaseAuthService._log` is already
+      `kDebugMode`-gated. `reportError()` follows the same rule: it's a no-op
+      outside `kDebugMode` until a real backend is wired in, at which point
+      whatever's wired in inherits that gate for free.
+
+## P1 — Recommended before wider release
+
+**All six items below are done as of 2026-08-29.** `flutter analyze` clean,
+`dart format --set-exit-if-changed` clean on every touched file. One item
+(A2.5's size-ceiling sub-item) was implemented as a soft log rather than a
+hard limit — see that item for why.
+
+### A2.5 Whole-database serialization runs synchronously on the UI isolate — **Fixed**
+
+**Severity:** Medium · **Category:** Performance
+**Location:** `lib/core/services/data_export_service.dart:87`
+(`JsonEncoder.withIndent('  ')`);
+`lib/features/backup/data/supabase_cloud_backup_service.dart:61`
+(`gzip.encode` + `base64Encode`)
+
+`buildJsonExport` reads every table into memory then runs a synchronous,
+non-yielding encode over the full dataset. `upload` adds a synchronous gzip and
+base64 over the same buffer. All on the main isolate.
+
+This runs on three paths, one of them invisible to the user: manual export, **every
+cloud backup**, and **the pre-import snapshot taken before every import/restore**
+(`data_export_service.dart:243`). The code comments cite ~1.4 MB of JSON for a year
+of training, and `withIndent` roughly doubles that. On a mid-range Android phone
+that is hundreds of milliseconds to seconds of frozen UI with no frames — long
+enough to risk an ANR on the import path, where it happens behind a spinner the
+user reads as progress.
+
+- [x] Move the JSON encode off the main isolate with `Isolate.run` (keep the DB
+      reads on the main isolate — Drift needs its executor). Used `compute()`
+      instead of raw `Isolate.run` — browsers have no isolate primitive at all,
+      and `compute` is Flutter's own cross-platform-safe wrapper: a real
+      background isolate on native platforms, running inline in place on web
+      rather than failing there. `buildJsonExport` now reads all tables inside
+      `db.transaction`, then hands the plain data (no `AppDatabase` reference —
+      that can't cross an isolate boundary) to a new top-level
+      `_encodeExportEnvelope` via `compute`.
+- [x] Move gzip + base64 in `SupabaseCloudBackupService.upload` off the main
+      isolate too. Same pattern: new top-level `_gzipAndBase64Encode`, called
+      through `compute`.
+- [x] Drop `withIndent` for the cloud payload specifically — nobody reads it, and
+      it halves the bytes before compression. `buildJsonExport` gained an
+      `indent` parameter (default `true`, preserving the file-export and
+      snapshot behavior); `CloudBackupController.backUpNow` passes
+      `indent: false`.
+- [x] Consider a size ceiling / warning for very large exports. Implemented as
+      a non-blocking log rather than a hard ceiling — a large export is still
+      a valid one, and blocking it would be user-hostile for no real benefit.
+      `buildJsonExport` calls `reportError` (A2.4's seam) if the encoded
+      payload exceeds 20MB (~14x the "a year of hard training" reference point
+      in the code comments), so it's visible in telemetry once a reporter
+      exists, without ever refusing the export itself.
+
+**Web build caveat:** `flutter build web --release` could not be run to
+completion in this environment to directly confirm `compute()` compiles clean
+end-to-end — it was still compiling after 30 minutes when the attempt was
+killed, which appears to be this sandbox being slow rather than a real error
+(no error was printed; a prior successful web build artifact from 2026-08-23
+already exists in `build/web/`, well before this change). `compute()` is
+Flutter's documented, widely-used solution specifically for this
+native-isolate/no-isolate-on-web split, so this isn't considered a real risk
+— but a real `flutter build web --release` on faster hardware is worth
+running once, purely for confirmation, before this ships.
+
+### A2.6 First-launch seed: ~2,400 individually-committed statements, no transaction — **Fixed**
+
+**Severity:** Medium · **Category:** Performance / Reliability
+**Location:** `lib/core/services/exercise_seeder.dart:56` (`_seedDatabase`)
+
+The loop runs one `upsertExercises` plus seven `replaceX` calls per exercise, and
+none of it is wrapped in `db.transaction`. With ~301 exercises that is ~2,400
+statement groups, each an implicit transaction with its own fsync.
+
+`allExercisesStream`, `exercisesSearchStream`, `exercisesFilteredStream` and
+`exerciseDetail` all `await ref.watch(exerciseSeederProvider.future)`, so Library
+and parts of Dashboard are gated on this — during the user's very first launch, on
+the slowest storage path. An interrupted seed also leaves the catalogue partially
+populated; the `seededCount >= exercises.length` guard recovers, but only by
+redoing all of it.
+
+- [x] Wrap the `_seedDatabase` body in `db.transaction(() async { ... })`. Single
+      commit instead of ~2,400; also makes the seed atomic, removing the
+      partial-seed state entirely.
+- [x] Measure cold-start-to-Library before and after, and record the numbers here.
+      **Inconclusive in this environment, honestly reported:** timed via
+      `Stopwatch` around `exerciseSeederProvider.future` on
+      `AppDatabase.forTesting()` — 4367ms before, 4311ms after, i.e. no
+      measurable difference. This is very likely because
+      `AppDatabase.forTesting()` uses an in-memory sqlite database, which has
+      no per-statement disk fsync cost — exactly the cost this fix removes.
+      The in-memory test executor can't exercise the bottleneck it's meant to
+      fix. The transaction wrap is still correct (atomicity alone justifies
+      it — see the previous paragraph), but the real-world speedup on a
+      file-backed database on an actual device remains unmeasured. Whoever
+      picks this up next should time a real on-device cold start (or a
+      file-backed sqlite3 database in a benchmark, not `forTesting()`) rather
+      than trust this number.
+
+### A2.7 XLSX import aborts on any workbook containing an empty sheet — **Fixed, verified**
+
+**Severity:** Medium · **Category:** Bug
+**Location:** `lib/core/services/workout_xlsx_import_service.dart:33`
+
+`_dateValue(_rowCell(rows[0], groupStart))` indexes `rows[0]` unconditionally.
+`_rowCell` guards its *column* index but nothing guards the *row* index, and
+`sheet.rows` is `[]` for a sheet with no data.
+
+**Verified** — a default `Excel.createExcel()` workbook has one sheet with zero
+rows:
+
+```
+SHEETS: [Sheet1]  rows=[0]
+RangeError (length): Invalid value: Valid value range is empty: 0
+  package:ironyx/core/services/workout_xlsx_import_service.dart 33:46
+```
+
+It is caught at `workout_xlsx_import_action.dart:52`, so it does not crash — but
+the entire import is abandoned including every valid sheet in the workbook, and
+the user is shown the literal string
+`RangeError (length): Invalid value: Valid value range is empty: 0`. Blank
+trailing sheets are extremely common in real spreadsheets.
+
+- [x] Skip sheets with too few rows: `if (rows.length < 3) continue;` (needs a
+      header row plus data rows) before touching `rows[0]`.
+- [x] Add a test for a workbook with an empty sheet alongside a populated one,
+      asserting the populated sheet still imports.
+      `test/unit/workout_xlsx_import_service_test.dart`: "a blank trailing
+      sheet does not abort the import of a populated one" — builds a sheet via
+      `excel['Blank Tab']` (auto-created with zero rows) alongside the normal
+      populated sheet, and asserts the populated one still parses.
+- [x] Replace the raw-exception message with an actionable one (see A2.9,
+      which did this for all four raw-exception sites at once).
+
+### A2.8 Import progress dialog is escapable, and dismissing it pops the Settings page — **Fixed**
+
+**Severity:** Medium · **Category:** Bug
+**Location:** `lib/features/settings/presentation/widgets/data_management_section.dart:240`,
+`:255`, `:260`
+
+`barrierDismissible: false` blocks tap-outside but **not** the Android system back
+button, and the dialog is not wrapped in `PopScope`. Because `_runImport` is
+`unawaited`, backing out of the spinner leaves the import running; on completion
+`Navigator.of(context, rootNavigator: true).pop()` fires against a root navigator
+whose top route is now the Settings page — so it pops Settings instead of the
+already-gone dialog.
+
+Repro: Settings -> Import -> confirm -> press the system back button while the
+spinner is up -> wait for the import to finish. Settings closes itself.
+
+- [x] Wrap the progress dialog's child in `PopScope(canPop: false, ...)`.
+- [x] Hold the dialog's own route reference (or a `GlobalKey`) and pop that,
+      rather than popping the root navigator blind — both at `:255` and `:260`.
+      Captured a `BuildContext?` from the dialog's own `builder` (a
+      `progressContext` local) and pop `Navigator.of(progressContext)`, guarded
+      by `progressContext.mounted` — checked at close time rather than the
+      outer Settings context's `mounted`, which stays true regardless of what
+      happens to the dialog on top of it and so can't answer "is the dialog
+      still there to close."
+- [x] Add a widget test that presses back during an in-flight import and asserts
+      Settings is still on screen.
+      `test/widget/settings_page_test.dart`, new `import progress dialog`
+      group. Reproduces the exact dialog shape (`PopScope(canPop: false)` +
+      context captured from `builder`) standalone rather than driving it
+      through `DataManagementSection._runImport` itself — that path starts
+      with `FilePicker.pickFile()`, which has no test-time platform channel
+      and no mockable seam anywhere in this codebase (see A2.10 and A2.14 for
+      the same recurring gap). Uses `tester.binding.handlePopRoute()`, the
+      standard way flutter_test simulates the Android system back button.
+
+### A2.9 Raw exception text is shown to end users — **Fixed**
+
+**Severity:** Low · **Category:** Code quality / UX
+**Location:** `active_workout_page.dart:192`, `data_management_section.dart:225`
+and `:261`, `workout_xlsx_import_action.dart:55`
+
+`activeWorkoutSaveFailed('$error')`, `dataSnapshotRestoreFailed('$e')`,
+`dataImportFailed('$e')` and `importXlsxReadFailed('$error')` interpolate
+`toString()` of arbitrary exceptions into a `SnackBar` or dialog. SQLite errors
+can echo column values back into the UI.
+
+This is inconsistent with the care taken elsewhere: `CloudBackupFailure` and
+`AuthFailure` both deliberately keep `detail` for logs and route the user-facing
+string through `messageFor(l10n)`.
+
+- [x] Give each of the four sites a localized, actionable message. All four
+      l10n keys (`activeWorkoutSaveFailed`, `dataSnapshotRestoreFailed`,
+      `dataImportFailed`, `importXlsxReadFailed`) dropped their `{error}`
+      placeholder for a plain, generic, actionable string (en + ar), e.g.
+      "Couldn't save your workout. Your sets are still here — try again." —
+      each states what's still safe (nothing was written / your data is
+      untouched) rather than echoing the exception.
+- [x] Send the raw text to the reporter from A2.4 instead of to the screen.
+      All four catch sites now call `reportError(error, stackTrace, context:
+      '...')` before showing the generic message.
+- [ ] Consider a shared failure-kind enum for import/export, mirroring
+      `CloudBackupFailureKind`. **Not done, deliberately.** All four sites are
+      blanket `catch (e)`/`on Object catch (error)` with no typed exception
+      hierarchy underneath them (unlike Auth/CloudBackup, which have real
+      Supabase exception types to discriminate on) — an enum here would have
+      exactly one meaningful value (`unknown`) at every site, which isn't
+      worth the ceremony. Revisit if these call sites ever grow real,
+      distinguishable failure modes worth telling apart in the UI.
+
+### A2.10 Testing gaps that let the above ship — **Mostly closed**
+
+**Severity:** Medium · **Category:** Testing
+
+- [x] Stream-refresh assertion after import and delete-all (would have caught
+      A2.1 — see that item). Closed when A2.1 was fixed.
+- [x] XLSX workbook with an empty / extra sheet (would have caught A2.7).
+      Closed when A2.7 was fixed.
+- [x] Account-switch data isolation (would have caught A2.2). Closed when
+      A2.2 was fixed.
+- [ ] A test that a failing `WorkoutXlsxImportService.apply` surfaces a message
+      rather than an unhandled exception (A2.4). **Still open, and likely to
+      stay open without more work than this item is worth on its own.** The
+      try/catch itself was added when A2.4 was fixed
+      (`workout_xlsx_import_action.dart`), but reaching it in a test means
+      driving through `WorkoutXlsxImportAction._run`, which opens with
+      `FilePicker.pickFile()` — no test-time platform channel, no mockable
+      seam anywhere in this codebase (same blocker noted for A2.8 and A2.14).
+      A real fix here is introducing a `FilePicker`-abstraction seam used by
+      all three call sites that touch it
+      (`workout_xlsx_import_action.dart`, `program_import_action.dart`,
+      `data_management_section.dart`) — worth doing once, not as a one-off
+      for this single test.
+- [x] Back-button-during-import widget test (A2.8). Closed when A2.8 was
+      fixed — see that item for why it's a standalone reproduction rather
+      than a test of `DataManagementSection` itself (same `FilePicker` seam
+      gap as above).
+
+## P2 — Nice to have
+
+### A2.11 Release-build hygiene — **Log-guarding fixed; ProGuard deliberately left alone**
+
+**Severity:** Low · **Category:** Production readiness
+
+- [x] `lib/core/router/app_router.dart:40` — `debugLogDiagnostics: true` is
+      unconditional. go_router logs via `dart:developer`, which is **not** stripped
+      in release, so every navigation is written to logcat in production. Change
+      to `debugLogDiagnostics: kDebugMode`.
+- [x] `lib/main.dart:45` — `debugPrint('[auth] Supabase URL: ...')` is unguarded.
+      `SupabaseAuthService._log` gets this right with its `kDebugMode` check;
+      match it. (`main.dart:38` and `:54` too.) All three now check `kDebugMode`
+      before printing.
+- [ ] `android/app/build.gradle.kts` release block sets no `isMinifyEnabled` /
+      `isShrinkResources`. Not a vulnerability, but it costs APK size and free
+      symbol obfuscation. Consider enabling with the Flutter default ProGuard
+      rules. **Deliberately not done.** CI only ever builds the debug APK
+      (`flutter build apk --debug`); nothing in this repo builds or smoke-tests
+      the *release* variant, so turning on shrinking here would be unverified —
+      if a plugin needs a keep rule this doesn't have, it would only surface as
+      a runtime crash on a real device, at release-cut time, with nothing in
+      CI to have caught it first. That's a worse failure mode than the current
+      one (a slightly larger APK). Enable this alongside actually running a
+      release build on a real device before flipping it.
+- [ ] Add `--obfuscate --split-debug-info=...` to the release build command, and
+      decide where symbol files are archived (needed to symbolicate A2.4's crash
+      reports). Left open for the same reason — meaningful only once a real
+      crash reporter (A2.4) and a tested release build pipeline both exist to
+      consume the symbol files; adding the flag alone with nowhere to archive
+      the output doesn't accomplish anything yet.
+
+### A2.12 `_isValidIdentifier` does not validate what its error message claims — **Fixed**
+
+**Severity:** Low · **Category:** Code quality
+**Location:** `lib/core/services/data_export_service.dart:590`
+
+The second branch, `RegExp(r'^[A-Za-z0-9_]+$')`, accepts any alphanumeric string,
+making the UUID regex below it unreachable for practically every input, and the
+error message *"must contain a valid UUID or legacy identifier"* misleading during
+debugging. There is **no injection risk** — all values are bound as parameters and
+table/column names come from `db.allTables` — so this is purely about the check
+meaning what it says.
+
+- [x] Either narrow the branch to the specific legacy id shapes that need
+      grandfathering, or rename the method and soften the message to match what it
+      actually enforces. Chose the rename: narrowing to an exact enumerated set of
+      legacy shapes (`ex_NNN`, single lowercase words for muscles/equipment,
+      `builtin_*`, the two sentinels) would tightly couple validation to
+      today's seed content and break the moment a new id shape is added.
+      Renamed `_isValidIdentifier` to `_hasSafeIdentifierShape` and reworded
+      both call-site messages to "must be a UUID or a plain alphanumeric
+      identifier" — accurate to what the check actually does, with a doc
+      comment on the method spelling out that this is a shape check, not a
+      lookup against known ids.
+
+### A2.13 Smaller cleanups — **3 of 4 done**
+
+- [ ] `WorkoutXlsxImportService._isDuplicateOfExisting` issues a query per
+      workout, plus per exercise, plus per set group, outside a transaction. Fine
+      at current scale; batch it if workbooks grow. **Deliberately left as-is** —
+      this item's own text already says it's not a current problem, and batching
+      would mean restructuring the duplicate-detection algorithm from
+      one-workout-at-a-time to a bulk prefetch, which is real scope for zero
+      observed benefit today. Revisit if workbook sizes actually grow.
+- [x] `data_export_service.dart:277` and `:294` interpolate `$tableName`
+      unquoted into `DELETE FROM` / `INSERT INTO`, while the same file quotes
+      identifiers everywhere else. Names come from `db.allTables` so it is safe
+      today — make it consistent anyway. Both now go through
+      `_quoteIdentifier`.
+- [x] `WorkoutXlsxImportService._normalize` strips all non-`[a-z0-9]` characters,
+      so a non-Latin (e.g. Arabic) exercise name normalizes to the empty string
+      and produces a meaningless slug like `-imported-a1b2c3d4`. Harmless today
+      (the catalogue is English-named; Arabic is translate-at-display), but worth
+      a fallback. The custom-exercise slug builder now falls back to the literal
+      prefix `exercise` when normalization empties out, so the slug reads
+      `exercise-imported-a1b2c3d4` instead. New test: "a non-Latin exercise name
+      still gets a sane slug when created as custom" (uses an Arabic name).
+- [x] `TimerController._finish` returns early on `_disposed` after awaiting
+      `_wakelock.disable()`, skipping `_writeSession` — a completed timer session
+      would go unrecorded. Unlikely given `keepAlive`, but the early return is on
+      the wrong side of the write. Fixed by reading the `TimerDao` up front
+      (before any await) and passing it into `_writeSession` as a parameter, so
+      the DB write no longer touches `ref` at all and cannot be skipped by a
+      disposal race — regardless of ordering, once `_finish()` starts, the
+      session gets written.
+      **Also found and fixed while writing the regression test, not by
+      inspection:** the class's own `_disposed` bool (set from an `onDispose`
+      callback) is not reliably synchronized with Riverpod's actual ref-validity
+      state — a test that disposed the container mid-`_finish()` crashed with
+      "Cannot use the Ref... after it has been disposed" at *both* the
+      haptics/sound block and the final `state = null`, despite each being
+      guarded by `if (!_disposed)`/`if (_disposed) return`. Riverpod's own
+      `ref.mounted` getter is the authoritative, always-current signal (its own
+      exception message says as much); both sites now check `ref.mounted`
+      instead. New test in `test/unit/timer_controller_test.dart`: "a session
+      completed right as the controller is disposed is still written" —
+      disposes the container while `_finish()` is suspended awaiting
+      `_wakelock.disable()`, then asserts the session row still exists. This
+      test failed twice before passing, against two different lines, before
+      landing on `ref.mounted` — the other ~9 `_disposed` checks elsewhere in
+      this class were not audited and may have the same latent issue; this fix
+      only touched the two inside `_finish()`.
+
+### A2.14 `programSeederProvider` may run `build()` twice when invalidated while ambiently watched — **not reproducible against the real flow; documented and tested instead**
+
+**Severity:** Low (downgraded from Medium — a follow-up real end-to-end test
+of the actual Settings flow did not reproduce it across 4 runs; see the
+checklist below) · **Category:** Reliability / Concurrency
+**Location:** `lib/core/services/program_seeder.dart` (`ProgramSeeder.build`),
+triggered by the `resetSeedVersion()` -> `ref.invalidate(programSeederProvider)`
+-> `await ref.read(programSeederProvider.future)` sequence, while
+`app.dart`'s `IronyxApp.build()` also holds an ambient
+`ref.watch(programSeederProvider)`.
+
+Found while adding the A2.2 widget test for the "erase local data and
+continue" path, which calls exactly this sequence (mirroring the pre-existing,
+already-shipped `DataManagementSection._deleteAll` flow — this is not new
+code, just newly exercised). Debug instrumentation showed `build()` starting
+twice for one invalidation; one invocation ran to completion and inserted all
+three built-in programs, but the *other* stayed stuck partway through
+`dao.insertProgram('builtin_full_body', ...)` and never resolved. Whichever
+copy `programSeederProvider.future` ends up pointing to determines whether the
+caller's `await` ever returns — in the reproduction, it pointed at the stuck
+one, hanging the caller indefinitely.
+
+No production repro yet — this was only ever hit via a widget test's
+`tester.pump()`/`runAsync` interleaving, and it's possible real Flutter frame
+scheduling never creates the same race. But `DataManagementSection._deleteAll`
+(Settings -> Delete all data) has run this *exact* sequence since it shipped,
+and — confirmed by re-reading `test/widget/settings_page_test.dart` — no
+existing test ever taps through to the real confirm button, so this path has
+never actually been exercised end-to-end by the suite either. Given that, the
+honest state is "untested," not "known safe."
+
+The account-conflict widget test for this path now uses `stubSeeders()`
+(`test/helpers/stub_seeders.dart`, already used elsewhere in the suite for
+this exact class of problem) to route around it rather than fix it — fixing a
+Riverpod invalidation race in shared seeder infrastructure was out of scope
+for the four P0 items this session was applying, and touching it blind
+without being able to reproduce it outside a test harness risked a worse bug
+than the one being chased.
+
+- [x] Try to reproduce outside a widget test — a real device/simulator run of
+      Settings -> Delete all data, watched for a hang or a duplicate-row error
+      in built-in programs. **No real device available in this environment**,
+      so this was approximated instead with the next item: a real (not
+      stubbed) *widget* test of the exact same button, which is the closest
+      available substitute and the thing A2.14 itself flagged as the actual
+      test-coverage gap. It passed cleanly, 4 runs in a row (no hang, no
+      duplicate-row error, programs correctly present both before and after).
+      A true on-device run is still the more authoritative check and remains
+      open — but a widget test exercising the identical provider sequence
+      failing to reproduce it across repeated runs is meaningful evidence
+      this is a test-harness artifact of the *account-conflict* test's
+      specific pump/`runAsync` interleaving, not a bug reachable from the
+      real Settings flow.
+- [ ] If reproducible: the likely fix is not calling `ref.invalidate` +
+      immediate `ref.read(...future)` on a provider that's also watched
+      elsewhere in the same synchronous frame — e.g. read the notifier once,
+      call a plain method on it that does the reset-and-reseed work directly
+      (bypassing `build()`/`invalidate` entirely for this one operation),
+      rather than relying on Riverpod's rebuild machinery to do it exactly
+      once. **Not attempted** — did not reproduce, so there is nothing
+      concrete to fix, and changing shared seeder infrastructure without a
+      failing case to verify against would be a guess, not a fix.
+- [x] If not reproducible outside tests: add a code comment at both call sites
+      (`account_conflict_flow.dart` and `data_management_section.dart`)
+      documenting the risk and pointing here, and add a real (not stubbed)
+      end-to-end test for `DataManagementSection`'s "Delete all data" confirm
+      button — the gap that let this go unnoticed since the feature shipped.
+      Both done: a comment at each call site cross-references the other and
+      points here, and `test/widget/settings_page_test.dart` gained "tapping
+      Delete everything actually deletes data and reseeds built-in
+      programs" — no `stubSeeders()`, real exercise/program seeding on boot
+      (`awaitDatabase: true`), taps the real confirm button, and asserts
+      programs exist both before (proving the seeders actually ran) and
+      after (proving delete + reseed completed) the real delete-all flow.
+
+**Update, same session — root cause found, not the seeder race:** this new
+test failed once under the full 366-test suite's load after passing 4/4 in
+isolation, with a fixed `Duration(seconds: 1)` wait after the delete-all tap.
+A second full-suite run (this time with untruncated output) caught it
+failing again, but at a *different, earlier* assertion — `programsBefore`,
+checked right after the initial `pumpApp(..., awaitDatabase: true)`, before
+delete-all is ever tapped. `pumpApp`'s own `awaitDatabase` option only waits
+a fixed 100ms for real sqlite3 seeding to finish; under the full suite's
+concurrent load, seeding ~301 exercises and 3 programs didn't finish in that
+window. This conclusively points to "fixed waits too short under load" as
+the actual cause of both flakes, not the `programSeederProvider` double-build
+race this item is about — the second failure happened before delete-all (and
+therefore before any invalidate/reseed) was even triggered.
+
+Both fixed waits (initial seed, post-delete-all reseed) were replaced with
+one shared polling helper (up to 50 x 200ms = 10s, checking the program
+count after each), which adapts to actual system load instead of assuming a
+duration — but a *third* full-suite run still failed at the same
+`programsBefore` check even with the 10-second polling ceiling in place,
+which is a strong signal the real ~301-exercise seed (not the program
+seeder this item is about) can genuinely take longer than that under this
+particular full-suite's load, in this sandboxed environment specifically —
+not evidence of a hang.
+
+The actual fix: this test does not need the real exercise seeder at all —
+only `ProgramSeeder`'s real reset/invalidate/reseed sequence is what A2.14
+is about. `exerciseSeederProvider` is now overridden with a local
+`_NoopExerciseSeeder`, and the handful of exercise ids the three built-in
+programs actually reference (18 ids, checked via
+`grep -oE "'ex_[0-9]+'" program_seeder.dart`) are seeded directly instead —
+lightweight, deterministic, and no longer coupled to the unrelated
+exercise-catalogue seeder's performance under load. The real `ProgramSeeder`
+still runs unstubbed, so the actual sequence under test is untouched.
+Re-verified 3x in isolation (now ~3s each, down from ~6-8s) and once against
+the full suite (367 passed, 1 skipped, 0 failed) — clean.
+
+## Confirmed working — do not "fix"
+
+Recorded so a later pass does not burn time re-deriving these.
+
+- **The import validator is genuinely thorough.** Schema-version match, exact
+  table-set match, unknown-table rejection, mandatory user-data tables on replace,
+  per-column type/nullability derived live from `PRAGMA table_info`, primary-key
+  uniqueness, and full foreign-key resolution — all before a single row is
+  touched, followed by an automatic pre-import snapshot with retention.
+- **The RLS policy is correct.** `for all ... using (auth.uid() = user_id) with
+  check (auth.uid() = user_id)` — the `WITH CHECK` half does stop a client
+  rewriting `user_id` on the way in, as its comment claims.
+- **Secrets hygiene is clean.** `supabase.json` is gitignored and confirmed
+  untracked; only `supabase.example.json` is committed; keystore and
+  `key.properties` are gitignored; the key in use is a `sb_publishable_` key,
+  public by design.
+- **Deep-link design is right.** Namespacing the scheme to the bundle id rather
+  than a squattable `ironyx://` is correct; PKCE is `supabase_flutter`'s default
+  for this flow.
+- **`TimerEngine`** recomputing from wall clock rather than accumulating ticks is
+  the correct architecture for a backgroundable timer, and is cleanly testable via
+  the injected `clock`.
+- **`ActiveWorkoutNotifier._writeQueue`** — serializing SharedPreferences writes,
+  and reading `state` *inside* the queued closure rather than at call time, is a
+  subtle ordering bug most codebases ship with.
+- **Vendor seams hold.** No Supabase type escapes `SupabaseAuthService` or
+  `SupabaseCloudBackupService` into any controller or widget.
+- **CI is thorough**: format, `analyze --fatal-infos --fatal-warnings`, asset
+  licence gate, tests with coverage, Android + web builds. Analyzer config is
+  strict (`strict-casts`, `strict-inference`, `strict-raw-types`,
+  `avoid_dynamic_calls`, `use_build_context_synchronously`).
+
+## Open questions — need input, not assumptions
+
+- [ ] Current `docs/ADR.md` and PLAN.md Phase 5 sync design — does the temporary
+      backup slot create migration debt for real per-table sync?
+- [ ] Target `minSdk` / `targetSdk` (both resolve from `flutter.*` at build time),
+      needed to judge A2.3's Auto Backup behaviour precisely.
+- [ ] Does the Supabase project have email confirmation and rate limiting enabled
+      server-side? The client maps `over_email_send_rate_limit`, but that is not
+      evidence the server enforces it.
+
+## Audit 2 status at creation
+
+- `flutter analyze`: **0 issues** (15.4s).
+- Full test suite: **not re-run** during this review (per the standing note about
+  long-running test commands). Last recorded green run: 2026-08-26, 337 passed,
+  1 skipped.
+- Two findings verified with throwaway tests, since deleted: A2.1
+  (stream staleness) and A2.7 (XLSX empty sheet).
+- **Production-readiness rating: 6 / 10.** The architecture is well above average
+  — ADR-driven, clean vendor seams, an import validator more rigorous than most
+  commercial apps ship, comments that explain *why*. What holds the score down is
+  the gap between that design quality and operational readiness: a correct,
+  well-tested data layer paired with a UI that silently does not refresh after the
+  most destructive operations (A2.1), a real cross-account privacy leak the
+  server-side RLS cannot help with (A2.2), and no crash reporting to have learned
+  about either from the field (A2.4). None of the four P0s are architectural —
+  they are a missing `markTablesUpdated`, a missing account-identity check, a
+  missing manifest attribute, and a missing error handler. Roughly a day of work,
+  and it would put this at an 8.
+
+## Update — 2026-08-28, P0 applied
+
+All four P0 items above are done (A2.3 and A2.4 each have one sub-item —
+iOS backup exclusion, the crash-reporter backend — correctly left open, since
+neither is something to complete from this environment or unilaterally).
+`flutter analyze`: 0 issues. `dart format --set-exit-if-changed`: clean on
+every touched file. Full suite: 362 passed, 1 skipped (was 337 at last
+recorded green run, 354 immediately before this session's test additions).
+
+One new issue was found in the process of testing A2.2 properly, not
+introduced by it: A2.14, a latent double-invocation race in
+`programSeederProvider` triggered by invalidating it while it's also
+ambiently watched (`app.dart`). It affects the already-shipped Settings
+"Delete all data" flow too — that flow has apparently never been tested
+through to its real confirm button — so this is a pre-existing gap this
+session's testing surfaced, not a regression. Deferred rather than fixed
+blind; see A2.14 for the reproduction and the suggested next step.
+
+## Update — 2026-08-29, P1 applied
+
+All six P1 items are done. `flutter analyze`: 0 issues. `dart format
+--set-exit-if-changed`: clean on every touched file. Full suite: 364 passed,
+1 skipped (net +2 over the 362 baseline after P0: the A2.7 blank-sheet test
+and the A2.8 back-button test; A2.5/A2.6/A2.9 changed behavior covered by
+existing tests rather than adding new ones, and A2.10's remaining gap was
+left honestly open rather than filled with a low-value test — see below).
+
+Two things surfaced worth flagging rather than quietly absorbing:
+
+- **A recurring test-infrastructure gap, not a defect in the fixes
+  themselves:** three separate P1/P0 items (A2.8's back-button test, A2.10's
+  still-open `apply()`-failure test, and by extension anything else that
+  starts with a file picker) are all blocked by the same thing —
+  `FilePicker.pickFile`/`saveFile` has no test-time platform channel and no
+  mockable seam anywhere in this codebase. A2.8's test worked around it by
+  reproducing the dialog mechanism standalone; A2.10's could not be worked
+  around the same way and was left open rather than forced. The real fix is
+  a `FilePicker` abstraction seam shared by the three call sites that use it
+  (`workout_xlsx_import_action.dart`, `program_import_action.dart`,
+  `data_management_section.dart`) — worth doing once as its own piece of
+  work, not as a one-off for a single test.
+- **A2.5's cold-start timing measurement came back inconclusive**, and says
+  so rather than reporting a number that would look precise but isn't:
+  `AppDatabase.forTesting()`'s in-memory database has no per-statement fsync
+  cost, which is exactly what the transaction wrap removes, so the test
+  environment can't observe the fix's real-world effect. The fix is still
+  correct (atomicity alone justifies it), but the performance claim needs a
+  real device or a file-backed benchmark to actually verify — flagged in
+  A2.5 rather than left silently unconfirmed.
+- **The web build could not be run to completion in this environment**
+  (killed after 30 minutes, still mid-compile, no error printed) to directly
+  confirm `compute()` — used in place of `Isolate.run` for A2.5's isolate
+  offloading, since raw isolates don't exist on the web target — compiles
+  clean end-to-end. `compute()` is Flutter's own documented cross-platform
+  answer to exactly this, so this isn't treated as a real risk, but a real
+  `flutter build web --release` on faster hardware is worth running once for
+  confirmation before shipping.
+
+## Update — 2026-08-29, P2 applied
+
+All four P2 items addressed; three fully, one (A2.14) resolved by
+downgrading rather than fixing blind — see below. `flutter analyze`: 0
+issues. `dart format --set-exit-if-changed`: clean on every touched file.
+Full suite: see the test-count note at the end of this update.
+
+- **A2.11**: the two log-guarding sub-items are done
+  (`debugLogDiagnostics: kDebugMode`, all three `main.dart` `debugPrint`s
+  gated). The ProGuard/minification sub-items were deliberately *not*
+  done: CI never builds or tests the release APK variant, so flipping
+  `isMinifyEnabled` here would be an unverified change to a build type
+  nothing exercises — if a plugin needed a keep rule this doesn't have, it
+  would only surface as a runtime crash on a real device at release-cut
+  time. Left open with that reasoning attached, rather than guessed at.
+- **A2.12**: renamed `_isValidIdentifier` to `_hasSafeIdentifierShape` and
+  reworded both call sites' messages, rather than narrowing the regex —
+  narrowing would tightly couple the check to today's exact seed-id shapes.
+- **A2.13**: 3 of 4 sub-items fixed (quoting, non-Latin slug fallback,
+  `TimerController._finish`). The query-batching item was left alone per
+  its own "fine at current scale" framing. The `TimerController` fix
+  surfaced a second, related bug while writing its regression test — the
+  class's own `_disposed` bool is not reliably synchronized with Riverpod's
+  actual ref-validity state, and two `ref`-touching sites inside `_finish()`
+  crashed under a real disposal race despite being guarded by it. Both
+  switched to `ref.mounted`, Riverpod's own authoritative signal. Worth
+  noting: the other ~9 `_disposed` checks elsewhere in `TimerController`
+  were not audited and may have the same latent issue — only the two inside
+  `_finish()` were touched.
+- **A2.14**: attempted the reproduction the item asked for — a real,
+  unstubbed end-to-end widget test of the actual Settings "Delete all data"
+  button (no on-device run was available in this environment) — and the
+  `programSeederProvider` race itself did not reproduce. Downgraded from
+  Medium to Low, documented with cross-referencing comments at both call
+  sites, and kept the new test as permanent coverage of a button that, per
+  A2.14's own investigation, had never actually been tapped by any test
+  since it shipped.
+  **This new test then went through three rounds of its own flakiness**
+  before landing — worth recording in full since it's a real example of the
+  "don't trust a single green run" principle: fixed-duration waits on real
+  sqlite3 seeding work passed reliably alone but failed intermittently under
+  the full 366+-test suite's load, twice, at two different assertions, each
+  time looking superficially like it might be A2.14's actual race. Chasing
+  the *actual* error text (not just the failure) both times showed neither
+  was the race — both were the unrelated, real ~300-exercise catalogue
+  seeder simply not finishing inside a fixed window under load. The test
+  now stubs the exercise seeder (irrelevant to what it's checking) and
+  seeds by hand only the 18 exercise ids the three built-in programs
+  reference, while leaving the real `ProgramSeeder` — the thing actually
+  under test — untouched. Confirmed clean across 3 isolated runs and one
+  full-suite run (367 passed, 1 skipped, 0 failed).
+
+Net new tests this pass: `workout_xlsx_import_service_test.dart`'s Arabic-slug
+case, `timer_controller_test.dart`'s disposal-race case, and
+`settings_page_test.dart`'s real delete-all case — 3 total. Final verified
+full-suite result: **367 passed, 1 skipped, 0 failed.**

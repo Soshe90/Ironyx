@@ -1,15 +1,16 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/profile_dao.dart';
-import 'package:fittrack/core/database/database_providers.dart';
-import 'package:fittrack/core/router/routes.dart';
-import 'package:fittrack/features/auth/domain/auth_controller.dart';
-import 'package:fittrack/features/auth/domain/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/profile_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/features/auth/domain/auth_controller.dart';
+import 'package:ironyx/features/auth/domain/auth_service.dart';
 
 import '../helpers/fake_auth_service.dart';
 import '../helpers/pump_app.dart';
+import '../helpers/stub_seeders.dart';
 
 /// End-to-end coverage for the Settings account card and the sign-in form.
 void main() {
@@ -33,13 +34,17 @@ void main() {
     await database.close();
   }
 
-  Future<void> pumpSettings(WidgetTester tester) async {
+  Future<void> pumpSettings(
+    WidgetTester tester, {
+    List<dynamic> overrides = const [],
+  }) async {
     await pumpApp(
       tester,
       initialLocation: Routes.settings,
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
         authServiceProvider.overrideWithValue(auth),
+        ...overrides,
       ],
       prefs: seededPrefs,
     );
@@ -130,6 +135,106 @@ void main() {
     final profile = await ProfileDao(database).get();
     expect(profile!.email, 'mustafa@example.com');
     expect(profile.remoteUserId, isNotNull);
+
+    await disposeApp(tester);
+  });
+
+  testWidgets(
+      'signing in as a different account offers to keep or erase local data '
+      '— keeping local data cancels the sign-in', (tester) async {
+    await ProfileDao(database).upsert(
+      const ProfilesTableCompanion(displayName: Value('Previous Owner')),
+    );
+    await ProfileDao(database)
+        .linkAccount(userId: 'user-existing', email: 'old@example.com');
+    auth.accounts['new@example.com'] = 'hunter22';
+    await pumpSettings(tester);
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'new@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'hunter22',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    // Not `pumpAndSettle`: `_submit` is now suspended waiting on the
+    // conflict dialog's choice, which this test hasn't made yet, so the
+    // form's busy spinner (an indeterminate `CircularProgressIndicator`)
+    // would keep `pumpAndSettle` from ever returning.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // The conflict dialog, not the ordinary "signed in" outcome.
+    expect(find.text('Different account on this device'), findsOneWidget);
+
+    await tester.tap(find.text('Keep my data'));
+    await tester.pumpAndSettle();
+
+    // Reverted: the sign-in that already completed is undone, and the
+    // previous owner's data is untouched.
+    expect(
+      find.text('Sign-in cancelled. Nothing on this device changed.'),
+      findsOneWidget,
+    );
+    final profile = await ProfileDao(database).get();
+    expect(profile!.remoteUserId, 'user-existing');
+    expect(profile.displayName, 'Previous Owner');
+
+    await disposeApp(tester);
+  });
+
+  testWidgets(
+      'signing in as a different account offers to keep or erase local data '
+      '— erasing wipes local data and links the new account', (tester) async {
+    await ProfileDao(database).upsert(
+      const ProfilesTableCompanion(displayName: Value('Previous Owner')),
+    );
+    await ProfileDao(database)
+        .linkAccount(userId: 'user-existing', email: 'old@example.com');
+    auth.accounts['new@example.com'] = 'hunter22';
+    // The erase branch re-triggers the real `programSeederProvider`, which
+    // is watched app-wide (`app.dart`) and reseeds built-in programs against
+    // a real sqlite3 handle — exercising that reseed race is not what this
+    // test is about, so it's stubbed out the same way any other test that
+    // isn't itself testing seeding does.
+    await pumpSettings(tester, overrides: stubSeeders());
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'new@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'hunter22',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    // See the matching comment in the "keeping local data" test above.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Different account on this device'), findsOneWidget);
+
+    await tester.tap(find.text('Erase local data and continue'));
+    await tester.pumpAndSettle();
+
+    // Back on Settings, now showing the new account.
+    expect(find.text('new@example.com'), findsOneWidget);
+
+    final profile = await ProfileDao(database).get();
+    expect(profile!.remoteUserId, isNot('user-existing'));
+    expect(profile.email, 'new@example.com');
+    expect(
+      profile.displayName,
+      isNull,
+      reason: 'delete-all wipes the profile row entirely, including the '
+          'previous owner\'s name',
+    );
 
     await disposeApp(tester);
   });

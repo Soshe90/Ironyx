@@ -1,11 +1,11 @@
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/features/tracker/domain/draft_editor_controller.dart';
-import 'package:fittrack/features/tracker/domain/workout_draft.dart';
-import 'package:fittrack/features/tracker/presentation/widgets/draft_editor_widgets.dart';
-import 'package:fittrack/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/features/tracker/domain/draft_editor_controller.dart';
+import 'package:ironyx/features/tracker/domain/workout_draft.dart';
+import 'package:ironyx/features/tracker/presentation/widgets/draft_editor_widgets.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -44,12 +44,86 @@ void main() {
     expect(find.byTooltip('Set 1 options'), findsOneWidget);
     expect(find.byTooltip('Set 2 options'), findsOneWidget);
   });
+
+  testWidgets(
+      'a time-based exercise shows a duration column instead of reps, and '
+      'entering a value updates durationSeconds not reps', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+    final harnessKey = GlobalKey<_DraftHarnessState>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: _DraftHarness(
+            key: harnessKey,
+            initial: const DraftExercise(
+              id: 'exercise-row',
+              exerciseId: 'plank',
+              name: 'Plank',
+              isTimeBased: true,
+              sets: [DraftSet(id: 'set-1')],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('SEC'), findsOneWidget);
+    expect(find.text('REPS'), findsNothing);
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(1), '45');
+    await tester.pump(const Duration(milliseconds: 350));
+
+    final exercise = harnessKey.currentState!.exercise;
+    expect(exercise.sets.single.durationSeconds, 45);
+    expect(exercise.sets.single.reps, 0);
+  });
+
+  testWidgets('a superset exercise shows its letter and a SUPERSET tag',
+      (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final preferences = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: _DraftHarness(
+            initial: DraftExercise(
+              id: 'exercise-row',
+              exerciseId: 'bench',
+              name: 'Bench Press',
+              supersetGroupId: 'g1',
+              sets: [DraftSet(id: 'set-1')],
+            ),
+            supersetLabel: 'A',
+            isInSuperset: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('SUPERSET'), findsOneWidget);
+    expect(find.text('A'), findsOneWidget);
+  });
 }
 
 class _DraftHarness extends StatefulWidget {
-  const _DraftHarness({super.key});
+  const _DraftHarness({
+    this.initial = _defaultInitial,
+    this.supersetLabel,
+    this.isInSuperset = false,
+    super.key,
+  });
 
-  final DraftExercise initial = const DraftExercise(
+  static const DraftExercise _defaultInitial = DraftExercise(
     id: 'exercise-row',
     exerciseId: 'bench',
     name: 'Bench Press',
@@ -59,6 +133,10 @@ class _DraftHarness extends StatefulWidget {
       DraftSet(id: 'set-3'),
     ],
   );
+
+  final DraftExercise initial;
+  final String? supersetLabel;
+  final bool isInSuperset;
 
   @override
   State<_DraftHarness> createState() => _DraftHarnessState();
@@ -77,6 +155,8 @@ class _DraftHarnessState extends State<_DraftHarness> {
           child: ExerciseDraftCard(
             exercise: exercise,
             controller: controller,
+            supersetLabel: widget.supersetLabel,
+            isInSuperset: widget.isInSuperset,
           ),
         ),
       );
@@ -108,6 +188,7 @@ class _FakeController implements DraftEditorController {
     bool? isWarmup,
     int? rpeTimes10,
     int? restSeconds,
+    int? durationSeconds,
   }) async {
     _ensureExercise(exerciseId);
     final source = _exercise!;
@@ -122,6 +203,7 @@ class _FakeController implements DraftEditorController {
               isWarmup: isWarmup ?? set.isWarmup,
               rpeTimes10: rpeTimes10 ?? set.rpeTimes10,
               restSeconds: restSeconds ?? set.restSeconds,
+              durationSeconds: durationSeconds ?? set.durationSeconds,
             )
           else
             set,
@@ -140,8 +222,11 @@ class _FakeController implements DraftEditorController {
   }
 
   @override
-  Future<void> addExercise(
-          {required String exerciseId, required String name}) =>
+  Future<void> addExercise({
+    required String exerciseId,
+    required String name,
+    bool isTimeBased = false,
+  }) =>
       Future<void>.value();
 
   @override
@@ -150,6 +235,12 @@ class _FakeController implements DraftEditorController {
   @override
   Future<void> reorderExercise(String exerciseId, int newIndex) =>
       Future<void>.value();
+
+  @override
+  Future<void> groupWithPrevious(String exerciseId) => Future<void>.value();
+
+  @override
+  Future<void> ungroupFromSuperset(String exerciseId) => Future<void>.value();
 
   @override
   Future<void> addSet(String exerciseId) => Future<void>.value();

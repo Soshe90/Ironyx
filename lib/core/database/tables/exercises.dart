@@ -47,6 +47,10 @@ class ExercisesTable extends Table {
   /// Whether this is a bodyweight movement (affects default weight = 0).
   BoolColumn get isBodyweight => boolean().withDefault(const Constant(false))();
 
+  /// Whether sets are logged as a held duration (e.g. a plank) rather than
+  /// repetitions. Drives the reps-vs-duration input in the set logger.
+  BoolColumn get isTimeBased => boolean().withDefault(const Constant(false))();
+
   /// Seed version this row belongs to. Bumped when the seed file changes
   /// so the idempotent seeder can detect diffs.
   IntColumn get seedVersion => integer()();
@@ -156,6 +160,7 @@ abstract class Exercise with _$Exercise {
     Mechanic? mechanic,
     required bool isUnilateral,
     required bool isBodyweight,
+    required bool isTimeBased,
     required int seedVersion,
     required bool isCustom,
     required DateTime createdAt,
@@ -177,6 +182,7 @@ abstract class Exercise with _$Exercise {
             row.mechanic == null ? null : Mechanic.values.byName(row.mechanic!),
         isUnilateral: row.isUnilateral,
         isBodyweight: row.isBodyweight,
+        isTimeBased: row.isTimeBased,
         seedVersion: row.seedVersion,
         isCustom: row.isCustom,
         createdAt: row.createdAt,

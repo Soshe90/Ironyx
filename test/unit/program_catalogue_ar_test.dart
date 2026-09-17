@@ -1,9 +1,9 @@
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/program_dao.dart';
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/features/programs/domain/program_catalogue_ar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/program_dao.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/features/programs/domain/program_catalogue_ar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Guards the Arabic program-catalogue tables against seed drift.

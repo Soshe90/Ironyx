@@ -1,16 +1,16 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/features/auth/domain/auth_controller.dart';
-import 'package:fittrack/features/auth/domain/auth_service.dart';
-import 'package:fittrack/features/backup/domain/cloud_backup_controller.dart';
-import 'package:fittrack/features/backup/domain/cloud_backup_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/features/auth/domain/auth_controller.dart';
+import 'package:ironyx/features/auth/domain/auth_service.dart';
+import 'package:ironyx/features/backup/domain/cloud_backup_controller.dart';
+import 'package:ironyx/features/backup/domain/cloud_backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/fake_auth_service.dart';
@@ -145,7 +145,7 @@ void main() {
       database = AppDatabase.forTesting();
       cloud = FakeCloudBackupService();
       final Directory dir =
-          Directory.systemTemp.createTempSync('fittrack_backup_test');
+          Directory.systemTemp.createTempSync('ironyx_backup_test');
       snapshotDir = dir.path;
       addTearDown(() => dir.deleteSync(recursive: true));
       await seedCatalogue(database);
@@ -170,6 +170,41 @@ void main() {
       // point of reusing it is that restore already knows how to validate.
       expect(cloud.payload, contains('formatVersion'));
       expect(cloud.payload, contains('w1'));
+    });
+
+    test('backUpNow refuses when local data is linked to a different account',
+        () async {
+      // The scenario this guards: a deep link (email confirmation) can
+      // authenticate a different account than whichever one this device's
+      // profile was last linked to, bypassing the interactive sign-in/
+      // sign-up conflict dialog entirely (see `app.dart`'s
+      // `_linkIfNoConflict`). Uploading regardless would write this
+      // device's data into the wrong account's backup slot.
+      await seedWorkout(database, 'w1', 100);
+      container = await containerFor(
+        database,
+        user: const AuthUser(
+          id: 'user-2',
+          email: 'other@example.com',
+          isEmailConfirmed: true,
+        ),
+      );
+      await container.read(profileDaoProvider).linkAccount(
+            userId: 'user-1',
+            email: 'tester@example.com',
+          );
+
+      await expectLater(
+        container.read(cloudBackupControllerProvider.notifier).backUpNow(),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.accountMismatch,
+          ),
+        ),
+      );
+      expect(cloud.uploads, 0);
     });
 
     test('backUpNow completes even though nothing listens to the controller',

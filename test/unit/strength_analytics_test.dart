@@ -1,6 +1,6 @@
-import 'package:fittrack/core/database/daos/workout_dao.dart';
-import 'package:fittrack/features/progress/domain/strength_analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/features/progress/domain/strength_analytics.dart';
 
 void main() {
   test('fits a positive monthly e1RM trend', () {

@@ -10,10 +10,10 @@ the Flutter tool and must match your local SDK.
 ```bash
 flutter create \
   --org com.yourdomain \
-  --project-name fittrack \
+  --project-name ironyx \
   --platforms=android,ios,web \
   --description "Offline-first workout tracker" \
-  fittrack
+  ironyx
 ```
 
 > `--org` becomes the Android `applicationId` and the iOS bundle
@@ -23,8 +23,8 @@ flutter create \
 ## 2. Overlay this source on top
 
 ```bash
-cp -r fittrack-overlay/. fittrack/
-cd fittrack
+cp -r ironyx-overlay/. ironyx/
+cd ironyx
 rm -f lib/main.dart.bak test/widget_test.dart   # remove the counter sample
 ```
 

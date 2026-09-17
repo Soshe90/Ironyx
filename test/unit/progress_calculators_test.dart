@@ -1,5 +1,5 @@
-import 'package:fittrack/features/progress/domain/progress_calculators.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/features/progress/domain/progress_calculators.dart';
 
 void main() {
   group('epleyOneRepMax', () {

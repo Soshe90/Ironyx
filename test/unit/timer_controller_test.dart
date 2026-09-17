@@ -1,17 +1,19 @@
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/timer_dao.dart';
-import 'package:fittrack/core/l10n/l10n_provider.dart';
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/core/services/haptics_service.dart';
-import 'package:fittrack/core/services/notification_service.dart';
-import 'package:fittrack/core/services/timer_audio_service.dart';
-import 'package:fittrack/core/services/wakelock_service.dart';
-import 'package:fittrack/features/timer/domain/timer_controller.dart';
-import 'package:fittrack/features/timer/domain/timer_preset.dart';
-import 'package:fittrack/features/timer/domain/timer_settings_controller.dart';
-import 'package:fittrack/l10n/app_localizations_en.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/timer_dao.dart';
+import 'package:ironyx/core/l10n/l10n_provider.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/services/haptics_service.dart';
+import 'package:ironyx/core/services/notification_service.dart';
+import 'package:ironyx/core/services/timer_audio_service.dart';
+import 'package:ironyx/core/services/wakelock_service.dart';
+import 'package:ironyx/features/timer/domain/timer_controller.dart';
+import 'package:ironyx/features/timer/domain/timer_preset.dart';
+import 'package:ironyx/features/timer/domain/timer_settings_controller.dart';
+import 'package:ironyx/l10n/app_localizations_en.dart';
 import 'package:mocktail/mocktail.dart';
 
 /// Mock classes for services
@@ -213,6 +215,36 @@ void main() {
 
       verify(() => mockHaptics.impact()).called(1);
       verify(() => mockAudio.cue(TimerCue.transition)).called(1);
+    });
+
+    test(
+        'a session completed right as the controller is disposed is still '
+        'written', () async {
+      // Regression guard: `_finish()` used to bail out on `_disposed` before
+      // reaching the database write, so a session that completed in the same
+      // window as the screen closing was silently dropped. The DAO now has
+      // to be captured before any await that can run past disposal.
+      final Completer<void> wakelockDisabled = Completer<void>();
+      when(() => mockWakelock.disable())
+          .thenAnswer((_) => wakelockDisabled.future);
+
+      await controller.start(TimerPresets.tabata(), notificationGranted: true);
+      final Future<void> stopFuture = controller.stop();
+
+      // Dispose the whole container while `_finish()` is suspended awaiting
+      // `_wakelock.disable()` — the exact window the fix protects. `dispose`
+      // is idempotent, so `tearDown`'s own call below is a no-op after this.
+      container.dispose();
+      wakelockDisabled.complete();
+      await stopFuture;
+
+      final int sessionCount = await database
+          .customSelect(
+            'SELECT COUNT(*) AS count FROM timer_sessions_table',
+          )
+          .getSingle()
+          .then((row) => row.read<int>('count'));
+      expect(sessionCount, 1);
     });
   });
 }

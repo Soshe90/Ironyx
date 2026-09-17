@@ -1,7 +1,7 @@
-import 'package:fittrack/core/widgets/chart_gestures.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/widgets/chart_gestures.dart';
 
 /// Guards the workaround in `core/widgets/chart_gestures.dart`.
 ///

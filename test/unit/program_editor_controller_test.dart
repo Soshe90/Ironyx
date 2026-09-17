@@ -1,11 +1,11 @@
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/program_dao.dart';
-import 'package:fittrack/core/database/database_providers.dart';
-import 'package:fittrack/core/theme/app_spacing.dart';
-import 'package:fittrack/features/programs/domain/program_editor_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/program_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/theme/app_spacing.dart';
+import 'package:ironyx/features/programs/domain/program_editor_controller.dart';
 
 void main() {
   late AppDatabase database;
@@ -172,6 +172,94 @@ void main() {
     expect(detail!.days.single.exercises.single.targetReps, isNull);
   });
 
+  test('grouping consecutive exercises persists a shared superset id',
+      () async {
+    final notifier =
+        container.read(programEditorControllerProvider(null).notifier);
+    await container.read(programEditorControllerProvider(null).future);
+    notifier.setName('Superset Day');
+    notifier.addDay();
+    final dayId = container
+        .read(programEditorControllerProvider(null))
+        .value!
+        .days
+        .single
+        .id;
+    notifier.addExercise(dayId, exerciseId: 'bench', name: 'Bench Press');
+    notifier.addExercise(dayId, exerciseId: 'squat', name: 'Back Squat');
+    notifier.addExercise(dayId, exerciseId: 'bench', name: 'Bench Press');
+    final exercises = container
+        .read(programEditorControllerProvider(null))
+        .value!
+        .days
+        .single
+        .exercises;
+
+    // Group the second with the first, then extend the superset by grouping
+    // the third with the (now-grouped) second.
+    notifier.groupWithPrevious(dayId, exercises[1].id);
+    notifier.groupWithPrevious(dayId, exercises[2].id);
+
+    final grouped = container
+        .read(programEditorControllerProvider(null))
+        .value!
+        .days
+        .single
+        .exercises;
+    final groupId = grouped.first.supersetGroupId;
+    expect(groupId, isNotNull);
+    expect(grouped[1].supersetGroupId, groupId);
+    expect(grouped[2].supersetGroupId, groupId);
+
+    final programId = await notifier.save();
+    final detail =
+        await container.read(programDaoProvider).getDetail(programId);
+    final saved = detail!.days.single.exercises;
+    expect(saved, hasLength(3));
+    expect(saved[0].supersetGroupId, groupId);
+    expect(saved[1].supersetGroupId, groupId);
+    expect(saved[2].supersetGroupId, groupId);
+  });
+
+  test('ungrouping the last member of a two-exercise superset dissolves it',
+      () async {
+    final notifier =
+        container.read(programEditorControllerProvider(null).notifier);
+    await container.read(programEditorControllerProvider(null).future);
+    notifier.setName('Dissolve');
+    notifier.addDay();
+    final dayId = container
+        .read(programEditorControllerProvider(null))
+        .value!
+        .days
+        .single
+        .id;
+    notifier.addExercise(dayId, exerciseId: 'bench', name: 'Bench Press');
+    notifier.addExercise(dayId, exerciseId: 'squat', name: 'Back Squat');
+    final exercises = container
+        .read(programEditorControllerProvider(null))
+        .value!
+        .days
+        .single
+        .exercises;
+    notifier.groupWithPrevious(dayId, exercises[1].id);
+
+    notifier.ungroupFromSuperset(dayId, exercises[1].id);
+
+    final after = container
+        .read(programEditorControllerProvider(null))
+        .value!
+        .days
+        .single
+        .exercises;
+    expect(after[0].supersetGroupId, isNull);
+    expect(after[1].supersetGroupId, isNull);
+
+    // Flush the pending auto-save synchronously so the shared tearDown's
+    // `database.close()` can't race the dispose-time write.
+    await notifier.save();
+  });
+
   group('auto-save', () {
     test(
         'does not write a new program until it is structurally valid, '
@@ -250,8 +338,7 @@ void main() {
       expect(programs.single.name, 'Solo v2');
     });
 
-    test('disposing the provider flushes a pending valid auto-save',
-        () async {
+    test('disposing the provider flushes a pending valid auto-save', () async {
       container.listen(programEditorControllerProvider(null), (_, __) {});
       final notifier =
           container.read(programEditorControllerProvider(null).notifier);

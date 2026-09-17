@@ -54,10 +54,12 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
 
     final exercises = <WorkoutExercise>[];
     final Map<String, String> exerciseNames = {};
+    final Map<String, bool> exerciseIsTimeBased = {};
     for (final row in exerciseRows) {
       final we = row.readTable(workoutExercisesTable);
       exercises.add(WorkoutExercise.fromDrift(we));
       exerciseNames[we.id] = row.readTable(exercisesTable).name;
+      exerciseIsTimeBased[we.id] = row.readTable(exercisesTable).isTimeBased;
     }
 
     final Map<String, List<WorkoutSet>> setsByExercise = {};
@@ -74,6 +76,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       workout: Workout.fromDrift(workout),
       exercises: exercises,
       exerciseNames: exerciseNames,
+      exerciseIsTimeBased: exerciseIsTimeBased,
       setsByExercise: setsByExercise,
     );
   }
@@ -244,8 +247,8 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// with no data behind it, and choosing a real lift meant scrolling past
   /// hundreds of entries never performed.
   ///
-  /// Filters on the same completed / non-warm-up / reps-1-12 window as
-  /// [watchOneRMSeries], so the picker can never offer a lift whose chart
+  /// Filters on the same completed / non-warm-up / loaded / reps-1-12 window
+  /// as [watchOneRMSeries], so the picker can never offer a lift whose chart
   /// would then come up empty.
   Stream<List<LoggedExercise>> watchLoggedExercises() {
     return customSelect(
@@ -262,6 +265,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         AND ws.is_completed = 1
         AND ws.is_warmup = 0
         AND ws.reps BETWEEN 1 AND 12
+        AND ws.weight_kg > 0
       GROUP BY we.exercise_id, ex.name
       ORDER BY session_count DESC, ex.name ASC
       ''',
@@ -289,9 +293,14 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Attributes each set's volume to its exercise's *primary* muscle only,
   /// so a set is never double-counted across secondary/stabilizer roles.
   /// Returns groups ordered by volume descending. `since` is null for
-  /// all-time (no lower bound).
-  Stream<List<MuscleGroupVolume>> watchMuscleGroupVolume({DateTime? since}) {
+  /// all-time (no lower bound); [until] is an exclusive upper bound used for
+  /// comparing a selected range with the preceding range.
+  Stream<List<MuscleGroupVolume>> watchMuscleGroupVolume({
+    DateTime? since,
+    DateTime? until,
+  }) {
     final whereSince = since == null ? '' : 'AND w.started_at >= ?';
+    final whereUntil = until == null ? '' : 'AND w.started_at < ?';
 
     return customSelect(
       '''
@@ -309,15 +318,18 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         AND ws.is_completed = 1
         AND ws.is_warmup = 0
         $whereSince
+        $whereUntil
       GROUP BY m.id, m.display_name
       HAVING total_volume_kg > 0
       ORDER BY total_volume_kg DESC
       ''',
-      variables: since == null ? [] : [Variable.withDateTime(since)],
+      variables: [
+        if (since != null) Variable.withDateTime(since),
+        if (until != null) Variable.withDateTime(until),
+      ],
       readsFrom: {
         workoutSetsTable,
         workoutExercisesTable,
-        workoutsTable,
         exerciseMusclesTable,
         musclesTable,
       },
@@ -335,6 +347,13 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   }
 
   /// Session-level RPE and working volume, for fatigue/load comparisons.
+  ///
+  /// The RPE average covers the sets that carry one; the volume covers the
+  /// whole session. Filtering the rows to `rpe_times10 IS NOT NULL` did both
+  /// at once, so a session where one set was logged without an RPE reported
+  /// a volume lower than the same session's figure everywhere else in the
+  /// app. `AVG` already skips nulls, and `HAVING` keeps sessions with no RPE
+  /// at all out of the list.
   Stream<List<SessionRpe>> watchRpeAnalytics({DateTime? since}) {
     final sinceClause = since == null ? '' : 'AND w.started_at >= ?';
     return customSelect('''
@@ -345,8 +364,10 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
       JOIN workouts_table w ON w.id = we.workout_id
       WHERE w.ended_at IS NOT NULL AND ws.is_completed = 1
-        AND ws.is_warmup = 0 AND ws.rpe_times10 IS NOT NULL $sinceClause
-      GROUP BY w.id, w.started_at ORDER BY w.started_at ASC
+        AND ws.is_warmup = 0 $sinceClause
+      GROUP BY w.id, w.started_at
+      HAVING COUNT(ws.rpe_times10) > 0
+      ORDER BY w.started_at ASC
     ''',
             variables: [if (since != null) Variable.withDateTime(since)],
             readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable})
@@ -520,63 +541,74 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     });
   }
 
-  /// Best estimated 1RM per exercise in a window, next to the same figure
-  /// for the window immediately before it.
+  /// Best estimated 1RM per exercise's most recent session in the window,
+  /// next to the best estimate from any session before it.
   ///
   /// This is the "am I getting stronger" query. Volume answers how much
   /// work was done, which moves when you add a set and barely moves when
   /// you add weight — the opposite of what a progress readout needs.
   ///
-  /// [since] null means all-time, in which case there is no preceding
-  /// window and [StrengthChange.previousBestKg] is null for every row.
+  /// "Previous" originally meant the equal-length window immediately
+  /// before [since] — a comparison that structurally cannot exist unless
+  /// the user's training history is at least *twice* the selected range,
+  /// so a lift trained only within the last 30 days read "new" under every
+  /// range, including the 30-day one. It now means "any earlier qualifying
+  /// session for this lift", which needs only a second session to ever
+  /// have happened — inside the window or out — and agrees with the old
+  /// definition whenever that one already found data. [since] still bounds
+  /// which lifts are current enough to list, and `null` (all-time) lists
+  /// every lift ever trained; a lift can go from "new" to compared the
+  /// moment a second session exists, which — unlike before — now includes
+  /// the all-time range too.
   Stream<List<StrengthChange>> watchStrengthChange({DateTime? since}) {
-    // The preceding window of equal length: [since - len, since).
-    final DateTime? previousSince =
-        since?.subtract(DateTime.now().difference(since));
-
     // Epley, matching watchOneRMSeries and watchPersonalRecordWorkoutIds.
     // Reps are capped at 12 because the estimate degrades badly above it.
     const String oneRm =
         'ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END';
-
-    // Indexed placeholders (?1 current-window start, ?2 previous-window
-    // start) because each is referenced more than once; drift binds the
-    // `variables` list positionally.
-    final String currentCase =
-        since == null ? oneRm : 'CASE WHEN w.started_at >= ?1 THEN $oneRm END';
-    final String previousCase = since == null
-        ? 'NULL'
-        : 'CASE WHEN w.started_at >= ?2 AND w.started_at < ?1 '
-            'THEN $oneRm END';
-    final String lowerBound = since == null ? '' : 'AND w.started_at >= ?2';
+    final String sinceClause = since == null ? '' : 'WHERE started_at >= ?';
 
     return customSelect(
       '''
+      WITH qualifying AS (
+        SELECT
+          we.exercise_id as exercise_id,
+          w.started_at as started_at,
+          $oneRm as one_rm
+        FROM workout_sets_table ws
+        JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+        JOIN workouts_table w ON we.workout_id = w.id
+        WHERE w.ended_at IS NOT NULL
+          AND ws.is_completed = 1
+          AND ws.is_warmup = 0
+          AND ws.reps BETWEEN 1 AND 12
+          AND ws.weight_kg > 0
+      ),
+      latest AS (
+        SELECT exercise_id, MAX(started_at) as latest_started_at
+        FROM qualifying
+        $sinceClause
+        GROUP BY exercise_id
+      )
       SELECT
-        we.exercise_id as exercise_id,
+        l.exercise_id as exercise_id,
         ex.name as exercise_name,
-        MAX($currentCase) as current_best,
-        MAX($previousCase) as previous_best
-      FROM workout_sets_table ws
-      JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
-      JOIN workouts_table w ON we.workout_id = w.id
-      JOIN exercises_table ex ON ex.id = we.exercise_id
-      WHERE w.ended_at IS NOT NULL
-        AND ws.is_completed = 1
-        AND ws.is_warmup = 0
-        AND ws.reps BETWEEN 1 AND 12
-        $lowerBound
-      GROUP BY we.exercise_id, ex.name
-      HAVING current_best IS NOT NULL
+        MAX(CASE WHEN q.started_at = l.latest_started_at
+            THEN q.one_rm END) as current_best,
+        MAX(CASE WHEN q.started_at < l.latest_started_at
+            THEN q.one_rm END) as previous_best
+      FROM latest l
+      JOIN qualifying q ON q.exercise_id = l.exercise_id
+      JOIN exercises_table ex ON ex.id = l.exercise_id
+      GROUP BY l.exercise_id, ex.name
       ORDER BY current_best DESC
       ''',
-      variables: since == null
-          ? const []
-          : [
-              Variable.withDateTime(since),
-              Variable.withDateTime(previousSince!),
-            ],
-      readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable},
+      variables: since == null ? const [] : [Variable.withDateTime(since)],
+      readsFrom: {
+        workoutSetsTable,
+        workoutExercisesTable,
+        workoutsTable,
+        exercisesTable,
+      },
     ).watch().map(
           (rows) => rows
               .map(
@@ -624,6 +656,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           AND ws.is_completed = 1
           AND ws.is_warmup = 0
           AND ws.reps BETWEEN 1 AND 12
+          AND ws.weight_kg > 0
       )
       SELECT
         r.exercise_id as exercise_id,
@@ -645,6 +678,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
             AND ws2.is_completed = 1
             AND ws2.is_warmup = 0
             AND ws2.reps BETWEEN 1 AND 12
+            AND ws2.weight_kg > 0
             AND w2.started_at < (
               SELECT started_at FROM workouts_table WHERE id = ?1
             )
@@ -674,6 +708,13 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
 
   /// Per-session load for one lift. This separates heavier lifting from doing
   /// more total work in the same 1RM window.
+  ///
+  /// Counts *every* completed working set, unlike the 1RM queries. The
+  /// reps-1-12 window exists because Epley degrades above it — that is a
+  /// property of the estimate, not of the work done, and applying it here
+  /// dropped whole sessions off the chart: a 15-rep leg-extension day, or a
+  /// 20-rep calf day, simply vanished, so the remaining points read as the
+  /// user's entire history for that lift.
   Stream<List<SessionVolumeLoad>> watchSessionVolumeLoad(
     String exerciseId, {
     DateTime? since,
@@ -686,8 +727,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
       JOIN workouts_table w ON w.id = we.workout_id
       WHERE we.exercise_id = ? AND w.ended_at IS NOT NULL
-        AND ws.is_completed = 1 AND ws.is_warmup = 0
-        AND ws.reps BETWEEN 1 AND 12 $sinceClause
+        AND ws.is_completed = 1 AND ws.is_warmup = 0 $sinceClause
       GROUP BY w.id, w.started_at ORDER BY w.started_at ASC
     ''', variables: [
       Variable.withString(exerciseId),
@@ -711,6 +751,12 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// several sets of the same lift would otherwise plot as several points on
   /// the same date, showing intra-workout fatigue instead of a progress
   /// trend, and [limit] would cap the range at N sets rather than N sessions.
+  ///
+  /// Unloaded sets are excluded along with the reps window: Epley over a
+  /// zero external load estimates a 0 kg one-rep max, which plotted push-ups
+  /// as a flat zero line and listed them in the strength table at "0 kg".
+  /// Bodyweight progress is real but it is not a kilogram figure — every
+  /// 1RM-derived query here shares this filter so they cannot disagree.
   Stream<List<OneRMSeriesPoint>> watchOneRMSeries(
     String exerciseId, {
     int limit = 50,
@@ -738,6 +784,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           AND ws.is_completed = 1
           AND ws.is_warmup = 0
           AND ws.reps BETWEEN 1 AND 12
+          AND ws.weight_kg > 0
       )
       SELECT date, weight_kg, reps
       FROM ranked
@@ -786,7 +833,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Mirrors the same reps-1-12 estimation window as [watchOneRMSeries] and
   /// the same Epley formula as [isPersonalRecord] in `progress_calculators`,
   /// so a badge here always agrees with the 1RM chart.
-  Stream<Set<String>> watchPersonalRecordWorkoutIds() {
+  Stream<Set<String>> watchPersonalRecordWorkoutIds({DateTime? since}) {
     const String oneRm =
         'ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END';
 
@@ -815,11 +862,13 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           AND ws.is_completed = 1
           AND ws.is_warmup = 0
           AND ws.reps BETWEEN 1 AND 12
+          AND ws.weight_kg > 0
         GROUP BY w.id, we.exercise_id
       ),
       scored AS (
         SELECT
           workout_id,
+          started_at,
           best_one_rm,
           MAX(best_one_rm) OVER (
             PARTITION BY exercise_id ORDER BY started_at
@@ -830,7 +879,9 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       SELECT DISTINCT workout_id
       FROM scored
       WHERE best_one_rm > COALESCE(prior_best, 0)
+        ${since == null ? '' : 'AND started_at >= ?'}
       ''',
+      variables: since == null ? [] : [Variable.withDateTime(since)],
       readsFrom: {workoutsTable, workoutExercisesTable, workoutSetsTable},
     ).watch().map(
           (rows) => rows.map((r) => r.read<String>('workout_id')).toSet(),
@@ -853,6 +904,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           AND ws.is_warmup = 0
           AND w.ended_at IS NOT NULL
           AND ws.reps BETWEEN 1 AND 12
+          AND ws.weight_kg > 0
         GROUP BY we.exercise_id
         ORDER BY set_count DESC
         LIMIT 1
@@ -872,6 +924,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           AND ws.is_warmup = 0
           AND w.ended_at IS NOT NULL
           AND ws.reps BETWEEN 1 AND 12
+          AND ws.weight_kg > 0
         GROUP BY w.id, w.started_at
       )
       SELECT
@@ -974,9 +1027,10 @@ class StrengthChange {
   final String exerciseName;
   final double currentBestKg;
 
-  /// Null when there is nothing to compare against — either the range is
-  /// all-time, or the lift is new this window. A new lift is not a
-  /// regression, so callers must not treat null as zero.
+  /// Null when there is no earlier qualifying session for this lift at
+  /// all — it was first trained inside the current window, or has only
+  /// ever been trained once. A new lift is not a regression, so callers
+  /// must not treat null as zero.
   final double? previousBestKg;
 
   bool get isNew => previousBestKg == null;
@@ -1149,6 +1203,7 @@ class WorkoutWithDetails {
     required this.workout,
     required this.exercises,
     required this.exerciseNames,
+    required this.exerciseIsTimeBased,
     required this.setsByExercise,
   });
 
@@ -1157,5 +1212,9 @@ class WorkoutWithDetails {
 
   /// Exercise display name keyed by [WorkoutExercise.id] (not exerciseId).
   final Map<String, String> exerciseNames;
+
+  /// Whether the exercise logs a held duration instead of reps, keyed by
+  /// [WorkoutExercise.id] (not exerciseId).
+  final Map<String, bool> exerciseIsTimeBased;
   final Map<String, List<WorkoutSet>> setsByExercise;
 }

@@ -49,7 +49,13 @@ class ExerciseSeeder extends _$ExerciseSeeder {
       return;
     }
 
-    await _seedDatabase(seedData, currentVersion);
+    // One commit for the whole seed rather than one per DAO call (~2,400 of
+    // them across ~300 exercises) — each was its own implicit transaction
+    // with its own fsync, which is most of why a first launch is slow. This
+    // also makes the seed atomic: a crash or kill mid-seed now leaves the
+    // catalogue exactly as it was before, rather than partially populated.
+    final db = ref.read(appDatabaseProvider);
+    await db.transaction(() => _seedDatabase(seedData, currentVersion));
     await prefs.setInt(_seedVersionKey, currentVersion);
   }
 
@@ -136,6 +142,7 @@ class ExerciseSeeder extends _$ExerciseSeeder {
           : Value(json['mechanic'] as String),
       isUnilateral: Value(json['isUnilateral'] as bool? ?? false),
       isBodyweight: Value(json['isBodyweight'] as bool? ?? false),
+      isTimeBased: Value(json['isTimeBased'] as bool? ?? false),
       seedVersion: version,
     );
   }

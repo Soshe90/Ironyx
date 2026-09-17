@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:fittrack/features/auth/domain/auth_service.dart';
+import 'package:ironyx/features/auth/domain/auth_service.dart';
 
 /// In-memory [AuthService] for tests.
 ///

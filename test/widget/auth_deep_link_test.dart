@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/profile_dao.dart';
-import 'package:fittrack/core/database/tables/profiles.dart';
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/features/auth/domain/auth_controller.dart';
-import 'package:fittrack/features/auth/domain/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/profile_dao.dart';
+import 'package:ironyx/core/database/tables/profiles.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/features/auth/domain/auth_controller.dart';
+import 'package:ironyx/features/auth/domain/auth_service.dart';
 
 import '../helpers/fake_auth_service.dart';
 import '../helpers/pump_app.dart';

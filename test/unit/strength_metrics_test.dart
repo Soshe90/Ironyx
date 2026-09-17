@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart' hide isNull;
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/database/daos/workout_dao.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
 
 /// Exercises the two raw-SQL strength queries against a real database.
 ///
@@ -195,6 +195,67 @@ void main() {
           .first;
 
       expect(rows.map((r) => r.exerciseName), ['Back Squat', 'Bench Press']);
+    });
+
+    test(
+        'compares against an earlier session even when both fall inside '
+        'the window, once the window predates both', () async {
+      final DateTime now = DateTime.now();
+      // A brand-new lifter: every session for this exercise sits well
+      // inside any preset range, so there is never an equal-length window
+      // "before" the range to compare against — the old design read this
+      // as "new" under every range, including the shortest one.
+      await addWorkout(
+          'first', now.subtract(const Duration(days: 8)), [('bench', 60, 5)]);
+      await addWorkout('second', now.subtract(const Duration(days: 1)),
+          [('bench', 70, 5)]);
+
+      for (final Duration window in [
+        const Duration(days: 30),
+        const Duration(days: 90),
+        const Duration(days: 365),
+      ]) {
+        final rows =
+            await dao.watchStrengthChange(since: now.subtract(window)).first;
+        expect(rows.single.isNew, isFalse, reason: '$window window');
+        expect(rows.single.currentBestKg, closeTo(70 * (1 + 5 / 30), 0.001),
+            reason: '$window window');
+        expect(rows.single.previousBestKg, closeTo(60 * (1 + 5 / 30), 0.001),
+            reason: '$window window');
+      }
+    });
+
+    test('all-time compares against an earlier session when one exists',
+        () async {
+      await addWorkout('old', DateTime(2020, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('new', DateTime(2020, 2, 1), [('bench', 110, 5)]);
+
+      final rows = await dao.watchStrengthChange().first;
+
+      expect(rows.single.previousBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
+      expect(rows.single.change, closeTo(0.1, 0.001));
+    });
+
+    test(
+        'the comparison point is the latest qualifying session, not the '
+        'window\'s single heaviest set', () async {
+      final DateTime now = DateTime.now();
+      // A heavier one-off two weeks ago must not outrank last night's
+      // session as "current" — current means most recent, not heaviest.
+      await addWorkout(
+          'heavier_earlier',
+          now.subtract(const Duration(days: 14)),
+          [('bench', 120, 5)]);
+      await addWorkout('lighter_latest', now.subtract(const Duration(days: 1)),
+          [('bench', 90, 5)]);
+
+      final rows = await dao
+          .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
+          .first;
+
+      expect(rows.single.currentBestKg, closeTo(90 * (1 + 5 / 30), 0.001));
+      expect(rows.single.previousBestKg, closeTo(120 * (1 + 5 / 30), 0.001));
+      expect(rows.single.change, lessThan(0));
     });
   });
 

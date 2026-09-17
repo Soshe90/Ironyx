@@ -2,9 +2,20 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show gzip;
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import '../domain/cloud_backup_service.dart';
+
+/// Compresses and encodes [payload] for upload. Run via [compute] rather
+/// than called directly — gzipping a multi-hundred-KB JSON payload on every
+/// backup is real, non-yielding CPU work. `compute`, not `Isolate.run`:
+/// browsers have no real isolate primitive to spawn, so `compute` is
+/// Flutter's own cross-platform-safe wrapper for exactly this — a true
+/// background isolate on native platforms, running inline in place on web
+/// rather than failing there.
+String _gzipAndBase64Encode(String payload) =>
+    base64Encode(gzip.encode(utf8.encode(payload)));
 
 /// Supabase-backed implementation of [CloudBackupService].
 ///
@@ -58,7 +69,7 @@ class SupabaseCloudBackupService implements CloudBackupService {
         // envelope repeats the same keys on every one of several thousand
         // rows. That is the difference between a backup a tester will run
         // on mobile data and one they won't.
-        final String encoded = base64Encode(gzip.encode(utf8.encode(payload)));
+        final String encoded = await compute(_gzipAndBase64Encode, payload);
         final Map<String, dynamic> row = await _client
             .from(_table)
             .upsert(<String, dynamic>{

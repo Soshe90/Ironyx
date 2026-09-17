@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/profile_dao.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/profile_dao.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
 
 /// The v6 -> v7 migration adds `profiles_table` for accounts and personal
@@ -19,7 +19,7 @@ void main() {
   late File dbFile;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('fittrack_profiles_mig');
+    tempDir = await Directory.systemTemp.createTemp('ironyx_profiles_mig');
     dbFile = File('${tempDir.path}/test.sqlite');
   });
 

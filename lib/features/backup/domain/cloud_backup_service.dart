@@ -40,6 +40,16 @@ enum CloudBackupFailureKind {
   /// database schema.
   corrupt,
 
+  /// The local profile is still linked to a *different* account than the
+  /// one currently signed in — e.g. a deep link (email confirmation)
+  /// authenticated a different account than the one the interactive
+  /// sign-in/sign-up flow would have checked. Uploading now would write
+  /// this device's data into the newly-active account's backup slot, which
+  /// may not be who that data actually belongs to. Refused rather than
+  /// silently proceeding; the fix is to sign out and back in through the
+  /// normal flow, which resolves the conflict explicitly.
+  accountMismatch,
+
   unknown,
 }
 

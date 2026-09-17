@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/tables/exercises.dart';
+import '../../../core/error_reporting.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -67,6 +69,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     }
 
     final bool hasExercises = draft.exercises.isNotEmpty;
+    final List<String?> supersetLabelsForDraft = supersetLabels(
+      [for (final DraftExercise e in draft.exercises) e.supersetGroupId],
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -123,12 +128,21 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                     },
                     itemBuilder: (BuildContext context, int index) {
                       final DraftExercise exercise = draft.exercises[index];
+                      final bool isInSuperset =
+                          exercise.supersetGroupId != null;
+                      final bool canGroupWithPrevious = index > 0 &&
+                          !(exercise.supersetGroupId != null &&
+                              exercise.supersetGroupId ==
+                                  draft.exercises[index - 1].supersetGroupId);
                       return ExerciseDraftCard(
                         key: ValueKey<String>(exercise.id),
                         exercise: exercise,
                         controller: notifier,
                         position: index + 1,
                         dragHandleIndex: index,
+                        supersetLabel: supersetLabelsForDraft[index],
+                        isInSuperset: isInSuperset,
+                        canGroupWithPrevious: canGroupWithPrevious,
                       );
                     },
                   ),
@@ -171,7 +185,11 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       builder: (_) => const ExercisePickerSheet(),
     );
     if (exercise != null) {
-      await notifier.addExercise(exerciseId: exercise.id, name: exercise.name);
+      await notifier.addExercise(
+        exerciseId: exercise.id,
+        name: exercise.name,
+        isTimeBased: exercise.isTimeBased,
+      );
     }
   }
 
@@ -186,10 +204,14 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       final messenger = ScaffoldMessenger.of(context);
       context.pop();
       messenger.showSnackBar(SnackBar(content: Text(l10n.activeWorkoutSaved)));
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      // The raw exception goes to the reporter, never the screen — a SQLite
+      // constraint message means nothing to a user mid-workout, and could
+      // echo back data they typed.
+      reportError(error, stackTrace, context: 'ActiveWorkoutPage.save');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.activeWorkoutSaveFailed('$error'))),
+          SnackBar(content: Text(l10n.activeWorkoutSaveFailed)),
         );
       }
     }

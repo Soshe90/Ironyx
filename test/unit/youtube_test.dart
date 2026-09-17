@@ -1,5 +1,5 @@
-import 'package:fittrack/core/formatters/youtube.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/formatters/youtube.dart';
 
 void main() {
   group('Youtube.videoId / thumbnailUrl', () {

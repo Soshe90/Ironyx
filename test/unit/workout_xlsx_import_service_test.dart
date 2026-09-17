@@ -1,9 +1,9 @@
 import 'package:excel/excel.dart';
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/exercise_dao.dart';
-import 'package:fittrack/core/formatters/unit_formatters.dart';
-import 'package:fittrack/core/services/workout_xlsx_import_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/formatters/unit_formatters.dart';
+import 'package:ironyx/core/services/workout_xlsx_import_service.dart';
 
 void main() {
   const service = WorkoutXlsxImportService();
@@ -183,6 +183,46 @@ void main() {
   });
 
   test(
+      'a non-Latin exercise name still gets a sane slug when created as '
+      'custom', () async {
+    // `_normalize` strips everything outside `[a-z0-9]`, so an Arabic name
+    // normalizes to the empty string. The id suffix alone still keeps the
+    // slug unique, but without a fallback prefix it reads
+    // `-imported-a1b2c3d4` — a display bug, not a crash.
+    final database = AppDatabase.forTesting();
+
+    final result = WorkoutXlsxImportResult(
+      workouts: [
+        ImportedHistoricalWorkout(
+          date: DateTime.utc(2026, 1, 1),
+          exercises: [
+            ImportedHistoricalExercise(
+              exerciseId: null,
+              name: 'دفع الحديد',
+              sets: [
+                const ImportedHistoricalSet(reps: 10, weightKg: 80),
+              ],
+            ),
+          ],
+        ),
+      ],
+      unknownExercises: const ['دفع الحديد'],
+      totalSets: 1,
+    );
+
+    await service.apply(database, result);
+
+    final created = await database
+        .customSelect(
+          "SELECT slug FROM exercises_table WHERE name = 'دفع الحديد'",
+        )
+        .getSingleOrNull();
+    expect(created, isNotNull);
+    expect(created!.read<String>('slug'), startsWith('exercise-imported-'));
+    await database.close();
+  });
+
+  test(
       'importing the same workbook twice skips the duplicate the second '
       'time', () async {
     final database = AppDatabase.forTesting();
@@ -272,6 +312,37 @@ void main() {
         .getSingle()
         .then((row) => row.read<int>('count'));
     expect(finalCount, 1);
+    await database.close();
+  });
+
+  test('a blank trailing sheet does not abort the import of a populated one',
+      () async {
+    // Real workbooks commonly carry an extra blank tab (a template left over
+    // from copying a previous month, say). `parse()` used to index row 0 of
+    // every sheet unconditionally, so a sheet with no rows at all threw a
+    // RangeError that aborted the whole workbook — including sheets that
+    // parsed fine on their own.
+    final database = AppDatabase.forTesting();
+    await seedExercise(database, 'bench-press');
+
+    final excel = Excel.decodeBytes(
+      buildWorkbook(
+        date: DateTime.utc(2026, 1, 1),
+        exerciseName: 'bench-press',
+        reps: 5,
+        weight: 60,
+      ),
+    );
+    // `excel['name']` creates the sheet if it doesn't exist yet, with zero
+    // rows — exactly the shape a blank tab has.
+    excel['Blank Tab'];
+    final bytes = excel.encode()!;
+
+    final result =
+        await service.parse(bytes, database, sourceUnit: WeightUnit.kg);
+
+    expect(result.workouts, hasLength(1));
+    expect(result.totalSets, 1);
     await database.close();
   });
 }

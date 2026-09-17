@@ -14,6 +14,8 @@ extension CloudBackupFailureL10n on CloudBackupFailure {
         CloudBackupFailureKind.noBackupYet => l10n.backupErrorNoBackupYet,
         CloudBackupFailureKind.offline => l10n.backupErrorOffline,
         CloudBackupFailureKind.corrupt => l10n.backupErrorCorrupt,
+        CloudBackupFailureKind.accountMismatch =>
+          l10n.backupErrorAccountMismatch,
         CloudBackupFailureKind.unknown => l10n.backupErrorUnknown,
       };
 }

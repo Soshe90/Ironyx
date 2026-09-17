@@ -1,6 +1,6 @@
-import 'package:fittrack/features/timer/domain/timer_engine.dart';
-import 'package:fittrack/features/timer/domain/timer_preset.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/features/timer/domain/timer_engine.dart';
+import 'package:ironyx/features/timer/domain/timer_preset.dart';
 
 void main() {
   group('TimerEngine', () {

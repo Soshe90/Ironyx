@@ -1,4 +1,4 @@
-import 'package:fittrack/core/providers.dart';
+import 'package:ironyx/core/providers.dart';
 
 /// Overrides that stop the real seeders from touching a test's database.
 ///

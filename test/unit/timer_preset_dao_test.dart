@@ -1,7 +1,7 @@
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/database/daos/timer_preset_dao.dart';
-import 'package:fittrack/features/timer/domain/timer_preset.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/database/daos/timer_preset_dao.dart';
+import 'package:ironyx/features/timer/domain/timer_preset.dart';
 
 void main() {
   late AppDatabase database;

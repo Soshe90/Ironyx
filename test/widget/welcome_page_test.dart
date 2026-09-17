@@ -1,11 +1,11 @@
-import 'package:fittrack/app.dart';
-import 'package:fittrack/core/database/app_database.dart';
-import 'package:fittrack/core/providers.dart';
-import 'package:fittrack/core/router/routes.dart';
-import 'package:fittrack/features/auth/domain/auth_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/app.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/features/auth/domain/auth_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/fake_auth_service.dart';
@@ -58,7 +58,7 @@ void main() {
       (tester) async {
     await pumpWelcome(tester);
 
-    expect(find.text('FitTrack'), findsOneWidget);
+    expect(find.text('Ironyx'), findsOneWidget);
     expect(find.text('Your training, tracked.'), findsOneWidget);
     expect(find.text('Log every set and rep'), findsOneWidget);
     expect(find.text('Charts that show progress'), findsOneWidget);
@@ -131,7 +131,7 @@ void main() {
     await disposeApp(tester);
   });
 
-  /// Boots the real [FitTrackApp] with **no** injected router, so that
+  /// Boots the real [IronyxApp] with **no** injected router, so that
   /// `app.dart` picks the launch location from the persisted flag itself.
   /// The other tests supply a router and would skip that decision entirely.
   Future<void> pumpRealLaunch(
@@ -153,7 +153,7 @@ void main() {
           appDatabaseProvider.overrideWithValue(database),
           authServiceProvider.overrideWithValue(auth),
         ],
-        child: const FitTrackApp(),
+        child: const IronyxApp(),
       ),
     );
     await tester.pump(const Duration(seconds: 2));

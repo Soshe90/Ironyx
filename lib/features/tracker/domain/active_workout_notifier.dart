@@ -75,6 +75,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
             id: _uuid.v4(),
             exerciseId: input.exerciseId,
             name: input.name,
+            isTimeBased: input.isTimeBased,
+            supersetGroupId: input.supersetGroupId,
             sets: [
               for (var i = 0;
                   i < (input.targetSets < 1 ? 1 : input.targetSets);
@@ -131,6 +133,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
           exerciseId: exercise.exerciseId,
           orderIndex: exerciseIndex,
           isWarmup: Value(exercise.isWarmup),
+          supersetGroupId: Value(exercise.supersetGroupId),
         ),
       );
       for (var setIndex = 0; setIndex < exercise.sets.length; setIndex++) {
@@ -144,6 +147,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
             reps: set.reps,
             rpeTimes10: Value(set.rpeTimes10),
             restSeconds: Value(set.restSeconds),
+            durationSeconds: Value(set.durationSeconds),
             isCompleted: Value(set.isCompleted),
             isWarmup: Value(set.isWarmup || exercise.isWarmup),
           ),
@@ -173,6 +177,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
   Future<void> addExercise({
     required String exerciseId,
     required String name,
+    bool isTimeBased = false,
   }) async {
     final draft = state;
     if (draft == null) return;
@@ -183,6 +188,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
           id: _uuid.v4(),
           exerciseId: exerciseId,
           name: name,
+          isTimeBased: isTimeBased,
           sets: [DraftSet(id: _uuid.v4())],
         ),
       ],
@@ -214,6 +220,61 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
         newIndex > exercises.length ? exercises.length : newIndex;
     exercises.insert(targetIndex, exercise);
     state = draft.copyWith(exercises: exercises);
+    await _persist();
+  }
+
+  @override
+  Future<void> groupWithPrevious(String exerciseId) async {
+    final draft = state;
+    if (draft == null) return;
+    final index = draft.exercises.indexWhere((e) => e.id == exerciseId);
+    if (index <= 0) return;
+    final previous = draft.exercises[index - 1];
+    final current = draft.exercises[index];
+    if (previous.supersetGroupId != null &&
+        previous.supersetGroupId == current.supersetGroupId) {
+      return;
+    }
+    final groupId = previous.supersetGroupId ?? _uuid.v4();
+    state = draft.copyWith(
+      exercises: [
+        for (final exercise in draft.exercises)
+          if (exercise.id == previous.id)
+            exercise.copyWith(supersetGroupId: groupId)
+          else if (exercise.id == current.id)
+            exercise.copyWith(supersetGroupId: groupId)
+          else
+            exercise,
+      ],
+    );
+    await _persist();
+  }
+
+  @override
+  Future<void> ungroupFromSuperset(String exerciseId) async {
+    final draft = state;
+    if (draft == null) return;
+    final index = draft.exercises.indexWhere((e) => e.id == exerciseId);
+    if (index < 0) return;
+    final current = draft.exercises[index];
+    if (current.supersetGroupId == null) return;
+    final groupId = current.supersetGroupId!;
+    final withoutCurrent = draft.exercises
+        .map((e) => e.id == current.id ? e.copyWith(supersetGroupId: null) : e)
+        .toList();
+    final remaining =
+        withoutCurrent.where((e) => e.supersetGroupId == groupId).toList();
+    state = draft.copyWith(
+      exercises: remaining.length != 1
+          ? withoutCurrent
+          : [
+              for (final exercise in withoutCurrent)
+                if (exercise.supersetGroupId == groupId)
+                  exercise.copyWith(supersetGroupId: null)
+                else
+                  exercise,
+            ],
+    );
     await _persist();
   }
 
@@ -259,6 +320,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
     bool? isWarmup,
     int? rpeTimes10,
     int? restSeconds,
+    int? durationSeconds,
   }) async {
     await _updateExercise(
       exerciseId,
@@ -272,6 +334,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
             isWarmup: isWarmup ?? set.isWarmup,
             rpeTimes10: rpeTimes10 ?? set.rpeTimes10,
             restSeconds: restSeconds ?? set.restSeconds,
+            durationSeconds: durationSeconds ?? set.durationSeconds,
           );
         }).toList(),
       ),
@@ -318,6 +381,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
                 'exerciseId': exercise.exerciseId,
                 'name': exercise.name,
                 'isWarmup': exercise.isWarmup,
+                'isTimeBased': exercise.isTimeBased,
+                'supersetGroupId': exercise.supersetGroupId,
                 'sets': exercise.sets
                     .map(
                       (set) => {
@@ -328,6 +393,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
                         'isWarmup': set.isWarmup,
                         'rpeTimes10': set.rpeTimes10,
                         'restSeconds': set.restSeconds,
+                        'durationSeconds': set.durationSeconds,
                       },
                     )
                     .toList(),
@@ -346,6 +412,8 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
             exerciseId: exercise['exerciseId'] as String,
             name: exercise['name'] as String,
             isWarmup: exercise['isWarmup'] as bool? ?? false,
+            isTimeBased: exercise['isTimeBased'] as bool? ?? false,
+            supersetGroupId: exercise['supersetGroupId'] as String?,
             sets: (exercise['sets'] as List<dynamic>).map((item) {
               final set = item as Map<String, dynamic>;
               return DraftSet(
@@ -356,6 +424,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
                 isWarmup: set['isWarmup'] as bool? ?? false,
                 rpeTimes10: set['rpeTimes10'] as int?,
                 restSeconds: set['restSeconds'] as int?,
+                durationSeconds: set['durationSeconds'] as int?,
               );
             }).toList(),
           );

@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:fittrack/features/library/domain/exercise_catalogue_ar.dart';
-import 'package:fittrack/features/library/domain/exercise_catalogue_l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/features/library/domain/exercise_catalogue_ar.dart';
+import 'package:ironyx/features/library/domain/exercise_catalogue_l10n.dart';
 
 /// Guards the Arabic catalogue tables against seed drift.
 ///
