@@ -9,6 +9,7 @@ pubspec_overrides.yaml
 # Android (packages/flutter_tools/templates/app/android.tmpl/.gitignore)
 android/gradle-wrapper.jar
 android/.gradle/
+android/.kotlin/
 android/captures/
 android/gradlew
 android/gradlew.bat
@@ -89,6 +90,19 @@ coverage/
 # Supabase credentials for --dart-define-from-file (ADR-8).
 # The anon key is public by design, but the project URL still stays out of git.
 supabase.json
+
+# Local secrets, databases, and user exports. Never commit personal workout
+# history, account tokens, or credentials produced during local testing.
+.env
+.env.*
+*.sqlite
+*.sqlite3
+*.db
+*_backup_*.json
+*_export_*.csv
+*.pem
+*.p12
+*.mobileprovision
 
 # Upstream exercise dump + original images, re-downloaded on demand by
 # scripts/build_exercise_seed.py. Large, and reproducible from the network.
