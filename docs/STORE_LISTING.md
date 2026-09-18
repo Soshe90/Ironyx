@@ -44,9 +44,9 @@ not vanity stats, the numbers that tell you whether the program is
 working.
 
 PRIVATE BY DEFAULT
-Your training log is not a product. Ironyx doesn't run ads, doesn't run
-analytics, and doesn't share or sell your data. There is nothing to opt
-out of, because there is nothing collecting it.
+Your training log is not a product. Ironyx does not run ads or analytics,
+and your local training log stays on your device unless you explicitly
+enable cloud backup. Ironyx does not sell your data.
 
 CLOUD BACKUP, ON YOUR TERMS
 Create a free account only if you want an optional, one-tap backup —
