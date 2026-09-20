@@ -20,8 +20,12 @@ Checked today, not copied from old notes:
   timer gap, and an untested accounts backend. Nothing else in the old plan
   blocks a first release.
 - Not on this machine: `supabase.json`, `android/key.properties`, the upload
-  keystore. The original key is lost (confirmed 2026-09-20), so a new upload
-  key is safe: nothing was ever uploaded.
+  keystore. **Update 2026-09-20:** the app was originally built on a Linux
+  server, and these files are gitignored, so they were never pushed and may
+  still be there. The earlier note that the original key is lost only meant
+  it is missing from this Windows machine; look on the server before
+  generating anything new. (A new key is still safe if it is truly gone:
+  nothing was ever uploaded to Play.)
 - No physical device is attached; the only Android target is the `atco_test`
   emulator. Everything timer- and notification-related has been seen on an
   emulator only.
@@ -63,13 +67,26 @@ approval before I touch code.
 
 Lead-time items first; they cost calendar time, not effort.
 
+- [ ] **me** **A0** On the Linux server, in the Ironyx checkout: run
+      `git status` and `git log origin/main..HEAD --oneline`. Anything listed
+      is work that GitHub (and therefore this machine) does not have; push it
+      or tell me before we build on this checkout. Then copy the three
+      gitignored things across, from a PowerShell in `F:\Ironyx` (not
+      `F:\...` as the target: `scp` reads the drive letter as a host name):
+      `scp USER@SERVER:~/Ironyx/supabase.json .` and
+      `scp USER@SERVER:~/Ironyx/android/upload-keystore.jks android/` and
+      `scp USER@SERVER:~/Ironyx/android/key.properties android/`
+      (adjust the remote path). These carry passwords, so copy them with `scp`
+      rather than pasting them into a chat. If the keystore is found, A3 is
+      unnecessary; just back it up.
 - [ ] **me** **A1** Create the Play developer account ($25) and start identity
       verification. This can take days. Everything in Day 2 that uses the
       Console waits on it.
 - [ ] **me** **A2** Line up **15+ testers** with Gmail addresses (12 must stay
       opted in for 14 days; 3+ spare for drop-outs). Ask today so they can opt
       in on Day 2.
-- [ ] **me + dev** **A3** Generate the new upload key: `keytool` from
+- [ ] **me + dev** **A3** Only if A0 did not find the original keystore:
+      generate a new upload key: `keytool` from
       `C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot\bin` (not on PATH),
       recipe in `SETUP.md` §5. You choose the passwords; they stay in the
       gitignored `android/key.properties`. **Back up `upload-keystore.jks` and
@@ -78,19 +95,26 @@ Lead-time items first; they cost calendar time, not effort.
 
 Code and configuration:
 
-- [ ] **dev** **C1** Timer end notification. `_rescheduleBoundaries` schedules
-      only phase *starts* and skips the last phase's end, and
-      `NotificationService.showCompletion` is never called. A locked phone
-      therefore goes silent when the final interval ends, the one failure in
-      the core loop. Schedule a "Timer complete" notification at the total end,
-      cancel it on stop/finish, add English and Arabic strings, and a test in
-      `test/unit/timer_controller_test.dart`. About 1.5 h.
-- [ ] **dev** **C2** Host the privacy policy and a delete-account page. The
-      repo is public, so GitHub Pages is free: add minimal front matter to
-      `docs/PRIVACY_POLICY.md`, add `docs/delete-account.md` (in-app path plus
-      the email fallback), then **me**: Settings → Pages → `main` / `/docs`.
-      URLs become `https://soshe90.github.io/Ironyx/PRIVACY_POLICY.html` and
-      `.../delete-account.html`. Play needs both URLs. About 30 min.
+- [x] **dev** **C1** Timer end notification (done 2026-09-20, uncommitted).
+      `_rescheduleBoundaries` scheduled only phase *starts*, so a locked phone
+      went silent when the final interval ended. It now also schedules a
+      "Timer complete" notification for the total end through a new
+      `NotificationService.scheduleCompletion` (own id, the existing
+      `timer_complete` channel), with English and Arabic strings. It is
+      rescheduled on resume and skip, cancelled by `cancelAll` on pause and
+      finish, and skipped without notification permission. Five new tests in
+      `test/unit/timer_controller_test.dart`; four fail against the old
+      controller. Analyze clean. **Still emulator/device-unverified:** the
+      alarm actually firing while backgrounded is part of C6.
+- [ ] **dev + me** **C2** Host the privacy policy and a delete-account page.
+      **dev, done 2026-09-20 (uncommitted):** `docs/_config.yml` (theme, and
+      hides the internal docs), `docs/index.md`, `docs/delete-account.md`, and
+      front matter on `docs/PRIVACY_POLICY.md`. **me, still to do, after the
+      commit is pushed:** repo Settings → Pages → Deploy from branch → `main`
+      → `/docs`. URLs then become `https://soshe90.github.io/Ironyx/privacy/`
+      and `https://soshe90.github.io/Ironyx/delete-account/`. Open both in a
+      browser before pasting them into Play Console; I could not render Jekyll
+      locally, so the first load is the real test.
 - [ ] **me** **C3** Supabase project, all four:
       1. Confirm the `backups` table and `delete_my_account()` exist (run
          `docs/cloud_backup_setup.sql` if unsure).
@@ -104,6 +128,11 @@ Code and configuration:
          Source: [Supabase SMTP docs](https://supabase.com/docs/guides/auth/auth-smtp).
       4. Copy the project URL and anon key into `supabase.json` (see
          `supabase.example.json`; gitignored).
+      *2026-09-20: the account holder says the Supabase project is already
+      linked to the app. No `supabase.json` exists anywhere on this machine,
+      so step 4 is not done, and steps 1–3 are unverified until it is: with
+      the URL and anon key I can check the public auth settings and the
+      `backups` table over the API, but not the SMTP or redirect settings.*
       Note: the privacy policy currently names Supabase as the only third
       party. Gmail SMTP sends mail from your own address, so add one line about
       the email provider before submitting Data Safety.

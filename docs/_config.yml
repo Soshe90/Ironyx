@@ -1,0 +1,15 @@
+# GitHub Pages site for the public policy pages (Settings -> Pages -> main / docs).
+# Only pages with front matter are rendered; everything else in docs/ is
+# internal and is excluded so it is not published as raw files.
+title: Ironyx
+description: Offline-first workout tracker
+theme: jekyll-theme-minimal
+exclude:
+  - ADR.md
+  - M0-SETUP.md
+  - STORE_LISTING.md
+  - build-plan.md
+  - cloud_backup_setup.sql
+  - v2-ideas.md
+  - widgets.md
+  - archive

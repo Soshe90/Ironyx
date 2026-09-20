@@ -1,3 +1,7 @@
+---
+title: Privacy Policy
+permalink: /privacy/
+---
 # Privacy Policy — Ironyx
 
 **Last updated: September 20, 2026**
