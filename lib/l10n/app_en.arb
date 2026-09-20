@@ -539,6 +539,11 @@
       "phase": { "type": "String" }
     }
   },
+  "timerCompletionNotificationTitle": "Timer complete",
+  "@timerCompletionNotificationTitle": {
+    "description": "Title of the notification posted when the last phase of a timer ends while the app is in the background."
+  },
+  "timerCompletionNotificationBody": "Your session is finished.",
   "timerEndTooltip": "End timer",
   "timerSkipTooltip": "Skip interval",
   "timerPauseSemantic": "Pause timer",

@@ -29,6 +29,17 @@ abstract interface class NotificationService {
     required String body,
   });
 
+  /// Schedules the session-complete notification for when the timer's final
+  /// phase ends. [scheduleBoundary] announces the start of each following
+  /// phase, so on its own the last phase's end would be silent: a locked
+  /// phone would say nothing at exactly the moment the session finishes.
+  /// Implementations must be best-effort and never throw.
+  Future<void> scheduleCompletion({
+    required DateTime at,
+    required String title,
+    required String body,
+  });
+
   /// Cancels any pending timer notifications (called when a session ends or
   /// the app returns to the foreground).
   Future<void> cancelAll();
@@ -57,6 +68,13 @@ class NoopNotificationService implements NotificationService {
   }) async {}
 
   @override
+  Future<void> scheduleCompletion({
+    required DateTime at,
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
   Future<void> cancelAll() async {}
 }
 
@@ -66,6 +84,11 @@ class PlatformNotificationService implements NotificationService {
     _plugin = FlutterLocalNotificationsPlugin();
     _initialization = _initialize();
   }
+
+  /// Fixed id for the session-complete notification. The controller numbers
+  /// boundary notifications from 10000, so this stays clear of them, and a
+  /// reschedule replaces the pending one instead of stacking a second.
+  static const int _completionNotificationId = 20000;
 
   late final FlutterLocalNotificationsPlugin _plugin;
   late final Future<void> _initialization;
@@ -201,6 +224,56 @@ class PlatformNotificationService implements NotificationService {
         presentSound: true,
       ),
     );
+    await _scheduleAt(
+      id: id,
+      at: at,
+      title: title,
+      body: body,
+      details: details,
+    );
+  }
+
+  @override
+  Future<void> scheduleCompletion({
+    required DateTime at,
+    required String title,
+    required String body,
+  }) async {
+    await _initialization;
+    if (kIsWeb || !_initialized) return;
+    // Same channel as `showCompletion`, so the user sees one "Timer
+    // completion" switch in system settings rather than two.
+    const NotificationDetails details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'timer_complete',
+        'Timer completion',
+        channelDescription: 'Shown when an interval timer finishes',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      // See the matching comment in `showCompletion`.
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+    await _scheduleAt(
+      id: _completionNotificationId,
+      at: at,
+      title: title,
+      body: body,
+      details: details,
+    );
+  }
+
+  Future<void> _scheduleAt({
+    required int id,
+    required DateTime at,
+    required String title,
+    required String body,
+    required NotificationDetails details,
+  }) async {
     try {
       await _plugin.zonedSchedule(
         id,

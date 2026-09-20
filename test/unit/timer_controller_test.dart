@@ -61,6 +61,11 @@ void main() {
             title: any(named: 'title'),
             body: any(named: 'body'),
           )).thenAnswer((_) async {});
+      when(() => mockNotifications.scheduleCompletion(
+            at: any(named: 'at'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+          )).thenAnswer((_) async {});
       when(() => mockAudio.preload()).thenAnswer((_) async {});
       when(() => mockAudio.cue(any())).thenAnswer((_) async {});
       when(() => mockAudio.dispose()).thenAnswer((_) async {});
@@ -307,6 +312,107 @@ void main() {
         verifyNever(
           () => mockNotifications.scheduleBoundary(
             id: any(named: 'id'),
+            at: any(named: 'at'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+          ),
+        );
+      });
+    });
+
+    group('completion notification', () {
+      const TimerPreset threePhases = TimerPreset(
+        id: 'test',
+        name: 'Test',
+        description: 'Test',
+        phases: [
+          TimerPhase(type: TimerPhaseType.work, durationSeconds: 20),
+          TimerPhase(type: TimerPhaseType.rest, durationSeconds: 10),
+          TimerPhase(type: TimerPhaseType.work, durationSeconds: 20),
+        ],
+      );
+
+      /// Every `scheduleCompletion` call since the last interaction reset,
+      /// as (at, title, body).
+      List<({DateTime at, String title, String body})> scheduled() {
+        final List<dynamic> captured = verify(
+          () => mockNotifications.scheduleCompletion(
+            at: captureAny(named: 'at'),
+            title: captureAny(named: 'title'),
+            body: captureAny(named: 'body'),
+          ),
+        ).captured;
+        return [
+          for (var i = 0; i < captured.length; i += 3)
+            (
+              at: captured[i] as DateTime,
+              title: captured[i + 1] as String,
+              body: captured[i + 2] as String,
+            ),
+        ];
+      }
+
+      test('is scheduled for the end of the last phase', () async {
+        final DateTime before = DateTime.now().toUtc();
+        await controller.start(threePhases, notificationGranted: true);
+
+        // 20 + 10 + 20 seconds. The last phase's end is not a boundary,
+        // so `scheduleBoundary` never announces it; this does.
+        final calls = scheduled();
+        expect(calls, hasLength(1));
+        expect(calls.single.title, 'Timer complete');
+        expect(calls.single.body, 'Your session is finished.');
+        expect(
+          calls.single.at.difference(before).inMilliseconds,
+          inInclusiveRange(49000, 51000),
+        );
+      });
+
+      test('a single-phase timer still announces its end', () async {
+        const TimerPreset single = TimerPreset(
+          id: 'single',
+          name: 'Single',
+          description: 'Single',
+          phases: [TimerPhase(type: TimerPhaseType.work, durationSeconds: 60)],
+        );
+        final DateTime before = DateTime.now().toUtc();
+        await controller.start(single, notificationGranted: true);
+
+        expect(
+          scheduled().single.at.difference(before).inMilliseconds,
+          inInclusiveRange(59000, 61000),
+        );
+      });
+
+      test('is rescheduled from the new position after a skip', () async {
+        await controller.start(threePhases, notificationGranted: true);
+        clearInteractions(mockNotifications);
+        final DateTime before = DateTime.now().toUtc();
+
+        await controller.skip();
+
+        // Skipping the first 20 s phase leaves 10 + 20 s.
+        expect(
+          scheduled().single.at.difference(before).inMilliseconds,
+          inInclusiveRange(29000, 31000),
+        );
+      });
+
+      test('resume schedules it again', () async {
+        await controller.start(threePhases, notificationGranted: true);
+        await controller.pause();
+        clearInteractions(mockNotifications);
+
+        await controller.resume();
+
+        expect(scheduled(), hasLength(1));
+      });
+
+      test('nothing is scheduled without notification permission', () async {
+        await controller.start(threePhases, notificationGranted: false);
+
+        verifyNever(
+          () => mockNotifications.scheduleCompletion(
             at: any(named: 'at'),
             title: any(named: 'title'),
             body: any(named: 'body'),

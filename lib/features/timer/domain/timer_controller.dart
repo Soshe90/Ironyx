@@ -279,6 +279,19 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
         body: l10n.timerNotificationBody(nextPhase.type.label(l10n)),
       );
     }
+
+    // The loop above announces each phase that *starts*, so the last
+    // phase's end has no boundary of its own. Without this, a locked phone
+    // is silent exactly when the session finishes.
+    final Duration untilEnd =
+        Duration(seconds: _preset.totalDurationSeconds) - snapshot.elapsed;
+    if (untilEnd > Duration.zero) {
+      await notifications.scheduleCompletion(
+        at: now.add(untilEnd),
+        title: l10n.timerCompletionNotificationTitle,
+        body: l10n.timerCompletionNotificationBody,
+      );
+    }
   }
 
   void _dispose() {

@@ -529,6 +529,8 @@
       "phase": { "type": "String" }
     }
   },
+  "timerCompletionNotificationTitle": "اكتمل المؤقّت",
+  "timerCompletionNotificationBody": "انتهت جلستك.",
   "timerEndTooltip": "إنهاء المؤقّت",
   "timerSkipTooltip": "تخطّي الفترة",
   "timerPauseSemantic": "إيقاف المؤقّت مؤقتًا",
