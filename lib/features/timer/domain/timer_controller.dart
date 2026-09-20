@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/daos/timer_dao.dart';
+import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/l10n/l10n_provider.dart';
 import '../../../core/providers.dart';
@@ -134,7 +135,7 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
   }
 
   void _maybeCountdown(TimerSnapshot snapshot) {
-    final int second = snapshot.remaining.inSeconds;
+    final int second = UnitFormatters.secondsRoundedUp(snapshot.remaining);
     if (second > 0 && second <= 3 && second != _lastCountdownSecond) {
       _lastCountdownSecond = second;
       if (ref.read(timerSettingsControllerProvider).hapticsEnabled) {

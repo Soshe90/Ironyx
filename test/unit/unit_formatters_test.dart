@@ -77,6 +77,29 @@ void main() {
         expect(UnitFormatters.duration(const Duration(hours: 2)), '2:00:00');
       });
 
+      test('durationRoundedUp keeps live countdowns ahead of zero', () {
+        expect(
+          UnitFormatters.durationRoundedUp(
+            const Duration(seconds: 3, milliseconds: 900),
+          ),
+          '00:04',
+        );
+        expect(
+          UnitFormatters.secondsRoundedUp(
+            const Duration(seconds: 1, milliseconds: 1),
+          ),
+          2,
+        );
+        expect(
+          UnitFormatters.durationRoundedUp(const Duration(milliseconds: 1)),
+          '00:01',
+        );
+        expect(
+          UnitFormatters.durationRoundedUp(const Duration(milliseconds: -1)),
+          '00:00',
+        );
+      });
+
       test('durationShort formats compact', () {
         expect(
             UnitFormatters.durationShort(const Duration(minutes: 48)), '48m');

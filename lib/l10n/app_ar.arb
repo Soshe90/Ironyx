@@ -664,6 +664,8 @@
   "dashboardEstOneRm": "أقصى تكرار مُقدَّر",
   "dashboardLogALiftToSeeThis": "سجّل رفعة لعرض هذا",
   "dashboardBodyWeight": "وزن الجسم",
+  "dashboardAverageDuration": "متوسط المدة",
+  "dashboardAverageDurationEmpty": "أكمل تمرينًا لعرض هذا",
   "dashboardNotRecorded": "غير مسجَّل",
   "dashboardRowSemantic": "{title}، {value}، {caption}",
   "@dashboardRowSemantic": {

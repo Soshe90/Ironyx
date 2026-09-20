@@ -57,6 +57,21 @@ abstract final class UnitFormatters {
     return hours > 0 ? '$hours:$mm:$ss' : '$mm:$ss';
   }
 
+  /// Formats a live countdown by rounding up to the next whole second.
+  ///
+  /// A wall-clock timer can have 3.9 seconds remaining between ticks. Using
+  /// [duration] would display `00:03` even though the user still has almost
+  /// four seconds; rounding up keeps the countdown and its cue at 3, 2, 1.
+  static String durationRoundedUp(Duration d) {
+    final int seconds = d.isNegative ? 0 : (d.inMilliseconds + 999) ~/ 1000;
+    return duration(Duration(seconds: seconds));
+  }
+
+  /// Whole seconds remaining in a live countdown, rounded up at sub-second
+  /// boundaries. Negative durations are already complete.
+  static int secondsRoundedUp(Duration d) =>
+      d.isNegative ? 0 : (d.inMilliseconds + 999) ~/ 1000;
+
   /// Compact duration for summaries: `48m`, `1h 12m`.
   static String durationShort(Duration d) {
     final int hours = d.inHours;

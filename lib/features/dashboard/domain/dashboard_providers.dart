@@ -43,6 +43,11 @@ Stream<MostLoggedOneRM?> dashboardMostLoggedOneRM(Ref ref) =>
 Stream<BodyMetrics?> dashboardLatestBodyMetrics(Ref ref) =>
     ref.watch(bodyMetricsDaoProvider).watchLatest();
 
+/// Average duration of completed workouts, for the dashboard progress cards.
+@riverpod
+Stream<double?> dashboardAverageWorkoutDuration(Ref ref) =>
+    ref.watch(workoutDaoProvider).watchAverageDurationSeconds();
+
 /// Profile settings used by dashboard targets.
 @riverpod
 Stream<Profile?> dashboardProfile(Ref ref) =>

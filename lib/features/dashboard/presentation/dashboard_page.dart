@@ -696,6 +696,8 @@ class _ProgressSection extends StatelessWidget {
             Expanded(child: _BodyWeightCard()),
           ],
         ),
+        const SizedBox(height: AppSpacing.md),
+        const _AverageDurationCard(),
       ],
     );
   }
@@ -905,6 +907,31 @@ class _OneRmCard extends ConsumerWidget {
         OneRMTrend.down => TrendDirection.down,
         OneRMTrend.flat => TrendDirection.flat,
       };
+}
+
+class _AverageDurationCard extends ConsumerWidget {
+  const _AverageDurationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<double?> durationAsync =
+        ref.watch(dashboardAverageWorkoutDurationProvider);
+    final double? averageSeconds = durationAsync.value;
+
+    return SummaryCard(
+      title: context.l10n.dashboardAverageDuration,
+      icon: Icons.timelapse_outlined,
+      onTap: () => context.goNamed(Routes.progressName),
+      isLoading: durationAsync.isLoading,
+      error: durationAsync.error,
+      metric: averageSeconds == null
+          ? null
+          : UnitFormatters.durationShort(
+              Duration(seconds: averageSeconds.round()),
+            ),
+      emptyCaption: context.l10n.dashboardAverageDurationEmpty,
+    );
+  }
 }
 
 class _BodyWeightCard extends ConsumerWidget {

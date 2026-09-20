@@ -679,6 +679,8 @@
   "dashboardEstOneRm": "Est. 1RM",
   "dashboardLogALiftToSeeThis": "Log a lift to see this",
   "dashboardBodyWeight": "Body weight",
+  "dashboardAverageDuration": "Average duration",
+  "dashboardAverageDurationEmpty": "Complete a workout to see this",
   "dashboardNotRecorded": "Not recorded",
   "dashboardRowSemantic": "{title}, {value}, {caption}",
   "@dashboardRowSemantic": {

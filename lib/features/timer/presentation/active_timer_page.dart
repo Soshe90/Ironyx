@@ -111,7 +111,8 @@ class _CountdownRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final String countdown = UnitFormatters.duration(snapshot.remaining);
+    final String countdown =
+        UnitFormatters.durationRoundedUp(snapshot.remaining);
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {

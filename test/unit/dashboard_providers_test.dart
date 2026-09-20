@@ -162,6 +162,59 @@ void main() {
     });
   });
 
+  group('WorkoutDao.watchAverageDurationSeconds', () {
+    test('ignores incomplete and legacy workouts without durations', () async {
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'incomplete',
+          startedAt: DateTime.utc(2026, 1, 1),
+          durationSeconds: const Value(60),
+        ),
+        const [],
+        const [],
+      );
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'legacy',
+          startedAt: DateTime.utc(2026, 1, 2),
+          endedAt: Value(DateTime.utc(2026, 1, 2, 0, 30)),
+        ),
+        const [],
+        const [],
+      );
+
+      expect(await workoutDao.watchAverageDurationSeconds().first, isNull);
+    });
+
+    test('averages recorded completed workout durations', () async {
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'short',
+          startedAt: DateTime.utc(2026, 1, 1),
+          endedAt: Value(DateTime.utc(2026, 1, 1, 0, 20)),
+          durationSeconds: const Value(1200),
+        ),
+        const [],
+        const [],
+      );
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'long',
+          startedAt: DateTime.utc(2026, 1, 2),
+          endedAt: Value(DateTime.utc(2026, 1, 2, 1)),
+          durationSeconds: const Value(3600),
+        ),
+        const [],
+        const [],
+      );
+
+      expect(
+        await workoutDao.watchAverageDurationSeconds().first,
+        closeTo(2400, 0.001),
+      );
+    });
+  });
+
   group('WorkoutDao.watchMostLoggedExerciseOneRM', () {
     test('no workouts yields null', () async {
       final result = await workoutDao.watchMostLoggedExerciseOneRM().first;

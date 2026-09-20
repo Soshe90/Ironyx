@@ -114,6 +114,24 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           .watch()
           .map((rows) => rows.map<Workout>(Workout.fromDrift).toList());
 
+  /// Average duration of completed workouts, in seconds.
+  ///
+  /// Incomplete and legacy workouts without a recorded duration are excluded.
+  /// The aggregation stays in SQL per ADR-1, and a null result means there is
+  /// no duration data to show yet.
+  Stream<double?> watchAverageDurationSeconds() => customSelect(
+        '''
+        SELECT AVG(duration_seconds) AS average_seconds
+        FROM workouts_table
+        WHERE ended_at IS NOT NULL
+          AND duration_seconds IS NOT NULL
+          AND duration_seconds > 0
+        ''',
+        readsFrom: {workoutsTable},
+      ).watch().map(
+            (rows) => rows.single.read<double?>('average_seconds'),
+          );
+
   /// Weekly volume aggregation — computed in SQL (ADR-1).
   /// Returns (week_start, total_volume_kg) for completed workouts, with
   /// untrained weeks zero-filled — see [_fillWeekGaps].
