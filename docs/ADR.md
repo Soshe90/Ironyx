@@ -27,6 +27,7 @@
 
 **Binding rules:**
 - Riverpod lint rules run through `flutter analyze` (`riverpod_lint` via `analysis_server_plugin`). Warnings are errors.
+  > **Status 2026-09-20 — not currently enforced.** `riverpod_lint` and `custom_lint` are not in `pubspec.yaml` (blocked by an analyzer-version conflict with the pinned `build_runner`/`freezed` toolchain). `flutter analyze --fatal-infos --fatal-warnings` runs the standard rule set plus the strict options in `analysis_options.yaml`, and is clean. The rules below are therefore enforced by review, not by tooling, until the lint stack is re-enabled during a dependency upgrade.
 - Never read a provider inside `build()` outside of `ref.watch` / `ref.select`.
 - Use `ref.watch(provider.select(...))` wherever a widget depends on one field of a larger object.
 - Repositories are exposed as providers; widgets never construct a repository or DAO directly.
@@ -66,6 +67,10 @@ Accepted consequence: the Library tab does not remember its depth when you switc
 - Audio cue files are preloaded at session start. Never construct a player per beep.
 - iOS audio session is configured to **duck** the user's music, not interrupt it.
 
+> **Known deviation, 2026-09-20.** No cue files are bundled (`assets/audio/` is empty), so `TimerAudioService` plays the OS alert sound via `SystemSound.play`. That satisfies "no player per beep" trivially but not "files are preloaded", and `docs/build-plan.md` notes `SystemSound` gives a click on Android and nothing useful on iOS (not yet checked on a device). `just_audio` is declared in `pubspec.yaml` but not yet used. Open in `TODO.md` (Week 2); the welcome screen and store listing say "sound", so this is user-visible.
+
+> **Amended 2026-09-19 — boundary alerts need a declared receiver and exact alarms.** `flutter_local_notifications` does not declare its alarm receivers for the app: `ScheduledNotificationReceiver` and `ScheduledNotificationBootReceiver` must be in the app's own `AndroidManifest.xml`, or scheduled alerts are dropped silently. `test/unit/android_manifest_test.dart` guards this. Boundary alerts use exact alarms when the OS allows them (`USE_EXACT_ALARM`; `SCHEDULE_EXACT_ALARM` capped at `maxSdkVersion=32`) and fall back to inexact delivery otherwise, which can be many seconds late. The boundary list is computed from the *running phase's own end* forward, each notification labelled with the phase that *starts*.
+
 ---
 
 ## ADR-5 — Nested form state is keyed by stable UUID, never by list index
@@ -93,6 +98,8 @@ Applies to: `HapticFeedback` (no-op on web), local notifications, wakelock, file
 - No `dart:io` import outside `core/services/`.
 - Mouse-wheel scrolling, hover states, and keyboard focus order are verified on web.
 - Layouts are checked at 360dp, 768dp, and 1440dp. No full-width stretched mobile layouts on desktop.
+
+> **Amended 2026-09-19 (TODO.md decision D5) — web is not a launch target.** The title above is superseded for v1: launch is Android (iOS decided separately, D1). Web still builds, and the capability-degradation rules above still bind — they are what keeps the test suite and credential-free runs working — but web QA (IndexedDB persistence, `sqlite3.wasm`, hover/keyboard/wheel checks) is off the critical path, and web may ship post-launch as a demo at most. `driftDatabase(name: 'ironyx')` has no web options configured, so **web persistence is unverified**. Do not describe the web build as supported in store copy.
 
 ---
 
@@ -125,9 +132,12 @@ Workouts, programs, templates and body metrics stay in local SQLite and are neve
 >
 > Consequence to keep in view: Settings and the welcome screen still say workouts are local to the device. That is true by default and false once a user opts in, so the copy is scoped to "your workouts are stored on this device either way" rather than claiming nothing ever leaves.
 
+> **Amended 2026-09-19 — account deletion and password recovery.** Both live behind the `AuthService` seam (`deleteAccount()`, `isPasswordRecoveryPending`, `passwordRecoveryRequests()`, `updatePassword()`), so the binding rules below are unchanged. Deletion calls the `delete_my_account()` security-definer RPC in `docs/cloud_backup_setup.sql`, which removes the caller's `backups` row and `auth.users` row — a client holding the anon key cannot delete an auth user any other way. It removes the *remote* account and backup only; local workouts stay until the user removes them in Settings → Data Management, and the confirmation copy says so. Store policy (Apple 5.1.1(v), Google Play) requires an in-app deletion path for any app with account creation; this is that path. Recovery arrives on `AuthChangeEvent.passwordRecovery` and routes to `/auth/reset-password`.
+
 **Binding rules:**
 - No `redirect` on the router for auth. A login wall is the one change able to stop a cold offline launch from reaching the dashboard.
 - No `supabase_flutter` import outside `features/auth/domain/supabase_auth_service.dart` and `features/backup/data/supabase_cloud_backup_service.dart`. Everything else speaks `AuthUser` / `AuthFailure`, or `CloudBackupInfo` / `CloudBackupFailure`.
+  > **Clarified 2026-09-20.** Three composition-root files also import the package, only to obtain the client: `main.dart` (`Supabase.initialize`), and the two controller files that build the service (`sb.Supabase.instance.client` in `auth_controller.dart` and `cloud_backup_controller.dart`). No Supabase *type* other than the client crosses into a controller or widget. Any new import beyond these is a violation.
 - Implementations translate every transport and vendor error into `AuthFailure`; an unmapped exception reaching the UI is a bug. Network failure is its own kind, distinct from bad credentials.
 - A build without credentials resolves `authServiceProvider` to `DisabledAuthService` and says so in Settings. This is ADR-6's degradation rule applied to accounts, and it is what keeps a credential-free `flutter run` and the whole test suite working.
 - `AuthService.currentUser` is synchronous and reads only local storage, so an offline launch restores the session without a network call.

@@ -21,7 +21,36 @@ block everything else.
 
 ---
 
-## Status — 2026-08-24
+## Status — 2026-09-20
+
+Published: no. Platforms: Android only (iOS builds are unverified — no Mac).
+Revenue: none. Users: 1. `flutter analyze` clean; `flutter test` 423 passed,
+1 skipped, 0 failed.
+
+**The active tracker is now `TODO.md`'s "Launch plan — 12 weeks"** (Sep 28 –
+Dec 20; Android store go-live Tue Nov 17). It schedules most of the `acct`
+and `dev` items below and adds four blockers this file did not have:
+in-app account deletion (done in code), the Play closed-testing gate, the
+telemetry-vs-privacy-policy contradiction, and iOS not being on a launchable
+path. Where the two disagree, `TODO.md` wins. Decisions taken since the
+entries below (all in `TODO.md`): brand primary is **teal** (D3), web is
+**not a launch target** (D5), success floors accepted (D4); D1 (iOS) and D2
+(telemetry) are still open.
+
+Things this file used to say that have since changed: the catalogue is now
+**301 exercises / 602 images** (seed v17), still all public domain; the
+privacy policy is written (`docs/PRIVACY_POLICY.md`) but **not hosted**;
+release shrinking and obfuscation are on; the account holder has decided to
+declare `USE_EXACT_ALARM` for timer alerts (Play may reject it); and the
+release keystore described in Phase 2 is **not present on the current
+Windows machine** — locate it or generate a new upload key before the first
+Play upload.
+
+---
+
+## Status history
+
+### 2026-08-24
 
 Published: no. Platforms: Android only. Revenue: none. Users: 1.
 
@@ -41,39 +70,44 @@ the iOS work is unverified without a Mac to actually run it, and the
 remaining Phase 1/2 blockers are still `acct` items (privacy policy, Play
 Developer account, Apple Developer enrollment) that need you, not more code.
 
-**Update — 2026-09-15.** App renamed **Ironyx → Ironyx**. Cause: a Play
-Store check found "Ironyx" already used by 5+ published apps, one with
-near-identical positioning ("Ironyx - Offline Workout Planner") — a
-solo dev with no ad budget can't win ASO against exact-name duplicates.
-Checked "Ironyx" has no existing Play Store listing. Changed: Android
-manifest label, iOS `CFBundleDisplayName`, both l10n `appTitle` strings
-(and every other user-facing "Ironyx" string — export/import error
-messages, About screen copy), regenerated `app_localizations_*.dart`, and
-the two widget tests asserting on the literal displayed name. Left
-unchanged, deliberately: the `applicationId`/`namespace`
-(`com.soshe90.ironyx`, already fixed once, not worth breaking Play
-listing continuity or Supabase redirect URLs to churn again for a
-cosmetic rename), the Flutter package name (`ironyx` in `pubspec.yaml`,
-purely internal, would touch every import), and the internal `IronyxApp`
-Dart class name (not user-facing). Store listing title/description/ASO
-keywords still need to be written around the new name (Phase 2).
+> **Editorial note, 2026-09-20.** The two 2026-09-15 entries below were
+> mangled by a global find-and-replace in commit `8417741` (they read
+> "Ironyx → Ironyx" and "`com.soshe90.ironyx` → `com.soshe90.ironyx`"). The
+> original wording is not in git history; the names below are reconstructed
+> from the pre-rename tree (`pubspec.yaml` name `fittrack`, `applicationId`
+> `com.soshe90.fittrack`, class `FitTrackApp`, Android label "FitTrack").
 
-**Update — 2026-09-15 (same day).** On reflection, went further: the
-`applicationId`/bundle id changed too, `com.soshe90.ironyx` →
-**`com.soshe90.ironyx`**. This is the second and *last* time this can move
-— after first Play publish it's permanent. Touched: `build.gradle.kts`
-(namespace + applicationId), the Kotlin package directory (moved
-`.../com/soshe90/ironyx/MainActivity.kt` → `.../ironyx/MainActivity.kt`,
-updated its `package` declaration), `AndroidManifest.xml`'s intent-filter
-scheme, `ios/Runner/Info.plist`'s `CFBundleURLTypes`,
-`ios/Runner.xcodeproj/project.pbxproj`'s `PRODUCT_BUNDLE_IDENTIFIER` (6
-occurrences across targets/configs), and `lib/core/config/deep_links.dart`.
-**Consequence: the Supabase Redirect URLs entry above must be
-`com.soshe90.ironyx://login-callback`, not the `.ironyx` one** — if you
-already added the old one to the Supabase dashboard, add this one instead
-(or in addition, harmlessly, until you're sure nothing still points at the
-old scheme). Verified with `flutter analyze` (clean) and a `flutter clean`
-+ debug APK build.
+### 2026-09-15
+
+App renamed **FitTrack → Ironyx**. Cause: a Play Store check found
+"FitTrack" already used by 5+ published apps, one with near-identical
+positioning — a solo dev with no ad budget can't win ASO against exact-name
+duplicates. Checked "Ironyx" has no existing Play Store listing *(Play only —
+the App Store name, a trademark search and the domain are still open;
+`TODO.md` C13)*. Changed: Android manifest label, iOS `CFBundleDisplayName`,
+both l10n `appTitle` strings (and every other user-facing "FitTrack" string —
+export/import error messages, About screen copy), regenerated
+`app_localizations_*.dart`, and the two widget tests asserting on the
+literal displayed name. Initially left unchanged: the `applicationId` /
+`namespace` (`com.soshe90.fittrack`), the Flutter package name (`fittrack`
+in `pubspec.yaml`) and the internal `FitTrackApp` class.
+
+**Same day.** On reflection, went further: the `applicationId` / bundle id
+changed too, `com.soshe90.fittrack` → **`com.soshe90.ironyx`**, and the
+package and class names followed (`ironyx`, `IronyxApp`). This is the second
+and *last* time the bundle id can move — after first Play publish it's
+permanent. Touched: `build.gradle.kts` (namespace + applicationId), the
+Kotlin package directory (`MainActivity.kt` moved to
+`.../com/soshe90/ironyx/`, `package` declaration updated),
+`AndroidManifest.xml`'s intent-filter scheme, `ios/Runner/Info.plist`'s
+`CFBundleURLTypes`, `ios/Runner.xcodeproj/project.pbxproj`'s
+`PRODUCT_BUNDLE_IDENTIFIER` (6 occurrences across targets/configs), and
+`lib/core/config/deep_links.dart`. **Consequence: the Supabase Redirect URLs
+entry must be `com.soshe90.ironyx://login-callback`, not the old
+`com.soshe90.fittrack://` one** — if the old one was already added to the
+Supabase dashboard, add the new one instead (or in addition, harmlessly,
+until nothing points at the old scheme). Verified with `flutter analyze`
+(clean) and a `flutter clean` + debug APK build.
 
 ---
 
@@ -92,10 +126,10 @@ old scheme). Verified with `flutter analyze` (clean) and a `flutter clean`
 - [x] Guest copy tells the truth: workouts are local, uninstall deletes them,
       export from Settings. It does **not** claim an account protects data,
       because under ADR-8 it does not. Revisit when Phase 5 ships.
-- [x] Auth deep link — `com.ironyx.ironyx://login-callback` registered in
-      the Android manifest and iOS `Info.plist`, passed as `emailRedirectTo`
-      on signup and password reset. Replaces the `http://localhost:3000`
-      dead-end.
+- [x] Auth deep link — `com.soshe90.ironyx://login-callback` is registered in
+      the Android manifest and iOS `Info.plist`, and passed as `emailRedirectTo`
+      on signup and password reset. The Supabase dashboard Redirect URLs
+      allow-list and Site URL still require live-project verification.
 - [x] Profile linking on any auth transition (`app.dart`). Confirming by deep
       link signs the user in without either auth screen on top, so neither
       was there to link the profile.
@@ -121,7 +155,10 @@ no `ASSETS-LICENSE.md`, which is precisely why it stayed invisible.
       onto the normalized schema.
 - [x] **dev** — Catalogue rebuilt: **150 exercises, 300 images**, every
       one public domain and bundled locally. Zero hotlinks. All 71 old
-      PNGs deleted from `assets/`, not merely unreferenced.
+      PNGs deleted from `assets/`, not merely unreferenced. *(Since grown
+      to **301 exercises / 602 images** at seed v17 — commit `41dc429` —
+      still every one public domain, 48 with a YouTube link; counts
+      re-checked 2026-09-20.)*
 - [x] **dev** — `scripts/build_exercise_seed.py` makes the rebuild
       repeatable rather than a one-off cleanup. Curation (which 150, and
       each one's `MovementPattern`, which upstream has no field for) is
@@ -155,7 +192,12 @@ and five near-duplicate cable-fly entries that had been sharing images.
 
 - [ ] **acct** — Privacy policy, publicly hosted. Mandatory for Play
       regardless of monetization. Must cover Supabase (email + auth) and
-      anything added in Phase 2.
+      anything added in Phase 2. *(2026-09-20: **written** —
+      `docs/PRIVACY_POLICY.md`, last updated 2026-09-20 — covers Supabase,
+      cloud backup, in-app account deletion and the permission list. **Not
+      hosted anywhere**, so this box stays open; hosting is `TODO.md`
+      Week 2. It must be revised in the same change as any telemetry
+      decision, D2.)*
 - [ ] **acct** — Play Data Safety form.
 - [ ] **acct** — Play health-apps declaration. Fitness data is a sensitive
       category with its own disclosure requirements.
@@ -171,13 +213,14 @@ and five near-duplicate cable-fly entries that had been sharing images.
       silently ignores an unlisted `redirect_to` and falls back to the Site
       URL. Also change Site URL off `http://localhost:3000`.
 - [x] **dev** — Bundle id changed 2026-08-24 from the template placeholder
-      `com.ironyx.ironyx` to `com.soshe90.ironyx`, across
+      `com.fittrack.fittrack` to `com.soshe90.fittrack`, and again on
+      2026-09-15 (the rename) to the final **`com.soshe90.ironyx`**, across
       `android/app/build.gradle.kts` (namespace + applicationId), the Kotlin
       package directory and `MainActivity.kt`, `AndroidManifest.xml`'s
       intent filter, `ios/Runner/Info.plist`'s `CFBundleURLTypes`,
       `ios/Runner.xcodeproj/project.pbxproj`'s `PRODUCT_BUNDLE_IDENTIFIER`,
       and `lib/core/config/deep_links.dart`. The Supabase Redirect URLs
-      entry above still needs the matching update.
+      entry above still needs the matching update (`TODO.md` Week 2).
 - [x] **dev** — Fix the 6 pre-existing test failures (5 in
       `library_page_test.dart`, 1 in `program_editor_page_test.dart`). Fixed
       during the Arabic localization work; `flutter test` now reports 337
@@ -200,7 +243,12 @@ learning.**
       else yet). `build.gradle.kts` uses it for `release` builds when present,
       falling back to the debug key otherwise. **Still need to back the
       keystore up somewhere durable** — losing it means never updating this
-      listing again once published.
+      listing again once published. **2026-09-20: neither file exists on the
+      current Windows machine** (rechecked; both were created elsewhere).
+      Locate the originals first; if they are gone, generate a new upload key
+      *before* the first Play upload, since nothing has been published under
+      the old one, and back it up at creation (`SETUP.md` §5). Until then a
+      release build here is debug-signed and cannot be uploaded.
 - [ ] **dev** — Store listing: icon, feature graphic, screenshots, short and
       full description.
 - [ ] **acct** — ASO. The highest-return free work available: title,
@@ -211,7 +259,10 @@ learning.**
 - [ ] **dev** — Decide whether to add Firebase Analytics. Needed to answer
       "which screens do people use, where do they quit". Costs a dependency,
       a privacy-policy section, and a consent story. Defer if unsure — Play
-      Console covers the basics.
+      Console covers the basics. *(2026-09-20: superseded by `TODO.md`
+      decision D2 — recommended **Sentry only**, scrubbed, no Firebase or
+      Amplitude, and the policy/listing updated first. Still undecided;
+      due Fri Oct 2.)*
 
 **Counting users, for reference:**
 
@@ -258,6 +309,15 @@ the store — Strong, Hevy, Jefit, FitNotes all have years of ranking history.
 **Gate: is $99/year worth it before there is any revenue?** Nothing here
 requires owning a Mac; only the compile does, and that can be rented by the
 minute.
+
+> **2026-09-20 — scheduling.** `TODO.md` makes this an explicit go/no-go
+> (D1, Mon Oct 5) with **Android-first, iOS fast-follow in Q1 2027** as the
+> default. iOS icon and launch images were replaced 2026-09-19 (opaque
+> RGB icons, navy launch storyboard) but never seen in Xcode. Two caveats
+> for whoever picks this up: timer sound cues currently use
+> `SystemSound.play`, which docs say gives nothing useful on iOS (no cue
+> files are bundled — ADR-4 deviation note), and the iOS iCloud/iTunes
+> backup-exclusion item (`TODO.md` A2.3) is still open.
 
 - [ ] **acct** — Decide on the Apple Developer Program, $99/year. Without it
       a build cannot be installed on any physical iPhone. There is no free
@@ -335,6 +395,13 @@ minute.
 > compatible with a whole-database blob is worse than one that doesn't.
 > One-time server setup lives in `docs/cloud_backup_setup.sql`. ADR-8 has
 > been amended to record the exception.
+>
+> **2026-09-19:** that SQL file also defines `delete_my_account()`, the
+> security-definer function behind Settings → Account → Delete account
+> (required by Apple 5.1.1(v) and Google Play). Any Phase 5 schema has to
+> keep account deletion cascading through whatever it adds — a per-table
+> sync that leaves rows behind after deletion would break the store rule
+> and the privacy policy's promise.
 
 This is the feature people actually pay for, and the only one with a genuine
 recurring cost — which is what makes a subscription honest rather than
@@ -451,11 +518,13 @@ building.
 | Decision | Owner | Blocks | Notes |
 |---|---|---|---|
 | Exercise asset source | dev | Phase 1, all of monetization | free-exercise-db recommended |
-| Apple Developer $99/yr | acct | Phase 4 | No free path onto a real iPhone |
-| GitHub Actions vs Codemagic | acct | Phase 4 | Actions is closer to hand; Codemagic is easier signing |
-| Firebase Analytics or not | dev | Phase 2 | Play Console may be enough at first |
+| Apple Developer $99/yr | acct | Phase 4 | No free path onto a real iPhone. **= `TODO.md` D1, due Mon Oct 5**; default is Android-first |
+| GitHub Actions vs Codemagic | acct | Phase 4 | Actions is closer to hand; Codemagic is easier signing. Only matters if D1 = go |
+| Firebase Analytics or not | dev | Phase 2 | **= `TODO.md` D2, due Fri Oct 2**; recommendation is Sentry only, no analytics SDK |
 | Sync conflict rule | dev | Phase 5 | Decide before coding |
-| Subscription / lifetime / both | acct | Phase 6 | Both recommended |
+| Subscription / lifetime / both | acct | Phase 6 | Both recommended. Planning only until a D7 number exists |
+| Brand primary colour | dev | store assets | **Decided 2026-09-19 (D3): teal.** Theme seed now matches the icon |
+| Web as a launch target | dev | — | **Decided 2026-09-19 (D5): no.** Post-launch demo at most |
 
 ---
 
@@ -473,6 +542,11 @@ unzip -p build/app/outputs/flutter-apk/app-release.apk \
   | grep -a "supabase.co"
 ```
 
-**Pre-existing test failures.** None as of 2026-08-26. The 6 long-standing
+**Pre-existing test failures.** None as of 2026-09-20: `flutter test` reports
+423 passed, 1 skipped (the golden review harness), 0 failed, and
+`flutter analyze --fatal-infos --fatal-warnings` is clean. The 6 long-standing
 failures (5 `library_page_test`, 1 `program_editor_page_test`) were fixed with
 the Arabic localization work; the suite is green, so any failure is now yours.
+
+**Local tooling caveat.** `dart run tool/check_asset_licenses.dart` false-fails
+on Windows (mixed path separators); trust the Linux CI run. See `SETUP.md`.

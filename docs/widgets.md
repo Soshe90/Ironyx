@@ -20,7 +20,7 @@ Two layers:
 | `SectionHeader` (`section_header.dart`) | Titles a group of content, with an optional trailing action and an optional info affordance. Gives the app one vertical rhythm for section breaks. |
 | `StickyActionBar` (`sticky_action_bar.dart`) | Pins a screen's primary commit action (finish, save) above the fold instead of leaving it at the bottom of a list that grows as you add exercises. |
 | `SheetHandle` (`sheet_handle.dart`) | The grab handle at the top of a bottom sheet. Decorative — excluded from semantics so the sheet's heading is what gets announced. |
-| `Breakpoint`, `BreakpointContext` (`responsive.dart`) | Layout breakpoints (`compact` / `medium` / `expanded`) plus `context.breakpoint` and `context.contentMaxWidth`. Verified at 360 dp, 768 dp and 1440 dp. |
+| `Breakpoint`, `BreakpointContext` (`responsive.dart`) | Layout breakpoints (`compact` / `medium` / `expanded`, switching at 768 and 1200 dp) plus `context.breakpoint` and `context.contentMaxWidth`. Designed for 360 dp, 768 dp and 1440 dp; widget tests cover the dashboard at those widths, but a manual pass on real windows/devices is still open (`TODO.md` Priority 3). |
 
 ## Core — metrics and data display
 
@@ -62,6 +62,7 @@ Two layers:
 | Widget | Purpose |
 | --- | --- |
 | `SummaryCard` (`dashboard/.../summary_card.dart`) | One dashboard metric tile: a `MetricBlock` on an `AppCard`. Each card owns its loading and error state so one failing query degrades a single tile instead of blanking the dashboard. |
+| Dashboard hero and week card (private, `dashboard_page.dart`) | `_TodayCard` (gradient hero with Start/Resume and start-from-program), `_WeekBody` with `_SessionGoal` (sessions x / weekly target, from `profiles.weekly_session_target`, default 3, clamped 1–7) and `_WeeklyBreakdown` / `_WeekdayCell` (Monday-first strip, filled = trained, bucketed in the device's timezone). Deliberately **private and not in `core/`**: they are one screen's layout, and each is fed by its own provider (no single `DashboardData` model — see `TODO.md` cross-check). At the expanded breakpoint the page uses a two-column primary row inside `PageBody`'s 1100 dp cap. |
 | `BodyMetricTile` (`progress/.../body_metric_widgets.dart`) | One logged measurement with its edit/delete menu. Shared by the Progress page's recent list and the full history page so the two cannot drift apart. |
 | `ValuePillRow` (`profile/.../value_pill.dart`) | One labelled row of the Personal Details form: icon, label, and a tappable pill showing the current value (or a placeholder such as "Set" when empty). |
 
@@ -69,8 +70,9 @@ Two layers:
 
 | Widget | Purpose |
 | --- | --- |
-| `AuthFormScaffold` (`auth/.../auth_form_scaffold.dart`) | Shared shell for the three auth screens. They differ only in fields and primary action, so title, intro copy, error banner and scroll behaviour live here instead of being copied three times and drifting. |
-| `AccountSection` (`settings/.../account_section.dart`) | The Settings entry point for accounts and personal details. Three states: signed out, signed in, and Supabase-not-configured — the last says so plainly rather than offering a button that can only fail. |
+| `AuthFormScaffold` (`auth/.../auth_form_scaffold.dart`) | Shared shell for the four auth screens (sign in, sign up, forgot password, reset password). They differ only in fields and primary action, so title, intro copy, error banner and scroll behaviour live here instead of being copied four times and drifting. |
+| `AccountSection` (`settings/.../account_section.dart`) | The Settings entry point for accounts and personal details. Three states: signed out, signed in, and Supabase-not-configured — the last says so plainly rather than offering a button that can only fail. When signed in it also carries **Delete account**, behind a typed `DELETE` confirmation: it removes the remote account and cloud backup only, and says local workouts stay until removed in Data Management (store-required in-app deletion path; ADR-8 amendment). |
+| `AboutSection` (`settings/.../about_section.dart`) | The free-exercise-db attribution dialog and the open-source licences page (Flutter's `showLicensePage`, which also shows `kAppVersion`). |
 | `CloudBackupSection` (`settings/.../cloud_backup_section.dart`) | Manual whole-database backup and restore against the signed-in account. Explicitly temporary (PLAN.md Phase 5); the copy says "while the app is in testing" out loud, because a backup people over-trust is worse than one whose limits they know. |
 | `DataManagementSection` (`settings/.../data_management_section.dart`) | Export / import / delete-all-data controls (ADR-7). Kept as its own widget so `settings_page.dart` stays a plain list of sections while the dialog flow lives here. |
 

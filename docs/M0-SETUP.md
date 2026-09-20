@@ -1,5 +1,20 @@
 # M0 — Repo & Tooling Runbook
 
+> **Historical — do not re-run.** The project was created long ago and M0 is
+> done. For a working checkout use `SETUP.md`. Things in this runbook that
+> are no longer true:
+>
+> - The bundle id is fixed: `com.soshe90.ironyx` (changed twice before first
+>   publish; it is permanent once Play sees it). `--org com.yourdomain` below
+>   is a placeholder from the original template.
+> - `dart run build_runner build --delete-conflicting-outputs`: the installed
+>   `build_runner` no longer accepts that flag (conflict deletion is the
+>   default). Use `dart run build_runner build`.
+> - `dart run custom_lint` and the `riverpod_lint` / `custom_lint` /
+>   `golden_toolkit` dev dependencies are not in the project (ADR-2 status note).
+> - A `linux/` folder also exists (plugin registrant files only, from a
+>   desktop-enabled Flutter run); only Android, iOS and Web are targets.
+
 **Time:** ~half a day
 **Exit:** CI green on an empty project, tagged `v0.0.1-scaffold`
 **Rule:** do not write a single line of feature code in M0. The only deliverable is a project that builds, lints, tests, and has its decisions written down.

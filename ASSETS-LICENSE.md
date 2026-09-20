@@ -7,7 +7,10 @@ This file is enforced, not decorative: `tool/check_asset_licenses.dart`
 runs in CI and fails the build if the exercise catalogue gains a source
 that is not listed here, an image without a licence, an image hotlinked
 from a third-party server, or an image file that ships without a
-provenance record.
+provenance record. (Known issue, 2026-09-20: on Windows the tool reports
+every image as unreferenced because it compares `\` paths with the seed's
+`/` paths; Linux CI is unaffected. Run it in CI, not locally on Windows,
+until that is fixed.)
 
 ---
 
@@ -20,9 +23,11 @@ provenance record.
 dedication. No attribution required, no share-alike obligation, cleared
 for commercial redistribution.
 
-**Covers:** all 151 exercises in `assets/data/exercises_seed.json` —
-their names, instructions, muscle and equipment classifications — and all
-302 images in `assets/images/exercises/free_exercise_db/`.
+**Covers:** all 301 exercises in `assets/data/exercises_seed.json` (seed
+version 17, checked 2026-09-20; every entry carries a
+`Public domain (Unlicense)` source record) — their names, instructions,
+muscle and equipment classifications — and all 602 images in
+`assets/images/exercises/free_exercise_db/` (two per exercise).
 
 **Modifications:** images are resized to 600px wide and re-encoded as
 JPEG at quality 80 to keep the download reasonable. Movement patterns
@@ -47,7 +52,32 @@ is required or claimed.
 
 ## Audio
 
-`assets/audio/` — timer cues. Generated for this project; ours outright.
+**No audio files are bundled.** `assets/audio/` holds only a `.gitkeep`, and
+is still listed in `pubspec.yaml` so that adding cues later needs no
+manifest change. The timer's sound cues today call the operating system's
+alert sound (`SystemSound.play` in `lib/core/services/timer_audio_service.dart`),
+which ships with the OS, not with us.
+
+If cue files are added, record their origin and licence here in the same
+change. `tool/check_asset_licenses.dart` checks the exercise catalogue only —
+it does **not** look at audio, so nothing enforces this.
+
+---
+
+## App icon, splash and brand artwork
+
+`assets/branding/` (`ironyx-icon-1024.png`, `ironyx-icon-512.png`,
+`ironyx-mark.svg`) and everything derived from it: the Android launcher
+icons (legacy PNGs, adaptive foreground/background/monochrome vectors), the
+Android and iOS splash marks, the iOS `AppIcon` set, the notification small
+icon and the web icons. `assets/branding/` is source material and is not
+bundled as a Flutter asset.
+
+**Provenance is not recorded in the repository.** How the mark was made
+(own design, commissioned, or generated with a tool) decides what can be
+claimed about it and whether it can be trademarked, so the account holder
+should add a line here saying which. Tracked in `TODO.md`, Week 0
+("clearance").
 
 ---
 
@@ -55,8 +85,10 @@ is required or claimed.
 
 Material Icons and the Material Design font set ship with the Flutter SDK
 under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
-Flutter surfaces this automatically in the app's own licence page (the
-standard `showLicensePage` route), so no additional attribution is owed.
+The `cupertino_icons` package (MIT) supplies the iOS icon font Flutter's
+page transitions reference. Flutter surfaces both automatically in the
+app's own licence page (the standard `showLicensePage` route), so no
+additional attribution is owed. No other font files are bundled.
 
 ---
 

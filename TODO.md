@@ -2,8 +2,368 @@
 
 This checklist captures the production-hardening work identified during the architecture, data-integrity, UX, and release-readiness audit. Prioritize data safety before polish.
 
-> **New work starts at [Audit 2 — production readiness review (2026-08-28)](#audit-2--production-readiness-review-2026-08-28).**
-> Everything above that heading is the first audit and is essentially complete.
+> **Active tracker: [Launch plan — 12 weeks](#launch-plan--12-weeks)** (reviewed 2026-09-19;
+> documentation reconciled against the code 2026-09-20 — see the Week 0 hygiene item).
+> Below it: the first engineering audit (Priority 0–4, Progress feature track,
+> validation checklist — essentially complete) and
+> [Audit 2](#audit-2--production-readiness-review-2026-08-28). Their open items
+> are pulled into the launch plan as gates; tick them here, not twice.
+
+## Launch plan — 12 weeks
+
+**Reviewed 2026-09-19.** Source: *IRONYX Workout App — 12-Week Execution Plan
+v1.0* (same date; not stored in the repo, and the three guides it points at —
+`FITTRACK_DASHBOARD_REDESIGN_GUIDE.md`, `DASHBOARD_REDESIGN_SUMMARY.md`,
+`IRONYX_STRATEGIC_PLAN.md` — do not exist in it; "FitTrack" is a pre-rename
+leftover). **Where this section disagrees with the source, this section wins.**
+Owner tags as in `PLAN.md`: **dev** = code, **acct** = only the account holder
+can do it.
+
+**Not verified in this review — read before trusting any "done":**
+
+- `flutter analyze` / `flutter test` were **not run** in the review session (no
+  Flutter SDK on PATH). **Since run, 2026-09-19:** analyze clean, 393 passed,
+  1 skipped (see Week 0). **Re-run 2026-09-20 on the full working tree:**
+  analyze `--fatal-infos --fatal-warnings` clean; `flutter test` **423 passed,
+  1 skipped, 0 failed**; `dart format` clean on `lib/` and `test/`. The
+  uncommitted diff (79 files) is analyzed and tested, but not yet committed;
+  it has been seen on an Android 15 emulator only, never on a physical device.
+- Store-policy facts below (Play closed-test rule, Apple/Play field limits,
+  account-deletion rules) are from the reviewer's knowledge as of early 2026.
+  Re-check each against the live Play Console / App Store Connect docs before
+  scheduling around it. Items that hinge on this are marked **(verify)**.
+- Repo-state claims were checked against the tree on 2026-09-19; evidence is in
+  the cross-check table.
+
+### Verdict
+
+The shape (polish → QA → submit → launch → grow) and the ~460 h budget are
+sound, and the plan's arithmetic checks out (85 + 107 + 124 + 152 = 468 h;
+per-week blocks sum to their weeks). But it was written as if from a blank app,
+and it collides with the repo and with store rules in four places that would
+each cost a week if found late. Those are **B1–B4**. Roughly half of the
+"Week 1–2 dashboard redesign" already exists.
+
+### Blockers — fix the plan around these
+
+| # | Blocker | Evidence | Resolution (scheduled below) |
+|---|---|---|---|
+| **B1** | **No in-app account deletion.** Apple (guideline 5.1.1(v)) and Google Play both require an in-app deletion path — plus, for Play, a web URL — for any app that lets users create an account **(verify)**. | `PRIVACY_POLICY.md` says the app "provides sign-out but not an in-app account-deletion button"; grep of `lib/` for `deleteAccount`/`deleteUser` finds nothing. A client holding the anon key cannot delete an `auth.users` row, so this needs server-side work. | W1–W2: `delete_my_account()` security-definer RPC + Settings UI + policy update. |
+| **B2** | **Google Play closed-testing gate.** A new personal developer account must run a closed test (12 opted-in testers, 14 continuous days at time of writing) before it may apply for production **(verify)**. The plan has no closed test, no tester recruitment, and creates the Play account in Week 5. | `PLAN.md` Phase 2 already lists "Closed testing track first" as `acct`; the 12-week plan dropped it. Working back from a Tue Nov 17 go-live, the 14-day clock must start by **Mon Oct 12**. | W0: create account. W2: recruit 15–20 testers. W3: closed test live. |
+| **B3** | **Telemetry contradicts what the app promises.** The plan adds Amplitude + Firebase + Sentry in Week 2. | `PRIVACY_POLICY.md`: "no analytics SDK, no advertising SDK, and no crash-reporting service". `STORE_LISTING.md`: "does not run ads or analytics". Play Data Safety and Apple App Privacy must match the shipped binary. No such dependency is in `pubspec.yaml`. | **D2** below. Recommended: Sentry only, wired through the existing `reportError()` seam, with the policy and listing copy updated **first**. No Amplitude/Firebase. |
+| **B4** | **iOS is not on a launchable path.** The plan submits to the App Store in Week 5. | No Mac, no Apple Developer enrolment, no signing/TestFlight pipeline. iOS `AppIcon` and `LaunchImage` are still the initial-commit Flutter template (`AppIcon 1024` ≠ `assets/branding/ironyx-icon-1024.png`; launch images are 68-byte placeholders). The CI `ios` job (`--no-codesign`) has never run. `PLAN.md` Phase 4 gates iOS on the $99 decision. | **D1** below: explicit go/no-go on Mon Oct 5. Default if not "go": Android-first, iOS fast-follow in Q1 2027. |
+
+### Corrections applied to the source plan
+
+| # | Source plan says | Reality | Correction |
+|---|---|---|---|
+| C1 | "Monday, September 26"; PH "Monday Nov 14"; "Wed Nov 15" | 2026-09-26 and 2026-11-14 are **Saturdays**; Nov 15 is a Sunday. Weekday names look copied from an older calendar. | Re-anchored to Mon–Sun weeks: **Week 1 = Mon Sep 28**, Week 12 = Dec 14–20 (contains Dec 18). The old "Sept 19–26" prep week becomes **Week 0 (Sep 21–27)**. |
+| C2 | "Launch Date: December 18" | The schedule goes live in Weeks 8–9 (Nov) and uses Dec 18 as the *evaluation* date. Week 8 also launches on Product Hunt **before** Week 9 releases to the stores. | Store go-live **Tue Nov 17** (W8); Product Hunt **Wed Nov 18**, only after the app is live; **Fri Dec 18 = measurement date**. |
+| C3 | Effort "300–400 h"; phase headers 50–70 / 60–80 / 80–100 / 70–90 | Sections sum to 468 h. Headers sum to 260–340 h. | One number: re-baselined estimate **≈ 460 h** (table at the end). |
+| C4 | "primary teal"; hero number "48px teal" | `AppColors.seed = 0xFF2D6BFF` (electric blue). Icon + `web/manifest.json` use navy `#0B1628` / teal `#38D6C0`. **The app theme and the icon disagree.** | **D3.** |
+| C5 | Title "Ironyx — Precision Workout Tracking" (35 chars); subtitle "Offline-first fitness tracking for athletes" (43); Play category "Sports"; "Free with in-app purchases"; "PEGI 3"; icon "JPG" | App Store name and subtitle max 30 chars each; Play title max 30 **(verify)**. There is no IAP. Play rates via the IARC questionnaire. `STORE_LISTING.md`'s "Ironyx: Offline Workout Log" (27) is fine. Play also requires a **1024×500 feature graphic**, which the plan omits. | Category **Health & Fitness** on both. Price **Free** (declare IAP only when one exists). Icon **PNG, no alpha**. Draft an iOS name/subtitle ≤ 30 each. *(Drafted 2026-09-20 in `docs/STORE_LISTING.md`: name 19, subtitle 29 characters.)* |
+| C6 | Marketing copy: "sync later", "Open APIs (integrations coming soon)", "60fps, minimal battery drain", "Free with IAP" | No sync exists (one manual backup slot). No API exists. 60 fps / battery are unmeasured (device profiling still open). | Reuse the honest copy already in `docs/STORE_LISTING.md`. Delete the three claims until true. |
+| C7 | Reddit/HN/forum posting plan | r/fitness is known to restrict self-promotion; every sub has its own rules **(verify each)**. New accounts created a week before posting trip spam filters. HN "Show HN" needs something people can try and must not ask for upvotes. An "IPA backup" is not a thing — TestFlight is the fallback. Influencer freebies need FTC-style disclosure. | Community accounts move to **W4** and participate genuinely for 3+ weeks. Read each sub's rules before drafting. Stagger posts across days. |
+| C8 | 500 downloads, 50 DAU, 4.5★ by Dec 18; "50K users, $10K MRR" in a year | `PLAN.md` Phase 3: months 1–3 with no marketing = 0–100 downloads; year-1 "low thousands" is *good*; 500 paying subs needs 10–25K active users. 50 DAU from ~500 installs is 10% DAU/install. A rating from < 10 reviews is noise. The plan's "95%+ coverage" conflicts with `build-plan.md` M7 (≥ 70% on `domain/` + `data/`); CI enforces no threshold. | Keep the plan's numbers as **targets**, add **floors** (D4), and use 70% coverage on `domain/`+`data/`. |
+| C9 | Test on iPhone SE / 14 Pro, Safari (Mac), Chrome (Mac) | Dev machine is Windows; no Mac. | W0 device inventory; emulators/cloud devices for the rest. iOS/Safari rows apply only if D1 = go. |
+| C10 | "Localization check (if multi-language)"; "Health kit / camera / storage" permissions | App ships **English + Arabic (RTL)**. No HealthKit, camera or storage permission is used; manifest = `INTERNET, VIBRATE, WAKE_LOCK, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED`. | RTL, Arabic screenshots and 200% text-scale QA are in scope. Permission check becomes the notification flow (Android 13+/iOS) + file-picker export/import. |
+| C11 | Privacy policy in Week 4; website in Weeks 5–6 | Both stores need a **public policy URL** before any track goes live (closed test included), and Play needs the account-deletion URL. | Minimal site (policy + support email + delete-account page) in **W2**. Full landing page stays W5. |
+| C12 | Week 9 API docs; Week 11 "implement premium check", referral program, free premium for reviewers; "Free with IAP" | No REST API, no IAP dependency; cloud backup is an interim single-slot blob `PLAN.md` says to delete rather than extend. `PLAN.md` Phase 3 gate: no Phase 5/6 work until there is a D7 retention number. | **Dropped from the schedule.** Week 11 keeps premium as *planning only*. |
+| C13 | Name/domain | `PLAN.md` cleared the name on Play only, after one rename on Sep 15. | W0: check App Store name availability, do a trademark search, confirm the domain **before** spending on assets. |
+| C14 | Launch Nov 14–21, judge Dec 18 | US Thanksgiving is Thu Nov 26 (W9). January is the peak month for fitness apps and falls after the Dec 18 review. Apple review has historically slowed late December **(verify)**. | No big pushes Nov 26–27. Plan a **January ASO/creator push** in the Q1 roadmap; don't read Dec 18 as the final verdict. |
+
+Two backend items the source plan never mentions, both **(verify)**: Supabase's
+built-in email sender is rate-limited and not meant for production traffic
+(sign-up confirmation mail is the first thing a launch spike breaks — configure
+custom SMTP), and free-tier projects pause after roughly a week of inactivity
+(a paused project silently breaks sign-in and backup for every new user). Both
+are scheduled in W2.
+
+### Cross-check — plan item vs repo (2026-09-19)
+
+| Plan item | Repo state | Verdict |
+|---|---|---|
+| `hero_metric_card.dart` (count, goal bar, trend, quick actions) | `_TodayCard` + `_WeekBody` in `dashboard_page.dart`: volume hero, trend chip, sparkline, sessions/streak/last week, Start/Resume + Start-from-program. No goal progress bar — but `profiles.weekly_session_target` (schema v9, default 3) already exists to feed one. | **Partial** |
+| `metric_card.dart` / `metric_grid.dart` | `summary_card.dart`, `_OneRmCard`, `_BodyWeightCard` in a fixed 2-up row. No 1/2/3-col grid. | **Partial** |
+| `weekly_breakdown_calendar.dart` (M–Su) | Nothing. (`HistoryCalendar` exists on the Tracker — reusable day-cell logic.) | **Missing** |
+| Six providers named `weeklyWorkoutCountProvider` … | Eight per-card providers exist under different names (`dashboardLastWorkout`, `…LastTimerSession`, `…LibrarySummary`, `…MostLoggedOneRM`, `…LatestBodyMetrics`, `…WeeklyVolume`, `…WeeklyFrequency`, `…WeekSnapshot`). Genuinely missing: average duration, per-day breakdown. | **Partial** |
+| `DashboardData` freezed model | **Conflicts** with the design: one provider per card so "one failing card must never blank the whole dashboard" (`dashboard_providers.dart`, `build-plan.md` M6). | **Drop** |
+| `dashboard_skeleton_loader.dart`, empty state, retry | Per-card `LoadingShimmer` + `ErrorView` exist; "Ready to train" CTA + `WeekSnapshot.hasHistory`. Zero-data new-user state not verified on screen. | **Done** (verify empty state) |
+| Responsive 1/2/3 col | `Breakpoint` compact / medium 768 / expanded 1200 in `core/widgets/responsive.dart`; dashboard uses it only for the button row and sparkline width. WIP diff uncommitted. | **Partial** |
+| Dark mode | `ThemeModeNotifier`, `theme_mode_test.dart`. | **Done** |
+| App icon / splash | Android launcher, web icons, `web/manifest.json`, `assets/branding/*` updated 2026-09-18. iOS `AppIcon` + `LaunchImage` = template; Android splash = default `launch_background.xml`; `web/index.html` still says "A new Flutter project" / title `ironyx`; no icon/splash generator configured. | **Partial** |
+| Store graphics | None. `test/golden/*.png` are test renders, not store screenshots. No feature graphic. | **Missing** |
+| Store description | `docs/STORE_LISTING.md`: Play title/short/full drafted, ASO keywords, screenshot order. No iOS listing. | **Partial** |
+| Analytics + Sentry | Neither in `pubspec.yaml`. `lib/core/error_reporting.dart` `reportError()` is the single integration seam, `kDebugMode`-gated. | **Conflict** (B3) |
+| Privacy policy | `docs/PRIVACY_POLICY.md` (2026-09-17). Not hosted. Stale on deletion (B1) and on telemetry if D2 ≠ none. | **Partial** |
+| Terms of service | None. Not required by either store for a free app with no IAP; decide whether accounts justify one. | **Optional** |
+| Signing / AAB | Keystore + `key.properties` exist (gitignored, **not backed up**). `scripts/build_android.sh bundle` builds an AAB. Release shrinking off, and CI never builds a release variant (A2.11). `pubspec` version `0.1.0+1`. *(Updated 2026-09-20: shrinking + obfuscation are now on and `pubspec` is `1.0.0+1`; the uncommitted `ci.yaml` adds a shrunk, obfuscated release-APK build. **The keystore and `key.properties` are not on this Windows machine** — see Week 0.)* | **Partial** |
+| Unit / widget / golden tests | 367 passing as of 2026-08-29 (**423 as of 2026-09-20**). 12 screen goldens incl. `dashboard.png` + `dashboard_tablet.png` (dated Aug 22 — **stale against the WIP diff**). The 12 h "golden tests" block is mostly a refresh. | **Mostly done** |
+| Offline / persistence / crash recovery | Unit-covered; real-device validation still open (Priority 2). | **Partial** |
+| Accessibility audit | Code-level pass done; TalkBack / VoiceOver open. | **Partial** |
+| Data export "JSON, CSV" | Both in Settings → Data Management. | **Done** |
+| Web target | `flutter build web` passes. `driftDatabase(name: 'ironyx')` has no web options and `web/` holds no `sqlite3.wasm` / `drift_worker.js`; runtime persistence never verified. | **Unverified** (D5) |
+| Website, newsletter, PH assets, blog | Nothing. | **Missing** |
+| API docs, premium, referral, IAP | Nothing, by design. | **Drop** (C12) |
+| v1.1 "workout templates" / "analytics dashboard" | Templates + 3 built-in programs exist; Progress analytics Phases 0–4 shipped. | **Rewrite v1.1 scope** |
+
+### Decisions — defaults apply if you do nothing
+
+| # | Decision | Recommended default | Decide by |
+|---|---|---|---|
+| D1 | iOS at launch or fast-follow? | **Fast-follow** unless enrolled + a build host chosen (Codemagic vs Actions) by Oct 5. If "go", iOS tasks below apply. | Mon Oct 5 |
+| D2 | Telemetry: none / Sentry only / Sentry + analytics | **Sentry only**, scrubbed (no email, no exception text), policy + listing updated first. Use Play Console / App Store Connect for installs and retention. | Fri Oct 2 |
+| D3 | Brand primary: teal (icon, web manifest) or blue (theme seed) | **Teal** — it is what users see on the home screen; move `AppColors.seed` to match and re-check contrast. | Sun Sep 27 |
+| D4 | Success floors (proposed — edit) | See "Success criteria". | Sun Sep 27 |
+| D5 | Web as a launch target? | **No** — post-launch demo at most. Removes the wasm/IndexedDB verification and web QA from the critical path. | Sun Sep 27 |
+
+- [ ] D1 decided (due Mon Oct 5)
+- [ ] D2 decided (due Fri Oct 2)
+- [x] D3 decided 2026-09-19: **teal**. Move `AppColors.seed` to match the icon/manifest teal (`#38D6C0`) in the Week 1 brand task, then re-check 4.5:1 contrast in light and dark.
+- [x] D4 decided 2026-09-19: floors accepted as proposed in "Success criteria".
+- [x] D5 decided 2026-09-19: **web is not a launch target** (post-launch demo at most). Drops web QA and the wasm/IndexedDB check from the critical path; `web/index.html` title fix and the Priority 2/3 web items stay parked.
+
+### Week 0 — Mon Sep 21 – Sun Sep 27 · prep (≈ 6 h)
+
+Lead-time items go first: they take calendar days regardless of effort.
+
+- [ ] **acct** Create the Play Developer account ($25) and start identity verification.
+- [ ] **acct** Back up `android/upload-keystore.jks` + `android/key.properties` to two durable locations. Losing the keystore means never updating the listing. **(2026-09-19: neither file exists in `F:\Ironyx\android` on this Windows machine — both are correctly gitignored and untracked, and a search of the repo and `C:\Users\musta` (depth 4) found only debug/OneDrive keystores. They were created on another machine or environment. Locate the original before anything else; if it is gone, generate a new upload key now, before the first Play upload, and back it up at creation. **Rechecked 2026-09-20: still absent** — `android/*.jks` and `android/key.properties` do not exist, so `build.gradle.kts` silently falls back to the debug key and any release build made here is debug-signed and not uploadable. Recipe: `SETUP.md` §5.)**
+- [ ] **acct** Clearance: App Store name availability, trademark search for "Ironyx", domain (`ironyx.app` / `ironyx-app.com`) — before any asset spend (C13). *(2026-09-19 DNS lookup: `ironyx.app`, `ironyx-app.com`, `getironyx.com`, `ironyx.io`, `ironyx.fit` return NXDOMAIN, i.e. probably unregistered; `ironyx.com` gave a DNS server failure — inconclusive. NXDOMAIN is not proof of availability: confirm at a registrar. App Store name and trademark still need a manual search.)* Also record **who made the app icon / mark and how** (own design, commissioned, or tool-generated) in `ASSETS-LICENSE.md` — it is not written down anywhere, and ownership affects both the trademark search and what can be claimed.
+- [ ] **acct** Device inventory: which real Android/iOS devices exist; what needs emulators or cloud devices (C9).
+- [x] **dev** Baseline on a machine with Flutter: `flutter analyze`, `flutter test`. **2026-09-19, Flutter 3.47.5 / Dart 3.13.4 (stable), installed at `C:\src\flutter` and added to the user PATH:** `flutter analyze --fatal-infos --fatal-warnings` — no issues; `flutter test` — **393 passed, 1 skipped, 0 failed** (the skip is the golden review harness), including the WIP dashboard diff and the three tests added the same day. The new 1440 dp layout test was confirmed to fail with "BoxConstraints forces an infinite height" against the original `stretch` row. **Formatting (re-checked 2026-09-19 later the same day): clean** — `dart format lib test` reports 0 changed on 283 files, so the 5-file drift listed earlier no longer reproduces. Goldens were not regenerated. `flutter pub get` warns that Windows plugin builds need Developer Mode (symlinks); irrelevant to analyze/test, needed for `flutter build`/`run` on this machine. **Re-run 2026-09-20 (same SDK, full working tree): analyze clean (97 s), `flutter test` 423 passed, 1 skipped, 0 failed (≈ 56 s), `dart format` 0 changed on 284 files.** The earlier counts in this file (393 / 397 / 408) were each correct for the day and tree they were taken on; 423 is current.
+- [ ] **dev** `tool/check_asset_licenses.dart` **fails on Windows** (2026-09-20): 602 false "unreferenced image ships in the APK" errors, one per image, because it builds paths with `\` (from `listSync`) and compares them with the seed's `/` paths (`assets/images/exercises\free_exercise_db\…`). No licence, source, hotlink or missing-file error is reported, and Linux CI is unaffected — so it is a tooling bug, not a licensing problem. Normalise separators before comparing. Until then, trust the CI run of this check.
+- [ ] **dev** Docs hygiene, found in the 2026-09-20 read-through — **fixed in the docs, but the underlying items are still open:** (a) `assets/audio/` is empty (`.gitkeep` only) and the timer plays `SystemSound.alert`, contradicting ADR-4 and the old `ASSETS-LICENSE.md` — tracked in Week 2; (b) `just_audio` is declared in `pubspec.yaml` but nothing in `lib/` imports it — use it for real cues or remove it; (c) `freezed` is pinned to a **prerelease** (`4.0.0-dev.3`) — fine for code generation now, worth a look before a long freeze; (d) `riverpod_lint` / `custom_lint` are not in the project, so ADR-2's lint rule is enforced by review only.
+- [ ] Read this section end to end; confirm 40 h/wk; block the calendar Sep 28 – Dec 20; place ICAO prep (target Oct 31) around W4.
+- [ ] Set up tracking: this file is the tracker (no second tool).
+- [x] Decide D3, D4, D5. (2026-09-19 — see Decisions.)
+
+### Week 1 — Sep 28 – Oct 4 · dashboard finish + brand (≈ 40 h)
+
+**Dashboard** (≈ 22 h — roughly half of the source's 40 h; the rest exists)
+- [ ] **dev** Once baseline is green: finish and commit the WIP diff (gradient Today card, two-up buttons at ≥ 768, `IntrinsicHeight` removal). *(2026-09-20: baseline is green — 423 tests. The uncommitted tree is much larger than the dashboard: 79 files covering the brand/theme, splash and icons, account deletion, password recovery, timer-notification fixes, R8 shrinking and CI. Only the Markdown docs have been committed so far; the code diff still needs to go in as logical commits.)*
+> **Cross-check 2026-09-19 (code read first; analyze + tests run afterwards — see the Week 0 baseline).** The
+> ticks below were checked against the uncommitted diff. Two ticks were
+> overstated and are fixed in the same pass:
+> the desktop row used `Row(crossAxisAlignment: stretch)` inside a
+> `SliverToBoxAdapter` (unbounded height → layout assertion at ≥ 1200 dp), and
+> the weekday strip bucketed days in UTC, so a workout just after local
+> midnight showed on the wrong day. The Arabic `dashboardStatStreak` label was
+> also changed (المواظبة → التتابع) in the same diff with no note here — confirm
+> that is intended.
+
+- [x] **dev** Goal progress bar in the hero from `weekly_session_target` (sessions x / target). (`_SessionGoal`; target clamped to 1–7, default 3.)
+- [x] **dev** Mon–Sun weekly breakdown (filled = trained) + per-day provider. Implemented as private `_WeeklyBreakdown` / `_WeekdayCell` in `dashboard_page.dart` plus `dashboardWeekdayDistributionProvider`, not a standalone `weekly_breakdown_calendar.dart`. Reuses `WorkoutDao.watchWeekdayDistribution` (Monday-first, zero-filled); it now takes a `utcOffset` and the dashboard passes the device offset. RTL mirroring comes from `Row`; not seen on screen.
+- [ ] **dev** Average-duration metric (provider + card), if it survives a "does the user care" check.
+- [x] **dev** `Breakpoint.expanded` layout with a constrained content width (closes Priority 3 "desktop layouts use constrained widths"). Two-column primary row (Today 2 : This week 1) and a secondary row (Progress 2 : Recent 1) inside `PageBody`'s 1100dp cap. Rows use `start` alignment. Not run at 1440 dp on a real window.
+- [x] **dev** Spacing via `AppSpacing` only. (Spacing yes; icon/bar/marker sizes — 28, 18, 8, 56 and `_dayMarkerSize = 32` — are literals.)
+- [x] **dev** Verify `WeekSnapshot.from` after Phase 0 zero-fill in `WorkoutDao._fillWeekGaps`. The snapshot now documents that gaps are zero-filled while an empty result still means no history.
+- [x] **dev** First look on a device (2026-09-19, Android 15 emulator, Pixel 6, release APK, 1080×2400): welcome screen and dashboard render in the teal theme, light mode, no overflow or exceptions. The Today gradient card, two stacked buttons, "Progress"/"Recent" sections and bottom nav all look right. **Empty state:** a new user sees "No training in the last 8 weeks" *instead of* the session-goal bar and weekday strip (they live inside `_WeekBody`, which only renders with history) — decide whether a zero-data user should see "0 / 3" and an empty strip. **Resolved 2026-09-19:** they now do — the "no recent training" text stays and the goal bar and empty weekday strip sit under it (tested; not re-seen on the emulator). **Not yet seen:** the goal bar and weekday strip with data, dark mode, Arabic/RTL, tablet/desktop widths.
+- [ ] **dev** Tests. Added and **passing (2026-09-19)**: `dashboard_page_test.dart` (goal + trained-day marker; 1440 dp layout does not throw), a `utcOffset` case in `progress_analytics_dao_test.dart`, and `dashboard_providers_test.dart` coverage for empty snapshots, current/previous week selection, streaks, and series length. **Added 2026-09-19 (passing):** empty-history state, week-card error state, and an Arabic/RTL check that Monday sits right of Sunday in the strip. Still open: refresh `dashboard.png` + `dashboard_tablet.png` and add a desktop golden.
+
+**Brand** (≈ 8 h)
+- [x] **dev** Apply D3: `AppColors.seed` → `0xFF38D6C0` (2026-09-19). Measured 4.5:1 contrast on the generated schemes, both themes (onPrimary/primary 6.43 light, 7.74 dark; primary on surface 6.13 / 10.81; container text 7.27; secondary, tertiary and error on surface ≥ 6.15; lowest is the light selected-nav label on its 16% indicator, 4.61). `fromSeed` mutes the seed, so the in-app primary is `#006B5E` (light) / `#83D5C6` (dark), not the icon's vivid `#38D6C0`. **Still open:** eyeball both themes on a device; `AppColors.gain` (`#3DD68C` green) now sits close in hue to the teal primary — check trend chips vs primary elements; `chartSeries[0]` is still the old blue `#2D6BFF` (left alone — decide whether series 1 should follow the brand); regenerate goldens.
+- [x] **dev** Typography pass: centralized modern heading, title, label, and metric hierarchy in `app_typography.dart` and `app_theme.dart` (2026-09-19). Shared cards, navigation, buttons, progress indicators, and app bars now use the refreshed visual system. Device/golden review remains open below.
+- [x] **dev** iOS `AppIcon` set (2026-09-19). The 1024 master has pre-rounded, transparent corners (App Store rejects both), so it was rebuilt as an opaque square: the icon's own `#0B1628 → #122D48` diagonal gradient underneath, the artwork composited on top. All 15 sizes are 24-bit RGB PNGs, no alpha. **Not seen in Xcode or on a device** (no Mac).
+- [x] **dev** Branded splash (2026-09-19). Android: navy `launch_background.xml` with the mark (≤ 11) and `values-v31` / `values-night-v31` `windowSplashScreenBackground` + `AnimatedIcon` (12+). iOS: `LaunchImage` 1x/2x/3x mark on transparent + navy storyboard background. Navy in both light and dark by design. **Not visually verified:** the splash could not be captured on the emulator (Android 15), and iOS not at all.
+- [x] **dev** Android adaptive icon (2026-09-19): vector foreground + gradient background + monochrome layer for Android 13 themed icons; legacy PNGs stay for API < 26. **Seen on the Pixel 6 / Android 15 emulator launcher** with the circular mask: mark inside the safe zone. Mark colours are sampled from `ironyx-icon-1024.png`, not the SVG — the SVG's gradient renders differently from the shipped PNG.
+- [x] **dev** Notification small icon: the timer notification used `@mipmap/ic_launcher` (full colour → grey blob on Android 5+, and a name-only lookup R8 can strip). Now a dedicated monochrome `@drawable/ic_notification` plus `res/raw/keep.xml`. Not yet seen in a real notification.
+- [ ] **dev** Fix `web/index.html` title/description only if D5 = yes.
+
+**Account deletion — B1** (≈ 10 h, continues into W2)
+- [x] **dev** Design: `delete_my_account()` security-definer RPC removing the caller's `backups` row and `auth.users` row; added to `docs/cloud_backup_setup.sql` (2026-09-19). The Supabase dashboard still needs to run it.
+- [x] **dev** Client behind the `SupabaseAuthService` seam; Settings → Account → "Delete account" with typed confirmation; sign out + `unlinkAccount` after success. Added English/Arabic copy and widget coverage (2026-09-19).
+- [x] **dev** Local data decision documented in the confirmation copy and client flow: account deletion removes the remote account and cloud backup, but keeps local workouts until the user explicitly removes them from Data Management (2026-09-19).
+
+### Week 2 — Oct 5 – Oct 11 · trust + release plumbing (≈ 42 h)
+
+- [ ] **acct** **D1 go/no-go (Mon Oct 5).** If go: enrol in Apple Developer Program and pick the build host.
+- [ ] **dev/acct** Finish B1: l10n en + ar and tests are complete; `PRIVACY_POLICY.md` already describes in-app deletion (checked 2026-09-19); still open: test account deletion end to end with a real account. **SQL execution in the Supabase dashboard is treated as complete per account-holder confirmation (2026-09-19).**
+- [ ] **dev** D2 outcome: if Sentry — `sentry_flutter` wired **only** inside `reportError()`, `beforeSend` scrubbing, release tagging, symbol upload plan (pairs with A2.11 obfuscation) and a deliberate test crash; update policy + listing copy in the same change. If none — nothing to build.
+- [x] **dev** Password recovery (2026-09-19): `AuthService` gained `isPasswordRecoveryPending`, `passwordRecoveryRequests()` and `updatePassword()`; `SupabaseAuthService` listens for `AuthChangeEvent.passwordRecovery` from construction; `app.dart` pushes the new `/auth/reset-password` route on the event or, for a cold start from the link, on the first frame; `ResetPasswordPage` validates like sign-up. New failure kinds `samePassword` and `recoveryExpired` (en + ar; expired offers "Request a new link"). 8 widget tests against the fake. **Not run against a real Supabase project or a real reset email** — needs `supabase.json` and the redirect URL below. The cold-start path relies on the SDK delivering the initial link after the service is created (it arrives on `uriLinkStream`, so it should) — confirm on a device.
+- [ ] **acct** Supabase: add `com.soshe90.ironyx://login-callback` to Redirect URLs; move Site URL off `http://localhost:3000` (`PLAN.md` Phase 1 — still unchecked, and deep-link confirmation is broken without it). Confirm email confirmation + rate limits are on server-side (Audit 2 open question). Configure custom SMTP and check free-tier pause behaviour **(verify)**. **A custom SMTP provider becomes a second data processor for users' email addresses** — `PRIVACY_POLICY.md` currently says Supabase is the only third party, so name the provider there (and in the Data Safety / App Privacy answers) in the same change.
+- [ ] **dev/acct** Publish the minimal site: policy, support email, delete-account instructions (C11). Record the public URL here and use it in the store forms.
+- [ ] **dev** *(2026-09-19: **partly done** — shrinking + resource shrinking on, `proguard-rules.pro` (Gson / `flutter_local_notifications`), `--obfuscate --split-debug-info=build/symbols/<version>` in `scripts/build_android.sh`, version `1.0.0+1` (`kAppVersion` matched). A shrunk, obfuscated release **APK** (89.6 MB, was 94.9 MB) built in ~2.5 min and booted to the welcome screen on the Android 15 emulator with no crash. **Timer notifications — two real bugs found and fixed, one decision open (2026-09-19, Pixel 6 / Android 15 emulator).** *Symptom:* Tabata started, app backgrounded, alarms fired ("5 wakes 5 alarms") but no notification ever posted; an unshrunk build did the same, so R8 was cleared. *Root cause 1 — the manifest never declared the alarm receiver.* `flutter_local_notifications`' own manifest carries permissions only; its README requires the **app** to declare `ScheduledNotificationReceiver` (and `ScheduledNotificationBootReceiver`). Without it Android delivers the alarm broadcast to a component that does not exist and drops it silently, so **scheduled timer notifications had never worked on any device** and nothing survived a reboot despite `RECEIVE_BOOT_COMPLETED` (and the privacy policy) saying otherwise. Both receivers are now declared, non-exported, with `test/unit/android_manifest_test.dart` guarding them (fails against the old manifest). *Root cause 2 — off-by-one in `TimerController._rescheduleBoundaries`:* it skipped the running phase's own end (so the first, most urgent boundary was never scheduled) and labelled each notification with the phase that had just *ended*. Fixed; 5 new tests, three of which fail against the old code. *Verified on the emulator with the shrunk release build:* `Rest phase / Rest starts now`, then `Work phase / Work starts now`, right channel, small icon = the new `ic_notification`. *Still open — exact alarms:* boundary alarms are inexact (`inexactAllowWhileIdle`), and the first boundary arrived **14 s late** on a 20 s work phase (longer than a Tabata rest). `PlatformNotificationService` now asks the OS (`canScheduleExactNotifications`) and uses exact alarms when allowed, falling back to inexact — so it is safe with or without the permission. Measured with `USE_EXACT_ALARM` temporarily declared (then removed): delivery **0.10–0.39 s** after the scheduled time (`window=0`). **Decision (account holder, 2026-09-19): declare `USE_EXACT_ALARM`** (plus `SCHEDULE_EXACT_ALARM` capped at `maxSdkVersion=32` for Android 12/12L); the manifest comment records the rationale and the fallback — if Play rejects the declaration, delete both lines and the code degrades to inexact. `PRIVACY_POLICY.md` permission list updated to match. **Play risk is not gone, only accepted:** the permission is restricted to apps whose *core function* is an alarm/timer/calendar **(verify against the live Play policy)**, so the Play Console exact-alarm declaration must cite the interval/rest timer and will be reviewed — see the Week 3 forms item. Not yet covered: no *completion* notification exists (`showCompletion` is never called; the last phase's end is unannounced when backgrounded), and everything above is emulator-only — a physical device is still required. **Still open:** the AAB, a real device, and archiving `build/symbols/` — it is gitignored, so each store upload's symbols must be copied somewhere durable or that build can never be symbolicated.)* Enable release shrinking (A2.11) **and** run the release AAB on a real device the same day (`scripts/build_android.sh bundle`). Set a real version (`1.0.0+N`). *(2026-09-19: an unshrunk, debug-signed release **APK** — 94.9 MB, all ABIs — built in ~5 min and launched on an emulator; shrinking, the AAB and a real device are still open. Windows build note: the pub cache (`C:`) and the repo (`F:`) are on different drives, which breaks Kotlin incremental compilation — build with `flutter build apk -P kotlin.incremental=false`, or move `PUB_CACHE` onto `F:`. Gradle also auto-installed NDK 28.2, Build-Tools 36 and Platform 34 into `C:\Android\Sdk`.)*
+- [ ] **dev** Timer sound cues (ADR-4 gap, found 2026-09-20). No audio files are bundled — `assets/audio/` holds only `.gitkeep` — so `TimerAudioService` plays `SystemSound.play(SystemSoundType.alert)` (its own doc comment says "swap the cue bodies when they exist"). The welcome screen ("Runs in the background, with sound and haptics"), the settings toggle ("Play a tone on phase change") and the store copy all promise sound; `docs/build-plan.md` notes `SystemSound` gives a click on Android and nothing useful on iOS. Decide: bundle real cues (`just_audio` is already a dependency, currently unused; record their licence in `ASSETS-LICENSE.md`, which `check_asset_licenses.dart` does **not** enforce for audio) or soften the copy. Check on a physical device either way — this has only been emulator-tested.
+- [ ] **dev** Physical-Android validation, Priority 2: force-kill recovery, timer across background/lock, wakelock release, notification reschedule.
+- [ ] **acct** Recruit 15–20 closed testers (opt-in list / Google Group); 12 must stay opted in for 14 days **(verify)**.
+- [ ] **dev** Store assets round 1: real-device screenshots (light + dark, English + Arabic), 1024×500 feature graphic.
+
+### Week 3 — Oct 12 – Oct 18 · QA + closed test starts (≈ 45 h)
+
+- [ ] **acct** **Mon Oct 12: upload the signed AAB to a Play closed-testing track.** Complete the app-content forms: Data Safety, health-apps declaration, IARC rating, target audience, ads = none, policy URL, account-deletion URL, **and the exact-alarm permission declaration** (`USE_EXACT_ALARM` — justify it by the interval/rest timer; if Play pushes back, drop the two manifest lines, nothing else changes).
+- [x] **dev** Measure coverage; target ≥ 70% on `domain/` + `data/` (not 95%). **2026-09-19: 70.9%** (`domain/` 74.3%, `data/` 0/71 lines) excluding generated code; whole `lib/` 68.2%. Optimistic: lcov only lists files some test imports. The 0% files are the two Supabase adapters (`supabase_auth_service.dart`, `supabase_cloud_backup_service.dart`) — no network seam. Next-lowest: `edit_workout_notifier` 56%, `progress_providers` 59%, `active_workout_notifier` 78%. Full suite that run: 408 passed, 1 skipped.
+- [ ] **dev** Unit/widget tests for any W1–W2 change; layouts at 360 / 768 / 1440 dp.
+- [ ] **dev** Manual QA on real devices: touch targets, scrolling, dark mode, Arabic/RTL, 200% font scale, notification permission flow (grant + deny fallback, per M4).
+- [ ] **dev** Import/export failure + recovery scenarios manually tested (validation checklist).
+- [ ] **dev** Log bugs; triage tester feedback as it arrives.
+- [ ] **acct** *(if D1 = go)* Create the App Store Connect record, signing set-up, first TestFlight build.
+
+### Week 4 — Oct 19 – Oct 25 · fix + performance (≈ 45 h)
+
+- [ ] **dev** Fix all critical bugs from W3 + tester reports; push updated closed-test builds.
+- [ ] **dev** Measure, on a real mid-range device, release/profile build: cold start to dashboard < 2 s, cached < 0.5 s, memory < 100 MB, 60 fps scroll. Also time the first-launch seed on a real file-backed DB (A2.6 was inconclusive in-memory).
+- [ ] **dev** Regenerate the golden matrix (320/375/768/1024/1440 × loading/data/empty/error where the harness supports it).
+- [ ] **dev** TalkBack pass (and VoiceOver if D1 = go); status not by colour alone; focus order if web ships.
+- [ ] **dev** Crash simulation + recovery, offline mode, data persistence across restart.
+- [ ] **acct** Start genuine participation in the target subreddits/Discords (C7). No promotion yet.
+- [ ] **dev** *(if D1 = go)* TestFlight pipeline green; iOS device checks (audio ducking, notifications, wakelock); iOS backup-exclusion (A2.3 open item); App Privacy questionnaire.
+
+### Week 5 — Oct 26 – Nov 1 · production access + listings (≈ 40 h)
+
+- [ ] **acct** Confirm the 14-day closed test completed (≈ Oct 26); apply for Play production access. Note the review time **(verify)**.
+- [ ] **dev/acct** Full landing site: hero, features, screenshots, FAQ, support, newsletter (with a privacy notice), analytics only if it matches D2. (≈ 20 h)
+- [ ] **acct** Finish Play listing (title ≤ 30, short ≤ 80, full ≤ 4000, Health & Fitness, ≥ 4 screenshots, feature graphic).
+- [ ] **acct** *(D1 = go)* iOS listing: name ≤ 30, subtitle ≤ 30, keywords, description, support + privacy URLs, screenshots at the current required sizes **(verify)**, age rating.
+- [ ] **acct** Product Hunt page prepared: title, tagline, thumbnail, description, maker bio, demo link; line up early supporters.
+- [ ] Fix anything from the final week of closed-test feedback.
+
+### Week 6 — Nov 2 – Nov 8 · submissions (≈ 40 h)
+
+- [ ] **acct** Submit Play production (consider a staged rollout).
+- [ ] **acct** *(D1 = go)* **Submit iOS by Wed Nov 4** — leaves room for a first-round rejection before Nov 17.
+- [ ] **dev** Launch playbook: store messaging, social posts, Reddit threads, newsletter email, support plan.
+- [ ] **dev** First blog post drafted; 3–5 social teasers.
+
+### Week 7 — Nov 9 – Nov 15 · monitor + content (≈ 36 h)
+
+- [ ] **acct** Check review status daily. Rejection → resubmit within 24 h. Fallback if iOS is rejected: launch Android-only, iOS follows.
+- [ ] **dev** Publish blog post (Medium, Dev.to, own site).
+- [ ] **dev** Community groundwork continues; research subreddit rules for each planned post.
+- [ ] **Fri Nov 13 — go/no-go gate:** see "Go-live gate" below.
+
+### Week 8 — Nov 16 – Nov 22 · launch (≈ 40 h)
+
+- [ ] **acct** **Tue Nov 17: release to Play** (and the App Store, if approved — use manual release so both go live together).
+- [ ] **dev** Same day: install from the store on a clean device and run sign-up, deep-link confirmation, backup and restore. A store-signed build can differ from a local one (Play App Signing key vs deep links / Supabase).
+- [ ] **acct** **Wed Nov 18: Product Hunt** (12:01 AM PT), answer every comment all day. Only after the app is live.
+- [ ] **acct** **Thu Nov 19 onward:** Reddit (per-sub rules, staggered, genuine), optional Show HN, Dev.to / Indie Hackers. Draft post copy from `docs/STORE_LISTING.md`'s wording, not the source plan's appendix (which is not in the repo and contains C6's three false claims).
+- [ ] Respond to every review; fix and ship hotfixes fast; collect early-adopter feedback.
+
+### Week 9 — Nov 23 – Nov 29 · initial metrics (≈ 30 h)
+
+- [ ] Track downloads, installs/uninstalls, ratings, crash-free rate daily (Play Console; Sentry if D2).
+- [ ] Read every review; list top bugs and top requests.
+- [ ] Quiet on Thu Nov 26 – Fri Nov 27 (US holiday).
+- [ ] ~~API documentation~~ **removed** (C12). Use the time for an in-app feedback/support path and an FAQ.
+
+### Week 10 — Nov 30 – Dec 6 · learn + patch (≈ 36 h)
+
+- [ ] Analyse: downloads, DAU, D1/D7 retention, crash-free %, rating.
+- [ ] Ship v1.0.1 for the top three bugs; update listing text if it changed.
+- [ ] Second blog post ("Building Ironyx: offline-first architecture"); optional AMA; share testimonials with permission.
+- [ ] Draft v1.1 roadmap from real feedback.
+
+### Week 11 — Dec 7 – Dec 13 · growth + planning (≈ 30 h)
+
+- [ ] Growth experiments (short-form video, threads, stories); micro-creator outreach with disclosure.
+- [ ] Ask beta testers for reviews and testimonials.
+- [ ] v1.1 scope, rewritten: expanded built-in program library, Health Connect / Apple Health, deeper analytics on top of Progress Phases 0–4, competitor import beyond the current XLSX. Estimate, sequence, backlog.
+- [ ] Premium — **planning only**: tier, price, what is gated. **No code**, no IAP, until `PLAN.md` Phase 3's D7 number exists.
+
+### Week 12 — Dec 14 – Dec 20 · review (≈ 30 h)
+
+- [ ] **Fri Dec 18: compile the final numbers** (below) against the success criteria.
+- [ ] Q4 retrospective: what went well, what to improve, Q1 priorities. Include a **January acquisition push** (C14).
+- [ ] Lock the Q1 roadmap; sprint schedule; help/contractor needs; Year-2 budget.
+- [ ] Thank early users and testers; take time off.
+- **Next review:** Thu Dec 31, 2026.
+
+### Go-live gate — Fri Nov 13
+
+Ship on Nov 17 only if **all** are true; otherwise slip a week and say so here.
+
+- [ ] Play production access granted and the build is approved.
+- [ ] Closed-test crash-free rate ≥ 99.5% over the last 7 days.
+- [ ] No open critical or data-loss bug.
+- [ ] B1 (account deletion) works end to end on a real account.
+- [ ] Privacy policy, Data Safety and listing copy all match the shipped binary (B3).
+- [ ] Release-variant build (shrunk) smoke-tested on a real device.
+- [ ] Keystore backed up; Supabase redirect URL + SMTP verified.
+- [ ] *(D1 = go)* iOS approved; otherwise Android-only launch is confirmed as the plan.
+
+### Success criteria — measured Fri Dec 18
+
+Proposed floors are mine (D4) — edit them. Targets are the source plan's.
+
+| Metric | Floor | Target | Stretch |
+|---|---|---|---|
+| Live in Play | required | required | — |
+| Live in App Store | (D1) | required if D1 = go | — |
+| Downloads | 100 | 500 | 1,000 |
+| Rating (min. 10 reviews) | ≥ 4.0 | ≥ 4.5 | ≥ 4.7 |
+| Crash-free sessions | ≥ 99% | ≥ 99.5% | ≥ 99.8% |
+| Daily active users | 10 | 50 | — |
+| Dashboard load (real mid-range device) | < 3 s cold | < 2 s cold, < 0.5 s cached | — |
+| Critical bugs at launch | 0 | 0 | — |
+| Product Hunt launched | yes | yes | top 10 |
+| First blog post | yes | yes | — |
+| Q1 2027 roadmap locked | yes | yes | — |
+
+Retired from the source plan: "2–5% premium conversion" (no premium exists),
+"500 newsletter subscribers" and "1K website visitors" (vanity; keep as
+optional), "1,000 waitlist" and "First premium subscriber" stretch goals.
+
+### Risk register
+
+| Risk | Sev. | Prob. | Mitigation |
+|---|---|---|---|
+| Play production access delayed (closed-test gate, B2) | 🔴 | High if unplanned | Account in W0; testers W2; test live by Oct 12; go/no-go Nov 13 |
+| Store rejection for missing account deletion (B1) | 🔴 | High if unfixed | Built and verified in W1–W2 |
+| Policy / Data Safety / binary mismatch (B3) | 🔴 | Med | One change updates code, policy and listing together |
+| iOS not ready by Nov 4 | 🟡 | Med–High | D1 go/no-go; Android-first fallback is pre-agreed |
+| Release-variant crash after enabling shrinking (A2.11) | 🔴 | Low–Med | Real-device smoke test in W2, not at release-cut |
+| Signup email fails under launch traffic / paused Supabase project | 🟡 | Med **(verify)** | Custom SMTP; keep project active or upgrade before W8 |
+| Keystore lost | 🔴 | Low | Two backups in W0 |
+| Design not polished enough | 🟡 | Low | Half the dashboard already exists; time-box W1 |
+| Bugs found in QA | 🟡 | 30% | 50% slack in W4 |
+| Low downloads | 🟡 | 25%+ | Floors in D4; January push (C14); read as ASO signal, not failure |
+| Burnout (40+ h/wk) | 🔴 | 20% | Weekends off; W9/W11/W12 are lighter by design |
+| ICAO exam conflict | 🟡 | 15% | Prep by Oct 31 (in W4); schedule the exam after launch |
+
+### Time tracking
+
+Planned hours are a **re-baselined estimate**, not the source plan's (C3). Fill
+in Actual on Sundays; add a two-line note (done / blocked / next).
+
+| Week | Dates | Focus | Planned h | Actual h | Notes |
+|---|---|---|---|---|---|
+| 0 | Sep 21–27 | Prep, lead-time items | 6 | | |
+| 1 | Sep 28–Oct 4 | Dashboard, brand, B1 start | 40 | | |
+| 2 | Oct 5–11 | B1, telemetry, release plumbing | 42 | | |
+| 3 | Oct 12–18 | QA, closed test live | 45 | | |
+| 4 | Oct 19–25 | Fixes, performance, a11y | 45 | | |
+| 5 | Oct 26–Nov 1 | Prod access, listings, site | 40 | | |
+| 6 | Nov 2–8 | Submissions | 40 | | |
+| 7 | Nov 9–15 | Monitor, content, gate | 36 | | |
+| 8 | Nov 16–22 | **Launch** | 40 | | |
+| 9 | Nov 23–29 | Metrics, reviews | 30 | | |
+| 10 | Nov 30–Dec 6 | Patch, learn | 36 | | |
+| 11 | Dec 7–13 | Growth, v1.1 planning | 30 | | |
+| 12 | Dec 14–20 | Review, Q1 roadmap | 30 | | |
+| | | **Total** | **460** | | |
+
+### Weekly status template
+
+```markdown
+## Week N (dates)
+### Done            - task (h)
+### In progress     - task (ETA)
+### Blocked         - blocker → mitigation
+### Lessons
+### Next week's top 2
+### Time            planned / actual / variance
+```
+
+---
+
+*Everything from here down to Audit 2 is the first engineering audit
+(Priority 0–4, the Progress feature track, the validation checklist) —
+essentially complete. Its open boxes (lifecycle/device validation, TalkBack /
+VoiceOver, responsive checks, import/export manual tests, final diff review)
+are scheduled in the launch plan above.*
+
+---
 
 ## Priority 0 — Backup and data-integrity safety
 
@@ -22,7 +382,7 @@ This checklist captures the production-hardening work identified during the arch
 - [x] Validate row value types before SQL insertion. (SQLite TEXT/INTEGER/REAL representations, boolean 0/1 values, nullability, and finite REAL values are checked during preflight.)
 - [x] Validate UUIDs and foreign-key relationships before applying an import. (UUIDs and documented legacy/sentinel IDs are accepted explicitly; foreign keys are resolved against the effective merge/replace view before snapshot/deletion.)
 - [x] Ensure the preview reports that the file is incomplete or partial when applicable. (`data_management_section.dart`'s preview dialog already highlights missing/unknown table counts in red before the user picks a mode.)
-- [x] Add tests for malformed headers, missing fields, unknown tables, invalid rows, invalid UUIDs, and missing required tables. (Malformed headers/missing fields/unknown tables/missing required tables are covered; "invalid rows" is covered for dangling FKs specifically — a row with a wrong *type* or a syntactically-invalid-but-unreferenced UUID is not separately tested, since nothing validates those ahead of SQLite's own insert. See the still-open row-validation items above.)
+- [ ] Add tests for malformed headers, missing fields, unknown tables, invalid rows, invalid UUIDs, and missing required tables. (Malformed headers/missing fields/unknown tables/missing required tables and dangling FKs are covered; wrong-type rows and syntactically-invalid-but-unreferenced UUIDs still need dedicated coverage.)
 
 ### Safe replace imports
 
@@ -72,7 +432,7 @@ This checklist captures the production-hardening work identified during the arch
 
 ### Duplicate historical imports
 
-- [x] Detect repeated XLSX imports using a stable source identity or file hash. (Chose content-based detection instead of a file hash — see next item. A file hash only catches re-importing the exact same bytes; it would miss an updated/appended export of the same log, which would still duplicate the old dates. No new table/migration needed either.)
+- [x] Detect repeated XLSX imports using stable reconstructed workout identity. (Content-based detection compares the historical date, exercise order, and set data; a file hash was intentionally rejected because it would miss updated/appended exports of the same log.)
 - [x] Detect likely duplicate workouts using date, source sheet/day, exercise structure, and set data. (`WorkoutXlsxImportService._isDuplicateOfExisting`: a workout is flagged only if an existing workout already sits at the exact neutral timestamp historical imports use for that date, with the same exercises in order and identical sets — a manually logged workout on the same calendar day is never flagged, since its `startedAt` differs.)
 - [x] Show duplicate candidates in the preview before writing. (Preview dialog reports the count and disables Import if every parsed workout is a duplicate; `apply()` silently skips flagged workouts.)
 - [x] Make retrying an interrupted import safe and predictable. (Falls out of the above plus the existing transaction atomicity: a failed `apply()` leaves nothing committed, so a retry inserts cleanly; a repeated *successful* import is caught by duplicate detection instead of double-logging.)
@@ -91,7 +451,7 @@ This checklist captures the production-hardening work identified during the arch
 - [x] Serialize draft persistence writes so older asynchronous writes cannot overwrite newer state. (`ActiveWorkoutNotifier._enqueueWrite`: every write — including `discard`'s and `save`'s, which previously bypassed `_persist` entirely — is chained onto one queue and reads `state` only when it actually runs.)
 - [x] Alternatively, add a monotonically increasing draft revision and ignore stale writes. **Not needed:** serialized persistence writes solve the stale-write problem without a second revision protocol.
 - [x] Verify all set-row input updates use the intended 300 ms debounce. (`AppDuration.inputDebounce` = 300ms, used by both weight and reps fields in `draft_editor_widgets.dart`.)
-- [x] Verify draft restoration after process termination/app restart. (Unit-level: a fresh `ProviderContainer` over the same `SharedPreferences` instance restores the draft — see `active_workout_notifier_test.dart`. A real process-kill integration test is a separate, larger item — see Priority 4's "app-restart integration coverage".)
+- [ ] Verify draft restoration after process termination/app restart. (Unit-level restoration through a fresh `ProviderContainer` is covered; a real process-kill integration test remains open under Priority 4.)
 - [x] Add a regression test for rapid sequential mutations and persistence ordering.
 - [x] Add a widget/integration test for deleting a middle set while editing values in neighboring rows. (`test/widget/draft_editor_widgets_test.dart` edits sets 1 and 3, removes set 2 through the rendered popup menu, and verifies both neighboring values survive.)
 
@@ -121,12 +481,12 @@ This checklist captures the production-hardening work identified during the arch
 ### Analyzer and platform builds
 
 - [x] Re-run `flutter analyze --fatal-infos --fatal-warnings` in an environment where Flutter can write its iOS ephemeral directory. (Ran clean in this session's environment — the read-only iOS ephemeral directory blocker noted at audit time doesn't reproduce here. Found and fixed 2 pre-existing info-level issues: a missing `const` and an unsorted import block, both in test files.)
-- [x] Run the complete test suite with coverage. (253 tests; 8 failures, all in `library_page_test.dart` and confirmed pre-existing/unrelated via `git stash` — see Priority 3 note.)
-- [x] Build Android debug/release artifacts. (Debug build succeeded locally: `flutter build apk --debug`. Release wasn't attempted — needs a signing config this environment doesn't have.)
+- [ ] Run the complete test suite with coverage. Full `flutter test` passes: **423 passed, 1 skipped, 0 failed** (2026-09-20; was 397 on 2026-09-19). Coverage was measured once on 2026-09-19 (see Week 3: 70.9% on `domain/` + `data/`); a fresh `--coverage` report has not been generated since, and CI runs `flutter test --coverage` with no threshold.
+- [ ] Build Android debug/release artifacts. (Debug build succeeded locally; release was not attempted because signing configuration was unavailable.)
 - [x] Build Web release. (`flutter build web --release` succeeds.)
-- [x] Verify iOS build and CocoaPods integration on macOS. **External validation required:** macOS/Xcode is not available in the current Linux environment; the repository's iOS scaffolding and setup instructions remain in place.
+- [ ] Verify iOS build and CocoaPods integration on macOS. **External validation required:** macOS/Xcode was unavailable; the repository's iOS scaffolding and setup instructions remain in place.
 - [x] Resolve or document the Web font warning involving `CupertinoIcons`. (Root cause: nothing in the app calls `CupertinoIcons.*`, but Flutter's default iOS/macOS adaptive page-transition theming references the font family internally regardless, and the app never declared the `cupertino_icons` package that ships the actual font asset. Added it as an explicit dependency — the standard `flutter create` default this project had dropped. Tree-shakes down to 1.4KB since it's genuinely unused.)
-- [x] Test whether all icon families used by the app render correctly in the browser. **External visual validation required:** the Web release build passes, but a real browser screenshot/accessibility pass is not available in this environment.
+- [ ] Test whether all icon families used by the app render correctly in the browser. **External visual validation required:** the Web release build passes, but a real browser screenshot/accessibility pass remains open.
 
 ### Lifecycle and device validation
 
@@ -386,16 +746,17 @@ Triggered by comparing Ironyx's exercise library/3D-model screens against Muscle
 
 ### ADR-8: media & content-sourcing strategy — **resolved 2026-08-23**
 
-- [x] Choose **no bundled third-party media for v1**. This preserves the
-      offline-first, no-backend scope while licensing and provenance are not
-      settled.
+- [x] Use the bundled free-exercise-db media for v1 with attribution and
+      license metadata. This preserves the offline-first scope while keeping
+      provenance visible in the app and asset documentation.
 - [x] Animated demos are out of scope for v1; no CDN/cache strategy is added.
 - [x] Rule out ExerciseDB (AGPL-3.0) and Gym Visual-derived sets
       (proprietary) as sources.
-- [x] Media provenance columns are not added yet because v1 imports no new
-      media source. Add `media_path`, `media_attribution`, and `license_source`
-      in the same migration that introduces a licensed source.
-- [x] No attribution screen is required while no third-party media is bundled.
+- [x] Store media provenance in the exercise media/source tables. The current
+      schema includes `license`, `attribution`, and `source`; extend those
+      fields when another licensed source is introduced.
+- [x] Show attribution for bundled third-party media. The Settings/About surface
+      and `LicenseRegistry` entry document the current free-exercise-db assets.
 
 ### 3D anatomy tab — **deferred by scope decision**
 
@@ -425,10 +786,10 @@ Triggered by comparing Ironyx's exercise library/3D-model screens against Muscle
 - [x] `dart run build_runner build` (passes; this installed build_runner no longer accepts `--delete-conflicting-outputs`.)
 - [x] `flutter analyze --fatal-infos --fatal-warnings` (passes.)
 - [x] `dart analyze` (passes.)
-- [x] `flutter test` (green as of 2026-08-26: 337 passed, 1 skipped, 0 failed. The 6 long-standing Library/program-editor widget failures and the migration fixture failure are all fixed. Not re-run with `--coverage`; no coverage threshold is enforced anywhere.)
+- [x] `flutter test` (**re-run 2026-09-20: 423 passed, 1 skipped, 0 failed.** Earlier: green as of 2026-08-26 with 337 passed, 1 skipped, 0 failed. The 6 long-standing Library/program-editor widget failures and the migration fixture failure are all fixed. Not re-run with `--coverage`; no coverage threshold is enforced anywhere.)
 - [x] `flutter build apk --debug` (passes.)
 - [x] `flutter build web --release` (passes.)
-- [x] iOS build verified on macOS. **External validation required:** macOS/Xcode is unavailable in this Linux environment.
+- [ ] iOS build verified on macOS. **External validation required:** macOS/Xcode is unavailable (no Mac; the CI `ios` job has never run). *(Un-ticked 2026-09-20: this box was checked although the note beside it says the build was never verified. Same item as Priority 2's "Verify iOS build and CocoaPods integration".)*
 - [ ] Import/export failure and recovery scenarios manually tested.
 - [ ] Android, iOS, Web, accessibility, and responsive checks completed.
 - [ ] Final diff reviewed for unrelated changes, dead code, duplicated logic, and untested behavior.
@@ -914,8 +1275,18 @@ string through `messageFor(l10n)`.
       `SupabaseAuthService._log` gets this right with its `kDebugMode` check;
       match it. (`main.dart:38` and `:54` too.) All three now check `kDebugMode`
       before printing.
-- [ ] `android/app/build.gradle.kts` release block sets no `isMinifyEnabled` /
-      `isShrinkResources`. Not a vulnerability, but it costs APK size and free
+- [x] `android/app/build.gradle.kts` release block sets no `isMinifyEnabled` /
+      `isShrinkResources`. **Enabled 2026-09-19** (see Week 2) with
+      `proguard-rules.pro` and `res/raw/keep.xml`; a shrunk release APK boots
+      on the emulator. Still needs a real device and a notification firing
+      before this is trusted. **CI (2026-09-20):** the uncommitted
+      `.github/workflows/ci.yaml` now builds the shrunk, obfuscated release
+      APK (`flutter build apk --release --obfuscate --split-debug-info=…`),
+      debug-signed — it proves the variant compiles and shrinks, not that it
+      runs. That makes the "CI does not build this variant" comment in
+      `android/app/build.gradle.kts` stale once the workflow is committed.
+      Original reasoning kept below for the record.
+      *Previously:* Not a vulnerability, but it costs APK size and free
       symbol obfuscation. Consider enabling with the Flutter default ProGuard
       rules. **Deliberately not done.** CI only ever builds the debug APK
       (`flutter build apk --debug`); nothing in this repo builds or smoke-tests
@@ -927,7 +1298,10 @@ string through `messageFor(l10n)`.
       release build on a real device before flipping it.
 - [ ] Add `--obfuscate --split-debug-info=...` to the release build command, and
       decide where symbol files are archived (needed to symbolicate A2.4's crash
-      reports). Left open for the same reason — meaningful only once a real
+      reports). **Half done 2026-09-19:** the flags are in
+      `scripts/build_android.sh` (symbols → `build/symbols/<version>`); *where to
+      archive them* is still undecided and depends on D2. Previously left open
+      for the same reason — meaningful only once a real
       crash reporter (A2.4) and a tested release build pipeline both exist to
       consume the symbol files; adding the flag alone with nowhere to archive
       the output doesn't accomplish anything yet.

@@ -1,5 +1,27 @@
 # Flutter Fitness App — Professional Build Plan
 
+> **Historical document — status note, 2026-09-20.** This is the original v1
+> build plan, kept for its rationale and exit criteria. **Its checkboxes are
+> not maintained** and many unticked items (M0–M6) are done. For current
+> status read `TODO.md` (the live tracker) and `PLAN.md` (release, platforms,
+> revenue); where this file disagrees with `docs/ADR.md`, the ADR wins. Known
+> differences from what shipped:
+>
+> - **Dependencies (§2):** the "Final dependency set" versions are obsolete —
+>   `pubspec.yaml` is the source of truth. `riverpod_lint`, `custom_lint`
+>   and `golden_toolkit` are **not** in the project (see ADR-2's status note).
+>   `freezed` is pinned to a prerelease (`4.0.0-dev.3`).
+> - **M1 seed colour:** "electric-blue seed" is superseded — decision D3
+>   (2026-09-19) moved the brand primary to teal (`AppColors.seed = 0xFF38D6C0`).
+> - **Scope:** "no user accounts" and "no backend in v1" are superseded by
+>   ADR-8 (optional Supabase accounts) and the interim account backup.
+>   Languages are **English and Arabic (RTL)**, not English only.
+> - **M4 audio:** cue files are not bundled yet; see ADR-4's deviation note.
+> - **M7 "crash reporting before the first public build":** open — decision D2
+>   in `TODO.md`. Web is no longer a launch target (D5).
+> - **Estimates:** the 6–8 week / 120–160 h estimate predates the launch plan,
+>   which re-baselines the remaining work at ≈ 460 h across 12 weeks.
+
 **Version:** 1.0
 **Target platforms:** Android, iOS, Web (responsive)
 **Model:** Offline-first, single-user, no backend in v1

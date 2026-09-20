@@ -1,6 +1,6 @@
 # Privacy Policy — Ironyx
 
-**Last updated: September 17, 2026**
+**Last updated: September 20, 2026**
 
 Ironyx ("the app") is an offline-first workout and fitness log. This policy
 explains what data the app collects, where it goes, how it is used, and what
@@ -42,6 +42,11 @@ copy unless you have used cloud backup (below). You can also export your
 data to a file at any time from Settings, and delete all local data from
 Settings without uninstalling.
 
+On Android, Ironyx opts out of the operating system's automatic app backup
+to Google Drive, so neither your local database nor your sign-in session is
+copied there by Android. Use the export file or the optional cloud backup
+if you want a copy that survives a reinstall.
+
 ## If you create an account
 
 Account creation is handled by Supabase, our backend provider, and
@@ -52,7 +57,9 @@ requires only an email address and password. We use this solely to:
 
 An account by itself does not upload your workout data. Your email
 address is stored by Supabase to operate the login system and is not
-used for marketing, shared with advertisers, or sold.
+used for marketing, shared with advertisers, or sold. The only emails
+sent to that address are ones you trigger: the confirmation message when
+you sign up and the link when you ask to reset your password.
 
 ## Cloud backup (optional, opt-in, off by default)
 
@@ -78,12 +85,16 @@ required for those purposes.
 
 - **Internet** — only used for sign-in and the optional cloud backup
   described above. The app functions fully offline without it.
-- **Notifications** — to alert you when a rest timer finishes.
+- **Notifications** — to alert you when a timer phase changes or a rest
+  timer finishes while the app is in the background.
 - **Vibrate** — for haptic feedback on timers and set completion.
 - **Wake lock** — to keep the screen on during an active workout so a
   timer doesn't get interrupted.
 - **Receive boot completed** — to re-schedule a pending rest-timer
   notification if your phone restarts mid-workout.
+- **Exact alarms** — so a timer phase-change notification arrives at the
+  moment the phase changes rather than being delayed by the system. It is
+  used only for the timers you start.
 
 The app does not request location, camera, microphone, contacts, or any
 other permission not listed here.
@@ -103,11 +114,14 @@ not sell data or use it for advertising or behavioral tracking.
   also uninstall Ironyx or export your data before deleting it. Local data is
   not recoverable after deletion unless you previously made a cloud backup or
   export.
-- **Account and cloud backup:** Ironyx currently provides sign-out but not an
-  in-app account-deletion button. Email mustafa.salih15@gmail.com to request
-  deletion of your Supabase account, email address, cloud backup, and other
-  personal data held for your account. We may ask you to verify ownership
-  before processing the request.
+- **Account and cloud backup:** If you use an account, Settings → Account →
+  Delete account permanently removes your Supabase account and associated
+  cloud backup. You must type `DELETE` to confirm. Workouts and other data
+  stored locally on this device remain until you separately remove them from
+  Settings → Data Management. If you cannot use the in-app option, email
+  mustafa.salih15@gmail.com to request deletion of your Supabase account,
+  email address, cloud backup, and other personal data held for your account.
+  We may ask you to verify ownership before processing the request.
 - **Email address:** You can stop using the account at any time. We do not
   use it for marketing.
 

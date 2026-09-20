@@ -5,6 +5,14 @@ Swap wording freely — the positioning (offline-first, private, no forced
 account) is the one thing worth keeping, since it's the app's actual point
 of difference in a saturated category.
 
+**Status, 2026-09-20:** nothing here has been entered into Play Console or
+App Store Connect yet (no developer account exists). Character counts were
+re-measured today. Every factual claim in the copy is audited against the
+current code in "Claims audit" at the bottom — re-run that audit before each
+submission, and update the copy **in the same change** as any telemetry
+decision (`TODO.md` D2). Store limits are from early-2026 knowledge; re-check
+them against the live consoles.
+
 ## App name (30 char max)
 
 ```
@@ -17,7 +25,7 @@ Ironyx: Offline Workout Log
 ```
 Log workouts, build programs, track progress. Fully offline. No account needed.
 ```
-(80 characters)
+(79 characters)
 
 ## Full description (4000 char max)
 
@@ -62,9 +70,13 @@ Available in English and Arabic.
 
 Questions or feedback: mustafa.salih15@gmail.com
 ```
-(~1,350 characters — well under the 4000 limit; room to add screenshots'
+(1,502 characters — well under the 4000 limit; room to add screenshots'
 worth of detail later, e.g. specific program templates, once you have
 user feedback on what to highlight)
+
+Before submitting, consider adding one line the copy does not yet say:
+*"You can delete your account and cloud backup from inside the app."* It is
+true (Settings → Account → Delete account) and both stores look for it.
 
 ## ASO keywords to weave into the description / consider for the title
 
@@ -88,13 +100,16 @@ crammed keywords.
 
 ## Feature graphic (1024×500) — content suggestion
 
-Since there's no design tool here to generate the actual image, the copy
-angle for whoever makes it: dark background, the app icon plus 2-3 real
-screenshots (dashboard, active workout logger, progress chart) angled
-slightly, tagline overlay: "Your training, tracked. Offline, private,
-yours." — that phrase already exists in the app's own welcome screen copy
-per `project_onboarding_welcome_screen`, so it's tested messaging, not
-new copy.
+Required by Play and **not yet made**. Copy angle for whoever makes it: the
+navy-to-teal brand palette (`#0B1628` / `#38D6C0` — the icon's colours and,
+since decision D3, the app's), the app icon plus 2-3 real screenshots
+(dashboard, active workout logger, progress chart) angled slightly.
+
+Tagline: the app's welcome screen says **"Your training, tracked."**
+(`welcomeTagline`) — that is the only tested phrase. "Offline, private,
+yours." is *new* copy; it matches the positioning but does not appear in
+the app, so treat it as untested. (An earlier version of this note claimed
+it was already in the welcome screen; it is not.)
 
 ## Screenshots — what to capture, in order
 
@@ -109,5 +124,79 @@ Play shows these in order, and most users don't scroll past the first
 5. (optional) Dashboard
 6. (optional) Exercise library
 
-Capture these on a real device or emulator once the app is running — I
-can help crop/prepare them once you have raw screenshots.
+Capture these on a real device or emulator, in **light and dark** and in
+**English and Arabic (RTL)** — both languages are in the listing, so the
+Arabic set is in scope. Play needs at least 4 screenshots on some form
+factors; check the current required sizes for each store **(verify)**.
+Screenshots are `TODO.md` Week 2 ("Store assets round 1"). The
+`test/golden/*.png` files are test renders, not store screenshots.
+
+---
+
+## Store metadata and declarations
+
+| Field | Value | Notes |
+|---|---|---|
+| Category | Health & Fitness | Both stores (the earlier plan said "Sports") |
+| Price | Free | Declare in-app purchases only when one exists; there is none |
+| Ads | None | True today |
+| Icon | PNG, no alpha **(verify)**, 512×512 (Play) / 1024×1024 (App Store) | Both `assets/branding/ironyx-icon-*.png` masters have transparent, pre-rounded corners (checked 2026-09-20) — flatten the 512 onto the navy gradient before uploading to Play. For the App Store use `ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png`, which was rebuilt opaque RGB |
+| Feature graphic | 1024×500 | Required by Play; not made |
+| Content rating | IARC questionnaire (Play) / age rating (Apple) | Not "PEGI 3" — Play rates via IARC |
+| Contact | mustafa.salih15@gmail.com | Also the privacy-policy contact |
+| Privacy policy URL | *not hosted yet* | Needed before **any** track goes live, closed testing included |
+| Account-deletion URL | *not hosted yet* | Play needs a web URL in addition to the in-app path |
+
+**Play Data Safety — what the binary actually does (2026-09-20).** Local
+workout, body-metric and profile data never leave the device unless the user
+taps "Back up now". With an account: email address and password (Supabase
+Auth); with cloud backup: the whole training database as one gzipped
+envelope (health and fitness information, plus profile fields such as date
+of birth and height). Encrypted in transit (HTTPS/TLS). Deletable in-app
+and by request. No data is sold or shared for advertising; no analytics,
+ads or crash-reporting SDK is present **today** — that changes if D2 =
+Sentry, and this section, the privacy policy and the listing copy must
+change with it. Android Auto Backup is disabled (`allowBackup="false"`).
+The health-apps declaration also applies.
+
+**Exact-alarm permission declaration (Play).** The manifest declares
+`USE_EXACT_ALARM` (plus `SCHEDULE_EXACT_ALARM` capped at Android 12L). Play
+restricts this to apps whose core function is an alarm, timer or calendar —
+justify it by the interval/rest timer, which fires phase-change alerts while
+the app is backgrounded. If Play rejects it, delete both manifest lines and
+the code falls back to inexact alarms (alerts can then arrive many seconds
+late); nothing else changes. Reflected in `PRIVACY_POLICY.md`.
+
+---
+
+## iOS listing draft (only if `TODO.md` D1 = go)
+
+Apple's name and subtitle limits are 30 characters each; the keyword field
+is 100 **(verify)**. Apple does not want words repeated between name,
+subtitle and keywords.
+
+| Field | Draft | Length |
+|---|---|---|
+| Name | `Ironyx: Workout Log` | 19 |
+| Subtitle | `Offline. Private. No account.` | 29 |
+| Keywords | `gym,lifting,strength,training,tracker,routine,progress,1RM,program,rest timer,exercise,fitness` | 94 |
+
+Reuse the Play full description. iOS needs its own screenshots at Apple's
+current required sizes, a support URL, a privacy URL and the App Privacy
+questionnaire (same answers as Data Safety above).
+
+---
+
+## Claims audit (checked against the code on 2026-09-20)
+
+| Claim in the copy | Status |
+|---|---|
+| "No account required. No internet required." | True — auth is optional and everything core is local |
+| "Pick from a library of 300+ exercises" | True — 301, seed v17 (the earlier plan said 150) |
+| "A built-in rest timer **with sound** and haptics" | **Partly true.** Sound cues use the OS alert (`SystemSound.play`); no cue files are bundled (ADR-4 deviation). Fine on Android in practice; unverified on a device, and reportedly silent on iOS. Fix before iOS, or soften the copy |
+| "Ironyx does not run ads or analytics" | True today (no such SDK in `pubspec.yaml`). **Breaks if D2 adds Sentry** — crash reporting is not "analytics", but the privacy policy currently says "no crash-reporting service" too |
+| "Your local training log stays on your device unless you explicitly enable cloud backup" | True. Nothing uploads without tapping "Back up now" |
+| "Charts show volume, estimated one-rep max, and consistency" | True — Progress phases 0–4 shipped |
+| "Available in English and Arabic" | True |
+| "Every core feature … works with zero connectivity, permanently" | True for the app's own features; sign-in and backup need a network |
+| "sync later", "open APIs", "60fps / minimal battery drain", "Free with IAP" (from the 12-week plan's source) | **Do not use** — no sync, no API, unmeasured performance, no IAP (`TODO.md` C6) |
