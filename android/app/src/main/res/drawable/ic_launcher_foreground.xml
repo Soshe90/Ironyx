@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Ironyx mark (assets/branding/ironyx-mark.svg) as an adaptive-icon
+     foreground. The 108dp canvas is masked to as little as a 66dp circle, so
+     the mark is scaled to sit inside that safe zone. The group transform maps
+     the SVG's 512-unit space onto it: scale 0.1842, centred on (54, 54).
+     Gradient coordinates below are in the SVG's own units. Colours are
+     sampled from ironyx-icon-1024.png, the artwork users actually see, not
+     from the SVG, whose gradient renders differently.
+     Also used as the Android 12+ splash icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.1842"
+        android:scaleY="0.1842"
+        android:translateX="6.84"
+        android:translateY="6.84">
+        <path
+            android:fillColor="#9AEEE1"
+            android:pathData="M186,168 L280,168 L230,226 L136,226 Z" />
+        <path android:pathData="M132,344 L286,168 L380,168 L226,344 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="256"
+                    android:startY="168"
+                    android:endX="256"
+                    android:endY="344">
+                    <item android:color="#80D6DC" android:offset="0" />
+                    <item android:color="#4CAECA" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:fillColor="#1179A9"
+            android:pathData="M226,344 L320,344 L380,276 L286,276 Z" />
+    </group>
+</vector>

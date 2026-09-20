@@ -64,6 +64,18 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+
+            // Shrinking is on deliberately (TODO A2.11). It is only safe with
+            // the keep rules in proguard-rules.pro and res/raw/keep.xml. CI
+            // builds this variant (debug-signed), which proves it compiles
+            // and shrinks but not that it runs — only a release build on a
+            // real device does that, so do it before every store upload.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

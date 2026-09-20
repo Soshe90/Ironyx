@@ -47,7 +47,8 @@ Deferred deliberately, with where the reasoning lives:
   (`TODO.md` A2.2), to be reconciled with ADR-8.
 - **Brzycki as an alternative 1RM formula** (settings toggle) — suggested in
   `docs/build-plan.md`, not built.
-- **Real timer audio cues** — *not* v2: bundled cue files are an ADR-4 gap to
-  close before or shortly after launch (`TODO.md` Week 2).
+- **Recorded / designed timer sounds, or a choice of sound packs** — the timer
+  now ships three synthesized tones (`scripts/build_timer_cues.py`); nicer
+  sounds are polish, not a v1 need.
 - **Terms of service** — not required by either store for a free app with no
   IAP; revisit if accounts or premium change that.

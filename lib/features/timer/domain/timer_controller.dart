@@ -260,15 +260,17 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     final TimerSnapshot snapshot = engine.snapshot();
     var boundary = Duration.zero;
     final DateTime now = DateTime.now().toUtc();
-    for (var index = 0; index < _preset.phases.length; index++) {
+    // `boundary` is the end of phase `index`, which is when phase `index + 1`
+    // begins — so that is the phase the notification announces. The last
+    // phase has no successor; its end is the timer finishing, not a boundary.
+    // The phase that is running right now still needs its own end scheduled,
+    // hence `<` rather than `<=` against the current index.
+    for (var index = 0; index < _preset.phases.length - 1; index++) {
       boundary += Duration(seconds: _preset.phases[index].durationSeconds);
-      if (index <= snapshot.currentIndex ||
-          index == _preset.phases.length - 1) {
-        continue;
-      }
+      if (index < snapshot.currentIndex) continue;
       final Duration untilBoundary = boundary - snapshot.elapsed;
       if (untilBoundary <= Duration.zero) continue;
-      final TimerPhase nextPhase = _preset.phases[index];
+      final TimerPhase nextPhase = _preset.phases[index + 1];
       await notifications.scheduleBoundary(
         id: 10000 + index,
         at: now.add(untilBoundary),

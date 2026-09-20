@@ -9,8 +9,9 @@ import '../error_reporting.dart';
 
 /// App version written into every export envelope (ADR-7). Kept as a plain
 /// constant rather than pulling in `package_info_plus` — the app has no
-/// other use for a runtime version lookup yet.
-const String kAppVersion = '0.1.0';
+/// other use for a runtime version lookup yet. Keep in step with the
+/// `version:` line in pubspec.yaml.
+const String kAppVersion = '1.0.0';
 
 /// Plain data handed to [_encodeExportEnvelope] on a background isolate via
 /// [compute]. Has to be a top-level function, not a closure, so this is a

@@ -75,7 +75,7 @@ class PlatformNotificationService implements NotificationService {
     if (!kIsWeb) tz_data.initializeTimeZones();
     if (kIsWeb) return;
     const InitializationSettings settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('@drawable/ic_notification'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -208,12 +208,38 @@ class PlatformNotificationService implements NotificationService {
         body,
         tz.TZDateTime.from(at, tz.local),
         details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: await _scheduleMode(),
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
     } on Object {
       // Notifications are best-effort; a failure must not fail the timer.
+    }
+  }
+
+  /// Exact when the OS lets this app schedule exact alarms, inexact otherwise.
+  ///
+  /// The difference is user-visible: an inexact alarm can be delivered tens of
+  /// seconds late (measured at 14 s for a 20 s boundary), which is longer
+  /// than a Tabata rest. Exact scheduling needs an exact-alarm permission in
+  /// the manifest *and* the OS having granted it, so this asks the OS rather
+  /// than assuming — and falls back rather than throwing, so a build without
+  /// the permission behaves exactly as it did before.
+  Future<AndroidScheduleMode> _scheduleMode() async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return AndroidScheduleMode.inexactAllowWhileIdle;
+    }
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? android =
+          _plugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      final bool exact =
+          await android?.canScheduleExactNotifications() ?? false;
+      return exact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+    } on Object {
+      return AndroidScheduleMode.inexactAllowWhileIdle;
     }
   }
 

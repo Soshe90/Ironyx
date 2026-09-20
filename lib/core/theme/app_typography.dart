@@ -72,9 +72,49 @@ abstract final class AppTypography {
       .copyWith(color: theme.colorScheme.onSurfaceVariant);
 
   static TextTheme apply(TextTheme base) => base.copyWith(
-        displayLarge: numeric(base.displayLarge ?? const TextStyle()),
-        displayMedium: numeric(base.displayMedium ?? const TextStyle()),
-        displaySmall: numeric(base.displaySmall ?? const TextStyle()),
-        headlineLarge: numeric(base.headlineLarge ?? const TextStyle()),
+        displayLarge: numeric(
+          (base.displayLarge ?? const TextStyle()).copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1.2,
+          ),
+        ),
+        displayMedium: numeric(
+          (base.displayMedium ?? const TextStyle()).copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.8,
+          ),
+        ),
+        displaySmall: numeric(
+          (base.displaySmall ?? const TextStyle()).copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
+        headlineLarge: numeric(
+          (base.headlineLarge ?? const TextStyle()).copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
+        headlineMedium: numeric(
+          (base.headlineMedium ?? const TextStyle()).copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
+        ),
+        headlineSmall: (base.headlineSmall ?? const TextStyle()).copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+        ),
+        titleLarge: (base.titleLarge ?? const TextStyle()).copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.1,
+        ),
+        titleMedium: (base.titleMedium ?? const TextStyle()).copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        labelLarge: (base.labelLarge ?? const TextStyle()).copyWith(
+          fontWeight: FontWeight.w600,
+        ),
       );
 }

@@ -11,9 +11,36 @@ import 'auth_service.dart';
 /// [AuthFailure] so nothing downstream — controllers, widgets, tests — has
 /// to know which backend is behind the seam.
 class SupabaseAuthService implements AuthService {
-  SupabaseAuthService(this._client, {this.redirectTo});
+  SupabaseAuthService(this._client, {this.redirectTo}) {
+    // Listens from construction, for the life of the app: the reset link can
+    // arrive at any point after the SDK starts, and the service is a
+    // keep-alive provider read on the first frame, so nothing is missed.
+    _recoverySubscription = _auth.onAuthStateChange.listen((state) {
+      switch (state.event) {
+        case sb.AuthChangeEvent.passwordRecovery:
+          _recoveryPending = true;
+          _recoveryRequests.add(null);
+        case sb.AuthChangeEvent.signedOut:
+          _recoveryPending = false;
+        default:
+          break;
+      }
+    });
+  }
 
   final sb.SupabaseClient _client;
+
+  late final StreamSubscription<sb.AuthState> _recoverySubscription;
+  final StreamController<void> _recoveryRequests =
+      StreamController<void>.broadcast();
+  bool _recoveryPending = false;
+
+  /// Stops listening. The provider that owns this is keep-alive, so this is
+  /// for tests and hot restarts rather than normal operation.
+  Future<void> dispose() async {
+    await _recoverySubscription.cancel();
+    await _recoveryRequests.close();
+  }
 
   /// Deep link that confirmation and password-reset mails send the user back
   /// to. One value for both: they are the same journey — leave the app, tap
@@ -87,6 +114,16 @@ class SupabaseAuthService implements AuthService {
   }
 
   @override
+  Future<void> deleteAccount() {
+    return _guard(() async {
+      await _client.rpc<void>('delete_my_account');
+      // The server deletes the session's user. Explicitly clear the local
+      // session as well so the UI never retains a stale authenticated state.
+      await _auth.signOut(scope: sb.SignOutScope.local);
+    });
+  }
+
+  @override
   Future<void> sendPasswordReset(String email) {
     return _guard(
       () => _auth.resetPasswordForEmail(
@@ -94,6 +131,27 @@ class SupabaseAuthService implements AuthService {
         redirectTo: redirectTo,
       ),
     );
+  }
+
+  @override
+  bool get isPasswordRecoveryPending => _recoveryPending;
+
+  @override
+  Stream<void> passwordRecoveryRequests() => _recoveryRequests.stream;
+
+  @override
+  Future<void> updatePassword(String newPassword) {
+    return _guard(() async {
+      // The reset link's session is the only authority to change a password
+      // without knowing the old one. If it is gone (already used, expired,
+      // signed out), say so rather than surfacing the SDK's missing-session
+      // error as "something went wrong".
+      if (_auth.currentSession == null) {
+        throw const AuthFailure(AuthFailureKind.recoveryExpired);
+      }
+      await _auth.updateUser(sb.UserAttributes(password: newPassword));
+      _recoveryPending = false;
+    });
   }
 
   static AuthUser? _toAuthUser(sb.User? user) {
@@ -152,6 +210,9 @@ class SupabaseAuthService implements AuthService {
     if (error is sb.AuthWeakPasswordException) {
       return AuthFailureKind.weakPassword;
     }
+    if (error is sb.AuthSessionMissingException) {
+      return AuthFailureKind.recoveryExpired;
+    }
     // Matched on the wire code rather than the SDK's `ErrorCode` enum: the
     // enum omits `invalid_credentials`, which is the single most common
     // failure there is.
@@ -163,6 +224,12 @@ class SupabaseAuthService implements AuthService {
       'user_already_exists' =>
         AuthFailureKind.emailAlreadyRegistered,
       'weak_password' => AuthFailureKind.weakPassword,
+      'same_password' => AuthFailureKind.samePassword,
+      'session_not_found' ||
+      'session_expired' ||
+      'refresh_token_not_found' ||
+      'refresh_token_already_used' =>
+        AuthFailureKind.recoveryExpired,
       'email_not_confirmed' => AuthFailureKind.emailNotConfirmed,
       // Supabase blocks certain domains outright, so a perfectly well-formed
       // address can still be refused. Without this the user gets a generic

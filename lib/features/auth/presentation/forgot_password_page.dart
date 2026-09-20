@@ -11,10 +11,9 @@ import 'widgets/auth_form_scaffold.dart';
 
 /// Sends a password-reset link.
 ///
-/// Completing the reset happens in the browser the link opens, not in the
-/// app: handling it in-app needs per-platform deep links, which aren't
-/// configured yet. Until they are, the mail's link uses the Supabase
-/// project's Site URL.
+/// Supabase returns the user through the registered platform callback when
+/// configured. The callback restores the recovery session and `app.dart`
+/// opens `ResetPasswordPage` to finish the reset.
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
 

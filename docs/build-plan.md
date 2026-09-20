@@ -16,7 +16,8 @@
 > - **Scope:** "no user accounts" and "no backend in v1" are superseded by
 >   ADR-8 (optional Supabase accounts) and the interim account backup.
 >   Languages are **English and Arabic (RTL)**, not English only.
-> - **M4 audio:** cue files are not bundled yet; see ADR-4's deviation note.
+> - **M4 audio:** three synthesized cue files are now bundled and played via
+>   `just_audio` (2026-09-20); see ADR-4's note. Emulator-verified only.
 > - **M7 "crash reporting before the first public build":** open — decision D2
 >   in `TODO.md`. Web is no longer a launch target (D5).
 > - **Estimates:** the 6–8 week / 120–160 h estimate predates the launch plan,

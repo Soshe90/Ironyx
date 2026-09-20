@@ -196,6 +196,125 @@ void main() {
           )).called(greaterThan(0));
     });
 
+    group('boundary notifications', () {
+      const TimerPreset threePhases = TimerPreset(
+        id: 'test',
+        name: 'Test',
+        description: 'Test',
+        phases: [
+          TimerPhase(type: TimerPhaseType.work, durationSeconds: 20),
+          TimerPhase(type: TimerPhaseType.rest, durationSeconds: 10),
+          TimerPhase(type: TimerPhaseType.work, durationSeconds: 20),
+        ],
+      );
+
+      /// Every `scheduleBoundary` call since the last interaction reset, as
+      /// (id, at, title, body).
+      List<({int id, DateTime at, String title, String body})> scheduled() {
+        final List<dynamic> captured = verify(
+          () => mockNotifications.scheduleBoundary(
+            id: captureAny(named: 'id'),
+            at: captureAny(named: 'at'),
+            title: captureAny(named: 'title'),
+            body: captureAny(named: 'body'),
+          ),
+        ).captured;
+        return [
+          for (var i = 0; i < captured.length; i += 4)
+            (
+              id: captured[i] as int,
+              at: captured[i + 1] as DateTime,
+              title: captured[i + 2] as String,
+              body: captured[i + 3] as String,
+            ),
+        ];
+      }
+
+      test('fires at the end of each phase, announcing the one that starts',
+          () async {
+        final DateTime before = DateTime.now().toUtc();
+        await controller.start(threePhases, notificationGranted: true);
+
+        final calls = scheduled();
+
+        // Work 20s -> Rest at +20s, Rest 10s -> Work at +30s. The final
+        // work phase's end is the timer finishing, not a boundary.
+        expect(calls, hasLength(2));
+        expect(calls[0].title, 'Rest phase');
+        expect(calls[0].body, 'Rest starts now');
+        expect(calls[1].title, 'Work phase');
+        expect(calls[1].body, 'Work starts now');
+        expect(
+          calls[0].at.difference(before).inMilliseconds,
+          inInclusiveRange(19000, 21000),
+        );
+        expect(
+          calls[1].at.difference(before).inMilliseconds,
+          inInclusiveRange(29000, 31000),
+        );
+        expect(calls[0].id, isNot(calls[1].id));
+      });
+
+      test('the end of the phase already running is still scheduled', () async {
+        // Regression guard: the loop used to skip `index <= currentIndex`,
+        // which dropped the very next boundary — the one due first.
+        final DateTime before = DateTime.now().toUtc();
+        await controller.start(threePhases, notificationGranted: true);
+
+        // The first phase is 20s, so the first notification is due then —
+        // not at the +30s boundary that used to be the earliest one.
+        final first = scheduled().first;
+        expect(
+          first.at.difference(before).inMilliseconds,
+          inInclusiveRange(19000, 21000),
+        );
+      });
+
+      test('after a skip only the remaining boundaries are scheduled',
+          () async {
+        await controller.start(threePhases, notificationGranted: true);
+        clearInteractions(mockNotifications);
+
+        await controller.skip();
+
+        final calls = scheduled();
+        expect(calls, hasLength(1));
+        expect(calls.single.title, 'Work phase');
+      });
+
+      test('a single-phase timer has no boundaries to announce', () async {
+        const TimerPreset single = TimerPreset(
+          id: 'single',
+          name: 'Single',
+          description: 'Single',
+          phases: [TimerPhase(type: TimerPhaseType.work, durationSeconds: 60)],
+        );
+        await controller.start(single, notificationGranted: true);
+
+        verifyNever(
+          () => mockNotifications.scheduleBoundary(
+            id: any(named: 'id'),
+            at: any(named: 'at'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+          ),
+        );
+      });
+
+      test('nothing is scheduled without notification permission', () async {
+        await controller.start(threePhases, notificationGranted: false);
+
+        verifyNever(
+          () => mockNotifications.scheduleBoundary(
+            id: any(named: 'id'),
+            at: any(named: 'at'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+          ),
+        );
+      });
+    });
+
     test('settings toggles trigger haptics and audio on phase transition',
         () async {
       const preset = TimerPreset(

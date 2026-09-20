@@ -77,6 +77,8 @@
   "authErrorEmailNotConfirmed": "أكّد بريدك الإلكتروني أولًا — ابحث عن رابط التأكيد في بريدك.",
   "authErrorRateLimited": "محاولات كثيرة جدًا. انتظر دقيقة ثم حاول مرة أخرى.",
   "authErrorOffline": "تعذّر الوصول إلى الخادم. تحقّق من اتصالك وحاول مرة أخرى.",
+  "authErrorSamePassword": "هذه هي كلمة مرورك الحالية. اختر كلمة مرور جديدة.",
+  "authErrorRecoveryExpired": "انتهت صلاحية رابط إعادة التعيين أو سبق استخدامه. اطلب رابطًا جديدًا.",
   "authErrorNotConfigured": "الحسابات غير متاحة في هذه النسخة.",
   "authErrorUnknown": "حدث خطأ ما. حاول مرة أخرى.",
 
@@ -638,7 +640,16 @@
   "dashboardNoRecentTrainingCaption": "سجّل تمرينًا وستظهر هنا حصيلتك الأسبوعية وسلسلة مواظبتك واتجاهاتك. السجلّ الأقدم موجود في تبويب التقدّم.",
   "dashboardVolumeEyebrow": "الحجم التدريبي",
   "dashboardStatSessions": "الجلسات",
-  "dashboardStatStreak": "المواظبة",
+  "dashboardSessionGoal": "الهدف الأسبوعي للجلسات",
+  "dashboardSessionGoalProgress": "{completed} / {target}",
+  "@dashboardSessionGoalProgress": {
+    "description": "الجلسات المكتملة مقارنة بالهدف الأسبوعي للمستخدم.",
+    "placeholders": {
+      "completed": { "type": "int" },
+      "target": { "type": "int" }
+    }
+  },
+  "dashboardStatStreak": "التتابع",
   "dashboardStatLastWeek": "الأسبوع الماضي",
   "dashboardStreakWeeks": "{count} أسبوع",
   "@dashboardStreakWeeks": {
@@ -772,7 +783,14 @@
   },
   "authResetPasswordTitle": "إعادة تعيين كلمة المرور",
   "authResetIntro": "أدخل البريد الإلكتروني الذي سجّلت به وسنرسل لك رابط إعادة التعيين.",
-  "authResetSentIntro": "إن كان لهذا العنوان حساب، فرابط إعادة التعيين في طريقه إليك. يُفتح الرابط في متصفّحك.",
+  "authResetSentIntro": "إن كان لهذا العنوان حساب، فرابط إعادة التعيين في طريقه إليك. افتحه على هذا الجهاز وسيطلب التطبيق كلمة مرور جديدة.",
+  "authNewPasswordTitle": "تعيين كلمة مرور جديدة",
+  "authNewPasswordIntro": "اختر كلمة مرور جديدة لحسابك.",
+  "authFieldNewPassword": "كلمة المرور الجديدة",
+  "authNewPasswordSave": "حفظ كلمة المرور",
+  "authNewPasswordDone": "تم تحديث كلمة المرور.",
+  "authNewPasswordNotNow": "ليس الآن",
+  "authNewPasswordRequestNew": "اطلب رابطًا جديدًا",
   "authResetSendLink": "إرسال رابط إعادة التعيين",
   "authResetSendAgain": "إرسال مرة أخرى",
   "authBackToSignIn": "العودة إلى تسجيل الدخول",
@@ -802,6 +820,19 @@
   "accountPersonalDetailsSubtitle": "الاسم، تاريخ الميلاد، الجنس، الطول",
   "accountShowWelcomeTitle": "عرض شاشة الترحيب",
   "accountShowWelcomeSubtitle": "المقدّمة التي تظهر عند أول تشغيل",
+  "accountDeleteTitle": "حذف الحساب",
+  "accountDeleteSubtitle": "يحذف حسابك والنسخة الاحتياطية السحابية نهائيًا",
+  "accountDeleteConfirmTitle": "حذف حسابك؟",
+  "accountDeleteConfirmBody": "سيحذف هذا حسابك ونسختك الاحتياطية السحابية نهائيًا. تبقى التمارين المحفوظة على هذا الجهاز حتى تحذفها من إدارة البيانات. لا يمكن التراجع عن هذا.",
+  "accountDeleteConfirmWord": "حذف",
+  "accountDeleteTypeToConfirm": "اكتب {word} للتأكيد",
+  "@accountDeleteTypeToConfirm": {
+    "placeholders": {
+      "word": { "type": "String", "example": "حذف" }
+    }
+  },
+  "accountDeleteAction": "حذف الحساب",
+  "accountDeleted": "تم حذف الحساب",
 
   "sizeBytes": "{count} B",
   "@sizeBytes": {

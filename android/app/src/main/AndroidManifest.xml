@@ -4,6 +4,20 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Exact alarms, so a timer phase change is announced on the second: an
+         inexact alarm was measured arriving 14 s late on a 20 s work phase,
+         longer than a Tabata rest. USE_EXACT_ALARM is auto-granted on
+         Android 13+ and Google Play restricts it to apps whose core function
+         is an alarm or timer — the interval/rest timer is the justification
+         for the Play Console declaration. SCHEDULE_EXACT_ALARM covers
+         Android 12/12L only (capped, so it is never requested where
+         USE_EXACT_ALARM applies). If Play rejects the declaration, delete
+         both lines: NotificationService asks the OS at schedule time and
+         falls back to inexact alarms, so nothing else needs to change. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32"/>
 
     <!-- allowBackup defaults to true, which would hand Android's Auto Backup
          (and, on 12+, the same opt-out also covers device-to-device
@@ -55,6 +69,28 @@
                     android:host="login-callback"/>
             </intent-filter>
         </activity>
+        <!-- flutter_local_notifications does NOT declare these itself; its own
+             manifest carries permissions only. Without the first, a scheduled
+             timer notification's alarm fires, Android delivers the broadcast
+             to a component that does not exist, and drops it silently — the
+             notification never appears (this is what shipped before). The
+             second re-arms pending notifications after a reboot or an app
+             update, which is what RECEIVE_BOOT_COMPLETED above is for. Both
+             must stay non-exported: only the plugin's own alarms and the
+             system's boot broadcast should reach them. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

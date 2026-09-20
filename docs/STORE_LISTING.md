@@ -140,7 +140,7 @@ Screenshots are `TODO.md` Week 2 ("Store assets round 1"). The
 | Category | Health & Fitness | Both stores (the earlier plan said "Sports") |
 | Price | Free | Declare in-app purchases only when one exists; there is none |
 | Ads | None | True today |
-| Icon | PNG, no alpha **(verify)**, 512×512 (Play) / 1024×1024 (App Store) | Both `assets/branding/ironyx-icon-*.png` masters have transparent, pre-rounded corners (checked 2026-09-20) — flatten the 512 onto the navy gradient before uploading to Play. For the App Store use `ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png`, which was rebuilt opaque RGB |
+| Icon | PNG, no alpha **(verify)**, 512×512 (Play) / 1024×1024 (App Store) | Both `assets/branding/ironyx-icon-512.png` and `-1024.png` masters have transparent, pre-rounded corners (checked 2026-09-20), so **don't upload them**. Use `assets/branding/ironyx-icon-512-opaque.png` for Play (512×512 RGB, no alpha, downscaled from the iOS icon; added 2026-09-20) and `ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png` for the App Store (1024×1024 RGB) |
 | Feature graphic | 1024×500 | Required by Play; not made |
 | Content rating | IARC questionnaire (Play) / age rating (Apple) | Not "PEGI 3" — Play rates via IARC |
 | Contact | mustafa.salih15@gmail.com | Also the privacy-policy contact |
@@ -193,7 +193,7 @@ questionnaire (same answers as Data Safety above).
 |---|---|
 | "No account required. No internet required." | True — auth is optional and everything core is local |
 | "Pick from a library of 300+ exercises" | True — 301, seed v17 (the earlier plan said 150) |
-| "A built-in rest timer **with sound** and haptics" | **Partly true.** Sound cues use the OS alert (`SystemSound.play`); no cue files are bundled (ADR-4 deviation). Fine on Android in practice; unverified on a device, and reportedly silent on iOS. Fix before iOS, or soften the copy |
+| "A built-in rest timer **with sound** and haptics" | **True on Android** as of 2026-09-20: three bundled cues (countdown, phase change, completion) play through `just_audio`, ducking other audio — confirmed in logcat on an Android 15 emulator's release build. Not yet heard on a physical device, and not checked on iOS at all. Re-verify both before claiming it for iOS |
 | "Ironyx does not run ads or analytics" | True today (no such SDK in `pubspec.yaml`). **Breaks if D2 adds Sentry** — crash reporting is not "analytics", but the privacy policy currently says "no crash-reporting service" too |
 | "Your local training log stays on your device unless you explicitly enable cloud backup" | True. Nothing uploads without tapping "Back up now" |
 | "Charts show volume, estimated one-rep max, and consistency" | True — Progress phases 0–4 shipped |

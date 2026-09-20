@@ -99,7 +99,9 @@ void main() {
   if (images.existsSync()) {
     for (final FileSystemEntity entity in images.listSync(recursive: true)) {
       if (entity is! File) continue;
-      final String path = entity.path;
+      // `listSync` returns backslash-separated paths on Windows, while the
+      // seed records forward-slash ones; compare like with like.
+      final String path = entity.path.replaceAll(r'\', '/');
       if (path.endsWith('.gitkeep')) continue;
       if (!referenced.contains(path)) {
         failures.add('unreferenced image ships in the APK: $path');

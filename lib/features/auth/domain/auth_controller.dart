@@ -110,6 +110,16 @@ class AuthController extends _$AuthController {
     state = null;
   }
 
+  Future<void> deleteAccount() async {
+    await ref.read(authServiceProvider).deleteAccount();
+    state = null;
+  }
+
   Future<void> sendPasswordReset(String email) =>
       ref.read(authServiceProvider).sendPasswordReset(email);
+
+  /// Completes a password reset. The recovery session already made the user
+  /// the signed-in one, so `state` needs no change.
+  Future<void> updatePassword(String newPassword) =>
+      ref.read(authServiceProvider).updatePassword(newPassword);
 }

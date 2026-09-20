@@ -575,6 +575,119 @@ void main() {
       expect(await service.listSnapshots(snapshotDir.path), isEmpty);
       await database.close();
     });
+
+    /// Mutates one row of an otherwise valid export and asserts the import is
+    /// refused up front: with [message] in the error, no snapshot written and
+    /// nothing changed in the destination.
+    Future<void> expectRejected(
+      void Function(Map<String, dynamic> tables) mutate,
+      String message,
+    ) async {
+      const service = DataExportService();
+      final database = AppDatabase.forTesting();
+      final tables = await exportedTables();
+      mutate(tables);
+      final envelope = ImportEnvelope(
+        formatVersion: DataExportService.formatVersion,
+        dbSchemaVersion: database.schemaVersion,
+        appVersion: '0.1.0',
+        exportedAt: DateTime.utc(2026),
+        tables: tables.map(
+          (key, value) => MapEntry(
+            key,
+            (value as List<dynamic>)
+                .map((row) =>
+                    (row as Map<String, dynamic>).cast<String, Object?>())
+                .toList(),
+          ),
+        ),
+      );
+
+      await expectLater(
+        service.applyImport(
+          database,
+          envelope,
+          mode: ImportMode.replace,
+          snapshotDirPath: snapshotDir.path,
+        ),
+        throwsA(
+          predicate<ImportValidationException>(
+            (error) => error.message.contains(message),
+            'an ImportValidationException mentioning "$message"',
+          ),
+        ),
+      );
+      expect(await service.listSnapshots(snapshotDir.path), isEmpty);
+      final int workouts = await database
+          .customSelect('SELECT COUNT(*) AS count FROM workouts_table')
+          .getSingle()
+          .then((row) => row.read<int>('count'));
+      expect(workouts, 0);
+      await database.close();
+    }
+
+    Map<String, dynamic> firstRow(
+      Map<String, dynamic> tables,
+      String table,
+    ) =>
+        (tables[table] as List<dynamic>).first as Map<String, dynamic>;
+
+    test('rejects an id that is neither a UUID nor a plain identifier',
+        () async {
+      // Renamed consistently with its child row, so the foreign key still
+      // resolves and only the id's own shape is wrong.
+      await expectRejected((tables) {
+        const String bad = 'not a uuid!!';
+        final String original =
+            firstRow(tables, 'workouts_table')['id']! as String;
+        for (final row in (tables['workouts_table'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .where((row) => row['id'] == original)) {
+          row['id'] = bad;
+        }
+        for (final row in (tables['workout_exercises_table'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .where((row) => row['workout_id'] == original)) {
+          row['workout_id'] = bad;
+        }
+      }, 'must be a UUID or a plain alphanumeric identifier');
+    });
+
+    test('rejects a boolean column that is not 0 or 1', () async {
+      await expectRejected(
+        (tables) => firstRow(tables, 'workout_sets_table')['is_completed'] = 2,
+        '"is_completed" has an invalid value type',
+      );
+    });
+
+    test('rejects a REAL column that is not finite', () async {
+      await expectRejected(
+        (tables) =>
+            firstRow(tables, 'workout_sets_table')['weight_kg'] = double.nan,
+        '"weight_kg" has an invalid value type',
+      );
+    });
+
+    test('rejects a null in a required column', () async {
+      await expectRejected(
+        (tables) => firstRow(tables, 'workout_sets_table')['reps'] = null,
+        'required column "reps" cannot be null',
+      );
+    });
+
+    test('rejects a column the schema does not have', () async {
+      await expectRejected(
+        (tables) => firstRow(tables, 'workouts_table')['bogus_column'] = 1,
+        'unknown column "bogus_column"',
+      );
+    });
+
+    test('rejects a duplicated primary key', () async {
+      await expectRejected((tables) {
+        final rows = tables['workouts_table'] as List<dynamic>;
+        rows.add(Map<String, dynamic>.of(rows.first as Map<String, dynamic>));
+      }, 'duplicate primary key');
+    });
   });
 
   test('rejects a file that is not valid JSON', () {

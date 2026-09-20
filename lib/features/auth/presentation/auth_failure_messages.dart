@@ -13,6 +13,8 @@ extension AuthFailureL10n on AuthFailure {
         AuthFailureKind.emailAlreadyRegistered =>
           l10n.authErrorEmailAlreadyRegistered,
         AuthFailureKind.weakPassword => l10n.authErrorWeakPassword,
+        AuthFailureKind.samePassword => l10n.authErrorSamePassword,
+        AuthFailureKind.recoveryExpired => l10n.authErrorRecoveryExpired,
         AuthFailureKind.emailRejected => l10n.authErrorEmailRejected,
         AuthFailureKind.signUpDisabled => l10n.authErrorSignUpDisabled,
         AuthFailureKind.emailNotConfirmed => l10n.authErrorEmailNotConfirmed,

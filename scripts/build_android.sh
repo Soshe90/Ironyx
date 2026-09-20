@@ -49,16 +49,26 @@ TARGET="${1:-apk}"
 
 DEFINE_ARG="--dart-define-from-file=$DEFINES_FILE"
 
+# Release builds are obfuscated; the symbol files are what turn a release stack
+# trace back into readable Dart, so archive build/symbols/<version> with every
+# build you upload to a store. A build without them cannot be symbolicated.
+VERSION="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
+SYMBOLS_DIR="build/symbols/${VERSION:-unversioned}"
+OBFUSCATE_ARGS=(--obfuscate "--split-debug-info=$SYMBOLS_DIR")
+
 case "$TARGET" in
   apk)
-    flutter build apk --release "$DEFINE_ARG" "$@"
+    flutter build apk --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
+    echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;
   bundle | aab | appbundle)
-    flutter build appbundle --release "$DEFINE_ARG" "$@"
+    flutter build appbundle --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
+    echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;
   install)
-    flutter build apk --release "$DEFINE_ARG" "$@"
+    flutter build apk --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
     flutter install --release "$@"
+    echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;
   run)
     flutter run "$DEFINE_ARG" "$@"

@@ -82,8 +82,7 @@ List<ProgressInsight> buildProgressInsights({
   // `calculateConsistency`. Assumed ascending by weekStart, matching every
   // DAO stream this function is fed from; not re-sorted here so a caller
   // passing rows in DAO order never risks an unstable sort on tied weeks.
-  final firstActiveWeek =
-      frequency.indexWhere((week) => week.workoutCount > 0);
+  final firstActiveWeek = frequency.indexWhere((week) => week.workoutCount > 0);
   final eligibleWeeks = firstActiveWeek == -1
       ? const <WorkoutFrequency>[]
       : frequency.sublist(firstActiveWeek);

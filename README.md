@@ -21,7 +21,7 @@ run on a physical device, and nothing has been run on iOS at all.
 | M1 | Theme, router shell, shared widgets | done (teal brand — decision D3) |
 | M2 | Drift schema + Library (301 exercises, public-domain media) | done |
 | M3 | Tracker: workouts, history, calendar, programs, XLSX/CSV import | done in code; real-device validation open |
-| M4 | Timer: wall-clock engine, presets, notifications, haptics | core done; sound cues use the OS alert (no cue files bundled); device validation open |
+| M4 | Timer: wall-clock engine, presets, notifications, haptics, bundled sound cues | core done; cues confirmed on an emulator only; physical-device and iOS validation open |
 | M5 | Progress & analytics: insights, consistency, strength, RPE/rest | done |
 | M6 | Dashboard, settings, versioned export/import, delete-all | done |
 | M7 | Hardening, a11y, release | superseded by the launch plan in `TODO.md` |
@@ -29,8 +29,8 @@ run on a physical device, and nothing has been run on iOS at all.
 
 What is still open before launch, in short: a physical-device validation
 pass, the release signing key (not on the current dev machine), store
-listing assets, hosting the privacy policy, the telemetry decision (D2), the
-Play closed-test gate, and real audio cues. `TODO.md` has the dated,
+listing assets, hosting the privacy policy, the telemetry decision (D2), and
+the Play closed-test gate. `TODO.md` has the dated,
 owner-tagged list — read its "Launch plan" section first.
 
 ## Setup
@@ -131,7 +131,7 @@ a failure leaves nothing behind.
     dart format .
     flutter analyze --fatal-infos --fatal-warnings
     flutter test --coverage
-    dart run tool/check_asset_licenses.dart   # false-fails on Windows; see SETUP.md
+    dart run tool/check_asset_licenses.dart   # asset-licence gate, also run in CI
 
 `riverpod_lint` / `custom_lint` are not enabled (analyzer-version conflict
 with the pinned build tooling); the standard analyzer plus the strict options

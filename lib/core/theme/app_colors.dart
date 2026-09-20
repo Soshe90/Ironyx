@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 /// Brand seed and the hand-tuned dark neutrals.
 ///
 /// `ColorScheme.fromSeed` produces a workable palette but its dark surfaces
-/// carry a violet cast from the blue seed. The overrides below replace them
-/// with true charcoal so that chart lines and the accent read cleanly.
+/// carry a tint from the seed. The overrides below replace them with true
+/// charcoal so that chart lines and the accent read cleanly.
 abstract final class AppColors {
-  /// Electric blue. Drives the whole generated scheme.
-  static const Color seed = Color(0xFF2D6BFF);
+  /// Brand teal, the same hue as the launcher icon and `web/manifest.json`
+  /// (`theme_color`). Drives the whole generated scheme.
+  static const Color seed = Color(0xFF38D6C0);
 
   // Dark surface ramp — deliberately neutral.
   static const Color darkSurface = Color(0xFF121416);

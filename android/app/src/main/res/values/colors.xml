@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand navy from the icon (web/manifest.json background_color). -->
+    <color name="ironyx_navy">#0B1628</color>
+</resources>

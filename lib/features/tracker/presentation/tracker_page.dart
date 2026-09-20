@@ -138,8 +138,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                                 const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: _ProgramTile(
                               name: summary.program.displayName(context),
-                              description: summary.program
-                                  .localizedDescription(
+                              description: summary.program.localizedDescription(
                                 context,
                                 summary.dayCount,
                               ),

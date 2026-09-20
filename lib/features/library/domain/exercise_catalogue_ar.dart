@@ -294,7 +294,8 @@ const Map<String, String> kExerciseNamesAr = <String, String>{
   'incline-hammer-curl': 'ثني هامر مائل',
   'parallel-bar-dip': 'تمرين المتوازي بقضبان متوازية',
   'weighted-bench-dip': 'تمرين غطس المقعد بوزن إضافي',
-  'standing-overhead-barbell-triceps-extension': 'تمديد الترايسبس العلوي بالبار واقفًا',
+  'standing-overhead-barbell-triceps-extension':
+      'تمديد الترايسبس العلوي بالبار واقفًا',
   'kneeling-cable-triceps-extension': 'تمديد الترايسبس بالكابل جاثيًا',
   'wrist-circles': 'تدوير الرسغين',
   'seated-barbell-wrist-curl': 'ثني الرسغ بالبار جالسًا',

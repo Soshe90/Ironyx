@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resources the notification plugin looks up by *name* at runtime. Resource
+     shrinking cannot see those references and would delete them, and the app
+     would then silently lose notifications (NotificationService swallows the
+     initialisation failure by design). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notification,@mipmap/ic_launcher" />

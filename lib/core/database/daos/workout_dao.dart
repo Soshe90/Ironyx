@@ -511,15 +511,25 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   }
 
   /// Monday-first distribution of completed workouts and distinct training days.
-  Stream<List<WeekdayDistribution>> watchWeekdayDistribution(
-      {DateTime? since}) {
+  ///
+  /// Days are resolved in UTC unless [utcOffset] is given: a workout logged
+  /// at 00:30 local time in UTC+3 is still the previous UTC day, so a view
+  /// that shows *which day* the user trained on passes the device offset.
+  /// (DST changes inside the window are ignored — the offset is applied as
+  /// one constant, which only matters for workouts within an hour of
+  /// midnight on the transition week.)
+  Stream<List<WeekdayDistribution>> watchWeekdayDistribution({
+    DateTime? since,
+    Duration utcOffset = Duration.zero,
+  }) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
+    final shifted = 'started_at + ${utcOffset.inSeconds}';
     return customSelect(
         '''
-      SELECT CASE CAST(strftime('%w', started_at, 'unixepoch') AS INTEGER)
-               WHEN 0 THEN 7 ELSE CAST(strftime('%w', started_at, 'unixepoch') AS INTEGER) END AS weekday,
+      SELECT CASE CAST(strftime('%w', $shifted, 'unixepoch') AS INTEGER)
+               WHEN 0 THEN 7 ELSE CAST(strftime('%w', $shifted, 'unixepoch') AS INTEGER) END AS weekday,
         COUNT(*) AS workout_count,
-        COUNT(DISTINCT date(started_at, 'unixepoch')) AS training_day_count
+        COUNT(DISTINCT date($shifted, 'unixepoch')) AS training_day_count
       FROM workouts_table WHERE ended_at IS NOT NULL $whereSince
       GROUP BY weekday ORDER BY weekday
     ''',

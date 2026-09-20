@@ -67,8 +67,7 @@ void main() {
       // async gap — exactly what `WorkoutEditPage`'s own `ref.watch`
       // otherwise prevents while the screen is open.
       container.listen(editWorkoutProvider('w1'), (_, __) {});
-      final notifier =
-          container.read(editWorkoutProvider('w1').notifier);
+      final notifier = container.read(editWorkoutProvider('w1').notifier);
       await container.read(editWorkoutProvider('w1').future);
 
       final setId = container
@@ -98,8 +97,7 @@ void main() {
     test('disposing the provider flushes a pending auto-save immediately',
         () async {
       container.listen(editWorkoutProvider('w1'), (_, __) {});
-      final notifier =
-          container.read(editWorkoutProvider('w1').notifier);
+      final notifier = container.read(editWorkoutProvider('w1').notifier);
       await container.read(editWorkoutProvider('w1').future);
 
       final setId = container
@@ -123,8 +121,7 @@ void main() {
 
     test('save() writes immediately, bypassing the debounce', () async {
       container.listen(editWorkoutProvider('w1'), (_, __) {});
-      final notifier =
-          container.read(editWorkoutProvider('w1').notifier);
+      final notifier = container.read(editWorkoutProvider('w1').notifier);
       await container.read(editWorkoutProvider('w1').future);
 
       final setId = container

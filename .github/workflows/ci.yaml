@@ -39,6 +39,14 @@ jobs:
       - name: Build Android (debug)
         run: flutter build apk --debug
 
+      # Release shrinking (R8 + resource shrinking) is on, and a keep-rule gap
+      # only shows up in the release variant — a debug build would never notice.
+      # Signed with the debug key here (no key.properties in CI); this proves
+      # the variant compiles and shrinks, not that it runs. Smoke-test a real
+      # release build on a device before every store upload.
+      - name: Build Android (release, shrunk + obfuscated)
+        run: flutter build apk --release --obfuscate --split-debug-info=build/symbols
+
       - name: Build Web
         run: flutter build web --release
 

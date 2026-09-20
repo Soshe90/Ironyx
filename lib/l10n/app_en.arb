@@ -80,6 +80,8 @@
   "authErrorEmailNotConfirmed": "Confirm your email first — check your inbox for the link.",
   "authErrorRateLimited": "Too many attempts. Wait a minute and try again.",
   "authErrorOffline": "Couldn't reach the server. Check your connection and try again.",
+  "authErrorSamePassword": "That's already your password. Choose a new one.",
+  "authErrorRecoveryExpired": "This reset link has expired or was already used. Request a new one.",
   "authErrorNotConfigured": "Accounts aren't available in this build.",
   "authErrorUnknown": "Something went wrong. Try again.",
 
@@ -652,6 +654,15 @@
   "dashboardNoRecentTrainingCaption": "Log a workout and your weekly volume, streak and trends will appear here. Older history is on the Progress tab.",
   "dashboardVolumeEyebrow": "VOLUME",
   "dashboardStatSessions": "Sessions",
+  "dashboardSessionGoal": "Weekly session goal",
+  "dashboardSessionGoalProgress": "{completed} / {target}",
+  "@dashboardSessionGoalProgress": {
+    "description": "Completed sessions versus the user's weekly target.",
+    "placeholders": {
+      "completed": { "type": "int" },
+      "target": { "type": "int" }
+    }
+  },
   "dashboardStatStreak": "Streak",
   "dashboardStatLastWeek": "Last week",
   "dashboardStreakWeeks": "{count} wk",
@@ -791,7 +802,14 @@
   },
   "authResetPasswordTitle": "Reset password",
   "authResetIntro": "Enter the email you signed up with and we'll send a reset link.",
-  "authResetSentIntro": "If that address has an account, a reset link is on its way. The link opens in your browser.",
+  "authResetSentIntro": "If that address has an account, a reset link is on its way. Open it on this device and the app will ask for a new password.",
+  "authNewPasswordTitle": "Set a new password",
+  "authNewPasswordIntro": "Choose a new password for your account.",
+  "authFieldNewPassword": "New password",
+  "authNewPasswordSave": "Save password",
+  "authNewPasswordDone": "Password updated.",
+  "authNewPasswordNotNow": "Not now",
+  "authNewPasswordRequestNew": "Request a new link",
   "authResetSendLink": "Send reset link",
   "authResetSendAgain": "Send again",
   "authBackToSignIn": "Back to sign in",
@@ -824,6 +842,19 @@
   "accountPersonalDetailsSubtitle": "Name, date of birth, sex, height",
   "accountShowWelcomeTitle": "Show welcome screen",
   "accountShowWelcomeSubtitle": "The intro shown on first launch",
+  "accountDeleteTitle": "Delete account",
+  "accountDeleteSubtitle": "Permanently removes your account and cloud backup",
+  "accountDeleteConfirmTitle": "Delete your account?",
+  "accountDeleteConfirmBody": "This permanently deletes your account and cloud backup. Workouts stored on this device stay here until you remove them from Data management. This cannot be undone.",
+  "accountDeleteConfirmWord": "DELETE",
+  "accountDeleteTypeToConfirm": "Type {word} to confirm",
+  "@accountDeleteTypeToConfirm": {
+    "placeholders": {
+      "word": { "type": "String", "example": "DELETE" }
+    }
+  },
+  "accountDeleteAction": "Delete account",
+  "accountDeleted": "Account deleted",
 
   "sizeBytes": "{count} B",
   "@sizeBytes": {

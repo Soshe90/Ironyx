@@ -41,8 +41,36 @@ class _IronyxAppState extends ConsumerState<IronyxApp> {
             : Routes.welcome,
       );
 
+  StreamSubscription<void>? _recoverySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Opens the new-password screen when a reset link is followed. Read on the
+    // first frame so the service is already listening when the SDK hands over
+    // the deep link; the pending flag covers a link that got there first.
+    final AuthService auth = ref.read(authServiceProvider);
+    _recoverySubscription =
+        auth.passwordRecoveryRequests().listen((_) => _openPasswordReset());
+    if (auth.isPasswordRecoveryPending) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _openPasswordReset(),
+      );
+    }
+  }
+
+  void _openPasswordReset() {
+    if (!mounted) return;
+    final String current = _router.routerDelegate.currentConfiguration.uri.path;
+    if (current == Routes.resetPassword) return;
+    // Pushed rather than `go`: a reset link tapped mid-workout must not
+    // discard the screen underneath it.
+    unawaited(_router.pushNamed<void>(Routes.resetPasswordName));
+  }
+
   @override
   void dispose() {
+    unawaited(_recoverySubscription?.cancel());
     // Only dispose a router this widget created.
     if (widget.router == null) {
       _router.dispose();

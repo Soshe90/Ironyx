@@ -207,8 +207,8 @@ void main() {
       // as "new" under every range, including the shortest one.
       await addWorkout(
           'first', now.subtract(const Duration(days: 8)), [('bench', 60, 5)]);
-      await addWorkout('second', now.subtract(const Duration(days: 1)),
-          [('bench', 70, 5)]);
+      await addWorkout(
+          'second', now.subtract(const Duration(days: 1)), [('bench', 70, 5)]);
 
       for (final Duration window in [
         const Duration(days: 30),
@@ -242,10 +242,8 @@ void main() {
       final DateTime now = DateTime.now();
       // A heavier one-off two weeks ago must not outrank last night's
       // session as "current" — current means most recent, not heaviest.
-      await addWorkout(
-          'heavier_earlier',
-          now.subtract(const Duration(days: 14)),
-          [('bench', 120, 5)]);
+      await addWorkout('heavier_earlier',
+          now.subtract(const Duration(days: 14)), [('bench', 120, 5)]);
       await addWorkout('lighter_latest', now.subtract(const Duration(days: 1)),
           [('bench', 90, 5)]);
 

@@ -4,6 +4,7 @@ import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
+import '../../../core/database/tables/profiles.dart';
 import '../../../core/database/tables/timer_sessions.dart';
 import '../../../core/database/tables/workouts.dart';
 import '../../../core/formatters/date_formatters.dart';
@@ -41,6 +42,19 @@ Stream<MostLoggedOneRM?> dashboardMostLoggedOneRM(Ref ref) =>
 @riverpod
 Stream<BodyMetrics?> dashboardLatestBodyMetrics(Ref ref) =>
     ref.watch(bodyMetricsDaoProvider).watchLatest();
+
+/// Profile settings used by dashboard targets.
+@riverpod
+Stream<Profile?> dashboardProfile(Ref ref) =>
+    ref.watch(profileDaoProvider).watch();
+
+/// Completed workouts for each day in the current Monday-Sunday week.
+@riverpod
+Stream<List<WeekdayDistribution>> dashboardWeekdayDistribution(Ref ref) =>
+    ref.watch(workoutDaoProvider).watchWeekdayDistribution(
+          since: DateFormatters.startOfWeek(DateTime.now()),
+          utcOffset: DateTime.now().timeZoneOffset,
+        );
 
 /// Last 8 weeks of training volume, for the dashboard's hero card
 /// (headline number, trend vs. the prior week, and a sparkline).
@@ -91,10 +105,10 @@ class WeekSnapshot {
 
   /// Builds the snapshot from the two weekly series.
   ///
-  /// The series only contain weeks that have workouts — SQLite's `GROUP BY`
-  /// emits no row for a week you did not train. So "this week" is whichever
-  /// bucket matches the current week start, not simply `last`; using `last`
-  /// would report a stale week's volume as the current one after a rest week.
+  /// The DAO zero-fills gaps after SQLite's `GROUP BY`, but an empty result
+  /// still means there is no history in the requested window. "This week" is
+  /// therefore whichever bucket matches the current week start, not simply
+  /// `last`; using `last` would report a stale week's volume after a rest week.
   factory WeekSnapshot.from({
     required List<WeeklyVolume> volume,
     required List<WorkoutFrequency> frequency,

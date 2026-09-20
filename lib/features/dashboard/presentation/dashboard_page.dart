@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
+import '../../../core/database/tables/profiles.dart';
 import '../../../core/database/tables/timer_sessions.dart';
 import '../../../core/database/tables/workouts.dart';
 import '../../../core/formatters/date_formatters.dart';
@@ -60,29 +61,76 @@ class DashboardPage extends StatelessWidget {
                   top: AppSpacing.sm,
                   bottom: AppSpacing.xl,
                 ),
-                sliver: const SliverToBoxAdapter(child: _TodayCard()),
-              ),
-              SliverPadding(
-                padding: context.sliverGutter,
-                sliver: const SliverToBoxAdapter(child: _ThisWeekSection()),
-              ),
-              SliverPadding(
-                padding: context.sliverGutter.copyWith(top: AppSpacing.xl),
-                sliver: const SliverToBoxAdapter(child: _ProgressSection()),
-              ),
-              SliverPadding(
-                padding: context.sliverGutter.copyWith(
-                  top: AppSpacing.xl,
-                  bottom: AppSpacing.xl,
+                sliver: SliverToBoxAdapter(
+                  child: context.isAtLeast(Breakpoint.expanded)
+                      ? const _DesktopPrimaryRow()
+                      : const _TodayCard(),
                 ),
-                sliver: const SliverToBoxAdapter(child: _RecentSection()),
               ),
+              if (!context.isAtLeast(Breakpoint.expanded))
+                SliverPadding(
+                  padding: context.sliverGutter,
+                  sliver: const SliverToBoxAdapter(child: _ThisWeekSection()),
+                ),
+              if (context.isAtLeast(Breakpoint.expanded))
+                SliverPadding(
+                  padding: context.sliverGutter.copyWith(
+                    top: AppSpacing.xl,
+                    bottom: AppSpacing.xl,
+                  ),
+                  sliver: const SliverToBoxAdapter(
+                    child: _DesktopSecondaryRow(),
+                  ),
+                )
+              else ...<Widget>[
+                SliverPadding(
+                  padding: context.sliverGutter.copyWith(top: AppSpacing.xl),
+                  sliver: const SliverToBoxAdapter(child: _ProgressSection()),
+                ),
+                SliverPadding(
+                  padding: context.sliverGutter.copyWith(
+                    top: AppSpacing.xl,
+                    bottom: AppSpacing.xl,
+                  ),
+                  sliver: const SliverToBoxAdapter(child: _RecentSection()),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+}
+
+// The desktop rows use `start` alignment, not `stretch`: a sliver hands its
+// child an unbounded height, and a stretched Row demands a finite one.
+class _DesktopPrimaryRow extends StatelessWidget {
+  const _DesktopPrimaryRow();
+
+  @override
+  Widget build(BuildContext context) => const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(flex: 2, child: _TodayCard()),
+          SizedBox(width: AppSpacing.lg),
+          Expanded(child: _ThisWeekSection()),
+        ],
+      );
+}
+
+class _DesktopSecondaryRow extends StatelessWidget {
+  const _DesktopSecondaryRow();
+
+  @override
+  Widget build(BuildContext context) => const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(flex: 2, child: _ProgressSection()),
+          SizedBox(width: AppSpacing.lg),
+          Expanded(child: _RecentSection()),
+        ],
+      );
 }
 
 /// Trend trace beside the weekly volume figure.
@@ -133,6 +181,14 @@ class _TodayCard extends ConsumerWidget {
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: <Color>[
+          scheme.primaryContainer,
+          theme.colorScheme.surfaceContainerHigh,
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -167,12 +223,31 @@ class _TodayCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            inProgress
-                ? l10n.dashboardWorkoutInProgress
-                : l10n.dashboardReadyToTrain,
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  inProgress
+                      ? l10n.dashboardWorkoutInProgress
+                      : l10n.dashboardReadyToTrain,
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  inProgress ? Icons.play_arrow_rounded : Icons.bolt_rounded,
+                  color: scheme.primary,
+                  size: 28,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -182,24 +257,48 @@ class _TodayCard extends ConsumerWidget {
             style: AppTypography.caption(theme),
           ),
           const SizedBox(height: AppSpacing.xl),
-          FilledButton.icon(
-            onPressed: () => context.pushNamed(Routes.activeWorkoutName),
-            icon: Icon(inProgress ? Icons.play_arrow : Icons.add),
-            label: Text(
-              inProgress
-                  ? l10n.dashboardResumeWorkout
-                  : l10n.dashboardStartWorkout,
-            ),
-          ),
-          if (!inProgress) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: () => context.goNamed(Routes.trackerName),
-              icon: const Icon(Icons.event_note_outlined),
-              label: Text(l10n.dashboardStartFromProgram),
-            ),
+          if (context.isAtLeast(Breakpoint.medium))
+            Row(
+              children: <Widget>[
+                Expanded(child: _primaryAction(context, l10n, inProgress)),
+                if (!inProgress) ...<Widget>[
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.goNamed(Routes.trackerName),
+                      icon: const Icon(Icons.event_note_outlined),
+                      label: Text(l10n.dashboardStartFromProgram),
+                    ),
+                  ),
+                ],
+              ],
+            )
+          else ...<Widget>[
+            _primaryAction(context, l10n, inProgress),
+            if (!inProgress) ...<Widget>[
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: () => context.goNamed(Routes.trackerName),
+                icon: const Icon(Icons.event_note_outlined),
+                label: Text(l10n.dashboardStartFromProgram),
+              ),
+            ],
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _primaryAction(
+    BuildContext context,
+    AppLocalizations l10n,
+    bool inProgress,
+  ) {
+    return FilledButton.icon(
+      onPressed: () => context.pushNamed(Routes.activeWorkoutName),
+      icon: Icon(inProgress ? Icons.play_arrow : Icons.add),
+      label: Text(
+        inProgress ? l10n.dashboardResumeWorkout : l10n.dashboardStartWorkout,
       ),
     );
   }
@@ -221,6 +320,10 @@ class _ThisWeekSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<WeekSnapshot> snapshotAsync =
         ref.watch(dashboardWeekSnapshotProvider);
+    final AsyncValue<List<WeekdayDistribution>> weekdayAsync =
+        ref.watch(dashboardWeekdayDistributionProvider);
+    final Profile? profile = ref.watch(dashboardProfileProvider).value;
+    final int weeklyTarget = profile?.weeklySessionTarget ?? 3;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
@@ -264,7 +367,13 @@ class _ThisWeekSection extends ConsumerWidget {
               details: error.toString(),
               compact: true,
             ),
-            data: (s) => _WeekBody(snapshot: s, unit: unit, scheme: scheme),
+            data: (s) => _WeekBody(
+              snapshot: s,
+              weeklyTarget: weeklyTarget,
+              weekdayAsync: weekdayAsync,
+              unit: unit,
+              scheme: scheme,
+            ),
           ),
         ),
       ],
@@ -275,11 +384,15 @@ class _ThisWeekSection extends ConsumerWidget {
 class _WeekBody extends StatelessWidget {
   const _WeekBody({
     required this.snapshot,
+    required this.weeklyTarget,
+    required this.weekdayAsync,
     required this.unit,
     required this.scheme,
   });
 
   final WeekSnapshot snapshot;
+  final int weeklyTarget;
+  final AsyncValue<List<WeekdayDistribution>> weekdayAsync;
   final WeightUnit unit;
   final ColorScheme scheme;
 
@@ -304,6 +417,16 @@ class _WeekBody extends StatelessWidget {
             l10n.dashboardNoRecentTrainingCaption,
             style: AppTypography.caption(theme),
           ),
+          // The goal and the week strip stay visible: they are the invitation
+          // to start, and hiding them makes a new user's dashboard look
+          // broken rather than empty.
+          const SizedBox(height: AppSpacing.lg),
+          _SessionGoal(
+            completed: snapshot.sessions,
+            target: weeklyTarget,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _WeeklyBreakdown(asyncValue: weekdayAsync),
         ],
       );
     }
@@ -374,6 +497,13 @@ class _WeekBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
+        _SessionGoal(
+          completed: snapshot.sessions,
+          target: weeklyTarget,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _WeeklyBreakdown(asyncValue: weekdayAsync),
+        const SizedBox(height: AppSpacing.lg),
         Divider(height: 1, color: scheme.outlineVariant),
         const SizedBox(height: AppSpacing.lg),
         StatStrip(
@@ -407,6 +537,147 @@ class _WeekBody extends StatelessWidget {
   }
 }
 
+class _WeeklyBreakdown extends StatelessWidget {
+  const _WeeklyBreakdown({required this.asyncValue});
+
+  final AsyncValue<List<WeekdayDistribution>> asyncValue;
+
+  @override
+  Widget build(BuildContext context) => asyncValue.when(
+        loading: () => const LoadingShimmer(
+          width: double.infinity,
+          height: 56,
+        ),
+        error: (_, __) => Text(
+          context.l10n.metricCouldNotLoad,
+          style: AppTypography.caption(Theme.of(context)),
+        ),
+        data: (days) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              context.l10n.progressTrainingDaysTitle,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                for (final WeekdayDistribution day in days)
+                  Expanded(child: _WeekdayCell(day: day)),
+              ],
+            ),
+          ],
+        ),
+      );
+}
+
+const double _dayMarkerSize = 32;
+
+class _WeekdayCell extends StatelessWidget {
+  const _WeekdayCell({required this.day});
+
+  final WeekdayDistribution day;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool trained = day.trainingDayCount > 0;
+    final String key = switch (day.weekday) {
+      DateTime.monday => 'monday',
+      DateTime.tuesday => 'tuesday',
+      DateTime.wednesday => 'wednesday',
+      DateTime.thursday => 'thursday',
+      DateTime.friday => 'friday',
+      DateTime.saturday => 'saturday',
+      _ => 'sunday',
+    };
+
+    return Semantics(
+      label: context.l10n.progressWeekdaySemantic(
+        context.l10n.progressWeekdayFull(key),
+        day.trainingDayCount,
+        day.workoutCount,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+        child: Column(
+          children: <Widget>[
+            // Not interactive, so no 48dp minimum; seven of them must also
+            // fit a 360dp card, where a 48dp marker gets squeezed non-square.
+            Container(
+              width: _dayMarkerSize,
+              height: _dayMarkerSize,
+              decoration: BoxDecoration(
+                color:
+                    trained ? scheme.primary : scheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
+              ),
+              child: trained
+                  ? Icon(Icons.check, size: 18, color: scheme.onPrimary)
+                  : null,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              context.l10n.progressWeekdayShort(key),
+              style: theme.textTheme.labelSmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionGoal extends StatelessWidget {
+  const _SessionGoal({required this.completed, required this.target});
+
+  final int completed;
+  final int target;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final AppLocalizations l10n = context.l10n;
+    final int safeTarget = target.clamp(1, 7);
+    final double progress = (completed / safeTarget).clamp(0.0, 1.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l10n.dashboardSessionGoal,
+                style: theme.textTheme.labelLarge,
+              ),
+            ),
+            Text(
+              l10n.dashboardSessionGoalProgress(completed, safeTarget),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: scheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        LinearProgressIndicator(
+          value: progress,
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(4),
+          backgroundColor: scheme.surfaceContainerHighest,
+          color: scheme.primary,
+        ),
+      ],
+    );
+  }
+}
+
 /// Priority three: the two progress signals worth surfacing off-screen.
 class _ProgressSection extends StatelessWidget {
   const _ProgressSection();
@@ -417,15 +688,13 @@ class _ProgressSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         SectionHeader(title: context.l10n.navProgress),
-        const IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(child: _OneRmCard()),
-              SizedBox(width: AppSpacing.md),
-              Expanded(child: _BodyWeightCard()),
-            ],
-          ),
+        const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: _OneRmCard()),
+            SizedBox(width: AppSpacing.md),
+            Expanded(child: _BodyWeightCard()),
+          ],
         ),
       ],
     );
@@ -605,8 +874,7 @@ class _OneRmCard extends ConsumerWidget {
     final AsyncValue<MostLoggedOneRM?> oneRmAsync =
         ref.watch(dashboardMostLoggedOneRMProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
-    final Map<String, String> slugsById =
-        ref.watch(exerciseSlugsByIdProvider);
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
 
     return SummaryCard(
       title: context.l10n.dashboardEstOneRm,

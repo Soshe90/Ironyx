@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/formatters/date_formatters.dart';
+import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
 
 /// Covers the two new dashboard-card queries added in M6:
 /// `ExerciseDao.watchLibrarySummary` and
@@ -71,6 +73,74 @@ void main() {
       ],
     );
   }
+
+  group('WeekSnapshot.from', () {
+    test('empty series produces a zeroed no-history snapshot', () {
+      final snapshot = WeekSnapshot.from(
+        volume: const <WeeklyVolume>[],
+        frequency: const <WorkoutFrequency>[],
+      );
+
+      expect(snapshot.volumeKg, 0);
+      expect(snapshot.previousVolumeKg, 0);
+      expect(snapshot.sessions, 0);
+      expect(snapshot.streakWeeks, 0);
+      expect(snapshot.volumeSeries, isEmpty);
+      expect(snapshot.hasHistory, isFalse);
+    });
+
+    test('selects current and previous weeks and preserves series length', () {
+      final DateTime currentWeek = DateFormatters.startOfWeek(DateTime.now());
+      final DateTime previousWeek =
+          currentWeek.subtract(const Duration(days: 7));
+      final DateTime olderWeek = previousWeek.subtract(const Duration(days: 7));
+
+      final snapshot = WeekSnapshot.from(
+        volume: <WeeklyVolume>[
+          WeeklyVolume(weekStart: olderWeek, totalVolumeKg: 50),
+          WeeklyVolume(weekStart: previousWeek, totalVolumeKg: 100),
+          WeeklyVolume(weekStart: currentWeek, totalVolumeKg: 150),
+        ],
+        frequency: <WorkoutFrequency>[
+          WorkoutFrequency(weekStart: olderWeek, workoutCount: 1),
+          WorkoutFrequency(weekStart: previousWeek, workoutCount: 2),
+          WorkoutFrequency(weekStart: currentWeek, workoutCount: 3),
+        ],
+      );
+
+      expect(snapshot.volumeKg, 150);
+      expect(snapshot.previousVolumeKg, 100);
+      expect(snapshot.sessions, 3);
+      expect(snapshot.streakWeeks, 3);
+      expect(snapshot.volumeSeries, <double>[50, 100, 150]);
+      expect(snapshot.hasHistory, isTrue);
+    });
+
+    test('a rest week continues the previous streak until the current week',
+        () {
+      final DateTime currentWeek = DateFormatters.startOfWeek(DateTime.now());
+      final DateTime previousWeek =
+          currentWeek.subtract(const Duration(days: 7));
+      final DateTime twoWeeksAgo =
+          previousWeek.subtract(const Duration(days: 7));
+
+      final snapshot = WeekSnapshot.from(
+        volume: <WeeklyVolume>[
+          WeeklyVolume(weekStart: twoWeeksAgo, totalVolumeKg: 50),
+          WeeklyVolume(weekStart: previousWeek, totalVolumeKg: 100),
+          WeeklyVolume(weekStart: currentWeek, totalVolumeKg: 0),
+        ],
+        frequency: <WorkoutFrequency>[
+          WorkoutFrequency(weekStart: twoWeeksAgo, workoutCount: 1),
+          WorkoutFrequency(weekStart: previousWeek, workoutCount: 2),
+          WorkoutFrequency(weekStart: currentWeek, workoutCount: 0),
+        ],
+      );
+
+      expect(snapshot.sessions, 0);
+      expect(snapshot.streakWeeks, 2);
+    });
+  });
 
   group('ExerciseDao.watchLibrarySummary', () {
     test('empty catalogue reports zero count and no recent name', () async {

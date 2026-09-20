@@ -82,6 +82,20 @@ class AccountSection extends ConsumerWidget {
                   title: Text(l10n.authSignOut),
                   onTap: () => _signOut(context, ref),
                 ),
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_forever_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    l10n.accountDeleteTitle,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  subtitle: Text(l10n.accountDeleteSubtitle),
+                  onTap: () => _deleteAccount(context, ref),
+                ),
               ],
               // Always available, signed in or not: the details are local,
               // and a guest has just as much use for them.
@@ -108,6 +122,28 @@ class AccountSection extends ConsumerWidget {
         const SizedBox(height: AppSpacing.xl),
       ],
     );
+  }
+
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l10n = context.l10n;
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _DeleteAccountDialog(l10n: l10n),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(authControllerProvider.notifier).deleteAccount();
+      // Account deletion is remote; local workouts remain on this device until
+      // the user explicitly removes them from Data Management.
+      await ref.read(profileDaoProvider).unlinkAccount();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.accountDeleted)));
+    } on AuthFailure catch (failure) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(failure.messageFor(l10n))),
+      );
+    }
   }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
@@ -141,5 +177,68 @@ class AccountSection extends ConsumerWidget {
         SnackBar(content: Text(failure.messageFor(l10n))),
       );
     }
+  }
+}
+
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = widget.l10n;
+    final bool canConfirm =
+        _controller.text.trim() == l10n.accountDeleteConfirmWord;
+
+    return AlertDialog(
+      title: Text(l10n.accountDeleteConfirmTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(l10n.accountDeleteConfirmBody),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              labelText: l10n.accountDeleteTypeToConfirm(
+                l10n.accountDeleteConfirmWord,
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: canConfirm ? () => Navigator.pop(context, true) : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
+          ),
+          child: Text(l10n.accountDeleteAction),
+        ),
+      ],
+    );
   }
 }

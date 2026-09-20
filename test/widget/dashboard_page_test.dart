@@ -1,4 +1,5 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
@@ -6,6 +7,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -97,6 +99,45 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets('shows session goal progress and the trained weekday',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+
+      // No profile target is set, so the default of 3 applies.
+      expect(find.text('Weekly session goal'), findsOneWidget);
+      expect(find.text('1 / 3'), findsOneWidget);
+      // One completed workout marks exactly one day of the Mon-Sun strip.
+      expect(find.byIcon(Icons.check), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('expanded width lays the sections out in columns',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: seededPrefs,
+        surfaceSize: const Size(1440, 900),
+      );
+      await tester.pumpAndSettle();
+
+      // A stretched Row under a sliver throws on layout; assert it does not.
+      expect(tester.takeException(), isNull);
+      expect(find.text('Start workout'), findsOneWidget);
+      expect(find.text('Weekly session goal'), findsOneWidget);
+      // Progress and Recent sit side by side, so both are on screen at once.
+      expect(find.text('Progress'), findsWidgets);
+      expect(find.text('Recent'), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
     testWidgets('one block failing to load does not blank the others',
         (tester) async {
       await pumpApp(
@@ -128,6 +169,81 @@ void main() {
       expect(find.text('Last timer'), findsOneWidget);
 
       await disposeApp(tester);
+    });
+
+    testWidgets('the week card shows its own error when the snapshot fails',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dashboardWeekSnapshotProvider.overrideWith(
+            (ref) => throw Exception('boom'),
+          ),
+        ],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not load this week'), findsOneWidget);
+      // The card failing must not take the hero, or the goal bar's absence,
+      // down with anything else on the page.
+      expect(find.text('Start workout'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('lays the weekday strip out right-to-left in Arabic',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: <String, Object>{...seededPrefs, 'app_locale': 'ar'},
+      );
+      await tester.pumpAndSettle();
+
+      final AppLocalizations ar = await AppLocalizations.delegate.load(
+        const Locale('ar'),
+      );
+      final Finder monday = find.text(ar.progressWeekdayShort('monday'));
+      final Finder sunday = find.text(ar.progressWeekdayShort('sunday'));
+      expect(monday, findsOneWidget);
+      expect(sunday, findsOneWidget);
+      // Monday leads the week, so in RTL it sits to the right of Sunday.
+      expect(
+        tester.getCenter(monday).dx,
+        greaterThan(tester.getCenter(sunday).dx),
+      );
+      expect(tester.takeException(), isNull);
+
+      await disposeApp(tester);
+    });
+  });
+
+  group('DashboardPage with no history', () {
+    late AppDatabase database;
+
+    setUp(() => database = AppDatabase.forTesting());
+
+    testWidgets('a new user still sees the goal at 0 and an empty strip',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: const <String, Object>{'exercise_seed_version': 999999},
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Weekly session goal'), findsOneWidget);
+      expect(find.text('0 / 3'), findsOneWidget);
+      // Nothing trained, so no day carries a check mark.
+      expect(find.byIcon(Icons.check), findsNothing);
+      expect(find.text('Start workout'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+      await database.close();
     });
   });
 }

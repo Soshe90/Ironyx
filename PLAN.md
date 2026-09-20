@@ -247,7 +247,9 @@ learning.**
       current Windows machine** (rechecked; both were created elsewhere).
       Locate the originals first; if they are gone, generate a new upload key
       *before* the first Play upload, since nothing has been published under
-      the old one, and back it up at creation (`SETUP.md` §5). Until then a
+      the old one, and back it up at creation (`SETUP.md` §5). **The account
+      holder confirmed on 2026-09-20 that the original is lost**, so a new
+      upload key is the plan; it has not been generated yet. Until then a
       release build here is debug-signed and cannot be uploaded.
 - [ ] **dev** — Store listing: icon, feature graphic, screenshots, short and
       full description.
@@ -314,9 +316,9 @@ minute.
 > (D1, Mon Oct 5) with **Android-first, iOS fast-follow in Q1 2027** as the
 > default. iOS icon and launch images were replaced 2026-09-19 (opaque
 > RGB icons, navy launch storyboard) but never seen in Xcode. Two caveats
-> for whoever picks this up: timer sound cues currently use
-> `SystemSound.play`, which docs say gives nothing useful on iOS (no cue
-> files are bundled — ADR-4 deviation note), and the iOS iCloud/iTunes
+> for whoever picks this up: the timer's sound cues (bundled 2026-09-20,
+> played through `just_audio`) were checked on an Android emulator only —
+> iOS audio-session ducking is unverified — and the iOS iCloud/iTunes
 > backup-exclusion item (`TODO.md` A2.3) is still open.
 
 - [ ] **acct** — Decide on the Apple Developer Program, $99/year. Without it
@@ -548,5 +550,6 @@ unzip -p build/app/outputs/flutter-apk/app-release.apk \
 failures (5 `library_page_test`, 1 `program_editor_page_test`) were fixed with
 the Arabic localization work; the suite is green, so any failure is now yours.
 
-**Local tooling caveat.** `dart run tool/check_asset_licenses.dart` false-fails
-on Windows (mixed path separators); trust the Linux CI run. See `SETUP.md`.
+**Local tooling.** `dart run tool/check_asset_licenses.dart` used to false-fail
+on Windows (mixed path separators); fixed 2026-09-20 and verified to still
+catch an orphaned image.

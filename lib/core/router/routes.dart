@@ -71,6 +71,11 @@ abstract final class Routes {
   static const String forgotPassword = '/auth/forgot-password';
   static const String forgotPasswordName = 'forgotPassword';
 
+  /// Where a password-reset link lands. Pushed by `app.dart` when the
+  /// recovery deep link arrives, never navigated to by the user directly.
+  static const String resetPassword = '/auth/reset-password';
+  static const String resetPasswordName = 'resetPassword';
+
   /// Name, date of birth, sex, height and current weight.
   static const String personalDetails = '/profile';
   static const String personalDetailsName = 'personalDetails';

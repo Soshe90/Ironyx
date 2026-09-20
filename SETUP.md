@@ -43,13 +43,9 @@ flutter test
 dart run tool/check_asset_licenses.dart      # what CI runs before building
 ```
 
-> **Windows caveat:** `check_asset_licenses.dart` currently fails on Windows
-> with 602 "unreferenced image ships in the APK" errors — one per image.
-> It builds file paths with `\` (from `listSync`) and compares them with the
-> `/` paths in the seed, so nothing ever matches. It is a tooling bug, not a
-> licensing problem (no null licence, uncleared source, hotlink or missing
-> file is reported), and Linux CI passes. Trust CI for this check until the
-> path comparison is normalised (`TODO.md`, Week 0).
+The licence check passes on Windows as well as Linux (fixed 2026-09-20: it
+used to compare `\`-separated paths from the filesystem with the seed's
+`/` paths and report every image as unreferenced).
 
 `flutter test --coverage` is what CI runs. One golden harness is skipped by
 design (`dart_test.yaml`): its output embeds the date, so it is for looking
@@ -113,8 +109,17 @@ keyPassword=...
 ```
 
 Back both files up to two durable places the moment they exist. As of
-2026-09-20 neither is present on the Windows development machine — see
-`TODO.md`, Week 0.
+2026-09-20 neither is present on the Windows development machine, and the
+original key is confirmed lost — this is the recipe for its replacement
+(safe because nothing was ever uploaded to Play under the old key; see
+`TODO.md`, Week 0). After building, confirm the bundle is release-signed:
+
+```bash
+keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
+```
+
+The certificate owner and fingerprint must be your new key, not
+"Android Debug".
 
 Build and check a release:
 

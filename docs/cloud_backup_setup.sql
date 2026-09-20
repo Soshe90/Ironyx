@@ -51,6 +51,25 @@ create policy "Users manage their own backup"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Account deletion is intentionally server-side. The mobile app only holds the
+-- public anon key, which must never be granted permission to delete rows from
+-- auth.users directly. The function runs as its owner, but remains scoped to
+-- the caller's auth.uid() and cannot be invoked by anonymous clients.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.backups where user_id = auth.uid();
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke execute on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
+
 -- The statements above are DDL, so a successful run reports
 -- "Success. No rows returned". That is what you want, but it looks
 -- identical to a no-op — run this to actually confirm the table exists and

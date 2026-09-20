@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon for timer notifications. Android renders these as a flat
+     alpha mask, so the full-colour launcher icon would show as a grey blob;
+     this is the mark alone, sized to fill a 24dp glyph. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:scaleX="0.0806"
+        android:scaleY="0.0806"
+        android:translateX="-8.65"
+        android:translateY="-8.65">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M132,344 L286,168 L380,168 L226,344 Z M186,168 L280,168 L230,226 L136,226 Z" />
+    </group>
+</vector>

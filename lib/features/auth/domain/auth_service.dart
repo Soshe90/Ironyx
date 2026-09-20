@@ -34,6 +34,15 @@ enum AuthFailureKind {
   /// The backend rejected the password as too weak.
   weakPassword,
 
+  /// Changing a password to the one it already is. Kept apart from
+  /// [weakPassword]: "use at least 8 characters" would be wrong advice for a
+  /// password that is long enough, just not new.
+  samePassword,
+
+  /// The reset link was already used or has expired, so there is no recovery
+  /// session left to authorise a new password.
+  recoveryExpired,
+
   /// The backend refused the address itself. Supabase rejects a set of
   /// domains outright (`example.com` among them), independently of whether
   /// the address is well-formed, so client-side validation cannot predict
@@ -113,7 +122,30 @@ abstract interface class AuthService {
 
   Future<void> signOut();
 
+  /// Permanently deletes the authenticated account and its server data.
+  ///
+  /// The implementation must perform this through a server-side operation;
+  /// clients must never receive or hold service-role credentials.
+  Future<void> deleteAccount();
+
   Future<void> sendPasswordReset(String email);
+
+  /// True when the app was opened from a password-reset link and the user has
+  /// not yet chosen a new password.
+  ///
+  /// The link is delivered while the SDK initialises, before any screen can
+  /// be listening to [passwordRecoveryRequests] — so a cold start from the
+  /// link is only ever visible through this flag.
+  bool get isPasswordRecoveryPending;
+
+  /// Emits when a reset link is opened while the app is already running.
+  Stream<void> passwordRecoveryRequests();
+
+  /// Sets a new password for the recovery session the reset link created.
+  ///
+  /// Throws [AuthFailure]; [AuthFailureKind.recoveryExpired] when the link no
+  /// longer authorises anything.
+  Future<void> updatePassword(String newPassword);
 }
 
 /// Stand-in used when [SupabaseConfig.isConfigured] is false.
@@ -151,6 +183,20 @@ class DisabledAuthService implements AuthService {
   Future<void> signOut() async {}
 
   @override
+  Future<void> deleteAccount() async =>
+      throw const AuthFailure(AuthFailureKind.notConfigured);
+
+  @override
   Future<void> sendPasswordReset(String email) async =>
+      throw const AuthFailure(AuthFailureKind.notConfigured);
+
+  @override
+  bool get isPasswordRecoveryPending => false;
+
+  @override
+  Stream<void> passwordRecoveryRequests() => const Stream<void>.empty();
+
+  @override
+  Future<void> updatePassword(String newPassword) async =>
       throw const AuthFailure(AuthFailureKind.notConfigured);
 }

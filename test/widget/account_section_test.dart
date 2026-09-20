@@ -239,6 +239,64 @@ void main() {
     await disposeApp(tester);
   });
 
+  testWidgets('deleting an account requires confirmation and keeps local data',
+      (tester) async {
+    await ProfileDao(database).upsert(
+      const ProfilesTableCompanion(displayName: Value('Mustafa Salih')),
+    );
+    auth.accounts['mustafa@example.com'] = 'hunter22';
+    await pumpSettings(tester);
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'mustafa@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'hunter22',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete your account?'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Delete account'), findsOneWidget);
+
+    // The destructive action stays disabled until the exact confirmation word
+    // is entered.
+    final Finder confirmationField = find.byType(TextField);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Delete account'),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.enterText(confirmationField, 'DELETE');
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Delete account'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in'), findsOneWidget);
+    final profile = await ProfileDao(database).get();
+    expect(profile!.remoteUserId, isNull);
+    expect(profile.displayName, 'Mustafa Salih');
+
+    await disposeApp(tester);
+  });
+
   testWidgets('signing out keeps the personal details on the device',
       (tester) async {
     await ProfileDao(database).upsert(

@@ -241,6 +241,25 @@ void main() {
     expect(result[6].workoutCount, 1);
   });
 
+  test('weekday distribution applies the UTC offset to the day boundary',
+      () async {
+    // Monday 2026-01-05 22:30 UTC is already Tuesday at UTC+3.
+    await insertWorkout(
+        id: 'late',
+        date: DateTime.utc(2026, 1, 5, 22, 30),
+        exerciseId: 'push',
+        reps: 5);
+    final utc = await dao.watchWeekdayDistribution().first;
+    expect(utc[0].workoutCount, 1);
+    expect(utc[1].workoutCount, 0);
+    final local = await dao
+        .watchWeekdayDistribution(utcOffset: const Duration(hours: 3))
+        .first;
+    expect(local[0].workoutCount, 0);
+    expect(local[1].workoutCount, 1);
+    expect(local[1].trainingDayCount, 1);
+  });
+
   test('RPE analytics pairs effort with session volume', () async {
     await insertWorkout(
         id: 'rpe',
