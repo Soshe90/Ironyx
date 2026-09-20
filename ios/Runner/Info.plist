@@ -43,7 +43,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!-- Lets a rest-timer's countdown cue and completion sound keep playing
-	     after the app backgrounds (PLAN.md Phase 4). Without this, iOS
+	     after the app backgrounds (TODO.md Roadmap Phase 4). Without this, iOS
 	     suspends app audio the moment the user locks the screen or switches
 	     apps mid-timer — silently, with no error the app could catch — which
 	     is the opposite of what the timer promises. Android needs no

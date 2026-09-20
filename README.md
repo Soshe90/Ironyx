@@ -80,8 +80,7 @@ Documentation map:
 
 | File | What it is |
 |---|---|
-| `TODO.md` | The live tracker: 12-week launch plan, decisions, audits, checklists |
-| `PLAN.md` | Release, platforms and revenue phases, each with a gate |
+| `TODO.md` | The live tracker: 12-week launch plan, decisions, the post-launch roadmap (release, platforms, revenue phases and gates), audits, checklists |
 | `docs/ADR.md` | Binding architecture decisions and amendments |
 | `docs/widgets.md` | Shared widget reference |
 | `docs/PRIVACY_POLICY.md` | The privacy policy (not yet publicly hosted) |

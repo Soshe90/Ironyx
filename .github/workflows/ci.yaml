@@ -52,7 +52,7 @@ jobs:
 
   ios:
     # Gated on `verify` passing first: macOS runners bill at a 10x minute
-    # multiplier on private repos (PLAN.md Phase 4), so a plain formatting or
+    # multiplier on private repos (TODO.md Roadmap Phase 4), so a plain formatting or
     # analyzer failure should not spend them before the cheap Linux job would
     # have caught the same thing.
     needs: verify
@@ -96,7 +96,7 @@ jobs:
       # `--no-codesign`: this proves the app compiles for iOS, which is what
       # CI is for. Signing (a real Apple Developer certificate and
       # provisioning profile) is a separate, later step for an actual
-      # TestFlight/App Store upload — see PLAN.md Phase 4's build-host
+      # TestFlight/App Store upload — see TODO.md Roadmap Phase 4's build-host
       # decision (GitHub Actions vs Codemagic) for that, once the $99/year
       # program is enrolled.
       - name: Build iOS (no codesign)

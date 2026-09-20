@@ -10,7 +10,7 @@ only, no code before then.
 
 - Cloud sync / accounts — accounts and a manual single-slot backup shipped
   (ADR-8 amendment); real per-table sync stays here, gated on a D7 retention
-  number (`PLAN.md` Phase 3 → 5).
+  number (`TODO.md` Roadmap Phase 3 → 5).
 - Social features, shared workouts
 - Video demonstrations — the catalogue links out to YouTube for 48 exercises;
   no video is bundled or redistributed (`ASSETS-LICENSE.md`)
@@ -26,7 +26,7 @@ Deferred deliberately, with where the reasoning lives:
 
 - **Premium tier** (backup / sync / deeper analytics; subscription and/or
   lifetime) — planning only; no IAP code until a D7 number exists.
-  `PLAN.md` Phase 6, `TODO.md` C12.
+  `TODO.md` Roadmap Phase 6 and C12.
 - **Referral program, public REST API, free premium for reviewers** — dropped
   from the launch schedule (`TODO.md` C12); no API exists.
 - **Web build as a product** — demo at most, post-launch (decision D5). Needs

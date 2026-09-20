@@ -15,10 +15,10 @@ import '../../../backup/presentation/cloud_backup_failure_messages.dart';
 
 /// Back up and restore the whole database against the signed-in account.
 ///
-/// Temporary — see [CloudBackupService]'s docs and PLAN.md Phase 5. The
-/// copy says "while the app is in testing" out loud rather than implying a
-/// finished sync feature, because a backup people over-trust is worse than
-/// one they know the limits of.
+/// Temporary — see [CloudBackupService]'s docs and TODO.md Roadmap Phase 5.
+/// The copy says "while the app is in testing" out loud rather than
+/// implying a finished sync feature, because a backup people over-trust is
+/// worse than one they know the limits of.
 class CloudBackupSection extends ConsumerStatefulWidget {
   const CloudBackupSection({super.key});
 

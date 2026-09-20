@@ -3,8 +3,8 @@
 > **Historical document — status note, 2026-09-20.** This is the original v1
 > build plan, kept for its rationale and exit criteria. **Its checkboxes are
 > not maintained** and many unticked items (M0–M6) are done. For current
-> status read `TODO.md` (the live tracker) and `PLAN.md` (release, platforms,
-> revenue); where this file disagrees with `docs/ADR.md`, the ADR wins. Known
+> status read `TODO.md` (the live tracker, including its release, platforms,
+> and revenue roadmap); where this file disagrees with `docs/ADR.md`, the ADR wins. Known
 > differences from what shipped:
 >
 > - **Dependencies (§2):** the "Final dependency set" versions are obsolete —

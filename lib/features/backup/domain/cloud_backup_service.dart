@@ -2,11 +2,12 @@
 ///
 /// **Temporary, and deliberately not what ADR-8 describes.** ADR-8 says
 /// workouts "are never uploaded" and an account "carries identity only".
-/// That is still the intended end state for the *free* tier — see PLAN.md
-/// Phase 5, which replaces this with real per-table sync and amends ADR-8
-/// properly. This exists so a handful of testers can reinstall the app,
-/// sign in, and get their history back, which `flutter run` on a phone
-/// otherwise makes impossible without exporting a file by hand first.
+/// That is still the intended end state for the *free* tier — see TODO.md's
+/// Roadmap Phase 5, which replaces this with real per-table sync and
+/// amends ADR-8 properly. This exists so a handful of testers can
+/// reinstall the app, sign in, and get their history back, which
+/// `flutter run` on a phone otherwise makes impossible without exporting
+/// a file by hand first.
 ///
 /// It is backup/restore, not sync. There is no merge, no conflict rule,
 /// and no background upload: one slot per account, last write wins, and

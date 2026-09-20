@@ -128,7 +128,7 @@ Workouts, programs, templates and body metrics stay in local SQLite and are neve
 >
 > This exists because the app is in hands-on testing and a reinstall otherwise loses everything unless the tester remembered to export a file first. It is **backup/restore, not sync**: one slot per account, last write wins, restore replaces the device. There is no conflict rule because there is no merge.
 >
-> PLAN.md Phase 5 supersedes it with real per-table sync and rewrites this ADR properly. Until then the exception is written down here rather than left as a contradiction between the document and the code — the failure mode this whole file exists to prevent.
+> TODO.md Roadmap Phase 5 supersedes it with real per-table sync and rewrites this ADR properly. Until then the exception is written down here rather than left as a contradiction between the document and the code — the failure mode this whole file exists to prevent.
 >
 > Consequence to keep in view: Settings and the welcome screen still say workouts are local to the device. That is true by default and false once a user opts in, so the copy is scoped to "your workouts are stored on this device either way" rather than claiming nothing ever leaves.
 

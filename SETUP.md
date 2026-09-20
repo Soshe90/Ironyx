@@ -16,7 +16,7 @@ clean; `dart format` clean on `lib/` and `test/`; `flutter test` 423 passed, 1 s
 - Android: a JDK 17 and the Android SDK. Gradle installs the NDK, build
   tools and platform it needs on the first build.
 - iOS needs a Mac. **Nothing in `ios/` has ever been built or run on one** —
-  see `PLAN.md` Phase 4 and the iOS notes at the end.
+  see `TODO.md` Roadmap Phase 4 and the iOS notes at the end.
 
 ## 2. Get dependencies and generate code
 
@@ -148,7 +148,7 @@ scripts/build_android.sh bundle     # release AAB (shrunk + obfuscated)
 ## 7. iOS (unverified)
 
 Needs a Mac (or a rented macOS build host — GitHub Actions `macos-latest` or
-Codemagic; `PLAN.md` Phase 4) and, for a physical iPhone, the $99/year Apple
+Codemagic; `TODO.md` Roadmap Phase 4) and, for a physical iPhone, the $99/year Apple
 Developer Program. The `ios` job in `.github/workflows/ci.yaml` does a
 `--no-codesign` compile check and has never run. `Info.plist` has the
 background-audio, file-sharing and deep-link keys; the app icon and launch
@@ -159,6 +159,5 @@ backup exclusion is still open (`TODO.md` A2.3).
 
 - `README.md` — status, commands, conventions.
 - `docs/ADR.md` — binding architecture decisions; read before writing code.
-- `TODO.md` — the live tracker (12-week launch plan, decisions, audits).
-- `PLAN.md` — release, platforms and revenue phases.
+- `TODO.md` — the live tracker (12-week launch plan, decisions, release/platforms/revenue roadmap, audits).
 - `docs/widgets.md` — the shared widget reference.

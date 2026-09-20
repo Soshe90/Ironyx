@@ -6,7 +6,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Release signing (PLAN.md "Signing keystore"): key.properties and the
+// Release signing (TODO.md Roadmap Phase 2 "Signing keystore"): key.properties and the
 // keystore it points at are both gitignored, so this is absent on a fresh
 // checkout or in CI without the secret provisioned. Falls back to the debug
 // key in that case, exactly as before, rather than failing the build —

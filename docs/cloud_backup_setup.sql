@@ -1,7 +1,7 @@
 -- Account backup — one-time Supabase setup.
 --
 -- TEMPORARY, while the app is in testing. This is backup/restore, not the
--- cloud sync in PLAN.md Phase 5: one slot per account, last write wins,
+-- cloud sync in TODO.md Roadmap Phase 5: one slot per account, last write wins,
 -- and restoring replaces the device. Phase 5 replaces it with real
 -- per-table sync and amends ADR-8 properly.
 --
