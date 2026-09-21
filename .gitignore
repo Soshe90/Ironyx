@@ -7,6 +7,10 @@ build/
 pubspec_overrides.yaml
 
 # Android (packages/flutter_tools/templates/app/android.tmpl/.gitignore)
+.pub-cache/
+.android_home/
+.gradle_home/
+venv/
 android/gradle-wrapper.jar
 android/.gradle/
 android/.kotlin/
@@ -16,8 +20,10 @@ android/gradlew.bat
 android/local.properties
 android/**/GeneratedPluginRegistrant.java
 android/**/.cxx/
-# Never publicly share your keystore.
-android/key.properties
+# Never publicly share your keystore. The wildcard also catches a copy that
+# picked up an extra extension (key.properties.txt), which Gradle would not
+# read anyway and which holds the signing passwords.
+android/key.properties*
 android/**/*.keystore
 android/**/*.jks
 
