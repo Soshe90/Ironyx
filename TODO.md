@@ -19,16 +19,19 @@ Checked today, not copied from old notes:
 - The app is feature-complete. What is missing is **release plumbing**, one
   timer gap, and an untested accounts backend. Nothing else in the old plan
   blocks a first release.
-- Not on this machine: `supabase.json`, `android/key.properties`, the upload
-  keystore. **Update 2026-09-20:** the app was originally built on a Linux
-  server, and these files are gitignored, so they were never pushed and may
-  still be there. The earlier note that the original key is lost only meant
-  it is missing from this Windows machine; look on the server before
-  generating anything new. (A new key is still safe if it is truly gone:
-  nothing was ever uploaded to Play.)
-- No physical device is attached; the only Android target is the `atco_test`
-  emulator. Everything timer- and notification-related has been seen on an
-  emulator only.
+- `supabase.json`, `android/key.properties` and the upload keystore were
+  missing on 2026-09-20 (the app was originally built on a Linux server and
+  these files are gitignored). **Update 2026-09-21:** all three are now on
+  this machine. The keystore is the original key (alias `fittrack_upload`,
+  created 2026-08-26); the properties file arrived as `key.properties.txt`
+  and was renamed, because Gradle reads only `key.properties`.
+- No physical device is attached. **Update 2026-09-21:** the `atco_test`
+  emulator cannot boot on this machine either: its AVD definition exists but
+  the Android 35 `google_apis` x86_64 system image is not installed, and
+  there are no `cmdline-tools` to install one. C6 and S1 need either that
+  SDK download (about 1.5 GB) or a physical Android phone over USB.
+  Everything timer- and notification-related has so far been seen on an
+  emulator on another machine only.
 
 ## The one constraint code cannot remove
 
@@ -79,13 +82,18 @@ Lead-time items first; they cost calendar time, not effort.
       (adjust the remote path). These carry passwords, so copy them with `scp`
       rather than pasting them into a chat. If the keystore is found, A3 is
       unnecessary; just back it up.
+      *2026-09-21: `supabase.json`, the keystore and `key.properties` are
+      here (the properties file needed renaming from `.txt`). Still open:
+      the `git status` / `git log origin/main..HEAD` check on the server, and
+      backing up the keystore and `key.properties` to two places.*
 - [ ] **me** **A1** Create the Play developer account ($25) and start identity
       verification. This can take days. Everything in Day 2 that uses the
       Console waits on it.
 - [ ] **me** **A2** Line up **15+ testers** with Gmail addresses (12 must stay
       opted in for 14 days; 3+ spare for drop-outs). Ask today so they can opt
       in on Day 2.
-- [ ] **me + dev** **A3** Only if A0 did not find the original keystore:
+- [x] **me + dev** **A3** *Not needed: A0 found the original keystore
+      (2026-09-21).* Only if A0 did not find the original keystore:
       generate a new upload key: `keytool` from
       `C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot\bin` (not on PATH),
       recipe in `SETUP.md` §5. You choose the passwords; they stay in the
@@ -95,7 +103,7 @@ Lead-time items first; they cost calendar time, not effort.
 
 Code and configuration:
 
-- [x] **dev** **C1** Timer end notification (done 2026-09-20, uncommitted).
+- [x] **dev** **C1** Timer end notification (done 2026-09-20, commit `c9ae406`).
       `_rescheduleBoundaries` scheduled only phase *starts*, so a locked phone
       went silent when the final interval ended. It now also schedules a
       "Timer complete" notification for the total end through a new
@@ -107,7 +115,7 @@ Code and configuration:
       controller. Analyze clean. **Still emulator/device-unverified:** the
       alarm actually firing while backgrounded is part of C6.
 - [ ] **dev + me** **C2** Host the privacy policy and a delete-account page.
-      **dev, done 2026-09-20 (uncommitted):** `docs/_config.yml` (theme, and
+      **dev, done 2026-09-20 (commit `d3f36a9`):** `docs/_config.yml` (theme, and
       hides the internal docs), `docs/index.md`, `docs/delete-account.md`, and
       front matter on `docs/PRIVACY_POLICY.md`. **me, still to do, after the
       commit is pushed:** repo Settings → Pages → Deploy from branch → `main`
@@ -137,22 +145,53 @@ Code and configuration:
       is hidden from `anon` can look like, so re-run
       `docs/cloud_backup_setup.sql` (idempotent) and check it in C4. Custom
       SMTP and the redirect URL are dashboard settings I cannot see.*
-      Note: the privacy policy currently names Supabase as the only third
-      party. Gmail SMTP sends mail from your own address, so add one line about
-      the email provider before submitting Data Safety.
+      Note: the privacy policy named Supabase as the only third party, and
+      whichever SMTP provider you pick sends the emails. **dev, done
+      2026-09-21:** `docs/PRIVACY_POLICY.md` now says sign-up and reset emails
+      go through an email-sending service acting on our behalf (provider-neutral,
+      so it stays true for Gmail or any other SMTP); "Last updated" is
+      September 21, 2026.
 - [ ] **dev + me** **C4** Accounts end to end on the release build (emulator is
       fine). Sign up → confirmation email arrives → tapping the link reopens the
       app signed in → Back up now → clear data → Restore → Forgot password →
       reset link → Delete account (and confirm the auth user is gone in the
       dashboard). About 1.5 h. **Decision point at 6 pm: if any step is still
       broken, invoke the D6 fallback.**
-- [ ] **dev** **C5** Signed bundle. `scripts/build_android.sh bundle`, then
-      `keytool -printcert -jarfile <aab>` must show the **new** key, not
+      *2026-09-21 split:* the **server half** needs no device and can be run
+      by API once C3 is done: sign up a test address, confirm it by clicking
+      the mailed link (the account confirms on Supabase's side even though the
+      browser cannot open the `com.soshe90.ironyx://` redirect), sign in, write
+      and read a backup as that user, call `delete_my_account`, then confirm
+      sign-in fails and the `backups` row is gone. That proves SMTP, RLS and
+      the delete function. The **app half** (link reopens the app signed in,
+      Restore after clearing data, the reset-password screen) still needs a
+      device. Code review of `SupabaseAuthService` and the deep-link wiring
+      found no defect. Tester tip: open the confirmation link on the phone
+      that has the app installed, or it cannot hand back to the app.
+      Verification query for the delete function, to run after the SQL:
+      `select prosecdef, has_function_privilege('authenticated','public.delete_my_account()','execute') as auth_can, has_function_privilege('anon','public.delete_my_account()','execute') as anon_can from pg_proc where proname = 'delete_my_account';`
+      Expect `true / true / false`.
+- [x] **dev** **C5** Signed bundle. `scripts/build_android.sh bundle`, then
+      `keytool -printcert -jarfile <aab>` must show the upload key, not
       "Android Debug". Copy `build/symbols/<version>` somewhere durable (it is
       gitignored; without it that build's crashes cannot be read). Build release
       only with `supabase.json` present, or accounts are silently off.
+      *Done 2026-09-21:* `build/app/outputs/bundle/release/app-release.aab`
+      (87.7 MB, 1.0.0+1) is signed with the upload key (SHA-256
+      `57:08:11:C8:EC:BF:DD:43:D2:0B:FA:FA:63:B0:80:62:5C:9A:57:05:2B:55:07:B3:C3:3A:BE:79:D7:F7:7D:90`,
+      matching `fittrack_upload`). On this machine the build needs
+      `scripts/build_android.sh bundle -P kotlin.incremental=false`, because
+      the pub cache is on `C:` and the repo on `F:` (SETUP.md §6). The
+      release APK from the same flags has the Supabase host compiled in, so
+      accounts are on. **Still to do (me):** copy `build/symbols/1.0.0+1` and
+      the keystore + `key.properties` to durable storage.
 - [ ] **me + dev** **C6** Smoke test of the *release* build. On a physical
       device if you have one, otherwise the emulator; record results here.
+      **Blocked 2026-09-21:** no working Android target on this machine (see
+      "Where the app really stands"). The release APK is built at
+      `build/app/outputs/flutter-apk/app-release.apk`; plug in a phone with
+      USB debugging on, or approve the emulator image download, and the rest
+      is `adb install` plus the checks below.
       - [ ] Cold start to dashboard, first launch after install (seeding 301
             exercises); note the time.
       - [ ] Log a workout, force-kill the app mid-workout, relaunch: draft
@@ -180,8 +219,12 @@ Day 1 exit: a release-signed AAB that passed C4 and C6, and testers lined up.
       `assets/branding/ironyx-icon-512-opaque.png` (the other two masters
       have transparent corners; do not upload them).
 - [ ] **me** **S3** Play Console: create the app (Free, Health & Fitness) and
-      fill the forms. I will write the exact answers as a table in
-      `docs/STORE_LISTING.md`; the inputs are:
+      fill the forms. **dev, done 2026-09-21:** the exact answers are a
+      form-by-form table in `docs/STORE_LISTING.md` ("Play Console answers"),
+      with `(verify)` wherever it names a console label from memory; the
+      "delete your account" sentence is already in the description, gated on
+      C4. Target audience is recommended as **18 and over**, not "13+", to stay
+      out of the Families policy; say if you want otherwise. The inputs are:
       - Listing text from `docs/STORE_LISTING.md`, plus the one line it
         recommends adding: *"You can delete your account and cloud backup from
         inside the app."*
@@ -199,6 +242,9 @@ Day 1 exit: a release-signed AAB that passed C4 and C6, and testers lined up.
       *and* install; the 14-day clock needs 12 of them staying opted in.
 - [ ] **dev** **S5** Docs: update `README.md` (status, 438 tests, pointer to
       this file), `docs/STORE_LISTING.md` status line, and commit.
+      *2026-09-21: README, STORE_LISTING, SETUP and the privacy policy are
+      updated in the working tree. Not committed or pushed yet; the Pages
+      toggle in C2 needs the push.*
 
 Day 2 exit: build in closed testing, 12+ testers invited, policy pages live.
 

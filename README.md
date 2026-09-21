@@ -6,14 +6,18 @@ Arabic (RTL).
 
 ## Status
 
-**Not published yet.** The v1 feature set is built and the project is in its
-pre-launch phase: a 12-week launch plan (Sep 28 – Dec 20, 2026) tracked in
-`TODO.md`, targeting an Android store go-live on Tue Nov 17.
+**Not published yet.** The v1 feature set is built and the project is in a
+two-day finish tracked in `TODO.md`: a signed release bundle, store listing,
+hosted policy pages and a Play **closed test**. A new personal Play account
+must keep 12 testers opted in for 14 days before it can apply for production,
+so public availability follows the closed test by at least two weeks.
+The earlier 12-week plan is archived in `docs/archive/TODO-full-plan.md`.
 
 Checked 2026-09-20: `flutter analyze --fatal-infos --fatal-warnings` is
-clean and `flutter test` reports **423 passed, 1 skipped, 0 failed**. All
-device testing so far has been on an Android 15 emulator; nothing has been
-run on a physical device, and nothing has been run on iOS at all.
+clean and `flutter test` reports **438 passed, 1 skipped, 0 failed**. A
+release-signed AAB builds (2026-09-21, upload key confirmed by certificate
+fingerprint). Earlier device testing was on an Android 15 emulator; nothing
+has been run on a physical device, and nothing has been run on iOS at all.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -27,11 +31,11 @@ run on a physical device, and nothing has been run on iOS at all.
 | M7 | Hardening, a11y, release | superseded by the launch plan in `TODO.md` |
 | Accounts | Optional Supabase sign-in, password recovery, in-app account deletion, manual cloud backup (ADR-8) | built; not yet tested against a real project end to end |
 
-What is still open before launch, in short: a physical-device validation
-pass, the release signing key (not on the current dev machine), store
-listing assets, hosting the privacy policy, the telemetry decision (D2), and
-the Play closed-test gate. `TODO.md` has the dated,
-owner-tagged list — read its "Launch plan" section first.
+What is still open before launch, in short: an end-to-end test of accounts
+against the real Supabase project, a release-build smoke test on a device,
+store screenshots and feature graphic, switching on GitHub Pages for the
+policy pages, the Play developer account, and the closed test itself.
+`TODO.md` has the dated, owner-tagged list.
 
 ## Setup
 
@@ -80,10 +84,10 @@ Documentation map:
 
 | File | What it is |
 |---|---|
-| `TODO.md` | The live tracker: 12-week launch plan, decisions, the post-launch roadmap (release, platforms, revenue phases and gates), audits, checklists |
+| `TODO.md` | The live tracker: the two-day finish plan, decisions and risks. The old 12-week plan, roadmap and audits are in `docs/archive/TODO-full-plan.md` |
 | `docs/ADR.md` | Binding architecture decisions and amendments |
 | `docs/widgets.md` | Shared widget reference |
-| `docs/PRIVACY_POLICY.md` | The privacy policy (not yet publicly hosted) |
+| `docs/PRIVACY_POLICY.md` | The privacy policy (published through GitHub Pages once enabled, `TODO.md` C2) |
 | `docs/STORE_LISTING.md` | Play Store listing drafts and ASO notes |
 | `docs/cloud_backup_setup.sql` | One-time Supabase server set-up (backup table, RLS, account deletion) |
 | `docs/v2-ideas.md` | Parked ideas — nothing here is in v1 |

@@ -108,23 +108,29 @@ keyAlias=ironyx_upload
 keyPassword=...
 ```
 
-Back both files up to two durable places the moment they exist. As of
-2026-09-20 neither is present on the Windows development machine, and the
-original key is confirmed lost — this is the recipe for its replacement
-(safe because nothing was ever uploaded to Play under the old key; see
-`TODO.md`, Week 0). After building, confirm the bundle is release-signed:
+Back both files up to two durable places the moment they exist. The
+original upload key (alias `fittrack_upload`, created 2026-08-26, SHA-256
+`57:08:11:C8:…:7D:90`) was found on the Linux build server and copied here on
+2026-09-21, so the recipe above is only needed if that key is ever truly lost
+(safe only while nothing has been uploaded to Play under it). The file must be
+named exactly `key.properties`: Gradle ignores a `key.properties.txt`, which
+is how a copy from another machine silently produces a debug-signed bundle.
+After building, confirm the bundle is release-signed:
 
 ```bash
 keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
 ```
 
-The certificate owner and fingerprint must be your new key, not
-"Android Debug".
+The certificate owner and fingerprint must be your upload key, not
+"Android Debug". `keytool` is not on PATH on Windows; it lives in
+`C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot\bin`.
 
 Build and check a release:
 
 ```bash
 scripts/build_android.sh bundle     # release AAB (shrunk + obfuscated)
+# On Windows with the repo and pub cache on different drives (section 6):
+scripts/build_android.sh bundle -P kotlin.incremental=false
 ```
 
 - Release builds use R8 shrinking and `--obfuscate

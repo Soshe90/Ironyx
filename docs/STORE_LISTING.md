@@ -5,9 +5,11 @@ Swap wording freely — the positioning (offline-first, private, no forced
 account) is the one thing worth keeping, since it's the app's actual point
 of difference in a saturated category.
 
-**Status, 2026-09-20:** nothing here has been entered into Play Console or
+**Status, 2026-09-21:** nothing here has been entered into Play Console or
 App Store Connect yet (no developer account exists). Character counts were
-re-measured today. Every factual claim in the copy is audited against the
+re-measured 2026-09-20 and the description again after the deletion sentence
+was added. The Play Console answer table below is drafted; the screenshots
+and feature graphic are not made yet (`TODO.md` S1, S2). Every factual claim in the copy is audited against the
 current code in "Claims audit" at the bottom — re-run that audit before each
 submission, and update the copy **in the same change** as any telemetry
 decision (`TODO.md` D2). Store limits are from early-2026 knowledge; re-check
@@ -59,7 +61,8 @@ enable cloud backup. Ironyx does not sell your data.
 CLOUD BACKUP, ON YOUR TERMS
 Create a free account only if you want an optional, one-tap backup —
 useful before switching phones or reinstalling. It's off by default and
-never uploads anything without you tapping "Back up now."
+never uploads anything without you tapping "Back up now." You can delete
+your account and cloud backup from inside the app.
 
 WORKS OFFLINE, ALWAYS
 No signal at your gym? No problem. Every core feature — logging, timer,
@@ -70,13 +73,14 @@ Available in English and Arabic.
 
 Questions or feedback: mustafa.salih15@gmail.com
 ```
-(1,502 characters — well under the 4000 limit; room to add screenshots'
+(1,568 characters — well under the 4000 limit; room to add screenshots'
 worth of detail later, e.g. specific program templates, once you have
 user feedback on what to highlight)
 
-Before submitting, consider adding one line the copy does not yet say:
-*"You can delete your account and cloud backup from inside the app."* It is
-true (Settings → Account → Delete account) and both stores look for it.
+The last sentence of the cloud-backup paragraph ("You can delete your account
+and cloud backup from inside the app.") was added 2026-09-21; both stores look
+for it. It is only true if `delete_my_account()` works on the real Supabase
+project, so it is gated on `TODO.md` C4 — cut it if C4 does not pass.
 
 ## ASO keywords to weave into the description / consider for the title
 
@@ -144,8 +148,8 @@ Screenshots are `TODO.md` Week 2 ("Store assets round 1"). The
 | Feature graphic | 1024×500 | Required by Play; not made |
 | Content rating | IARC questionnaire (Play) / age rating (Apple) | Not "PEGI 3" — Play rates via IARC |
 | Contact | mustafa.salih15@gmail.com | Also the privacy-policy contact |
-| Privacy policy URL | *not hosted yet* | Needed before **any** track goes live, closed testing included |
-| Account-deletion URL | *not hosted yet* | Play needs a web URL in addition to the in-app path |
+| Privacy policy URL | `https://soshe90.github.io/Ironyx/privacy/` | Needed before **any** track goes live, closed testing included. **Not live until** the commit is pushed and GitHub Pages is switched on (`TODO.md` C2); open it in a browser before pasting |
+| Account-deletion URL | `https://soshe90.github.io/Ironyx/delete-account/` | Play needs a web URL in addition to the in-app path. Same Pages prerequisite |
 
 **Play Data Safety — what the binary actually does (2026-09-20).** Local
 workout, body-metric and profile data never leave the device unless the user
@@ -166,6 +170,32 @@ justify it by the interval/rest timer, which fires phase-change alerts while
 the app is backgrounded. If Play rejects it, delete both manifest lines and
 the code falls back to inexact alarms (alerts can then arrive many seconds
 late); nothing else changes. Reflected in `PRIVACY_POLICY.md`.
+
+### Play Console answers, form by form (`TODO.md` S3)
+
+Written 2026-09-21 from the code and the policy pages, **not** from the live
+console: Play renames and reorders these forms, so where the wording below is
+a category name or option label it is marked *(verify)*. Do not tick a box the
+build does not support just because a row here says so.
+
+| Play Console form | Answer |
+|---|---|
+| App details | Name `Ironyx: Offline Workout Log`; **App**, **Free**; category **Health & Fitness**; contact `mustafa.salih15@gmail.com` |
+| Store listing | Short and full description from above; icon `assets/branding/ironyx-icon-512-opaque.png`; feature graphic (S2); the screenshots (S1) |
+| App access | **All functionality is available without special access.** Accounts are optional and unlock only cloud backup, so no test login is needed |
+| Ads | **No**, the app contains no ads |
+| Content rating (IARC) | Category: utility/productivity/other *(verify)*. Answer **No** to violence, sexual content, profanity, controlled substances, gambling, and user-generated content shared between users; no location sharing; no digital purchases. Expect an "Everyone"-level rating |
+| Target audience | **18 and over** only, which avoids the Families-policy obligations. If you deliberately want younger teens, that is a separate decision: the policy says "not directed at children under 13" |
+| News app / COVID-19 / government | **No** to each |
+| Data safety: collection | **Yes**, the app collects data, but only if the user opts in. Never collected without an account |
+| Data safety: types | Email address (*Personal info*) and the password used to sign in (*Personal info / authentication* *(verify)*); *Health info* and *Fitness info*, because a cloud backup contains workouts, body metrics, date of birth, sex and height |
+| Data safety: per type | **Collected**, not shared (Supabase acts as a service provider on our behalf *(verify Play's "service provider" wording)*). **Optional**, not required. Purposes: *App functionality* and *Account management*. Not used for analytics, advertising or personalisation |
+| Data safety: practices | **Encrypted in transit: yes** (HTTPS/TLS). **Users can request deletion: yes**, in-app (Settings → Account → Delete account) and by the deletion URL above. Data is not sold. No independent security review to declare |
+| Health apps declaration | Features: activity and fitness tracking (manual logging only). Does **not** use Health Connect or any health platform, and is not a medical device (the policy says so). Complete the form as the "fitness / activity tracking" type *(verify)* |
+| Advertising ID | **No** — the app does not use it and no SDK reads it |
+| Government / financial / SMS / call-log / VPN / accessibility declarations | **None apply** |
+| Exact alarms | Permission `USE_EXACT_ALARM`. Core function: the interval and rest timer fires phase-change and completion alerts at the exact second while the app is in the background or the screen is locked. Delayed delivery would make the timer useless for training. Used only for timers the user starts |
+| Privacy policy / deletion URLs | The two URLs in the metadata table above |
 
 ---
 

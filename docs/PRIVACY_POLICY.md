@@ -4,7 +4,7 @@ permalink: /privacy/
 ---
 # Privacy Policy — Ironyx
 
-**Last updated: September 20, 2026**
+**Last updated: September 21, 2026**
 
 Ironyx ("the app") is an offline-first workout and fitness log. This policy
 explains what data the app collects, where it goes, how it is used, and what
@@ -63,7 +63,10 @@ An account by itself does not upload your workout data. Your email
 address is stored by Supabase to operate the login system and is not
 used for marketing, shared with advertisers, or sold. The only emails
 sent to that address are ones you trigger: the confirmation message when
-you sign up and the link when you ask to reset your password.
+you sign up and the link when you ask to reset your password. Those
+messages are delivered through an email-sending service that acts on our
+behalf; it handles your email address only to deliver them and does not use
+it for any other purpose.
 
 ## Cloud backup (optional, opt-in, off by default)
 
@@ -109,8 +112,10 @@ Ironyx contains no analytics SDK, no advertising SDK, and no crash-reporting
 service. The only third-party service the app talks to is Supabase. Supabase
 provides email/password authentication and stores the optional cloud backup
 when you explicitly use that feature. Supabase may process this information
-as our service provider under its own terms and privacy policy. Ironyx does
-not sell data or use it for advertising or behavioral tracking.
+as our service provider under its own terms and privacy policy. Supabase
+sends the sign-up and password-reset emails through the email-sending service
+described above. Ironyx does not sell data or use it for advertising or
+behavioral tracking.
 
 ## Data deletion and your choices
 
