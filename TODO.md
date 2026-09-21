@@ -128,11 +128,15 @@ Code and configuration:
          Source: [Supabase SMTP docs](https://supabase.com/docs/guides/auth/auth-smtp).
       4. Copy the project URL and anon key into `supabase.json` (see
          `supabase.example.json`; gitignored).
-      *2026-09-20: the account holder says the Supabase project is already
-      linked to the app. No `supabase.json` exists anywhere on this machine,
-      so step 4 is not done, and steps 1–3 are unverified until it is: with
-      the URL and anon key I can check the public auth settings and the
-      `backups` table over the API, but not the SMTP or redirect settings.*
+      *2026-09-21 checked over the API with the new `supabase.json` (valid,
+      gitignored, publishable key, URL matches the project). Project is
+      reachable; email sign-in on, sign-ups on, **email confirmation
+      required**. `backups` exists and **RLS is on** (an anonymous write is
+      refused with 42501). **Not confirmed:** `delete_my_account()` — the
+      anonymous lookup says "not found", which is also what a function that
+      is hidden from `anon` can look like, so re-run
+      `docs/cloud_backup_setup.sql` (idempotent) and check it in C4. Custom
+      SMTP and the redirect URL are dashboard settings I cannot see.*
       Note: the privacy policy currently names Supabase as the only third
       party. Gmail SMTP sends mail from your own address, so add one line about
       the email provider before submitting Data Safety.
