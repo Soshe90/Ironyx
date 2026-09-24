@@ -18,6 +18,7 @@ abstract final class UnitFormatters {
   static final NumberFormat _weight = NumberFormat('#,##0.##');
   static final NumberFormat _volume = NumberFormat('#,##0');
   static final NumberFormat _plain = NumberFormat('0.##');
+  static final NumberFormat _rate = NumberFormat('#,##0.0');
 
   /// Editable representation of a number: no grouping separators, so the
   /// result can be parsed straight back out of a text field. `_weight`'s
@@ -43,6 +44,14 @@ abstract final class UnitFormatters {
     final String n = _volume.format(fromKg(kg, unit));
     return withUnit ? '$n ${unit.label}' : n;
   }
+
+  /// A rate of change in weight, e.g. an estimated 1RM's monthly trend.
+  ///
+  /// One decimal: a fitted slope is an estimate of an estimate, so
+  /// "11.84 kg" overstates it, while whole units would flatten a real
+  /// +0.4 kg/month into "0 kg".
+  static String weightRate(double kg, WeightUnit unit) =>
+      '${_rate.format(fromKg(kg, unit))} ${unit.label}';
 
   static String volume(double kg, WeightUnit unit, {bool withUnit = true}) {
     final String n = _volume.format(fromKg(kg, unit));

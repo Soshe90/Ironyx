@@ -329,5 +329,26 @@ void main() {
         reason: 'closing the dialog must not also pop the page underneath it',
       );
     });
+
+    testWidgets(
+        'sound and haptics toggles live here (the Timer tab no longer '
+        'duplicates them)', (tester) async {
+      final AppDatabase db = AppDatabase.forTesting();
+      addTearDown(db.close);
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Haptics'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Sound cues'), findsOneWidget);
+      expect(find.widgetWithText(SwitchListTile, 'Haptics'), findsOneWidget);
+    });
   });
 }

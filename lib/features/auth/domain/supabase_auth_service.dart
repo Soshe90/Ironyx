@@ -119,7 +119,18 @@ class SupabaseAuthService implements AuthService {
       await _client.rpc<void>('delete_my_account');
       // The server deletes the session's user. Explicitly clear the local
       // session as well so the UI never retains a stale authenticated state.
-      await _auth.signOut(scope: sb.SignOutScope.local);
+      //
+      // Past this point the deletion has happened, so nothing may report it
+      // as failed. gotrue clears the local session *before* its network
+      // logout call and only then rethrows that call's errors (it already
+      // ignores the 401/403/404 a deleted user produces); anything else —
+      // a dropped connection, a 5xx — is logged and swallowed rather than
+      // telling the user a completed deletion failed.
+      try {
+        await _auth.signOut(scope: sb.SignOutScope.local);
+      } on Object catch (error) {
+        _log(error);
+      }
     });
   }
 

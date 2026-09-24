@@ -31,6 +31,10 @@ void main() {
       // control now starts below the fold and the ListView has not built it
       // yet.
       await tester.scrollUntilVisible(find.text('Dark'), 200);
+      // scrollUntilVisible stops as soon as any sliver of the label is on
+      // screen, which can leave the tap point off it; bring it fully in.
+      await tester.ensureVisible(find.text('Dark'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Dark'));
       await tester.pumpAndSettle();
 

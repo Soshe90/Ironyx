@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/workouts.dart';
 import '../../../core/formatters/date_formatters.dart';
@@ -17,6 +18,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/pr_badge.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../../programs/domain/program_catalogue_l10n.dart';
 import '../../programs/domain/program_providers.dart';
 import '../../programs/presentation/program_import_action.dart';
@@ -373,7 +375,7 @@ class _ResumeWorkoutBanner extends StatelessWidget {
   }
 }
 
-class _HistorySliverList extends StatelessWidget {
+class _HistorySliverList extends ConsumerWidget {
   const _HistorySliverList(
       {required this.workouts, required this.prWorkoutIds});
 
@@ -381,7 +383,14 @@ class _HistorySliverList extends StatelessWidget {
   final Set<String> prWorkoutIds;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // One query for every row's exercise names (see
+    // WorkoutDao.watchExerciseNamesByWorkout); empty while it loads, when
+    // rows fall back to their start time.
+    final Map<String, List<WorkoutExerciseName>> namesByWorkout =
+        ref.watch(workoutExerciseNamesProvider).value ?? const {};
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
+
     return SliverList.builder(
       itemCount: workouts.length,
       itemBuilder: (context, index) {
@@ -411,6 +420,16 @@ class _HistorySliverList extends StatelessWidget {
               _WorkoutHistoryTile(
                 workout: workout,
                 isPersonalRecord: prWorkoutIds.contains(workout.id),
+                exerciseNames: <String>[
+                  for (final WorkoutExerciseName e
+                      in namesByWorkout[workout.id] ?? const [])
+                    localizedExerciseName(
+                      context,
+                      slugsById,
+                      e.exerciseId,
+                      e.exerciseName,
+                    ),
+                ],
               ),
             ],
           ),
@@ -424,16 +443,41 @@ class _WorkoutHistoryTile extends ConsumerWidget {
   const _WorkoutHistoryTile({
     required this.workout,
     required this.isPersonalRecord,
+    required this.exerciseNames,
   });
 
   final Workout workout;
   final bool isPersonalRecord;
+
+  /// Localized, in logged order. Empty for a workout with no exercises.
+  final List<String> exerciseNames;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final String time = DateFormatters.of(context).time(workout.startedAt);
+    final String duration = workout.durationSeconds == null
+        ? context.l10n.trackerNoDuration
+        : UnitFormatters.durationShort(
+            Duration(seconds: workout.durationSeconds!),
+          );
+    // Named by what was trained; the start time is secondary. A time as the
+    // headline made every row read the same ("5:42 PM").
+    final String? title =
+        exerciseNames.isEmpty ? null : exerciseNames.join(', ');
+    final String volumeText =
+        UnitFormatters.volume(workout.totalVolumeKg, unit);
+    final String summary = isPersonalRecord
+        ? context.l10n.trackerWorkoutSemanticPr(
+            DateFormatters.of(context).full(workout.startedAt),
+            volumeText,
+          )
+        : context.l10n.trackerWorkoutSemantic(
+            DateFormatters.of(context).full(workout.startedAt),
+            volumeText,
+          );
 
     return AppCard(
       onTap: () => context.pushNamed(
@@ -444,15 +488,7 @@ class _WorkoutHistoryTile extends ConsumerWidget {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.md,
       ),
-      semanticLabel: isPersonalRecord
-          ? context.l10n.trackerWorkoutSemanticPr(
-              DateFormatters.of(context).full(workout.startedAt),
-              UnitFormatters.volume(workout.totalVolumeKg, unit),
-            )
-          : context.l10n.trackerWorkoutSemantic(
-              DateFormatters.of(context).full(workout.startedAt),
-              UnitFormatters.volume(workout.totalVolumeKg, unit),
-            ),
+      semanticLabel: title == null ? summary : '$title. $summary',
       child: Row(
         children: [
           Expanded(
@@ -460,11 +496,22 @@ class _WorkoutHistoryTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                Text(
+                  title ?? time,
+                  style: theme.textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.xxs),
                 Row(
                   children: [
-                    Text(
-                      DateFormatters.of(context).time(workout.startedAt),
-                      style: theme.textTheme.titleSmall,
+                    Flexible(
+                      child: Text(
+                        title == null ? duration : '$time · $duration',
+                        style: AppTypography.caption(theme),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     if (isPersonalRecord) ...[
                       const SizedBox(width: AppSpacing.sm),
@@ -472,21 +519,12 @@ class _WorkoutHistoryTile extends ConsumerWidget {
                     ],
                   ],
                 ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  workout.durationSeconds == null
-                      ? context.l10n.trackerNoDuration
-                      : UnitFormatters.durationShort(
-                          Duration(seconds: workout.durationSeconds!),
-                        ),
-                  style: AppTypography.caption(theme),
-                ),
               ],
             ),
           ),
           const SizedBox(width: AppSpacing.md),
           Text(
-            UnitFormatters.volume(workout.totalVolumeKg, unit),
+            volumeText,
             style: AppTypography.cardMetric(
               scheme,
               size: AppTypography.metricSizeSm,

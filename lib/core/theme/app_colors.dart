@@ -25,6 +25,16 @@ abstract final class AppColors {
   static const Color loss = Color(0xFFFF6B6B);
   static const Color personalRecord = Color(0xFFFFB020);
 
+  /// Text and icon colours for the three accents above on light surfaces.
+  ///
+  /// The accents are bright enough to read on the dark theme's charcoal but
+  /// only ~1.5:1 as text on their own pale tint in light mode. These darker
+  /// inks of the same hue reach at least 4.5:1 (WCAG AA) on that tint over
+  /// every light surface; the tinted pill itself still uses the accent.
+  static const Color gainInkLight = Color(0xFF0B6B3A);
+  static const Color lossInkLight = Color(0xFFB3261E);
+  static const Color personalRecordInkLight = Color(0xFF8A5300);
+
   /// Fixed series colours for charts (M5). Ordered for maximum separation
   /// and checked against the dark surface for contrast.
   static const List<Color> chartSeries = <Color>[

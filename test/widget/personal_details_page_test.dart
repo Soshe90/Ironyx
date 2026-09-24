@@ -70,7 +70,7 @@ void main() {
       (tester) async {
     await pumpPage(tester);
 
-    expect(find.text('Personal Details'), findsOneWidget);
+    expect(find.text('Personal details'), findsOneWidget);
 
     await tester.enterText(
       find.widgetWithText(TextField, 'Name'),

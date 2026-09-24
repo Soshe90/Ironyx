@@ -39,10 +39,8 @@
   "prBadge": "رقم قياسي",
 
   "settingsLanguageTitle": "اللغة",
-  "settingsLanguageSubtitle": "يسري التغيير فورًا دون إعادة تشغيل",
   "settingsLanguageSystem": "حسب إعدادات الجهاز",
   "settingsAppearanceTitle": "المظهر",
-  "settingsAppearanceSubtitle": "الوضع الداكن مظهر أصيل وليس مجرد عكس للألوان",
   "settingsThemeSystem": "النظام",
   "settingsThemeLight": "فاتح",
   "settingsThemeDark": "داكن",
@@ -55,7 +53,7 @@
   "settingsSoundCues": "التنبيهات الصوتية",
   "settingsSoundCuesSubtitle": "تشغيل نغمة عند تغيّر المرحلة",
   "settingsHaptics": "الاهتزاز",
-  "settingsHapticsSubtitle": "اهتزاز عند تغيّر المرحلة",
+  "settingsHapticsSubtitle": "اهتزاز عند تغيّر المرحلة وعند تسجيل مجموعة",
   "settingsDataTitle": "البيانات",
   "settingsDataSubtitle": "يحفظ Ironyx كل شيء على هذا الجهاز",
   "settingsStorageNote": "لا تغادر بيانات تدريبك هذا الجهاز إلا إذا صدّرتها بنفسك.",
@@ -88,7 +86,8 @@
   "backupErrorNoBackupYet": "لا توجد نسخة احتياطية محفوظة لهذا الحساب بعد.",
   "backupErrorOffline": "تعذّر الوصول إلى الخادم. تحقّق من اتصالك وحاول مرة أخرى.",
   "backupErrorCorrupt": "تعذّرت قراءة هذه النسخة الاحتياطية. ربما أُنشئت بإصدار أحدث من التطبيق.",
-  "backupErrorAccountMismatch": "بيانات هذا الجهاز مرتبطة بحساب آخر. سجّل الخروج ثم سجّل الدخول بذلك الحساب قبل إجراء نسخ احتياطي.",
+  "backupErrorAccountMismatch": "بيانات هذا الجهاز مرتبطة بحساب آخر. سجّل الخروج ثم سجّل الدخول بذلك الحساب أولاً.",
+  "backupErrorTooLarge": "هذه النسخة الاحتياطية أكبر من أن تُخزَّن مع حسابك. استخدم الإعدادات ← البيانات ← تصدير البيانات لحفظها في ملف بدلاً من ذلك.",
   "backupErrorUnknown": "حدث خطأ ما. حاول مرة أخرى.",
 
   "backupSectionTitle": "النسخ الاحتياطي للحساب",
@@ -375,6 +374,7 @@
     }
   },
 
+  "draftLastTime": "آخر مرة ({date}): {sets}",
   "draftRemoveExercise": "إزالة {name}",
   "@draftRemoveExercise": {
     "placeholders": {
@@ -495,6 +495,8 @@
   "importXlsxUnknownExercises": "هذه التمارين غير موجودة في الفهرس وستُضاف كتمارين مخصّصة:",
   "importXlsxConfirmAction": "استيراد",
 
+  "activeWorkoutMinimise": "تصغير التمرين",
+  "activeWorkoutOptions": "خيارات التمرين",
   "activeWorkoutDiscardTooltip": "تجاهل التمرين",
   "activeWorkoutAddFirstExercise": "أضف تمرينك الأول",
   "activeWorkoutAddFirstExerciseMessage": "اختر حركة وابدأ تسجيل المجموعات. تُحفظ مسوّدتك أولًا بأول.",
@@ -541,8 +543,6 @@
   "timerCustomTitle": "مخصّص",
   "timerCustomSubtitle": "أنشئ فترة زمنية ثم ابدأها أو احفظها",
   "timerPresetSaved": "تم حفظ الإعداد.",
-  "timerFeedbackSubtitle": "متاح أيضًا في الإعدادات",
-  "timerNoSavedPresets": "لا توجد إعدادات محفوظة بعد. أنشئ واحدًا بالأسفل واضغط «حفظ الإعداد» للاحتفاظ به هنا.",
   "timerPresetsLoadFailed": "تعذّر تحميل الإعدادات المحفوظة",
   "timerPresetSemantic": "ابدأ {name}، {duration} إجمالًا",
   "@timerPresetSemantic": {
@@ -659,6 +659,7 @@
       "count": { "type": "int" }
     }
   },
+  "dashboardSeeAll": "عرض الكل",
   "dashboardRecent": "الأحدث",
   "dashboardNothingYet": "لا شيء بعد",
   "dashboardLastWorkout": "آخر تمرين",
@@ -1013,9 +1014,11 @@
   "progressExerciseWithSessions": "{exercise} · {sessions}",
   "@progressExerciseWithSessions": { "placeholders": { "exercise": { "type": "String" }, "sessions": { "type": "String" } } },
   "progressExerciseRangeEmpty": "لا توجد مجموعات مكتملة لهذا التمرين ضمن الفترة المحدّدة.",
-  "progressOneRmFromSessions": "بدأ من {estimate} على مدى {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستين} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}}",
+  "progressEmptyTitle": "يبدأ تقدّمك من هنا",
+  "progressEmptyMessage": "سجّل أول تمرين لك وستظهر هنا قوتك وحجم تدريبك ومدى انتظامك.",
+  "progressOneRmFromSessions": "بدأ من {estimate} على مدى {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستين} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}} في هذه الفترة",
   "@progressOneRmFromSessions": { "placeholders": { "estimate": { "type": "String" }, "count": { "type": "int" } } },
-  "progressOneRmMonthlyTrend": "{change} شهريًا · {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستان} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}}",
+  "progressOneRmMonthlyTrend": "{change} شهريًا · {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستان} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}} في هذه الفترة",
   "@progressOneRmMonthlyTrend": { "placeholders": { "change": { "type": "String" }, "count": { "type": "int" } } },
   "progressOneDataPoint": "نقطة بيانات واحدة ضمن هذه الفترة",
   "progressSessionVolumeTitle": "حجم الجلسة التدريبي",

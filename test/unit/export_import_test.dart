@@ -288,21 +288,23 @@ void main() {
       await database.close();
     });
 
-    test('rejects a backup from an older schema version', () async {
+    test(
+        'upgrades a backup from an older schema version instead of '
+        'rejecting it (ADR-7)', () async {
+      // Previously rejected outright, which made every backup unrestorable
+      // after any schema change. The upgrade steps themselves are covered
+      // against real historical exports in export_schema_upgrade_test.dart.
       const service = DataExportService();
       final database = AppDatabase.forTesting();
       final envelope = service.parseImport(
         jsonEncode(envelopeJson(database.schemaVersion - 1)),
       );
 
-      await expectLater(
-        service.applyImport(
-          database,
-          envelope,
-          mode: ImportMode.merge,
-          snapshotDirPath: snapshotDir.path,
-        ),
-        throwsA(isA<ImportValidationException>()),
+      await service.applyImport(
+        database,
+        envelope,
+        mode: ImportMode.merge,
+        snapshotDirPath: snapshotDir.path,
       );
       await database.close();
     });
@@ -370,6 +372,156 @@ void main() {
 
     expect(await exerciseDao.getById('bench'), isNotNull);
     await destination.close();
+  });
+
+  group('replace onto an install whose catalogue is already seeded', () {
+    // The real reinstall case: the seeder fills the catalogue on first
+    // launch, so a restore always meets a populated one. ADR-7 keeps that
+    // catalogue as it is; exercises the backup needs but the device lacks
+    // must still arrive, or the workouts that use them cannot.
+    late AppDatabase source;
+    late AppDatabase destination;
+    const service = DataExportService();
+
+    ExercisesTableCompanion exercise(
+      String id, {
+      String? name,
+      int seedVersion = 1,
+      bool isCustom = false,
+    }) =>
+        ExercisesTableCompanion.insert(
+          id: id,
+          slug: id,
+          name: name ?? 'Exercise $id',
+          category: 'strength',
+          difficulty: 'intermediate',
+          movementPattern: 'other',
+          seedVersion: seedVersion,
+          isCustom: Value(isCustom),
+        );
+
+    Future<void> logWorkoutWith(String exerciseId) =>
+        WorkoutDao(source).insertWorkout(
+          WorkoutsTableCompanion.insert(
+            id: 'w_$exerciseId',
+            startedAt: DateTime.utc(2026, 1, 1),
+          ),
+          [
+            WorkoutExercisesTableCompanion.insert(
+              id: 'we_$exerciseId',
+              workoutId: 'w_$exerciseId',
+              exerciseId: exerciseId,
+              orderIndex: 0,
+            ),
+          ],
+          const [],
+        );
+
+    Future<void> restore() async => service.applyImport(
+          destination,
+          service.parseImport(await service.buildJsonExport(source)),
+          mode: ImportMode.replace,
+          snapshotDirPath: snapshotDir.path,
+        );
+
+    setUp(() async {
+      source = AppDatabase.forTesting();
+      destination = AppDatabase.forTesting();
+      await ExerciseDao(source).upsertExercises([exercise('bench')]);
+      await ExerciseDao(destination).upsertExercises([exercise('bench')]);
+    });
+
+    tearDown(() async {
+      await source.close();
+      await destination.close();
+    });
+
+    test('a custom exercise and the workout using it are restored', () async {
+      await ExerciseDao(source).upsertExercises([
+        exercise('my_lift', seedVersion: 0, isCustom: true),
+      ]);
+      await logWorkoutWith('my_lift');
+
+      await restore();
+
+      final restored = await ExerciseDao(destination).getById('my_lift');
+      expect(restored, isNotNull);
+      expect(restored!.isCustom, isTrue);
+      expect(
+        (await WorkoutDao(destination).watchAll().first).map((w) => w.id),
+        ['w_my_lift'],
+      );
+    });
+
+    test('a retired seed exercise still referenced by a workout is restored',
+        () async {
+      await ExerciseDao(source).upsertExercises([exercise('old_curl')]);
+      await logWorkoutWith('old_curl');
+
+      await restore();
+
+      expect(await ExerciseDao(destination).getById('old_curl'), isNotNull);
+    });
+
+    test(
+        'an unused missing exercise is left out, so a name clash on it '
+        'cannot block the restore', () async {
+      await ExerciseDao(source).upsertExercises([
+        exercise('unused_old', name: 'Exercise clash'),
+      ]);
+      await ExerciseDao(destination).upsertExercises([
+        exercise('renamed_local', name: 'Exercise clash'),
+      ]);
+
+      await restore();
+
+      expect(await ExerciseDao(destination).getById('unused_old'), isNull);
+    });
+
+    test('existing local catalogue rows are never overwritten', () async {
+      await ExerciseDao(source).upsertExercises([
+        exercise('bench', name: 'Renamed In Backup'),
+      ]);
+
+      await restore();
+
+      expect(
+        (await ExerciseDao(destination).getById('bench'))!.name,
+        'Exercise bench',
+      );
+    });
+
+    test(
+        'a missing exercise whose name is taken locally is refused before '
+        'anything is written', () async {
+      await ExerciseDao(source).upsertExercises([
+        exercise('dup_id', name: 'Exercise x'),
+      ]);
+      await logWorkoutWith('dup_id');
+      await ExerciseDao(destination).upsertExercises([
+        exercise('other_id', name: 'Exercise x'),
+      ]);
+      await WorkoutDao(destination).insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'local_workout',
+          startedAt: DateTime.utc(2026, 2, 1),
+        ),
+        const [],
+        const [],
+      );
+
+      await expectLater(
+        restore(),
+        throwsA(
+          isA<ImportValidationException>()
+              .having((e) => e.message, 'message', contains('Exercise x')),
+        ),
+      );
+      expect(
+        (await WorkoutDao(destination).watchAll().first).map((w) => w.id),
+        ['local_workout'],
+      );
+    });
   });
 
   test(

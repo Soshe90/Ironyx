@@ -175,27 +175,23 @@ class _EditorBodyState extends ConsumerState<_EditorBody> {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         children: <Widget>[
           SectionHeader(title: context.l10n.programDetails),
-          AppCard(
-            child: Column(
-              children: <Widget>[
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.programNameField,
-                  ),
-                  onChanged: _notifier.setName,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: _descriptionController,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.programDescriptionField,
-                  ),
-                  onChanged: (value) =>
-                      _notifier.setDescription(value.isEmpty ? null : value),
-                ),
-              ],
+          // Fields directly on the page; the day cards below are the real
+          // objects here and keep their cards.
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: context.l10n.programNameField,
             ),
+            onChanged: _notifier.setName,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _descriptionController,
+            decoration: InputDecoration(
+              labelText: context.l10n.programDescriptionField,
+            ),
+            onChanged: (value) =>
+                _notifier.setDescription(value.isEmpty ? null : value),
           ),
           const SizedBox(height: AppSpacing.xl),
           SectionHeader(

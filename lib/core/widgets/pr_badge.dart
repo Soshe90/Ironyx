@@ -15,6 +15,9 @@ class PrBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final Color ink = theme.brightness == Brightness.light
+        ? AppColors.personalRecordInkLight
+        : AppColors.personalRecord;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -28,16 +31,12 @@ class PrBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          const Icon(
-            Icons.military_tech,
-            size: 12,
-            color: AppColors.personalRecord,
-          ),
+          Icon(Icons.military_tech, size: 12, color: ink),
           const SizedBox(width: AppSpacing.xxs),
           Text(
             context.l10n.prBadge,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.personalRecord,
+              color: ink,
               fontWeight: FontWeight.w700,
             ),
           ),

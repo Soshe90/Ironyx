@@ -88,7 +88,7 @@ void main() {
 
       await tester.tap(find.text('Start workout'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byTooltip('Minimise workout'));
       await tester.pumpAndSettle();
 
       expect(find.byType(NavigationBar), findsOneWidget);

@@ -42,10 +42,8 @@
   },
 
   "settingsLanguageTitle": "Language",
-  "settingsLanguageSubtitle": "Changes apply immediately, no restart needed",
   "settingsLanguageSystem": "Match device",
   "settingsAppearanceTitle": "Appearance",
-  "settingsAppearanceSubtitle": "Dark mode is a first-class theme, not an inversion",
   "settingsThemeSystem": "System",
   "settingsThemeLight": "Light",
   "settingsThemeDark": "Dark",
@@ -58,7 +56,7 @@
   "settingsSoundCues": "Sound cues",
   "settingsSoundCuesSubtitle": "Play a tone on phase change",
   "settingsHaptics": "Haptics",
-  "settingsHapticsSubtitle": "Vibrate on phase change",
+  "settingsHapticsSubtitle": "Vibrate on phase change and when a set is logged",
   "settingsDataTitle": "Data",
   "settingsDataSubtitle": "Ironyx stores everything on this device",
   "settingsStorageNote": "Your training data never leaves this device unless you export it yourself.",
@@ -91,7 +89,8 @@
   "backupErrorNoBackupYet": "There's no backup stored for this account yet.",
   "backupErrorOffline": "Couldn't reach the server. Check your connection and try again.",
   "backupErrorCorrupt": "That backup couldn't be read. It may have been made by a newer version of the app.",
-  "backupErrorAccountMismatch": "This device's local data is linked to a different account. Sign out, then sign back in with that account before backing up.",
+  "backupErrorAccountMismatch": "This device's local data is linked to a different account. Sign out, then sign back in with that account first.",
+  "backupErrorTooLarge": "This backup is too large to store with your account. Use Settings → Data → Export data to save it as a file instead.",
   "backupErrorUnknown": "Something went wrong. Try again.",
 
   "backupSectionTitle": "Account backup",
@@ -133,7 +132,7 @@
 
   "actionGotIt": "Got it",
 
-  "navTracker": "Tracker",
+  "navTracker": "Workouts",
   "routeNotFoundTitle": "Not found",
   "routeNotFoundBody": "No route for {uri}",
   "@routeNotFoundBody": {
@@ -364,12 +363,12 @@
   "forceTypeIsometric": "Isometric",
   "mechanicCompound": "Compound",
   "mechanicIsolation": "Isolation",
-  "patternHorizontalPush": "Horizontal Push",
-  "patternVerticalPush": "Vertical Push",
-  "patternHorizontalPull": "Horizontal Pull",
-  "patternVerticalPull": "Vertical Pull",
-  "patternKneeDominant": "Knee Dominant",
-  "patternHipDominant": "Hip Dominant",
+  "patternHorizontalPush": "Horizontal push",
+  "patternVerticalPush": "Vertical push",
+  "patternHorizontalPull": "Horizontal pull",
+  "patternVerticalPull": "Vertical pull",
+  "patternKneeDominant": "Knee dominant",
+  "patternHipDominant": "Hip dominant",
   "patternCarry": "Carry",
   "patternRotation": "Rotation",
   "patternAntiRotation": "Anti-Rotation",
@@ -384,6 +383,13 @@
     }
   },
 
+  "draftLastTime": "Last time ({date}): {sets}",
+  "@draftLastTime": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "sets": { "type": "String" }
+    }
+  },
   "draftRemoveExercise": "Remove {name}",
   "@draftRemoveExercise": {
     "placeholders": {
@@ -504,6 +510,8 @@
   "importXlsxUnknownExercises": "These exercises are not in the catalogue and will be added as custom exercises:",
   "importXlsxConfirmAction": "Import",
 
+  "activeWorkoutMinimise": "Minimise workout",
+  "activeWorkoutOptions": "Workout options",
   "activeWorkoutDiscardTooltip": "Discard workout",
   "activeWorkoutAddFirstExercise": "Add your first exercise",
   "activeWorkoutAddFirstExerciseMessage": "Pick a movement and start logging sets. Your draft is saved as you go.",
@@ -554,8 +562,6 @@
   "timerCustomTitle": "Custom",
   "timerCustomSubtitle": "Build an interval and start or save it",
   "timerPresetSaved": "Preset saved.",
-  "timerFeedbackSubtitle": "Also available in Settings",
-  "timerNoSavedPresets": "No saved presets yet. Build one below and tap \"Save preset\" to keep it here.",
   "timerPresetsLoadFailed": "Unable to load saved presets",
   "timerPresetSemantic": "Start {name}, {duration} total",
   "@timerPresetSemantic": {
@@ -677,6 +683,7 @@
       "count": { "type": "int" }
     }
   },
+  "dashboardSeeAll": "See all",
   "dashboardRecent": "Recent",
   "dashboardNothingYet": "Nothing yet",
   "dashboardLastWorkout": "Last workout",
@@ -718,7 +725,7 @@
   "profileIntro": "To tailor your program and progress tracking, Ironyx uses a few personal details. They stay on this device.",
   "profileLoadFailed": "Failed to load your details",
   "profileName": "Name",
-  "profileDateOfBirth": "Date of Birth",
+  "profileDateOfBirth": "Date of birth",
   "profileSex": "Sex",
   "profileWeight": "Weight",
   "profileHeight": "Height",
@@ -842,7 +849,7 @@
   "accountEmailNotConfirmedTitle": "Email not confirmed",
   "accountEmailNotConfirmedSubtitle": "Open the link we sent to finish setting up your account.",
   "accountPersonalDetailsTitle": "Personal details",
-  "profilePageTitle": "Personal Details",
+  "profilePageTitle": "Personal details",
   "@profilePageTitle": {
     "description": "App-bar title of the personal-details screen. Title-cased, unlike the settings row that navigates to it."
   },
@@ -930,8 +937,8 @@
     "placeholders": { "name": { "type": "String" } }
   },
   "programRemoveExercise": "Remove exercise",
-  "programSetsField": "sets",
-  "programRepsField": "reps",
+  "programSetsField": "Sets",
+  "programRepsField": "Reps",
   "programSuperset": "SUPERSET",
   "programGroupWithAbove": "Group with above",
   "programUngroup": "Ungroup",
@@ -950,7 +957,7 @@
     "placeholders": { "count": { "type": "int" } }
   },
 
-  "libraryTitle": "Exercise Library",
+  "libraryTitle": "Exercise library",
   "libraryClearFilters": "Clear filters",
   "librarySearchHint": "Search exercises",
   "libraryClearSearch": "Clear search",
@@ -1044,9 +1051,11 @@
   "progressExerciseWithSessions": "{exercise} · {sessions}",
   "@progressExerciseWithSessions": { "placeholders": { "exercise": { "type": "String" }, "sessions": { "type": "String" } } },
   "progressExerciseRangeEmpty": "No completed sets for this exercise in this range.",
-  "progressOneRmFromSessions": "From {estimate} over {count, plural, =1{1 session} other{{count} sessions}}",
+  "progressEmptyTitle": "Your progress starts here",
+  "progressEmptyMessage": "Log your first workout and your strength, volume and consistency will show up on this screen.",
+  "progressOneRmFromSessions": "From {estimate} over {count, plural, =1{1 session} other{{count} sessions}} in this period",
   "@progressOneRmFromSessions": { "placeholders": { "estimate": { "type": "String" }, "count": { "type": "int" } } },
-  "progressOneRmMonthlyTrend": "{change}/month · {count, plural, =1{1 session} other{{count} sessions}}",
+  "progressOneRmMonthlyTrend": "{change}/month · {count, plural, =1{1 session} other{{count} sessions}} in this period",
   "@progressOneRmMonthlyTrend": { "placeholders": { "change": { "type": "String" }, "count": { "type": "int" } } },
   "progressOneDataPoint": "One data point in this range",
   "progressSessionVolumeTitle": "Session volume load",

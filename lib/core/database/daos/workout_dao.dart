@@ -268,6 +268,91 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Filters on the same completed / non-warm-up / loaded / reps-1-12 window
   /// as [watchOneRMSeries], so the picker can never offer a lift whose chart
   /// would then come up empty.
+  /// Each saved workout's exercises, in logged order, keyed by workout id —
+  /// what the history list names a session by.
+  ///
+  /// One query for the whole history rather than one per row: the list can
+  /// hold years of sessions, and a per-tile lookup would be N+1.
+  Stream<Map<String, List<WorkoutExerciseName>>> watchExerciseNamesByWorkout() {
+    return customSelect(
+      '''
+      SELECT we.workout_id AS workout_id,
+             we.exercise_id AS exercise_id,
+             ex.name AS exercise_name
+      FROM workout_exercises_table we
+      JOIN exercises_table ex ON ex.id = we.exercise_id
+      ORDER BY we.workout_id, we.order_index
+      ''',
+      readsFrom: {workoutExercisesTable, exercisesTable},
+    ).watch().map((rows) {
+      final Map<String, List<WorkoutExerciseName>> byWorkout = {};
+      for (final r in rows) {
+        (byWorkout[r.read<String>('workout_id')] ??= <WorkoutExerciseName>[])
+            .add(
+          WorkoutExerciseName(
+            exerciseId: r.read<String>('exercise_id'),
+            exerciseName: r.read<String>('exercise_name'),
+          ),
+        );
+      }
+      return byWorkout;
+    });
+  }
+
+  /// The working sets of [exerciseId] from the most recent finished
+  /// workout that has any — what the active workout shows as "last time".
+  ///
+  /// Null when the exercise has never been completed. Warm-ups are left out
+  /// (as a set or as a whole warm-up exercise): they are not the numbers
+  /// someone is trying to match. Uses the existing workout_exercises
+  /// (exercise_id) index, so it stays cheap as history grows.
+  Stream<PreviousPerformance?> watchPreviousPerformance(String exerciseId) {
+    return customSelect(
+      '''
+      SELECT w.started_at AS started_at,
+             ws.weight_kg AS weight_kg,
+             ws.reps AS reps,
+             ws.duration_seconds AS duration_seconds
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+      JOIN workouts_table w ON we.workout_id = w.id
+      WHERE we.exercise_id = ?1
+        AND ws.is_completed = 1
+        AND ws.is_warmup = 0
+        AND we.is_warmup = 0
+        AND w.id = (
+          SELECT w2.id
+          FROM workouts_table w2
+          JOIN workout_exercises_table we2 ON we2.workout_id = w2.id
+          JOIN workout_sets_table ws2 ON ws2.workout_exercise_id = we2.id
+          WHERE we2.exercise_id = ?1
+            AND w2.ended_at IS NOT NULL
+            AND ws2.is_completed = 1
+            AND ws2.is_warmup = 0
+            AND we2.is_warmup = 0
+          ORDER BY w2.started_at DESC
+          LIMIT 1
+        )
+      ORDER BY we.order_index, ws.set_index
+      ''',
+      variables: [Variable<String>(exerciseId)],
+      readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable},
+    ).watch().map((rows) {
+      if (rows.isEmpty) return null;
+      return PreviousPerformance(
+        date: rows.first.read<DateTime>('started_at'),
+        sets: <PreviousSet>[
+          for (final r in rows)
+            PreviousSet(
+              weightKg: r.read<double>('weight_kg'),
+              reps: r.read<int>('reps'),
+              durationSeconds: r.read<int?>('duration_seconds'),
+            ),
+        ],
+      );
+    });
+  }
+
   Stream<List<LoggedExercise>> watchLoggedExercises() {
     return customSelect(
       '''
@@ -1087,6 +1172,37 @@ class WorkoutFrequency {
 
   final DateTime weekStart;
   final int workoutCount;
+}
+
+/// An exercise's working sets from its most recent finished session.
+class PreviousPerformance {
+  const PreviousPerformance({required this.date, required this.sets});
+
+  final DateTime date;
+  final List<PreviousSet> sets;
+}
+
+class PreviousSet {
+  const PreviousSet({
+    required this.weightKg,
+    required this.reps,
+    this.durationSeconds,
+  });
+
+  final double weightKg;
+  final int reps;
+  final int? durationSeconds;
+}
+
+/// One exercise of a saved workout, for naming the session in history.
+class WorkoutExerciseName {
+  const WorkoutExerciseName({
+    required this.exerciseId,
+    required this.exerciseName,
+  });
+
+  final String exerciseId;
+  final String exerciseName;
 }
 
 /// An exercise the user has logged, with how many sessions it appears in.

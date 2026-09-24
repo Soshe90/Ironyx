@@ -28,6 +28,13 @@ class CloudBackupSection extends ConsumerStatefulWidget {
 
 class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
   bool _isBackingUp = false;
+  bool _isRestoring = false;
+
+  /// Backup and restore are mutually exclusive as well as non-reentrant: a
+  /// second restore would write a second pre-import snapshot and queue a
+  /// second replace, and a backup taken mid-restore would upload whichever
+  /// state it happened to read.
+  bool get _isBusy => _isBackingUp || _isRestoring;
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +83,8 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
                   subtitle: Text(_isBackingUp
                       ? l10n.backupInProgressSubtitle
                       : l10n.backupNowSubtitle),
-                  enabled: !_isBackingUp,
-                  onTap: _isBackingUp ? null : () => _backUp(context, ref),
+                  enabled: !_isBusy,
+                  onTap: _isBusy ? null : () => _backUp(context, ref),
                 ),
                 ListTile(
                   leading: const Icon(Icons.settings_backup_restore),
@@ -86,8 +93,8 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
                   // Nothing to restore, so don't offer a button that can
                   // only produce an error. `.value`, not `.valueOrNull` —
                   // Riverpod 3 dropped the latter.
-                  enabled: status.value != null,
-                  onTap: () => _restore(context, ref),
+                  enabled: status.value != null && !_isBusy,
+                  onTap: _isBusy ? null : () => _restore(context, ref),
                 ),
               ],
             ],
@@ -126,7 +133,7 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
   }
 
   Future<void> _backUp(BuildContext context, WidgetRef ref) async {
-    if (_isBackingUp) return;
+    if (_isBusy) return;
     setState(() => _isBackingUp = true);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     // Captured before the first `await`: `context.l10n` after one is an
@@ -181,8 +188,11 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
         ],
       ),
     );
-    if (confirmed != true || !context.mounted) return;
+    // Re-checked after the dialog: a backup can have started while it was
+    // open, and the tile's own guard only covers the tap that opened it.
+    if (confirmed != true || !context.mounted || _isBusy) return;
 
+    setState(() => _isRestoring = true);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(SnackBar(content: Text(l10n.backupRestoring)));
     try {
@@ -194,6 +204,16 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(failure.messageFor(l10n))));
+    } on Object catch (error) {
+      // Unmapped, so a bug rather than something the user can fix — same
+      // rule as `_backUp`. Without this, "Restoring…" stays up forever and
+      // the user cannot tell whether their data was replaced.
+      if (kDebugMode) debugPrint('[restore] $error');
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.backupErrorUnknown)));
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
     }
   }
 }

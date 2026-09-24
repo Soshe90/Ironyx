@@ -1,0 +1,70 @@
+// Throwaway: run inside a historical checkout to produce a genuine export
+// written by that version's own code. Not part of the repo.
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/app_database.dart';
+import 'package:ironyx/core/services/data_export_service.dart';
+
+void main() {
+  test('generate fixture', () async {
+    final db = AppDatabase.forTesting();
+    final firstIds = <String, String>{};
+
+    Future<void> insertRow(String table, {Map<String, Object?> overrides = const {}}) async {
+      final cols = await db.customSelect('PRAGMA table_info("$table")').get();
+      final fks = await db.customSelect('PRAGMA foreign_key_list("$table")').get();
+      final fkParent = {for (final f in fks) f.read<String>('from'): f.read<String>('table')};
+      final row = <String, Object?>{};
+      for (final c in cols) {
+        final name = c.read<String>('name');
+        final type = c.read<String>('type').toUpperCase();
+        final pk = c.read<int>('pk') > 0;
+        if (fkParent.containsKey(name)) {
+          row[name] = firstIds[fkParent[name]!];
+        } else if (pk && type == 'TEXT') {
+          row[name] = '${table.replaceAll('_table', '')}_1';
+        } else if (type == 'INTEGER') {
+          row[name] = name.startsWith('is_') ? 0
+              : (name.endsWith('_at') || name == 'date') ? 1754006400 : 1;
+        } else if (type == 'REAL') {
+          row[name] = 42.5;
+        } else if (type == 'TEXT') {
+          row[name] = 'x';
+        }
+      }
+      row.addAll(overrides);
+      // Where the explicit marker exists (v8+), the app itself sets it on a
+      // custom exercise.
+      if (row.containsKey('is_custom') && row['seed_version'] == 0) {
+        row['is_custom'] = 1;
+      }
+      final names = row.keys.toList();
+      await db.customStatement(
+        'INSERT INTO "$table" (${names.map((n) => '"$n"').join(', ')}) '
+        'VALUES (${List.filled(names.length, '?').join(', ')})',
+        [for (final n in names) row[n]],
+      );
+      final pkCol = cols.where((c) => c.read<int>('pk') > 0).firstOrNull;
+      if (pkCol != null) {
+        firstIds.putIfAbsent(table, () => row[pkCol.read<String>('name')]! as String);
+      }
+    }
+
+    await db.customStatement('PRAGMA foreign_keys = OFF');
+    for (final t in db.allTables) {
+      await insertRow(t.actualTableName);
+    }
+    // A custom exercise under the pre-v8 convention (seed_version == 0),
+    // logged in a workout.
+    await insertRow('exercises_table', overrides: {'id': 'ex_custom', 'slug': 'custom-lift', 'name': 'My Custom Lift', 'seed_version': 0});
+    await insertRow('workout_exercises_table', overrides: {'id': 'workout_exercises_2', 'exercise_id': 'ex_custom', 'order_index': 1});
+    await db.customStatement('PRAGMA foreign_keys = ON');
+    final bad = await db.customSelect('PRAGMA foreign_key_check').get();
+    expect(bad, isEmpty);
+
+    final json = await const DataExportService().buildJsonExport(db);
+    File(Platform.environment['FIXTURE_OUT']!).writeAsStringSync(json);
+    await db.close();
+  });
+}

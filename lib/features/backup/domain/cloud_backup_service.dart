@@ -15,6 +15,22 @@
 /// work and should not be smuggled in here.
 library;
 
+/// Largest stored payload (gzipped, then base64) one account may hold.
+///
+/// Must match the `backups_payload_size` check constraint in
+/// `docs/cloud_backup_setup.sql`, which is the real limit: the anon key ships
+/// in the APK and sign-up is open, so the client cannot be trusted to enforce
+/// it. The client checks too only so an oversized backup fails before it is
+/// uploaded rather than after. A year of hard training is ~40KB compressed,
+/// so 5 MiB is decades of headroom.
+const int kMaxBackupPayloadBytes = 5 * 1024 * 1024;
+
+/// Largest export envelope a downloaded backup may decompress to.
+///
+/// Guards against a payload that is small on the wire but expands to
+/// exhaust memory (a "gzip bomb"). ~1.4MB of JSON per year of training.
+const int kMaxBackupDecodedBytes = 64 * 1024 * 1024;
+
 /// Why a cloud backup call failed.
 ///
 /// Mirrors `AuthFailureKind`: implementations translate transport and
@@ -50,6 +66,10 @@ enum CloudBackupFailureKind {
   /// silently proceeding; the fix is to sign out and back in through the
   /// normal flow, which resolves the conflict explicitly.
   accountMismatch,
+
+  /// The compressed backup exceeds [kMaxBackupPayloadBytes]. The user can
+  /// still export to a file, which has no such limit.
+  tooLarge,
 
   unknown,
 }

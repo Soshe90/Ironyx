@@ -41,6 +41,14 @@ abstract final class AppTheme {
       visualDensity: VisualDensity.standard,
     );
 
+    // `base.textTheme` carries colours and weights but no font sizes: Flutter
+    // only merges size geometry in at `Theme.of`, per script. Component
+    // styles below are complete styles read directly by their widgets, so
+    // built from `base.textTheme` alone they have no size and silently fall
+    // back to 14 — which rendered every page title (meant to be 22) smaller
+    // than its own section headers. `sized` supplies the Material geometry.
+    final TextTheme sized = Typography.englishLike2021.merge(base.textTheme);
+
     return base.copyWith(
       textTheme: AppTypography.apply(base.textTheme),
       iconButtonTheme: IconButtonThemeData(
@@ -59,8 +67,10 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         toolbarHeight: 72,
-        titleSpacing: AppSpacing.xl,
-        titleTextStyle: base.textTheme.titleLarge?.copyWith(
+        // Matches the 16dp content gutter, so a page title lines up with
+        // the content under it.
+        titleSpacing: AppSpacing.lg,
+        titleTextStyle: sized.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
           letterSpacing: -0.2,
           color: scheme.onSurface,
@@ -79,7 +89,7 @@ abstract final class AppTheme {
         indicatorColor: scheme.primary.withValues(alpha: 0.16),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final bool selected = states.contains(WidgetState.selected);
-          return base.textTheme.labelMedium?.copyWith(
+          return sized.labelMedium?.copyWith(
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             color: selected ? scheme.primary : scheme.onSurfaceVariant,
           );
@@ -96,11 +106,11 @@ abstract final class AppTheme {
         indicatorColor: scheme.primary.withValues(alpha: 0.16),
         selectedIconTheme: IconThemeData(color: scheme.primary),
         unselectedIconTheme: IconThemeData(color: scheme.onSurfaceVariant),
-        selectedLabelTextStyle: base.textTheme.labelMedium?.copyWith(
+        selectedLabelTextStyle: sized.labelMedium?.copyWith(
           color: scheme.primary,
           fontWeight: FontWeight.w700,
         ),
-        unselectedLabelTextStyle: base.textTheme.labelMedium?.copyWith(
+        unselectedLabelTextStyle: sized.labelMedium?.copyWith(
           color: scheme.onSurfaceVariant,
         ),
       ),
@@ -115,7 +125,7 @@ abstract final class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(AppSpacing.minTapTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          textStyle: base.textTheme.labelLarge?.copyWith(
+          textStyle: sized.labelLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),
           shape: RoundedRectangleBorder(
@@ -128,7 +138,7 @@ abstract final class AppTheme {
           minimumSize: const Size.fromHeight(AppSpacing.minTapTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           side: BorderSide(color: scheme.outline),
-          textStyle: base.textTheme.labelLarge?.copyWith(
+          textStyle: sized.labelLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),
           shape: RoundedRectangleBorder(
@@ -139,7 +149,7 @@ abstract final class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: scheme.primary,
-          textStyle: base.textTheme.labelLarge?.copyWith(
+          textStyle: sized.labelLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),
           shape: RoundedRectangleBorder(
@@ -170,13 +180,16 @@ abstract final class AppTheme {
         circularTrackColor: scheme.surfaceContainerHighest,
       ),
       cardTheme: CardThemeData(
-        color: scheme.surfaceContainerLow,
+        color:
+            isDark ? scheme.surfaceContainerLow : scheme.surfaceContainerLowest,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          side: BorderSide(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: isDark
+              ? BorderSide(color: scheme.outlineVariant)
+              : BorderSide.none,
         ),
       ),
       snackBarTheme: SnackBarThemeData(

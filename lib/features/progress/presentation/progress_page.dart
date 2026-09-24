@@ -24,6 +24,7 @@ import '../../../core/widgets/metric_explainer.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/trend_badge.dart';
+import '../../../core/widgets/value_row.dart';
 import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../domain/bmi.dart';
 import '../domain/progress_insights.dart';
@@ -58,6 +59,40 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     final ProgressRange range = ref.watch(progressRangeControllerProvider);
 
     final AppLocalizations l10n = context.l10n;
+
+    // Nothing logged yet: one screen-level invitation instead of a dozen
+    // identical "No data yet" cards. Body measurements stay, because they
+    // can be recorded before any workout exists.
+    final AsyncValue<List<LoggedExercise>> logged =
+        ref.watch(loggedExercisesProvider);
+    if (logged.hasValue && logged.value!.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.navProgress)),
+        body: PageBody(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                EmptyState(
+                  icon: Icons.insights_outlined,
+                  title: l10n.progressEmptyTitle,
+                  message: l10n.progressEmptyMessage,
+                  actionLabel: l10n.dashboardStartWorkout,
+                  onAction: () => context.pushNamed(Routes.activeWorkoutName),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                SectionHeader(
+                  title: l10n.progressBodyMetricsTitle,
+                  subtitle: l10n.progressBodyMetricsSubtitle,
+                ),
+                _BodyMetricsSection(range: range),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.navProgress)),
@@ -258,20 +293,15 @@ class _RelativeStrengthSection extends ConsumerWidget {
                           style: AppTypography.caption(Theme.of(context)),
                         ),
                         for (final row in rows.take(6))
-                          ListTile(
-                            dense: true,
-                            title: Text(
-                              localizedExerciseName(
-                                context,
-                                slugsById,
-                                row.exerciseId,
-                                row.exerciseName,
-                              ),
+                          ValueRow(
+                            label: localizedExerciseName(
+                              context,
+                              slugsById,
+                              row.exerciseId,
+                              row.exerciseName,
                             ),
-                            trailing: Text(
-                              context.l10n.progressRelativeStrengthRatio(
-                                row.ratio.toStringAsFixed(2),
-                              ),
+                            value: context.l10n.progressRelativeStrengthRatio(
+                              row.ratio.toStringAsFixed(2),
                             ),
                           ),
                       ],
@@ -780,7 +810,7 @@ class _OneRmSection extends ConsumerWidget {
                   )
                 : context.l10n.progressOneRmMonthlyTrend(
                     '${regression.slopeKgPerMonth >= 0 ? '+' : ''}'
-                    '${UnitFormatters.weight(regression.slopeKgPerMonth, unit)}',
+                    '${UnitFormatters.weightRate(regression.slopeKgPerMonth, unit)}',
                     ordered.length,
                   );
 
@@ -840,13 +870,10 @@ class _SessionVolumeSection extends ConsumerWidget {
                           style: AppTypography.caption(Theme.of(context)),
                         ),
                         for (final row in rows.take(8))
-                          ListTile(
-                            dense: true,
-                            title: Text(
-                              DateFormatters.of(context).axisLabel(row.date),
-                            ),
-                            trailing:
-                                Text(UnitFormatters.volume(row.volumeKg, unit)),
+                          ValueRow(
+                            label:
+                                DateFormatters.of(context).axisLabel(row.date),
+                            value: UnitFormatters.volume(row.volumeKg, unit),
                           ),
                       ],
                     ),
@@ -940,11 +967,29 @@ class _DatedLineChart extends StatelessWidget {
                   if (value < 0 || value > span) {
                     return const SizedBox.shrink();
                   }
-                  return _axisDate(
-                    context,
-                    theme,
-                    first.add(
-                      Duration(minutes: (value * _minutesPerDay).round()),
+                  // fl_chart always labels the axis maximum as well as each
+                  // interval, so the last interval label can land on top of
+                  // it ("21 Sep 24 Sep"). Keep the maximum — the latest
+                  // session is the date people look for — and drop the
+                  // interval label crowding it.
+                  if (value != meta.max &&
+                      meta.max - value < meta.appliedInterval * 0.6) {
+                    return const SizedBox.shrink();
+                  }
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    // Keeps the edge labels inside the card instead of
+                    // clipping half a date off the right edge.
+                    fitInside: SideTitleFitInsideData.fromTitleMeta(
+                      meta,
+                      distanceFromEdge: 0,
+                    ),
+                    child: _axisDate(
+                      context,
+                      theme,
+                      first.add(
+                        Duration(minutes: (value * _minutesPerDay).round()),
+                      ),
                     ),
                   );
                 },
@@ -994,11 +1039,15 @@ class _DatedLineChart extends StatelessWidget {
                 getDotPainter: (spot, percent, bar, index) =>
                     FlDotCirclePainter(
                   radius: ordered[index].isPersonalRecord ? 5 : 3,
+                  // Records are amber everywhere else (PrBadge); a ring in
+                  // the card colour separates the dot from the line.
                   color: ordered[index].isPersonalRecord
-                      ? scheme.tertiary
+                      ? AppColors.personalRecord
                       : scheme.primary,
                   strokeWidth: ordered[index].isPersonalRecord ? 2 : 0,
-                  strokeColor: scheme.onSurface,
+                  strokeColor: theme.brightness == Brightness.light
+                      ? scheme.surfaceContainerLowest
+                      : scheme.surfaceContainerLow,
                 ),
               ),
               belowBarData: BarAreaData(
@@ -1200,20 +1249,17 @@ class _RpeSection extends ConsumerWidget {
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         for (final row in rows.take(8))
-                          ListTile(
-                              dense: true,
-                              title: Text(
+                          ValueRow(
+                            label:
                                 DateFormatters.of(context).axisLabel(row.date),
+                            value: context.l10n.progressSessionRpeValue(
+                              row.averageRpe.toStringAsFixed(1),
+                              UnitFormatters.volume(
+                                row.volumeKg,
+                                ref.watch(weightUnitControllerProvider),
                               ),
-                              trailing: Text(
-                                context.l10n.progressSessionRpeValue(
-                                  row.averageRpe.toStringAsFixed(1),
-                                  UnitFormatters.volume(
-                                    row.volumeKg,
-                                    ref.watch(weightUnitControllerProvider),
-                                  ),
-                                ),
-                              )),
+                            ),
+                          ),
                       ])),
           );
 }
@@ -1242,27 +1288,21 @@ class _RestSection extends ConsumerWidget {
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         for (final row in rows.take(8))
-                          ListTile(
-                              dense: true,
-                              title: Text(
+                          ValueRow(
+                            label:
                                 DateFormatters.of(context).axisLabel(row.date),
-                              ),
-                              // The sample size is part of the number: a
-                              // session where rest was recorded once reads as
-                              // that session's rest habit without it. It goes
-                              // in the subtitle rather than alongside the
-                              // average — a `ListTile.trailing` holding both
-                              // overflows the tile on a narrow phone.
-                              subtitle: Text(
-                                context.l10n.progressRestFromSets(
-                                  row.recordedSetCount,
-                                ),
-                              ),
-                              trailing: Text(
-                                context.l10n.progressAverageRestSeconds(
-                                  row.averageRestSeconds.round(),
-                                ),
-                              )),
+                            // The sample size is part of the number: a
+                            // session where rest was recorded once reads as
+                            // that session's rest habit without it. It sits
+                            // under the date rather than beside the average,
+                            // which overflows a narrow phone.
+                            caption: context.l10n.progressRestFromSets(
+                              row.recordedSetCount,
+                            ),
+                            value: context.l10n.progressAverageRestSeconds(
+                              row.averageRestSeconds.round(),
+                            ),
+                          ),
                       ])),
           );
 }
@@ -1318,18 +1358,15 @@ class _WeeklyMuscleSection extends ConsumerWidget {
                 : AppCard(
                     child: Column(children: [
                     for (final row in rows.take(12))
-                      ListTile(
-                          dense: true,
-                          title: Text(row.muscleName),
-                          subtitle: Text(
+                      ValueRow(
+                        label: row.muscleName,
+                        caption:
                             DateFormatters.of(context).axisLabel(row.weekStart),
-                          ),
-                          trailing: Text(
-                            UnitFormatters.volume(
-                              row.totalVolumeKg,
-                              ref.watch(weightUnitControllerProvider),
-                            ),
-                          ))
+                        value: UnitFormatters.volume(
+                          row.totalVolumeKg,
+                          ref.watch(weightUnitControllerProvider),
+                        ),
+                      )
                   ])),
           );
 }
@@ -1410,14 +1447,14 @@ class _RatioLine extends StatelessWidget {
         label: formattedRatio == null
             ? l10n.progressRatioInsufficientSemantic(label)
             : l10n.progressRatioSemantic(label, formattedRatio, status),
-        child: Row(children: [
-          Expanded(child: Text(label)),
-          Text(
-            formattedRatio == null
+        child: ExcludeSemantics(
+          child: ValueRow(
+            label: label,
+            value: formattedRatio == null
                 ? status
                 : l10n.progressRatioValueStatus(formattedRatio, status),
-          )
-        ]));
+          ),
+        ));
   }
 }
 
@@ -1428,10 +1465,9 @@ class _DistributionLine extends StatelessWidget {
   final int value;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-        dense: true,
-        title: Text(label),
-        trailing: Text(context.l10n.programTargetSets(value)),
+  Widget build(BuildContext context) => ValueRow(
+        label: label,
+        value: context.l10n.programTargetSets(value),
       );
 }
 

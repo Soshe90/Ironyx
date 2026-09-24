@@ -165,8 +165,29 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Could not load'), findsOneWidget);
-      // The rest of the page survived the one failure.
-      expect(find.text('Last timer'), findsOneWidget);
+      // The rest of the page survived the one failure. (Not the "Last
+      // timer" row: it is hidden until a timer has been used.)
+      expect(find.text('Recent'), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('the last-timer row stays hidden until a timer has been used',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(CustomScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Recent'), findsOneWidget);
+      expect(find.text('Last timer'), findsNothing);
 
       await disposeApp(tester);
     });

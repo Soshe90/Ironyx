@@ -1,14 +1,158 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/services/haptics_service.dart';
 import 'package:ironyx/features/tracker/domain/draft_editor_controller.dart';
 import 'package:ironyx/features/tracker/domain/workout_draft.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/draft_editor_widgets.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _CountingHaptics implements HapticsService {
+  int impacts = 0;
+
+  @override
+  bool get isSupported => true;
+
+  @override
+  Future<void> selection() async {}
+
+  @override
+  Future<void> impact() async => impacts++;
+
+  @override
+  Future<void> heavy() async {}
+}
+
 void main() {
+  Future<GlobalKey<_DraftHarnessState>> pumpHarness(
+    WidgetTester tester, {
+    Map<String, Object> prefs = const <String, Object>{},
+    HapticsService haptics = const NoopHapticsService(),
+    bool showPreviousPerformance = false,
+    PreviousPerformance? previous,
+  }) async {
+    SharedPreferences.setMockInitialValues(prefs);
+    final preferences = await SharedPreferences.getInstance();
+    final harnessKey = GlobalKey<_DraftHarnessState>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          hapticsServiceProvider.overrideWithValue(haptics),
+          previousPerformanceProvider('bench')
+              .overrideWith((ref) => Stream.value(previous)),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: _DraftHarness(
+            key: harnessKey,
+            showPreviousPerformance: showPreviousPerformance,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    return harnessKey;
+  }
+
+  testWidgets(
+      'removing an exercise is a menu action, not a one-tap button beside it',
+      (tester) async {
+    final harnessKey = await pumpHarness(tester);
+
+    expect(find.byTooltip('Remove Bench Press'), findsNothing);
+    await tester.tap(find.byTooltip('Bench Press options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove Bench Press'));
+    await tester.pumpAndSettle();
+
+    expect(
+      harnessKey.currentState!.controller.removedExerciseIds,
+      <String>['exercise-row'],
+    );
+  });
+
+  group('last time', () {
+    final PreviousPerformance previous = PreviousPerformance(
+      date: DateTime(2026, 9, 12),
+      sets: const <PreviousSet>[
+        PreviousSet(weightKg: 80, reps: 8),
+        PreviousSet(weightKg: 85, reps: 7),
+      ],
+    );
+
+    testWidgets('shows the previous session\'s sets in a live workout',
+        (tester) async {
+      await pumpHarness(
+        tester,
+        showPreviousPerformance: true,
+        previous: previous,
+      );
+
+      expect(
+        find.text(
+          'Last time (12 Sep): 80 kg × 8 · 85 kg × 7'.replaceAllMapped(
+            // Each set is held together with non-breaking spaces.
+            RegExp(r'(\d+) kg × (\d+)'),
+            (m) => '${m[1]}\u00A0kg\u00A0×\u00A0${m[2]}',
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('is off unless asked for (e.g. editing a past workout)',
+        (tester) async {
+      await pumpHarness(tester, previous: previous);
+
+      expect(find.textContaining('Last time'), findsNothing);
+    });
+
+    testWidgets('shows nothing for an exercise with no history',
+        (tester) async {
+      await pumpHarness(tester, showPreviousPerformance: true);
+
+      expect(find.textContaining('Last time'), findsNothing);
+    });
+  });
+
+  group('logging a set gives a haptic tick', () {
+    Finder doneButton(int set) => find.bySemanticsLabel(
+          RegExp('Set $set.*(complete|done)', caseSensitive: false),
+        );
+
+    testWidgets('when marked done, not when unmarked', (tester) async {
+      final _CountingHaptics haptics = _CountingHaptics();
+      await pumpHarness(tester, haptics: haptics);
+
+      await tester.tap(doneButton(1));
+      await tester.pump();
+      expect(haptics.impacts, 1);
+
+      await tester.tap(doneButton(1));
+      await tester.pump();
+      expect(haptics.impacts, 1);
+    });
+
+    testWidgets('never when haptics are switched off in Settings',
+        (tester) async {
+      final _CountingHaptics haptics = _CountingHaptics();
+      await pumpHarness(
+        tester,
+        haptics: haptics,
+        prefs: <String, Object>{'timer_haptics_enabled': false},
+      );
+
+      await tester.tap(doneButton(1));
+      await tester.pump();
+      expect(haptics.impacts, 0);
+    });
+  });
+
   testWidgets('deleting a middle set preserves neighboring edited values',
       (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -120,8 +264,11 @@ class _DraftHarness extends StatefulWidget {
     this.initial = _defaultInitial,
     this.supersetLabel,
     this.isInSuperset = false,
+    this.showPreviousPerformance = false,
     super.key,
   });
+
+  final bool showPreviousPerformance;
 
   static const DraftExercise _defaultInitial = DraftExercise(
     id: 'exercise-row',
@@ -157,6 +304,7 @@ class _DraftHarnessState extends State<_DraftHarness> {
             controller: controller,
             supersetLabel: widget.supersetLabel,
             isInSuperset: widget.isInSuperset,
+            showPreviousPerformance: widget.showPreviousPerformance,
           ),
         ),
       );
@@ -230,7 +378,10 @@ class _FakeController implements DraftEditorController {
       Future<void>.value();
 
   @override
-  Future<void> removeExercise(String exerciseId) => Future<void>.value();
+  Future<void> removeExercise(String exerciseId) async =>
+      removedExerciseIds.add(exerciseId);
+
+  final List<String> removedExerciseIds = <String>[];
 
   @override
   Future<void> reorderExercise(String exerciseId, int newIndex) =>

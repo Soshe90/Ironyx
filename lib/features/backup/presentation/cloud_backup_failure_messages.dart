@@ -16,6 +16,7 @@ extension CloudBackupFailureL10n on CloudBackupFailure {
         CloudBackupFailureKind.corrupt => l10n.backupErrorCorrupt,
         CloudBackupFailureKind.accountMismatch =>
           l10n.backupErrorAccountMismatch,
+        CloudBackupFailureKind.tooLarge => l10n.backupErrorTooLarge,
         CloudBackupFailureKind.unknown => l10n.backupErrorUnknown,
       };
 }

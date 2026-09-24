@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/daos/workout_dao.dart';
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
+import '../../../../core/services/haptics_service.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../library/domain/exercise_catalogue_l10n.dart';
 import '../../../timer/domain/timer_engine.dart';
 import '../../../timer/domain/timer_preset.dart';
+import '../../../timer/domain/timer_settings_controller.dart';
 import '../../domain/draft_editor_controller.dart';
 import '../../domain/workout_draft.dart';
 
@@ -39,6 +43,7 @@ class ExerciseDraftCard extends ConsumerWidget {
     this.supersetLabel,
     this.isInSuperset = false,
     this.canGroupWithPrevious = false,
+    this.showPreviousPerformance = false,
     super.key,
   });
 
@@ -64,6 +69,11 @@ class ExerciseDraftCard extends ConsumerWidget {
   /// Whether "group with above" is available (there is an exercise above and
   /// this one isn't already grouped with it).
   final bool canGroupWithPrevious;
+
+  /// Shows what this exercise's sets were last time, for someone trying to
+  /// match or beat them. On for a live session only: when editing a past
+  /// workout, the "last" session could be the one being edited.
+  final bool showPreviousPerformance;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -141,6 +151,8 @@ class ExerciseDraftCard extends ConsumerWidget {
                       controller.groupWithPrevious(exercise.id),
                     _DraftCardAction.ungroup =>
                       controller.ungroupFromSuperset(exercise.id),
+                    _DraftCardAction.remove =>
+                      controller.removeExercise(exercise.id),
                   },
                   itemBuilder: (_) => <PopupMenuEntry<_DraftCardAction>>[
                     PopupMenuItem<_DraftCardAction>(
@@ -161,13 +173,23 @@ class ExerciseDraftCard extends ConsumerWidget {
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
+                    // Removal has no undo, so it lives behind the menu,
+                    // separated and in the error colour, rather than as a
+                    // one-tap ✕ beside it.
+                    const PopupMenuDivider(),
+                    PopupMenuItem<_DraftCardAction>(
+                      value: _DraftCardAction.remove,
+                      child: ListTile(
+                        leading:
+                            Icon(Icons.delete_outline, color: scheme.error),
+                        title: Text(
+                          context.l10n.draftRemoveExercise(displayName),
+                          style: TextStyle(color: scheme.error),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
                   ],
-                ),
-                IconButton(
-                  onPressed: () => controller.removeExercise(exercise.id),
-                  icon: const Icon(Icons.close),
-                  tooltip: context.l10n.draftRemoveExercise(displayName),
-                  visualDensity: VisualDensity.compact,
                 ),
                 if (dragHandleIndex != null)
                   ReorderableDragStartListener(
@@ -182,6 +204,11 @@ class ExerciseDraftCard extends ConsumerWidget {
                   ),
               ],
             ),
+            if (showPreviousPerformance)
+              _PreviousPerformanceLine(
+                exerciseId: exercise.exerciseId,
+                isTimeBased: exercise.isTimeBased,
+              ),
             if (exercise.sets.isNotEmpty) ...<Widget>[
               const SizedBox(height: AppSpacing.md),
               _SetTableHeader(unit: unit, isTimeBased: exercise.isTimeBased),
@@ -301,7 +328,72 @@ class _SupersetTag extends StatelessWidget {
 }
 
 /// Actions on the overflow menu of an exercise card.
-enum _DraftCardAction { groupWithAbove, ungroup }
+enum _DraftCardAction { groupWithAbove, ungroup, remove }
+
+/// "Last time (12 Sep): 80 kg × 8 · 85 kg × 7" under an exercise's header.
+///
+/// One line rather than a "previous" column per set: a phone's set row has
+/// no room for another column without squeezing the fields being typed
+/// into. Renders nothing while loading, on error, or with no history — it
+/// is a hint, and must never stand between someone and logging a set.
+class _PreviousPerformanceLine extends ConsumerWidget {
+  const _PreviousPerformanceLine({
+    required this.exerciseId,
+    required this.isTimeBased,
+  });
+
+  final String exerciseId;
+  final bool isTimeBased;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final PreviousPerformance? previous =
+        ref.watch(previousPerformanceProvider(exerciseId)).value;
+    if (previous == null || previous.sets.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final ThemeData theme = Theme.of(context);
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    // Same set format as the workout detail screen, with non-breaking
+    // spaces inside each set so a narrow phone wraps between sets, never
+    // through one ("90 kg ×" / "6").
+    const String nbsp = '\u00A0';
+    final String sets = previous.sets
+        .map(
+          (PreviousSet s) => isTimeBased && s.durationSeconds != null
+              ? UnitFormatters.duration(Duration(seconds: s.durationSeconds!))
+              : '${UnitFormatters.weight(s.weightKg, unit)} × ${s.reps}'
+                  .replaceAll(' ', nbsp),
+        )
+        .join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(
+            Icons.history,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              context.l10n.draftLastTime(
+                DateFormatters.of(context).axisLabel(previous.date),
+                sets,
+              ),
+              style: AppTypography.caption(theme),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Names the set-row columns once, so each row can drop its field labels.
 class _SetTableHeader extends StatelessWidget {
@@ -565,150 +657,171 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
     final bool done = widget.set.isCompleted;
     final int index = widget.index;
 
+    // A logged set reads as done at a glance, not only by its checkbox.
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Row(
-        children: <Widget>[
-          SizedBox(
-            width: _setNumberWidth,
-            child: Text(
-              '$index',
-              style: AppTypography.numeric(
-                theme.textTheme.titleSmall ?? const TextStyle(),
-              ).copyWith(
-                color: done ? scheme.primary : scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
+      child: AnimatedContainer(
+        duration: AppDuration.fast,
+        decoration: BoxDecoration(
+          color: done
+              ? scheme.primary.withValues(alpha: 0.08)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: _setNumberWidth,
+              child: Text(
+                '$index',
+                style: AppTypography.numeric(
+                  theme.textTheme.titleSmall ?? const TextStyle(),
+                ).copyWith(
+                  color: done ? scheme.primary : scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: _NumberField(
-              controller: _weightController,
-              semanticLabel:
-                  context.l10n.draftSetWeightSemantic(index, unit.label),
-              decimal: true,
-              onChanged: (String value) {
-                final double? entered = double.tryParse(value);
-                if (entered == null || !entered.isFinite || entered < 0) {
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _NumberField(
+                controller: _weightController,
+                semanticLabel:
+                    context.l10n.draftSetWeightSemantic(index, unit.label),
+                decimal: true,
+                onChanged: (String value) {
+                  final double? entered = double.tryParse(value);
+                  if (entered == null || !entered.isFinite || entered < 0) {
+                    _weightDebounce?.cancel();
+                    return;
+                  }
+                  final double kg = UnitFormatters.toKg(entered, unit);
+                  if (kg > _maxWeightKg) {
+                    _weightDebounce?.cancel();
+                    return;
+                  }
                   _weightDebounce?.cancel();
-                  return;
-                }
-                final double kg = UnitFormatters.toKg(entered, unit);
-                if (kg > _maxWeightKg) {
-                  _weightDebounce?.cancel();
-                  return;
-                }
-                _weightDebounce?.cancel();
-                _weightDebounce = Timer(AppDuration.inputDebounce, () {
-                  if (!mounted) return;
-                  widget.controller.updateSet(
-                    widget.exerciseId,
-                    widget.set.id,
-                    weightKg: kg,
-                  );
-                });
-              },
+                  _weightDebounce = Timer(AppDuration.inputDebounce, () {
+                    if (!mounted) return;
+                    widget.controller.updateSet(
+                      widget.exerciseId,
+                      widget.set.id,
+                      weightKg: kg,
+                    );
+                  });
+                },
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: widget.isTimeBased
-                ? _NumberField(
-                    controller: _durationController,
-                    semanticLabel: context.l10n.draftSetDurationSemantic(index),
-                    onChanged: (String value) {
-                      final int? seconds = int.tryParse(value);
-                      if (seconds == null ||
-                          seconds < 0 ||
-                          seconds > _maxDurationSeconds) {
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: widget.isTimeBased
+                  ? _NumberField(
+                      controller: _durationController,
+                      semanticLabel:
+                          context.l10n.draftSetDurationSemantic(index),
+                      onChanged: (String value) {
+                        final int? seconds = int.tryParse(value);
+                        if (seconds == null ||
+                            seconds < 0 ||
+                            seconds > _maxDurationSeconds) {
+                          _durationDebounce?.cancel();
+                          return;
+                        }
                         _durationDebounce?.cancel();
-                        return;
-                      }
-                      _durationDebounce?.cancel();
-                      _durationDebounce = Timer(AppDuration.inputDebounce, () {
-                        if (!mounted) return;
-                        widget.controller.updateSet(
-                          widget.exerciseId,
-                          widget.set.id,
-                          durationSeconds: seconds,
-                        );
-                      });
-                    },
-                  )
-                : _NumberField(
-                    controller: _repsController,
-                    semanticLabel: context.l10n.draftSetRepsSemantic(index),
-                    onChanged: (String value) {
-                      final int? reps = int.tryParse(value);
-                      if (reps == null || reps < 0 || reps > _maxReps) {
+                        _durationDebounce =
+                            Timer(AppDuration.inputDebounce, () {
+                          if (!mounted) return;
+                          widget.controller.updateSet(
+                            widget.exerciseId,
+                            widget.set.id,
+                            durationSeconds: seconds,
+                          );
+                        });
+                      },
+                    )
+                  : _NumberField(
+                      controller: _repsController,
+                      semanticLabel: context.l10n.draftSetRepsSemantic(index),
+                      onChanged: (String value) {
+                        final int? reps = int.tryParse(value);
+                        if (reps == null || reps < 0 || reps > _maxReps) {
+                          _repsDebounce?.cancel();
+                          return;
+                        }
                         _repsDebounce?.cancel();
-                        return;
-                      }
-                      _repsDebounce?.cancel();
-                      _repsDebounce = Timer(AppDuration.inputDebounce, () {
-                        if (!mounted) return;
-                        widget.controller.updateSet(
-                          widget.exerciseId,
-                          widget.set.id,
-                          reps: reps,
-                        );
-                      });
-                    },
-                  ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          _SetDoneButton(
-            done: done,
-            index: index,
-            onChanged: (bool value) => widget.controller.updateSet(
-              widget.exerciseId,
-              widget.set.id,
-              isCompleted: value,
+                        _repsDebounce = Timer(AppDuration.inputDebounce, () {
+                          if (!mounted) return;
+                          widget.controller.updateSet(
+                            widget.exerciseId,
+                            widget.set.id,
+                            reps: reps,
+                          );
+                        });
+                      },
+                    ),
             ),
-          ),
-          SizedBox(
-            width: _rowMenuWidth,
-            child: PopupMenuButton<_SetAction>(
-              tooltip: context.l10n.draftSetOptionsSemantic(index),
-              icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
-              padding: EdgeInsets.zero,
-              onSelected: (_SetAction action) => switch (action) {
-                _SetAction.details => _showSetDetails(),
-                _SetAction.duplicate => widget.controller
-                    .duplicateSet(widget.exerciseId, widget.set.id),
-                _SetAction.remove =>
-                  widget.controller.removeSet(widget.exerciseId, widget.set.id),
+            const SizedBox(width: AppSpacing.sm),
+            _SetDoneButton(
+              done: done,
+              index: index,
+              onChanged: (bool value) {
+                // Logging a set is the most frequent action in the app; give it
+                // the tick HapticsService.impact() exists for. Same switch as
+                // the timer's cues, so "Haptics off" means off everywhere.
+                if (value &&
+                    ref.read(timerSettingsControllerProvider).hapticsEnabled) {
+                  unawaited(ref.read(hapticsServiceProvider).impact());
+                }
+                widget.controller.updateSet(
+                  widget.exerciseId,
+                  widget.set.id,
+                  isCompleted: value,
+                );
               },
-              itemBuilder: (_) => <PopupMenuEntry<_SetAction>>[
-                PopupMenuItem<_SetAction>(
-                  value: _SetAction.details,
-                  child: ListTile(
-                    leading: const Icon(Icons.speed_outlined),
-                    title: Text(context.l10n.draftRpeAndRest),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem<_SetAction>(
-                  value: _SetAction.duplicate,
-                  child: ListTile(
-                    leading: const Icon(Icons.copy_outlined),
-                    title: Text(context.l10n.draftDuplicateSet),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem<_SetAction>(
-                  value: _SetAction.remove,
-                  child: ListTile(
-                    leading: const Icon(Icons.remove_circle_outline),
-                    title: Text(context.l10n.draftRemoveSet),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
             ),
-          ),
-        ],
+            SizedBox(
+              width: _rowMenuWidth,
+              child: PopupMenuButton<_SetAction>(
+                tooltip: context.l10n.draftSetOptionsSemantic(index),
+                icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                padding: EdgeInsets.zero,
+                onSelected: (_SetAction action) => switch (action) {
+                  _SetAction.details => _showSetDetails(),
+                  _SetAction.duplicate => widget.controller
+                      .duplicateSet(widget.exerciseId, widget.set.id),
+                  _SetAction.remove => widget.controller
+                      .removeSet(widget.exerciseId, widget.set.id),
+                },
+                itemBuilder: (_) => <PopupMenuEntry<_SetAction>>[
+                  PopupMenuItem<_SetAction>(
+                    value: _SetAction.details,
+                    child: ListTile(
+                      leading: const Icon(Icons.speed_outlined),
+                      title: Text(context.l10n.draftRpeAndRest),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem<_SetAction>(
+                    value: _SetAction.duplicate,
+                    child: ListTile(
+                      leading: const Icon(Icons.copy_outlined),
+                      title: Text(context.l10n.draftDuplicateSet),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem<_SetAction>(
+                    value: _SetAction.remove,
+                    child: ListTile(
+                      leading: const Icon(Icons.remove_circle_outline),
+                      title: Text(context.l10n.draftRemoveSet),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

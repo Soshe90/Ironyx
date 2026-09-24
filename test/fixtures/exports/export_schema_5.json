@@ -1,0 +1,262 @@
+{
+  "formatVersion": 1,
+  "dbSchemaVersion": 5,
+  "appVersion": "0.1.0",
+  "exportedAt": "2026-09-24T17:26:45.413862Z",
+  "tables": {
+    "exercises_table": [
+      {
+        "id": "exercises_1",
+        "slug": "x",
+        "name": "x",
+        "description": "x",
+        "category": "x",
+        "difficulty": "x",
+        "movement_pattern": "x",
+        "force_type": "x",
+        "mechanic": "x",
+        "is_unilateral": 0,
+        "is_bodyweight": 0,
+        "seed_version": 1,
+        "created_at": 1754006400,
+        "updated_at": 1754006400
+      },
+      {
+        "id": "ex_custom",
+        "slug": "custom-lift",
+        "name": "My Custom Lift",
+        "description": "x",
+        "category": "x",
+        "difficulty": "x",
+        "movement_pattern": "x",
+        "force_type": "x",
+        "mechanic": "x",
+        "is_unilateral": 0,
+        "is_bodyweight": 0,
+        "seed_version": 0,
+        "created_at": 1754006400,
+        "updated_at": 1754006400
+      }
+    ],
+    "muscles_table": [
+      {
+        "id": "muscles_1",
+        "name": "x",
+        "display_name": "x",
+        "region": "x",
+        "parent_id": null
+      }
+    ],
+    "equipment_table": [
+      {
+        "id": "equipment_1",
+        "name": "x",
+        "category": "x"
+      }
+    ],
+    "exercise_muscles_table": [
+      {
+        "id": "exercise_muscles_1",
+        "exercise_id": "exercises_1",
+        "muscle_id": "muscles_1",
+        "role": "x",
+        "confidence": 42.5,
+        "source": "x"
+      }
+    ],
+    "exercise_equipment_table": [
+      {
+        "id": "exercise_equipment_1",
+        "exercise_id": "exercises_1",
+        "equipment_id": "equipment_1",
+        "is_required": 0
+      }
+    ],
+    "exercise_instructions_table": [
+      {
+        "id": "exercise_instructions_1",
+        "exercise_id": "exercises_1",
+        "step_number": 1,
+        "instruction": "x"
+      }
+    ],
+    "exercise_aliases_table": [
+      {
+        "id": "exercise_aliases_1",
+        "exercise_id": "exercises_1",
+        "alias": "x",
+        "language": "x"
+      }
+    ],
+    "exercise_media_table": [
+      {
+        "id": "exercise_media_1",
+        "exercise_id": "exercises_1",
+        "type": "x",
+        "url": "x",
+        "local_asset": "x",
+        "sort_order": 1,
+        "license": "x",
+        "attribution": "x",
+        "source": "x"
+      }
+    ],
+    "exercise_variations_table": [
+      {
+        "id": "exercise_variations_1",
+        "parent_exercise_id": "exercises_1",
+        "exercise_id": "exercises_1",
+        "variation_type": "x"
+      }
+    ],
+    "exercise_sources_table": [
+      {
+        "id": "exercise_sources_1",
+        "exercise_id": "exercises_1",
+        "source_name": "x",
+        "source_url": "x",
+        "source_exercise_id": "x",
+        "license": "x",
+        "attribution": "x",
+        "retrieved_at": 1754006400,
+        "used_for": "x"
+      }
+    ],
+    "exercise_tags_table": [
+      {
+        "id": "exercise_tags_1",
+        "exercise_id": "exercises_1",
+        "tag": "x"
+      }
+    ],
+    "workouts_table": [
+      {
+        "id": "workouts_1",
+        "started_at": 1754006400,
+        "ended_at": 1754006400,
+        "note": "x",
+        "total_volume_kg": 42.5,
+        "duration_seconds": 1,
+        "schema_version": 1
+      }
+    ],
+    "workout_exercises_table": [
+      {
+        "id": "workout_exercises_1",
+        "workout_id": "workouts_1",
+        "exercise_id": "exercises_1",
+        "order_index": 1,
+        "is_warmup": 0,
+        "note": "x"
+      },
+      {
+        "id": "workout_exercises_2",
+        "workout_id": "workouts_1",
+        "exercise_id": "ex_custom",
+        "order_index": 1,
+        "is_warmup": 0,
+        "note": "x"
+      }
+    ],
+    "workout_sets_table": [
+      {
+        "id": "workout_sets_1",
+        "workout_exercise_id": "workout_exercises_1",
+        "set_index": 1,
+        "weight_kg": 42.5,
+        "reps": 1,
+        "rpe_times10": 1,
+        "is_completed": 0,
+        "is_warmup": 0,
+        "rest_seconds": 1,
+        "note": "x"
+      }
+    ],
+    "templates_table": [
+      {
+        "id": "templates_1",
+        "name": "x",
+        "description": "x",
+        "created_at": 1754006400,
+        "updated_at": 1754006400,
+        "is_built_in": 0
+      }
+    ],
+    "template_exercises_table": [
+      {
+        "id": "template_exercises_1",
+        "template_id": "templates_1",
+        "exercise_id": "exercises_1",
+        "order_index": 1,
+        "target_sets": 1,
+        "target_reps": "x",
+        "target_rpe_times10": 1,
+        "note": "x"
+      }
+    ],
+    "programs_table": [
+      {
+        "id": "programs_1",
+        "name": "x",
+        "description": "x",
+        "split_type": "x",
+        "created_at": 1754006400,
+        "updated_at": 1754006400,
+        "is_built_in": 0
+      }
+    ],
+    "program_templates_table": [
+      {
+        "id": "program_templates_1",
+        "program_id": "programs_1",
+        "template_id": "templates_1",
+        "day_name": "x",
+        "order_index": 1
+      }
+    ],
+    "timer_sessions_table": [
+      {
+        "id": "timer_sessions_1",
+        "started_at": 1754006400,
+        "ended_at": 1754006400,
+        "planned_duration_seconds": 1,
+        "actual_duration_seconds": 1,
+        "preset_name": "x",
+        "intervals_completed": 1,
+        "total_intervals": 1,
+        "note": "x"
+      }
+    ],
+    "timer_intervals_table": [
+      {
+        "id": "timer_intervals_1",
+        "session_id": "timer_sessions_1",
+        "interval_index": 1,
+        "type": "x",
+        "planned_duration_seconds": 1,
+        "actual_duration_seconds": 1,
+        "is_completed": 0
+      }
+    ],
+    "timer_presets_table": [
+      {
+        "id": "timer_presets_1",
+        "name": "x",
+        "description": "x",
+        "phases_json": "x",
+        "created_at": 1754006400
+      }
+    ],
+    "body_metrics_table": [
+      {
+        "id": "body_metrics_1",
+        "date": 1754006400,
+        "weight_kg": 42.5,
+        "body_fat_percentage": 42.5,
+        "lean_mass_kg": 42.5,
+        "waist_cm": 42.5,
+        "note": "x"
+      }
+    ]
+  }
+}

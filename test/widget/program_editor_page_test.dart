@@ -226,7 +226,7 @@ void main() {
         find.widgetWithText(TextField, 'Day name'),
         'Heavy Day',
       );
-      await tester.enterText(find.widgetWithText(TextField, 'sets'), '5');
+      await tester.enterText(find.widgetWithText(TextField, 'Sets'), '5');
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithIcon(IconButton, Icons.check));
       await tester.pumpAndSettle();
