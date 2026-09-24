@@ -41,7 +41,7 @@ void main() {
       expect(find.text('Saved presets'), findsNothing);
     });
 
-    testWidgets('a saved preset appears in its own section, above Quick start',
+    testWidgets('quick start comes before the saved preset section',
         (tester) async {
       await tester.runAsync(
         () => TimerPresetDao(database).save(
@@ -61,8 +61,8 @@ void main() {
       expect(find.text('Saved presets'), findsOneWidget);
       expect(find.text('My EMOM'), findsOneWidget);
       expect(
-        tester.getTopLeft(find.text('Saved presets')).dy,
-        lessThan(tester.getTopLeft(find.text('Quick start')).dy),
+        tester.getTopLeft(find.text('Quick start')).dy,
+        lessThan(tester.getTopLeft(find.text('Saved presets')).dy),
       );
 
       await tester.pumpWidget(const SizedBox.shrink());

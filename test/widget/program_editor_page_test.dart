@@ -6,6 +6,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/program_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
 
 import '../helpers/pump_app.dart';
 import '../helpers/stub_seeders.dart';
@@ -75,7 +76,12 @@ void main() {
       );
       await tester.tap(find.widgetWithText(OutlinedButton, 'Add day'));
       await tester.pumpAndSettle();
-      expect(find.widgetWithText(TextField, 'Day name'), findsOneWidget);
+      final Finder dayNameField = find.widgetWithText(TextField, 'Day name');
+      expect(dayNameField, findsOneWidget);
+      expect(
+        find.ancestor(of: dayNameField, matching: find.byType(AppCard)),
+        findsNothing,
+      );
 
       await tester.tap(find.widgetWithText(TextButton, 'Add exercise'));
       await tester.pumpAndSettle();

@@ -6,6 +6,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -70,7 +71,12 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Incline Press, Chest-Supported Row'), findsOneWidget);
+    final Finder workoutTitle = find.text('Incline Press, Chest-Supported Row');
+    expect(workoutTitle, findsOneWidget);
+    expect(
+      find.ancestor(of: workoutTitle, matching: find.byType(AppCard)),
+      findsNothing,
+    );
     // Time and duration move to the secondary line.
     expect(find.textContaining('45m'), findsOneWidget);
 

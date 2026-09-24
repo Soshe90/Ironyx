@@ -8,7 +8,6 @@ import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
@@ -175,8 +174,7 @@ class _EditorBodyState extends ConsumerState<_EditorBody> {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         children: <Widget>[
           SectionHeader(title: context.l10n.programDetails),
-          // Fields directly on the page; the day cards below are the real
-          // objects here and keep their cards.
+          // Program details sit directly on the page rather than inside a card.
           TextField(
             controller: _nameController,
             decoration: InputDecoration(
@@ -273,7 +271,8 @@ class _DayEditorCardState extends ConsumerState<_DayEditorCard> {
       [for (final exercise in widget.day.exercises) exercise.supersetGroupId],
     );
 
-    return AppCard(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

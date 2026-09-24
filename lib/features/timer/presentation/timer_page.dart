@@ -37,9 +37,6 @@ class TimerPage extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
             children: [
-              // The user's own presets first: they are why someone saved
-              // one. Hidden entirely until there is one to show.
-              const _SavedPresets(),
               SectionHeader(
                 title: l10n.timerQuickStartTitle,
                 subtitle: l10n.timerQuickStartSubtitle,
@@ -54,6 +51,9 @@ class TimerPage extends ConsumerWidget {
                   onTap: () => startTimer(context, ref, preset),
                 ),
               const SizedBox(height: AppSpacing.xl),
+              // Personal presets follow quick start and stay hidden until
+              // the user has saved one.
+              const _SavedPresets(),
               SectionHeader(
                 title: l10n.timerCustomTitle,
                 subtitle: l10n.timerCustomSubtitle,

@@ -6,6 +6,7 @@ import 'package:ironyx/core/database/daos/body_metrics_dao.dart';
 import 'package:ironyx/core/database/daos/profile_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/features/profile/presentation/widgets/value_pill.dart';
 
 import '../helpers/pump_app.dart';
@@ -71,9 +72,15 @@ void main() {
     await pumpPage(tester);
 
     expect(find.text('Personal details'), findsOneWidget);
+    final Finder nameField = find.widgetWithText(TextField, 'Name');
+    expect(nameField, findsOneWidget);
+    expect(
+      find.ancestor(of: nameField, matching: find.byType(AppCard)),
+      findsNothing,
+    );
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'Name'),
+      nameField,
       'Mustafa Salih',
     );
     await enterNumber(tester, rowLabel: 'Height', value: '172');

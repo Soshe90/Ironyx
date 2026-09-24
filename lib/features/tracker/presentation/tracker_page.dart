@@ -479,60 +479,65 @@ class _WorkoutHistoryTile extends ConsumerWidget {
             volumeText,
           );
 
-    return AppCard(
-      onTap: () => context.pushNamed(
-        Routes.workoutDetailName,
-        pathParameters: {'id': workout.id},
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      semanticLabel: title == null ? summary : '$title. $summary',
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+    return Semantics(
+      label: title == null ? summary : '$title. $summary',
+      button: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: () => context.pushNamed(
+            Routes.workoutDetailName,
+            pathParameters: {'id': workout.id},
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: Row(
               children: [
-                Text(
-                  title ?? time,
-                  style: theme.textTheme.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        title == null ? duration : '$time · $duration',
-                        style: AppTypography.caption(theme),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title ?? time,
+                        style: theme.textTheme.titleSmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    if (isPersonalRecord) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      const PrBadge(),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title == null ? duration : '$time · $duration',
+                              style: AppTypography.caption(theme),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isPersonalRecord) ...[
+                            const SizedBox(width: AppSpacing.sm),
+                            const PrBadge(),
+                          ],
+                        ],
+                      ),
                     ],
-                  ],
+                  ),
                 ),
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  volumeText,
+                  style: AppTypography.cardMetric(
+                    scheme,
+                    size: AppTypography.metricSizeSm,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Text(
-            volumeText,
-            style: AppTypography.cardMetric(
-              scheme,
-              size: AppTypography.metricSizeSm,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-        ],
+        ),
       ),
     );
   }
