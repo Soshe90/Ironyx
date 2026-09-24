@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/daos/workout_dao.dart';
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
@@ -41,6 +43,7 @@ class ExerciseDraftCard extends ConsumerWidget {
     this.supersetLabel,
     this.isInSuperset = false,
     this.canGroupWithPrevious = false,
+    this.showPreviousPerformance = false,
     super.key,
   });
 
@@ -66,6 +69,11 @@ class ExerciseDraftCard extends ConsumerWidget {
   /// Whether "group with above" is available (there is an exercise above and
   /// this one isn't already grouped with it).
   final bool canGroupWithPrevious;
+
+  /// Shows what this exercise's sets were last time, for someone trying to
+  /// match or beat them. On for a live session only: when editing a past
+  /// workout, the "last" session could be the one being edited.
+  final bool showPreviousPerformance;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -196,6 +204,11 @@ class ExerciseDraftCard extends ConsumerWidget {
                   ),
               ],
             ),
+            if (showPreviousPerformance)
+              _PreviousPerformanceLine(
+                exerciseId: exercise.exerciseId,
+                isTimeBased: exercise.isTimeBased,
+              ),
             if (exercise.sets.isNotEmpty) ...<Widget>[
               const SizedBox(height: AppSpacing.md),
               _SetTableHeader(unit: unit, isTimeBased: exercise.isTimeBased),
@@ -316,6 +329,71 @@ class _SupersetTag extends StatelessWidget {
 
 /// Actions on the overflow menu of an exercise card.
 enum _DraftCardAction { groupWithAbove, ungroup, remove }
+
+/// "Last time (12 Sep): 80 kg × 8 · 85 kg × 7" under an exercise's header.
+///
+/// One line rather than a "previous" column per set: a phone's set row has
+/// no room for another column without squeezing the fields being typed
+/// into. Renders nothing while loading, on error, or with no history — it
+/// is a hint, and must never stand between someone and logging a set.
+class _PreviousPerformanceLine extends ConsumerWidget {
+  const _PreviousPerformanceLine({
+    required this.exerciseId,
+    required this.isTimeBased,
+  });
+
+  final String exerciseId;
+  final bool isTimeBased;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final PreviousPerformance? previous =
+        ref.watch(previousPerformanceProvider(exerciseId)).value;
+    if (previous == null || previous.sets.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final ThemeData theme = Theme.of(context);
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    // Same set format as the workout detail screen, with non-breaking
+    // spaces inside each set so a narrow phone wraps between sets, never
+    // through one ("90 kg ×" / "6").
+    const String nbsp = '\u00A0';
+    final String sets = previous.sets
+        .map(
+          (PreviousSet s) => isTimeBased && s.durationSeconds != null
+              ? UnitFormatters.duration(Duration(seconds: s.durationSeconds!))
+              : '${UnitFormatters.weight(s.weightKg, unit)} × ${s.reps}'
+                  .replaceAll(' ', nbsp),
+        )
+        .join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(
+            Icons.history,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              context.l10n.draftLastTime(
+                DateFormatters.of(context).axisLabel(previous.date),
+                sets,
+              ),
+              style: AppTypography.caption(theme),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Names the set-row columns once, so each row can drop its field labels.
 class _SetTableHeader extends StatelessWidget {

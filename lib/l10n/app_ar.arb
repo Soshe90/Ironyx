@@ -374,6 +374,7 @@
     }
   },
 
+  "draftLastTime": "آخر مرة ({date}): {sets}",
   "draftRemoveExercise": "إزالة {name}",
   "@draftRemoveExercise": {
     "placeholders": {

@@ -159,6 +159,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                                   draft.exercises[index - 1].supersetGroupId);
                       return ExerciseDraftCard(
                         key: ValueKey<String>(exercise.id),
+                        showPreviousPerformance: true,
                         exercise: exercise,
                         controller: notifier,
                         position: index + 1,

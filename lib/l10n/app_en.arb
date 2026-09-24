@@ -383,6 +383,13 @@
     }
   },
 
+  "draftLastTime": "Last time ({date}): {sets}",
+  "@draftLastTime": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "sets": { "type": "String" }
+    }
+  },
   "draftRemoveExercise": "Remove {name}",
   "@draftRemoveExercise": {
     "placeholders": {

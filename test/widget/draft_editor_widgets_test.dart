@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/providers.dart';
 import 'package:ironyx/core/services/haptics_service.dart';
 import 'package:ironyx/features/tracker/domain/draft_editor_controller.dart';
@@ -30,6 +31,8 @@ void main() {
     WidgetTester tester, {
     Map<String, Object> prefs = const <String, Object>{},
     HapticsService haptics = const NoopHapticsService(),
+    bool showPreviousPerformance = false,
+    PreviousPerformance? previous,
   }) async {
     SharedPreferences.setMockInitialValues(prefs);
     final preferences = await SharedPreferences.getInstance();
@@ -39,14 +42,20 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
           hapticsServiceProvider.overrideWithValue(haptics),
+          previousPerformanceProvider('bench')
+              .overrideWith((ref) => Stream.value(previous)),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: _DraftHarness(key: harnessKey),
+          home: _DraftHarness(
+            key: harnessKey,
+            showPreviousPerformance: showPreviousPerformance,
+          ),
         ),
       ),
     );
+    await tester.pump();
     return harnessKey;
   }
 
@@ -65,6 +74,50 @@ void main() {
       harnessKey.currentState!.controller.removedExerciseIds,
       <String>['exercise-row'],
     );
+  });
+
+  group('last time', () {
+    final PreviousPerformance previous = PreviousPerformance(
+      date: DateTime(2026, 9, 12),
+      sets: const <PreviousSet>[
+        PreviousSet(weightKg: 80, reps: 8),
+        PreviousSet(weightKg: 85, reps: 7),
+      ],
+    );
+
+    testWidgets('shows the previous session\'s sets in a live workout',
+        (tester) async {
+      await pumpHarness(
+        tester,
+        showPreviousPerformance: true,
+        previous: previous,
+      );
+
+      expect(
+        find.text(
+          'Last time (12 Sep): 80 kg × 8 · 85 kg × 7'.replaceAllMapped(
+            // Each set is held together with non-breaking spaces.
+            RegExp(r'(\d+) kg × (\d+)'),
+            (m) => '${m[1]}\u00A0kg\u00A0×\u00A0${m[2]}',
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('is off unless asked for (e.g. editing a past workout)',
+        (tester) async {
+      await pumpHarness(tester, previous: previous);
+
+      expect(find.textContaining('Last time'), findsNothing);
+    });
+
+    testWidgets('shows nothing for an exercise with no history',
+        (tester) async {
+      await pumpHarness(tester, showPreviousPerformance: true);
+
+      expect(find.textContaining('Last time'), findsNothing);
+    });
   });
 
   group('logging a set gives a haptic tick', () {
@@ -211,8 +264,11 @@ class _DraftHarness extends StatefulWidget {
     this.initial = _defaultInitial,
     this.supersetLabel,
     this.isInSuperset = false,
+    this.showPreviousPerformance = false,
     super.key,
   });
+
+  final bool showPreviousPerformance;
 
   static const DraftExercise _defaultInitial = DraftExercise(
     id: 'exercise-row',
@@ -248,6 +304,7 @@ class _DraftHarnessState extends State<_DraftHarness> {
             controller: controller,
             supersetLabel: widget.supersetLabel,
             isInSuperset: widget.isInSuperset,
+            showPreviousPerformance: widget.showPreviousPerformance,
           ),
         ),
       );

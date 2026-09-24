@@ -153,6 +153,12 @@ Stream<List<Equipment>> equipmentStream(Ref ref) =>
 Stream<List<Workout>> workoutHistoryStream(Ref ref) =>
     ref.watch(workoutDaoProvider).watchAll();
 
+/// An exercise's sets from its last finished session — the active
+/// workout's "last time" line.
+@riverpod
+Stream<PreviousPerformance?> previousPerformance(Ref ref, String exerciseId) =>
+    ref.watch(workoutDaoProvider).watchPreviousPerformance(exerciseId);
+
 /// Every saved workout's exercise names, keyed by workout id — used to title
 /// the Tracker history rows by what was trained.
 @Riverpod(keepAlive: true)

@@ -64,6 +64,94 @@ void main() {
     );
   }
 
+  group('watchPreviousPerformance', () {
+    /// A squat session on [day] with [sets] of (weight, reps, completed,
+    /// warm-up), finished unless [finished] is false.
+    Future<void> squatSession(
+      String id,
+      int day,
+      List<(double, int, bool, bool)> sets, {
+      bool finished = true,
+    }) {
+      final DateTime start = DateTime.utc(2026, 3, day, 18);
+      return workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: id,
+          startedAt: start,
+          endedAt: Value(finished ? start.add(const Duration(hours: 1)) : null),
+        ),
+        [
+          WorkoutExercisesTableCompanion.insert(
+            id: '${id}_we',
+            workoutId: id,
+            exerciseId: 'squat',
+            orderIndex: 0,
+          ),
+        ],
+        [
+          for (var i = 0; i < sets.length; i++)
+            WorkoutSetsTableCompanion.insert(
+              id: '${id}_s$i',
+              workoutExerciseId: '${id}_we',
+              setIndex: i,
+              weightKg: sets[i].$1,
+              reps: sets[i].$2,
+              isCompleted: Value(sets[i].$3),
+              isWarmup: Value(sets[i].$4),
+            ),
+        ],
+      );
+    }
+
+    test('is null for an exercise never completed', () async {
+      expect(await workoutDao.watchPreviousPerformance('squat').first, isNull);
+    });
+
+    test('returns the latest finished session\'s working sets, in order',
+        () async {
+      await squatSession('old', 1, [(100, 5, true, false)]);
+      await squatSession('new', 8, [
+        (60, 10, true, true), // warm-up: not a number to match
+        (110, 5, true, false),
+        (115, 4, true, false),
+        (120, 3, false, false), // not completed
+      ]);
+
+      final PreviousPerformance? previous =
+          await workoutDao.watchPreviousPerformance('squat').first;
+
+      // Same instant; Drift hands it back in local time.
+      expect(previous!.date.isAtSameMomentAs(DateTime.utc(2026, 3, 8, 18)),
+          isTrue);
+      expect(
+        previous.sets.map((s) => (s.weightKg, s.reps)),
+        [(110.0, 5), (115.0, 4)],
+      );
+    });
+
+    test(
+        'skips an unfinished workout and one with nothing completed, falling '
+        'back to the last real session', () async {
+      await squatSession('real', 1, [(100, 5, true, false)]);
+      await squatSession('abandoned', 5, [(105, 5, false, false)]);
+      await squatSession('warmups', 6, [(50, 10, true, true)]);
+      await squatSession(
+        'unsaved',
+        7,
+        [(130, 1, true, false)],
+        finished: false,
+      );
+
+      final PreviousPerformance? previous =
+          await workoutDao.watchPreviousPerformance('squat').first;
+
+      // Same instant; Drift hands it back in local time.
+      expect(previous!.date.isAtSameMomentAs(DateTime.utc(2026, 3, 1, 18)),
+          isTrue);
+      expect(previous.sets.single.weightKg, 100);
+    });
+  });
+
   group('WorkoutDao', () {
     test('getWithDetails joins the exercise name', () async {
       await insertSampleWorkout('w1');
