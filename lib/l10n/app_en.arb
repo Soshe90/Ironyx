@@ -56,7 +56,7 @@
   "settingsSoundCues": "Sound cues",
   "settingsSoundCuesSubtitle": "Play a tone on phase change",
   "settingsHaptics": "Haptics",
-  "settingsHapticsSubtitle": "Vibrate on phase change",
+  "settingsHapticsSubtitle": "Vibrate on phase change and when a set is logged",
   "settingsDataTitle": "Data",
   "settingsDataSubtitle": "Ironyx stores everything on this device",
   "settingsStorageNote": "Your training data never leaves this device unless you export it yourself.",
@@ -132,7 +132,7 @@
 
   "actionGotIt": "Got it",
 
-  "navTracker": "Tracker",
+  "navTracker": "Workouts",
   "routeNotFoundTitle": "Not found",
   "routeNotFoundBody": "No route for {uri}",
   "@routeNotFoundBody": {
@@ -503,6 +503,8 @@
   "importXlsxUnknownExercises": "These exercises are not in the catalogue and will be added as custom exercises:",
   "importXlsxConfirmAction": "Import",
 
+  "activeWorkoutMinimise": "Minimise workout",
+  "activeWorkoutOptions": "Workout options",
   "activeWorkoutDiscardTooltip": "Discard workout",
   "activeWorkoutAddFirstExercise": "Add your first exercise",
   "activeWorkoutAddFirstExerciseMessage": "Pick a movement and start logging sets. Your draft is saved as you go.",
@@ -553,8 +555,6 @@
   "timerCustomTitle": "Custom",
   "timerCustomSubtitle": "Build an interval and start or save it",
   "timerPresetSaved": "Preset saved.",
-  "timerFeedbackSubtitle": "Also available in Settings",
-  "timerNoSavedPresets": "No saved presets yet. Build one below and tap \"Save preset\" to keep it here.",
   "timerPresetsLoadFailed": "Unable to load saved presets",
   "timerPresetSemantic": "Start {name}, {duration} total",
   "@timerPresetSemantic": {

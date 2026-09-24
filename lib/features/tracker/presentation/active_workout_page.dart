@@ -75,17 +75,40 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
 
     return Scaffold(
       appBar: AppBar(
+        // Leaving keeps the draft running (Home offers Resume), so this is
+        // a "minimise" chevron. A close ✕ next to a bin read as two ways to
+        // throw the workout away; discarding now lives in the menu.
         leading: IconButton(
-          icon: const Icon(Icons.close),
-          tooltip: l10n.actionClose,
+          icon: const Icon(Icons.keyboard_arrow_down),
+          tooltip: l10n.activeWorkoutMinimise,
           onPressed: () => context.pop(),
         ),
         title: _SessionClock(startedAt: draft.startedAt),
         actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: l10n.activeWorkoutDiscardTooltip,
-            onPressed: () => _confirmDiscard(context, notifier),
+          PopupMenuButton<_WorkoutAction>(
+            tooltip: l10n.activeWorkoutOptions,
+            onSelected: (_WorkoutAction action) => switch (action) {
+              _WorkoutAction.discard => _confirmDiscard(context, notifier),
+            },
+            itemBuilder: (BuildContext context) =>
+                <PopupMenuEntry<_WorkoutAction>>[
+              PopupMenuItem<_WorkoutAction>(
+                value: _WorkoutAction.discard,
+                child: ListTile(
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    l10n.activeWorkoutDiscardTooltip,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -365,3 +388,5 @@ class _SessionTotals extends ConsumerWidget {
     );
   }
 }
+
+enum _WorkoutAction { discard }

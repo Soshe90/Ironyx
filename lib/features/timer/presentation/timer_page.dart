@@ -14,12 +14,10 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/error_view.dart';
-import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../domain/timer_controller.dart';
 import '../domain/timer_preset.dart';
-import '../domain/timer_settings_controller.dart';
 import 'timer_preset_labels.dart';
 
 /// Timer hub (branch index 3). Quick-start presets, a custom builder, and
@@ -39,6 +37,9 @@ class TimerPage extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
             children: [
+              // The user's own presets first: they are why someone saved
+              // one. Hidden entirely until there is one to show.
+              const _SavedPresets(),
               SectionHeader(
                 title: l10n.timerQuickStartTitle,
                 subtitle: l10n.timerQuickStartSubtitle,
@@ -52,9 +53,6 @@ class TimerPage extends ConsumerWidget {
                   preset: preset,
                   onTap: () => startTimer(context, ref, preset),
                 ),
-              const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.timerSavedPresets),
-              const _SavedPresets(),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(
                 title: l10n.timerCustomTitle,
@@ -72,12 +70,6 @@ class TimerPage extends ConsumerWidget {
                   }
                 },
               ),
-              const SizedBox(height: AppSpacing.xl),
-              SectionHeader(
-                title: l10n.settingsFeedbackTitle,
-                subtitle: l10n.timerFeedbackSubtitle,
-              ),
-              const _FeedbackToggles(),
             ],
           ),
         ),
@@ -118,52 +110,40 @@ class _SavedPresets extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedTimerPresetsProvider);
-    final ThemeData theme = Theme.of(context);
+    Widget section(Widget body) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            SectionHeader(title: context.l10n.timerSavedPresets),
+            body,
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        );
 
     return saved.when(
       data: (presets) => presets.isEmpty
-          ? AppCard(
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.bookmark_border,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Text(
-                      context.l10n.timerNoSavedPresets,
-                      style: AppTypography.caption(theme),
+          ? const SizedBox.shrink()
+          : section(
+              Column(
+                children: [
+                  for (final preset in presets)
+                    _PresetCard(
+                      preset: preset,
+                      onTap: () => startTimer(context, ref, preset),
                     ),
-                  ),
                 ],
               ),
-            )
-          : Column(
-              children: [
-                for (final preset in presets)
-                  _PresetCard(
-                    preset: preset,
-                    onTap: () => startTimer(context, ref, preset),
-                  ),
-              ],
             ),
-      loading: () => const AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            LoadingShimmer(width: 140, height: 16),
-            SizedBox(height: AppSpacing.sm),
-            LoadingShimmer(width: 100, height: 12),
-          ],
-        ),
-      ),
-      error: (error, _) => AppCard(
-        child: ErrorView(
-          title: context.l10n.timerPresetsLoadFailed,
-          details: error.toString(),
-          compact: true,
-          onRetry: () => ref.invalidate(savedTimerPresetsProvider),
+      // Nothing until it resolves: a placeholder for a section that is
+      // usually absent would flash and vanish.
+      loading: () => const SizedBox.shrink(),
+      error: (error, _) => section(
+        AppCard(
+          child: ErrorView(
+            title: context.l10n.timerPresetsLoadFailed,
+            details: error.toString(),
+            compact: true,
+            onRetry: () => ref.invalidate(savedTimerPresetsProvider),
+          ),
         ),
       ),
     );
@@ -381,35 +361,6 @@ class _NumberField extends StatelessWidget {
         Theme.of(context).textTheme.bodyLarge ?? const TextStyle(),
       ),
       decoration: InputDecoration(labelText: label),
-    );
-  }
-}
-
-class _FeedbackToggles extends ConsumerWidget {
-  const _FeedbackToggles();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final TimerSettings settings = ref.watch(timerSettingsControllerProvider);
-    final TimerSettingsController controller =
-        ref.read(timerSettingsControllerProvider.notifier);
-
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          SwitchListTile(
-            title: Text(context.l10n.settingsSoundCues),
-            value: settings.soundEnabled,
-            onChanged: controller.setSoundEnabled,
-          ),
-          SwitchListTile(
-            title: Text(context.l10n.settingsHaptics),
-            value: settings.hapticsEnabled,
-            onChanged: controller.setHapticsEnabled,
-          ),
-        ],
-      ),
     );
   }
 }

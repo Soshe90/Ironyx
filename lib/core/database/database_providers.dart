@@ -153,6 +153,12 @@ Stream<List<Equipment>> equipmentStream(Ref ref) =>
 Stream<List<Workout>> workoutHistoryStream(Ref ref) =>
     ref.watch(workoutDaoProvider).watchAll();
 
+/// Every saved workout's exercise names, keyed by workout id — used to title
+/// the Tracker history rows by what was trained.
+@Riverpod(keepAlive: true)
+Stream<Map<String, List<WorkoutExerciseName>>> workoutExerciseNames(Ref ref) =>
+    ref.watch(workoutDaoProvider).watchExerciseNamesByWorkout();
+
 /// IDs of workouts containing a personal-record set — used to badge the
 /// Tracker history list.
 @Riverpod(keepAlive: true)

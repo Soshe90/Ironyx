@@ -53,7 +53,7 @@
   "settingsSoundCues": "التنبيهات الصوتية",
   "settingsSoundCuesSubtitle": "تشغيل نغمة عند تغيّر المرحلة",
   "settingsHaptics": "الاهتزاز",
-  "settingsHapticsSubtitle": "اهتزاز عند تغيّر المرحلة",
+  "settingsHapticsSubtitle": "اهتزاز عند تغيّر المرحلة وعند تسجيل مجموعة",
   "settingsDataTitle": "البيانات",
   "settingsDataSubtitle": "يحفظ Ironyx كل شيء على هذا الجهاز",
   "settingsStorageNote": "لا تغادر بيانات تدريبك هذا الجهاز إلا إذا صدّرتها بنفسك.",
@@ -494,6 +494,8 @@
   "importXlsxUnknownExercises": "هذه التمارين غير موجودة في الفهرس وستُضاف كتمارين مخصّصة:",
   "importXlsxConfirmAction": "استيراد",
 
+  "activeWorkoutMinimise": "تصغير التمرين",
+  "activeWorkoutOptions": "خيارات التمرين",
   "activeWorkoutDiscardTooltip": "تجاهل التمرين",
   "activeWorkoutAddFirstExercise": "أضف تمرينك الأول",
   "activeWorkoutAddFirstExerciseMessage": "اختر حركة وابدأ تسجيل المجموعات. تُحفظ مسوّدتك أولًا بأول.",
@@ -540,8 +542,6 @@
   "timerCustomTitle": "مخصّص",
   "timerCustomSubtitle": "أنشئ فترة زمنية ثم ابدأها أو احفظها",
   "timerPresetSaved": "تم حفظ الإعداد.",
-  "timerFeedbackSubtitle": "متاح أيضًا في الإعدادات",
-  "timerNoSavedPresets": "لا توجد إعدادات محفوظة بعد. أنشئ واحدًا بالأسفل واضغط «حفظ الإعداد» للاحتفاظ به هنا.",
   "timerPresetsLoadFailed": "تعذّر تحميل الإعدادات المحفوظة",
   "timerPresetSemantic": "ابدأ {name}، {duration} إجمالًا",
   "@timerPresetSemantic": {

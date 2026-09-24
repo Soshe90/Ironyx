@@ -281,5 +281,62 @@ void main() {
       // The old exercise row (and its cascaded set) must be gone.
       expect(details.exerciseNames.containsKey('w1_ex1'), isFalse);
     });
+
+    test(
+        'watchExerciseNamesByWorkout names every workout in one query, in '
+        'logged order', () async {
+      await exerciseDao.upsertExercises([
+        ExercisesTableCompanion.insert(
+          id: 'bench',
+          slug: 'bench',
+          name: 'Bench Press',
+          category: 'strength',
+          difficulty: 'intermediate',
+          movementPattern: 'horizontalPush',
+          seedVersion: 1,
+        ),
+      ]);
+      // Inserted squat-first but ordered bench-first, to prove the result
+      // follows order_index rather than insertion order.
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'w2',
+          startedAt: DateTime.utc(2026, 1, 2),
+        ),
+        [
+          WorkoutExercisesTableCompanion.insert(
+            id: 'w2_squat',
+            workoutId: 'w2',
+            exerciseId: 'squat',
+            orderIndex: 1,
+          ),
+          WorkoutExercisesTableCompanion.insert(
+            id: 'w2_bench',
+            workoutId: 'w2',
+            exerciseId: 'bench',
+            orderIndex: 0,
+          ),
+        ],
+        const [],
+      );
+      await insertSampleWorkout('w1');
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'empty',
+          startedAt: DateTime.utc(2026, 1, 3),
+        ),
+        const [],
+        const [],
+      );
+
+      final names = await workoutDao.watchExerciseNamesByWorkout().first;
+
+      expect(
+        names['w2']!.map((e) => e.exerciseName),
+        ['Bench Press', 'Back Squat'],
+      );
+      expect(names['w1']!.map((e) => e.exerciseId), ['squat']);
+      expect(names.containsKey('empty'), isFalse);
+    });
   });
 }

@@ -268,6 +268,37 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Filters on the same completed / non-warm-up / loaded / reps-1-12 window
   /// as [watchOneRMSeries], so the picker can never offer a lift whose chart
   /// would then come up empty.
+  /// Each saved workout's exercises, in logged order, keyed by workout id —
+  /// what the history list names a session by.
+  ///
+  /// One query for the whole history rather than one per row: the list can
+  /// hold years of sessions, and a per-tile lookup would be N+1.
+  Stream<Map<String, List<WorkoutExerciseName>>> watchExerciseNamesByWorkout() {
+    return customSelect(
+      '''
+      SELECT we.workout_id AS workout_id,
+             we.exercise_id AS exercise_id,
+             ex.name AS exercise_name
+      FROM workout_exercises_table we
+      JOIN exercises_table ex ON ex.id = we.exercise_id
+      ORDER BY we.workout_id, we.order_index
+      ''',
+      readsFrom: {workoutExercisesTable, exercisesTable},
+    ).watch().map((rows) {
+      final Map<String, List<WorkoutExerciseName>> byWorkout = {};
+      for (final r in rows) {
+        (byWorkout[r.read<String>('workout_id')] ??= <WorkoutExerciseName>[])
+            .add(
+          WorkoutExerciseName(
+            exerciseId: r.read<String>('exercise_id'),
+            exerciseName: r.read<String>('exercise_name'),
+          ),
+        );
+      }
+      return byWorkout;
+    });
+  }
+
   Stream<List<LoggedExercise>> watchLoggedExercises() {
     return customSelect(
       '''
@@ -1087,6 +1118,17 @@ class WorkoutFrequency {
 
   final DateTime weekStart;
   final int workoutCount;
+}
+
+/// One exercise of a saved workout, for naming the session in history.
+class WorkoutExerciseName {
+  const WorkoutExerciseName({
+    required this.exerciseId,
+    required this.exerciseName,
+  });
+
+  final String exerciseId;
+  final String exerciseName;
 }
 
 /// An exercise the user has logged, with how many sessions it appears in.

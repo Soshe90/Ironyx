@@ -18,7 +18,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
   static List<_Destination> _destinationsFor(AppLocalizations l10n) =>
       <_Destination>[
         _Destination(l10n.navHome, Icons.home_outlined, Icons.home),
-        _Destination(l10n.navTracker, Icons.add_box_outlined, Icons.add_box),
+        _Destination(l10n.navTracker, Icons.list_alt_outlined, Icons.list_alt),
         _Destination(
           l10n.navLibrary,
           Icons.fitness_center_outlined,
