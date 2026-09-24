@@ -32,6 +32,19 @@ create table if not exists public.backups (
   updated_at        timestamptz not null default now()
 );
 
+-- Caps what one account can store. Sign-up is open and the anon key ships
+-- in the APK, so without this anyone can create accounts and fill the
+-- project's storage with arbitrarily large rows. 5 MiB of encoded payload is
+-- decades of training (~40KB compressed per year). The app checks the same
+-- number (`kMaxBackupPayloadBytes` in cloud_backup_service.dart) so an
+-- oversized backup fails before upload; this constraint is the real limit.
+-- Change both together. The payload is base64, so its octets are its chars.
+alter table public.backups
+  drop constraint if exists backups_payload_size;
+alter table public.backups
+  add constraint backups_payload_size
+  check (octet_length(payload) <= 5242880);
+
 -- Row-level security is the only thing standing between one tester's
 -- training log and another's: the anon key is public by design and ships
 -- inside the APK, so without this every user could read every backup.
@@ -55,11 +68,17 @@ create policy "Users manage their own backup"
 -- public anon key, which must never be granted permission to delete rows from
 -- auth.users directly. The function runs as its owner, but remains scoped to
 -- the caller's auth.uid() and cannot be invoked by anonymous clients.
+--
+-- `search_path = ''` means every name inside must be schema-qualified (they
+-- are). A security-definer function that resolves names through a search
+-- path can be tricked into calling an attacker's same-named object instead;
+-- an empty path removes that option entirely. Supabase's database linter
+-- flags anything else.
 create or replace function public.delete_my_account()
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 begin
   delete from public.backups where user_id = auth.uid();

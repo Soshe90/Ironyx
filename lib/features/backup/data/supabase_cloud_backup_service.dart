@@ -1,21 +1,86 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show gzip;
+import 'dart:typed_data' show BytesBuilder;
 
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import '../domain/cloud_backup_service.dart';
 
-/// Compresses and encodes [payload] for upload. Run via [compute] rather
-/// than called directly — gzipping a multi-hundred-KB JSON payload on every
-/// backup is real, non-yielding CPU work. `compute`, not `Isolate.run`:
-/// browsers have no real isolate primitive to spawn, so `compute` is
-/// Flutter's own cross-platform-safe wrapper for exactly this — a true
-/// background isolate on native platforms, running inline in place on web
-/// rather than failing there.
-String _gzipAndBase64Encode(String payload) =>
-    base64Encode(gzip.encode(utf8.encode(payload)));
+/// Compresses and encodes [payload] for upload, refusing a result larger
+/// than [kMaxBackupPayloadBytes] (the server would reject it anyway).
+///
+/// Run via [compute] rather than called directly — gzipping a
+/// multi-hundred-KB JSON payload on every backup is real, non-yielding CPU
+/// work. `compute`, not `Isolate.run`: browsers have no real isolate
+/// primitive to spawn, so `compute` is Flutter's own cross-platform-safe
+/// wrapper for exactly this — a true background isolate on native
+/// platforms, running inline in place on web rather than failing there.
+@visibleForTesting
+String encodeBackupPayload(String payload) {
+  final String encoded = base64Encode(gzip.encode(utf8.encode(payload)));
+  if (encoded.length > kMaxBackupPayloadBytes) {
+    throw CloudBackupFailure(
+      CloudBackupFailureKind.tooLarge,
+      detail: '${encoded.length} bytes',
+    );
+  }
+  return encoded;
+}
+
+/// Reverses [encodeBackupPayload]. Throws [CloudBackupFailure] with
+/// [CloudBackupFailureKind.corrupt] for anything that is not a valid,
+/// in-bounds payload.
+///
+/// The downloaded row is treated as untrusted input. Both sizes are bounded:
+/// the encoded length before any work is done, and the decompressed length
+/// *while* decompressing, so a small payload that inflates to gigabytes is
+/// stopped after at most one extra chunk instead of after exhausting memory.
+@visibleForTesting
+String decodeBackupPayload(String encoded) {
+  if (encoded.length > kMaxBackupPayloadBytes) {
+    throw CloudBackupFailure(
+      CloudBackupFailureKind.corrupt,
+      detail: 'encoded payload is ${encoded.length} bytes',
+    );
+  }
+  try {
+    final BytesBuilder output = BytesBuilder(copy: false);
+    final ByteConversionSink sink = gzip.decoder.startChunkedConversion(
+      _CappedByteSink(output, kMaxBackupDecodedBytes),
+    );
+    sink
+      ..add(base64Decode(encoded))
+      ..close();
+    return utf8.decode(output.takeBytes());
+  } on Object catch (error) {
+    throw CloudBackupFailure(
+      CloudBackupFailureKind.corrupt,
+      detail: '$error',
+    );
+  }
+}
+
+/// Collects decompressed chunks, throwing as soon as their total passes
+/// [_limit].
+class _CappedByteSink implements Sink<List<int>> {
+  _CappedByteSink(this._output, this._limit);
+
+  final BytesBuilder _output;
+  final int _limit;
+
+  @override
+  void add(List<int> chunk) {
+    if (_output.length + chunk.length > _limit) {
+      throw StateError('backup decompresses past $_limit bytes');
+    }
+    _output.add(chunk);
+  }
+
+  @override
+  void close() {}
+}
 
 /// Supabase-backed implementation of [CloudBackupService].
 ///
@@ -69,7 +134,7 @@ class SupabaseCloudBackupService implements CloudBackupService {
         // envelope repeats the same keys on every one of several thousand
         // rows. That is the difference between a backup a tester will run
         // on mobile data and one they won't.
-        final String encoded = await compute(_gzipAndBase64Encode, payload);
+        final String encoded = await compute(encodeBackupPayload, payload);
         final Map<String, dynamic> row = await _client
             .from(_table)
             .upsert(<String, dynamic>{
@@ -101,14 +166,7 @@ class SupabaseCloudBackupService implements CloudBackupService {
         if (encoded == null || encoded.isEmpty) {
           throw const CloudBackupFailure(CloudBackupFailureKind.noBackupYet);
         }
-        try {
-          return utf8.decode(gzip.decode(base64Decode(encoded)));
-        } on Object catch (error) {
-          throw CloudBackupFailure(
-            CloudBackupFailureKind.corrupt,
-            detail: '$error',
-          );
-        }
+        return decodeBackupPayload(encoded);
       });
 
   CloudBackupInfo _toInfo(Map<String, dynamic> row) => CloudBackupInfo(
@@ -159,9 +217,11 @@ class SupabaseCloudBackupService implements CloudBackupService {
   /// privilege"; PostgREST also reports an RLS refusal as `PGRST301`. All
   /// three mean the same thing in practice here — the one-time setup SQL
   /// has not been run — so they get a message that says so instead of
-  /// "something went wrong".
+  /// "something went wrong". `23514` is a check-constraint violation, and the
+  /// only check on `backups` is the payload size limit.
   CloudBackupFailureKind _kindOf(sb.PostgrestException error) {
     return switch (error.code) {
+      '23514' => CloudBackupFailureKind.tooLarge,
       '42P01' ||
       '42501' ||
       'PGRST301' ||
