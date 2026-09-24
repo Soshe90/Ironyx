@@ -203,11 +203,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     // horizontal scroller, so the three "All" chips looked identical, the
     // group labels were easy to miss, and the last group's options ran off
     // the edge with nothing to suggest they were there.
-    return Padding(
+    // One left-aligned row that scrolls sideways, like the list below it.
+    // A Wrap here was centred by the page's Column and broke onto a second
+    // line as soon as a label grew (e.g. "Movement pattern").
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Wrap(
+      child: Row(
         spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
         children: [
           _FilterMenuChip<Muscle>(
             label: context.l10n.libraryFilterMuscle,
@@ -238,6 +241,23 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 
   Widget _buildLoadingGrid() {
+    // Placeholders take the shape of what replaces them, so the page does
+    // not jump when the catalogue arrives: rows on phones, cards on wider
+    // screens (see `_ExerciseList`).
+    if (context.breakpoint == Breakpoint.compact) {
+      return ListView.separated(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        itemCount: 8,
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+        itemBuilder: (_, __) => const _ExerciseRowSkeleton(),
+      );
+    }
     final columns = context.gridColumns;
     return GridView.builder(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -659,6 +679,36 @@ class _ExerciseCard extends StatelessWidget {
                 ),
               ],
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Skeleton for [_ExerciseRow]: same padding, thumbnail and two text lines.
+class _ExerciseRowSkeleton extends StatelessWidget {
+  const _ExerciseRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const AppCard(
+      padding: EdgeInsets.all(AppSpacing.sm),
+      child: Row(
+        children: <Widget>[
+          LoadingShimmer(
+            width: _rowThumbnailSize,
+            height: _rowThumbnailSize,
+            radius: AppRadius.sm,
+          ),
+          SizedBox(width: AppSpacing.md),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              LoadingShimmer(width: 160, height: 14),
+              SizedBox(height: AppSpacing.sm),
+              LoadingShimmer(width: 110, height: 12),
+            ],
+          ),
         ],
       ),
     );

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/page_body.dart';
 
 /// Shared shell for the three auth screens.
@@ -59,18 +58,12 @@ class AuthFormScaffold extends StatelessWidget {
                 _ErrorBanner(message: message),
                 const SizedBox(height: AppSpacing.lg),
               ],
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    for (final Widget field in fields) ...<Widget>[
-                      field,
-                      if (field != fields.last)
-                        const SizedBox(height: AppSpacing.md),
-                    ],
-                  ],
-                ),
-              ),
+              // Straight on the page: the fields are already filled
+              // surfaces, and a card around them only adds a second frame.
+              for (final Widget field in fields) ...<Widget>[
+                field,
+                if (field != fields.last) const SizedBox(height: AppSpacing.md),
+              ],
               const SizedBox(height: AppSpacing.xl),
               FilledButton(
                 onPressed: busy ? null : onSubmit,

@@ -16,7 +16,7 @@ Two layers:
 | Widget | Purpose |
 | --- | --- |
 | `PageBody` (`page_body.dart`) | Centres page content, caps its max width, applies the responsive gutter. Wrap the scroll view rather than each child so the scrollbar sits at the true screen edge on desktop. |
-| `AppCard` (`app_card.dart`) | The standard surface for grouped content. Tappable variants get an ink ripple and a semantics label so a screen reader announces the card as a single button. |
+| `AppCard` (`app_card.dart`) | The standard surface for grouped content: 16dp radius; white with a soft shadow in light mode, a hairline outline in dark. Reserve it for real objects (a workout, an exercise being logged) — form fields and single rows sit on the page. Tappable variants get an ink ripple and a semantics label so a screen reader announces the card as a single button. |
 | `SectionHeader` (`section_header.dart`) | Titles a group of content, with an optional trailing action and an optional info affordance. Gives the app one vertical rhythm for section breaks. |
 | `StickyActionBar` (`sticky_action_bar.dart`) | Pins a screen's primary commit action (finish, save) above the fold instead of leaving it at the bottom of a list that grows as you add exercises. |
 | `SheetHandle` (`sheet_handle.dart`) | The grab handle at the top of a bottom sheet. Decorative — excluded from semantics so the sheet's heading is what gets announced. |
@@ -29,6 +29,7 @@ Two layers:
 | `MetricBlock` (`metric_block.dart`) | Eyebrow label, large tabular number, caption, optional trend — the shape every fitness metric in this app takes. Deliberately *not* a card, so screens can render it straight onto a surface without nesting cards to show a number. |
 | `MetricValue` (`metric_value.dart`) | A single-line metric number that scales down to fit instead of ellipsizing. Used by `MetricBlock`, `StatStrip` and the dashboard's volume headline; use it for any headline number that could meet a narrow tile or large system text. |
 | `StatStrip`, `Stat` (`stat_strip.dart`) | A row of small stats separated by hairline rules ("volume / sets / duration"). Wraps to a second line rather than shrinking text below legibility. At most one `Stat` per strip sets `emphasis`. |
+| `ValueRow` (`value_row.dart`) | The one style for a "label … value" line inside a card (a date and its volume, an exercise and its ratio), with an optional caption under the label. Replaces dense `ListTile`s, whose own inset misaligned rows with their card heading and whose unstyled trailing text made the value smaller than the label. |
 | `TrendBadge`, `TrendDirection` (`trend_badge.dart`) | Small coloured pill with a direction arrow for "up / down / flat vs. last period". The enum is domain-neutral on purpose — features map their own trend types at the presentation boundary, which is what keeps `core/` free of feature imports. |
 | `PrBadge` (`pr_badge.dart`) | Marks a workout that set a new estimated-1RM personal record. Uses the dedicated `AppColors.personalRecord` accent so a PR reads identically everywhere and never collides with the primary action colour. |
 | `Sparkline` (`sparkline.dart`) | A minimal, axis-free trend line for embedding in a card. Not a chart — use `fl_chart` directly when you need axes, tooltips or touch. |

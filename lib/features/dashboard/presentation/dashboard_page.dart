@@ -348,7 +348,7 @@ class _ThisWeekSection extends ConsumerWidget {
       children: <Widget>[
         SectionHeader(
           title: l10n.dashboardThisWeek,
-          actionLabel: l10n.navProgress,
+          actionLabel: l10n.dashboardSeeAll,
           onAction: () => context.goNamed(Routes.progressName),
         ),
         AppCard(
@@ -716,7 +716,6 @@ class _RecentSection extends StatelessWidget {
       children: <Widget>[
         SectionHeader(title: context.l10n.dashboardRecent),
         const _LastWorkoutRow(),
-        const SizedBox(height: AppSpacing.sm),
         const _LastTimerRow(),
       ],
     );
@@ -849,21 +848,31 @@ class _LastTimerRow extends ConsumerWidget {
     final AsyncValue<TimerSession?> sessionAsync =
         ref.watch(dashboardLastTimerSessionProvider);
 
-    return _ActivityRow(
-      icon: Icons.timer_outlined,
-      title: context.l10n.dashboardLastTimer,
-      onTap: () => context.goNamed(Routes.timerName),
-      isLoading: sessionAsync.isLoading,
-      error: sessionAsync.error,
-      caption: sessionAsync.value == null
-          ? null
-          : '${sessionAsync.value!.presetName} · '
-              '${DateFormatters.of(context).relativeDay(sessionAsync.value!.startedAt)}',
-      value: sessionAsync.value?.actualDurationSeconds == null
-          ? null
-          : UnitFormatters.durationShort(
-              Duration(seconds: sessionAsync.value!.actualDurationSeconds!),
-            ),
+    // Most people never use the standalone timer; a permanent "Last timer:
+    // Nothing yet" row is a dead card on their home screen. It appears once
+    // there is something to show (loading and errors still render).
+    if (sessionAsync.hasValue && sessionAsync.value == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: _ActivityRow(
+        icon: Icons.timer_outlined,
+        title: context.l10n.dashboardLastTimer,
+        onTap: () => context.goNamed(Routes.timerName),
+        isLoading: sessionAsync.isLoading,
+        error: sessionAsync.error,
+        caption: sessionAsync.value == null
+            ? null
+            : '${sessionAsync.value!.presetName} · '
+                '${DateFormatters.of(context).relativeDay(sessionAsync.value!.startedAt)}',
+        value: sessionAsync.value?.actualDurationSeconds == null
+            ? null
+            : UnitFormatters.durationShort(
+                Duration(seconds: sessionAsync.value!.actualDurationSeconds!),
+              ),
+      ),
     );
   }
 }

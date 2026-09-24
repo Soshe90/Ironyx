@@ -28,6 +28,8 @@ import '../domain/onboarding_controller.dart';
 class WelcomePage extends ConsumerWidget {
   const WelcomePage({super.key});
 
+  static const double _markSize = 72;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
@@ -63,53 +65,79 @@ class WelcomePage extends ConsumerWidget {
             child: SafeArea(
               bottom: false,
               child: PageBody(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                  children: <Widget>[
-                    Icon(
-                      Icons.fitness_center,
-                      size: AppSpacing.xxl,
-                      color: scheme.primary,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      l10n.appTitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
+                // Centred when it fits, scrolls when it doesn't (small phones,
+                // large text). A plain ListView pinned the pitch to the top
+                // over an empty middle whenever the action bar was short.
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: (constraints.maxHeight - 2 * AppSpacing.xl)
+                            .clamp(0, double.infinity),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Center(
+                            child: Container(
+                              width: _markSize,
+                              height: _markSize,
+                              decoration: BoxDecoration(
+                                color: scheme.primaryContainer,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.fitness_center,
+                                size: AppSpacing.xxl,
+                                color: scheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            l10n.appTitle,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            l10n.welcomeTagline,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          _Feature(
+                            icon: Icons.checklist_rtl,
+                            title: l10n.welcomeFeatureLogTitle,
+                            detail: l10n.welcomeFeatureLogDetail,
+                          ),
+                          _Feature(
+                            icon: Icons.calendar_month_outlined,
+                            title: l10n.welcomeFeatureProgramsTitle,
+                            detail: l10n.welcomeFeatureProgramsDetail,
+                          ),
+                          _Feature(
+                            icon: Icons.timer_outlined,
+                            title: l10n.welcomeFeatureTimerTitle,
+                            detail: l10n.welcomeFeatureTimerDetail,
+                          ),
+                          _Feature(
+                            icon: Icons.show_chart,
+                            title: l10n.welcomeFeatureChartsTitle,
+                            detail: l10n.welcomeFeatureChartsDetail,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      l10n.welcomeTagline,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    _Feature(
-                      icon: Icons.checklist_rtl,
-                      title: l10n.welcomeFeatureLogTitle,
-                      detail: l10n.welcomeFeatureLogDetail,
-                    ),
-                    _Feature(
-                      icon: Icons.calendar_month_outlined,
-                      title: l10n.welcomeFeatureProgramsTitle,
-                      detail: l10n.welcomeFeatureProgramsDetail,
-                    ),
-                    _Feature(
-                      icon: Icons.timer_outlined,
-                      title: l10n.welcomeFeatureTimerTitle,
-                      detail: l10n.welcomeFeatureTimerDetail,
-                    ),
-                    _Feature(
-                      icon: Icons.show_chart,
-                      title: l10n.welcomeFeatureChartsTitle,
-                      detail: l10n.welcomeFeatureChartsDetail,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

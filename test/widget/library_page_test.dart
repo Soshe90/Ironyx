@@ -152,7 +152,7 @@ void main() {
     testWidgets('displays exercise list', (tester) async {
       await pumpLibrary(tester);
 
-      expect(find.text('Exercise Library'), findsOneWidget);
+      expect(find.text('Exercise library'), findsOneWidget);
       expect(find.text('Barbell Bench Press'), findsOneWidget);
       expect(find.text('Back Squat'), findsOneWidget);
       expect(find.text('Push-Up'), findsOneWidget);

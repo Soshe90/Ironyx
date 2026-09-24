@@ -114,5 +114,14 @@ void main() {
         );
       });
     });
+
+    group('weight rate', () {
+      test('shows one decimal, never two and never rounded to zero', () {
+        expect(UnitFormatters.weightRate(11.84, WeightUnit.kg), '11.8 kg');
+        expect(UnitFormatters.weightRate(0.4, WeightUnit.kg), '0.4 kg');
+        expect(UnitFormatters.weightRate(-2, WeightUnit.kg), '-2.0 kg');
+        expect(UnitFormatters.weightRate(10, WeightUnit.lb), '22.0 lb');
+      });
+    });
   });
 }

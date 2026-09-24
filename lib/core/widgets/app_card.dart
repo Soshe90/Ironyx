@@ -25,7 +25,8 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final BorderRadius radius = BorderRadius.circular(AppRadius.xl);
+    final bool light = scheme.brightness == Brightness.light;
+    final BorderRadius radius = BorderRadius.circular(AppRadius.lg);
 
     final Widget content = DecoratedBox(
       decoration: BoxDecoration(
@@ -35,15 +36,25 @@ class AppCard extends StatelessWidget {
       child: Padding(padding: padding, child: child),
     );
 
+    // One separation cue per theme, not three. Light: a white card lifted
+    // off the tinted background by a soft shadow — an outline on top of
+    // that was the main source of visual noise. Dark: shadows don't read on
+    // charcoal and the fill step is small, so a hairline does the work.
     final Widget card = Material(
-      color: gradient == null ? scheme.surfaceContainerLow : Colors.transparent,
-      elevation: gradient == null ? 1 : 0,
-      shadowColor: scheme.shadow.withValues(alpha: 0.12),
+      color: gradient != null
+          ? Colors.transparent
+          : light
+              ? scheme.surfaceContainerLowest
+              : scheme.surfaceContainerLow,
+      elevation: gradient == null && light ? 1 : 0,
+      shadowColor: scheme.shadow.withValues(alpha: 0.10),
       shape: RoundedRectangleBorder(
         borderRadius: radius,
-        side: BorderSide(
-          color: scheme.outlineVariant.withValues(alpha: 0.7),
-        ),
+        side: light
+            ? BorderSide.none
+            : BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.7),
+              ),
       ),
       clipBehavior: Clip.antiAlias,
       child: onTap == null ? content : InkWell(onTap: onTap, child: content),

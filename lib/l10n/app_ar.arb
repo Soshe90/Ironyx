@@ -39,10 +39,8 @@
   "prBadge": "رقم قياسي",
 
   "settingsLanguageTitle": "اللغة",
-  "settingsLanguageSubtitle": "يسري التغيير فورًا دون إعادة تشغيل",
   "settingsLanguageSystem": "حسب إعدادات الجهاز",
   "settingsAppearanceTitle": "المظهر",
-  "settingsAppearanceSubtitle": "الوضع الداكن مظهر أصيل وليس مجرد عكس للألوان",
   "settingsThemeSystem": "النظام",
   "settingsThemeLight": "فاتح",
   "settingsThemeDark": "داكن",
@@ -660,6 +658,7 @@
       "count": { "type": "int" }
     }
   },
+  "dashboardSeeAll": "عرض الكل",
   "dashboardRecent": "الأحدث",
   "dashboardNothingYet": "لا شيء بعد",
   "dashboardLastWorkout": "آخر تمرين",
@@ -1014,9 +1013,11 @@
   "progressExerciseWithSessions": "{exercise} · {sessions}",
   "@progressExerciseWithSessions": { "placeholders": { "exercise": { "type": "String" }, "sessions": { "type": "String" } } },
   "progressExerciseRangeEmpty": "لا توجد مجموعات مكتملة لهذا التمرين ضمن الفترة المحدّدة.",
-  "progressOneRmFromSessions": "بدأ من {estimate} على مدى {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستين} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}}",
+  "progressEmptyTitle": "يبدأ تقدّمك من هنا",
+  "progressEmptyMessage": "سجّل أول تمرين لك وستظهر هنا قوتك وحجم تدريبك ومدى انتظامك.",
+  "progressOneRmFromSessions": "بدأ من {estimate} على مدى {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستين} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}} في هذه الفترة",
   "@progressOneRmFromSessions": { "placeholders": { "estimate": { "type": "String" }, "count": { "type": "int" } } },
-  "progressOneRmMonthlyTrend": "{change} شهريًا · {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستان} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}}",
+  "progressOneRmMonthlyTrend": "{change} شهريًا · {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستان} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}} في هذه الفترة",
   "@progressOneRmMonthlyTrend": { "placeholders": { "change": { "type": "String" }, "count": { "type": "int" } } },
   "progressOneDataPoint": "نقطة بيانات واحدة ضمن هذه الفترة",
   "progressSessionVolumeTitle": "حجم الجلسة التدريبي",

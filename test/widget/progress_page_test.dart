@@ -353,4 +353,28 @@ void main() {
       await disposeApp(tester);
     });
   });
+
+  testWidgets(
+      'with nothing logged, shows one invitation to start a workout instead '
+      'of a stack of empty charts', (tester) async {
+    final AppDatabase empty = AppDatabase.forTesting();
+    await pumpApp(
+      tester,
+      overrides: [appDatabaseProvider.overrideWithValue(empty)],
+      initialLocation: '/progress',
+      prefs: const <String, Object>{'exercise_seed_version': 999999},
+      surfaceSize: const Size(400, 2000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your progress starts here'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Start workout'), findsOneWidget);
+    // Body measurements can be logged before any workout, so they stay.
+    expect(find.text('Body metrics'), findsOneWidget);
+    expect(find.byType(LineChart), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+    await empty.close();
+  });
 }

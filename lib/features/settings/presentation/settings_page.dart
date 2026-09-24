@@ -55,19 +55,13 @@ class SettingsPage extends ConsumerWidget {
             // account, and someone who has just signed in on a fresh
             // install is exactly the person looking for it.
             const CloudBackupSection(),
-            SectionHeader(
-              title: l10n.settingsLanguageTitle,
-              subtitle: l10n.settingsLanguageSubtitle,
-            ),
+            SectionHeader(title: l10n.settingsLanguageTitle),
             const AppCard(
               padding: EdgeInsets.zero,
               child: _LanguageSection(),
             ),
             const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
-              title: l10n.settingsAppearanceTitle,
-              subtitle: l10n.settingsAppearanceSubtitle,
-            ),
+            SectionHeader(title: l10n.settingsAppearanceTitle),
             AppCard(
               child: SegmentedButton<ThemeMode>(
                 segments: <ButtonSegment<ThemeMode>>[

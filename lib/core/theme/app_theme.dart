@@ -180,13 +180,16 @@ abstract final class AppTheme {
         circularTrackColor: scheme.surfaceContainerHighest,
       ),
       cardTheme: CardThemeData(
-        color: scheme.surfaceContainerLow,
+        color:
+            isDark ? scheme.surfaceContainerLow : scheme.surfaceContainerLowest,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          side: BorderSide(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: isDark
+              ? BorderSide(color: scheme.outlineVariant)
+              : BorderSide.none,
         ),
       ),
       snackBarTheme: SnackBarThemeData(
