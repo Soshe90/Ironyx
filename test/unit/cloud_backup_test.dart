@@ -207,6 +207,43 @@ void main() {
       expect(cloud.uploads, 0);
     });
 
+    test(
+        'restoreFromCloud refuses when local data is linked to a different '
+        'account, before downloading or replacing anything', () async {
+      // Same deep-link scenario as the backup guard above, in the other
+      // direction: restoring would replace user-1's data on this device
+      // with user-2's backup without the conflict dialog ever asking.
+      await seedWorkout(database, 'local_w', 100);
+      cloud.payload = 'unreachable if the guard works';
+      container = await containerFor(
+        database,
+        user: const AuthUser(
+          id: 'user-2',
+          email: 'other@example.com',
+          isEmailConfirmed: true,
+        ),
+      );
+      await container.read(profileDaoProvider).linkAccount(
+            userId: 'user-1',
+            email: 'tester@example.com',
+          );
+
+      await expectLater(
+        container
+            .read(cloudBackupControllerProvider.notifier)
+            .restoreFromCloud(),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.accountMismatch,
+          ),
+        ),
+      );
+      final local = await WorkoutDao(database).watchAll().first;
+      expect(local.map((w) => w.id), ['local_w']);
+    });
+
     test('backUpNow completes even though nothing listens to the controller',
         () async {
       // The regression this guards: Settings reads the notifier from a tap
@@ -298,16 +335,17 @@ void main() {
     });
 
     test(
-        'a backup from a different schema fails as corrupt and leaves '
+        'a backup from a newer schema fails as corrupt and leaves '
         'local data untouched', () async {
       await seedWorkout(database, 'w1', 100);
       container = await containerFor(database);
       await container.read(cloudBackupControllerProvider.notifier).backUpNow();
       await seedWorkout(database, 'w_local', 60);
 
-      // The realistic case: a backup taken before an app update that
-      // migrated the database. `parseImport` accepts it; only `applyImport`
-      // knows the schema no longer matches.
+      // A backup taken on a newer app version (e.g. another device that
+      // updated first). `parseImport` accepts it; only `applyImport` knows
+      // this build cannot read that schema. Older schemas are upgraded
+      // instead — see export_schema_upgrade_test.dart.
       cloud.payload = cloud.payload!.replaceFirst(
         '"dbSchemaVersion":${database.schemaVersion}',
         '"dbSchemaVersion":${database.schemaVersion + 1}',

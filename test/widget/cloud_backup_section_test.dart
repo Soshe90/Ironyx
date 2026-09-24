@@ -155,8 +155,12 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(cloud.downloads, 1);
 
-    // Finish the restore (as a corrupt backup, so nothing is written).
-    download.complete('not an export envelope');
+    // Finish the restore. A failed download ends it without reaching the
+    // parser, which runs on a background isolate that a widget test's fake
+    // clock never waits for.
+    download.completeError(
+      const CloudBackupFailure(CloudBackupFailureKind.offline),
+    );
     await tester.pumpAndSettle();
 
     expect(tileTitled(tester, 'Restore from my account').enabled, isTrue);

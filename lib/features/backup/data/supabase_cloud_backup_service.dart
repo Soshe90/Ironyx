@@ -166,7 +166,8 @@ class SupabaseCloudBackupService implements CloudBackupService {
         if (encoded == null || encoded.isEmpty) {
           throw const CloudBackupFailure(CloudBackupFailureKind.noBackupYet);
         }
-        return decodeBackupPayload(encoded);
+        // Off the UI isolate for the same reason the upload's encode is.
+        return compute(decodeBackupPayload, encoded);
       });
 
   CloudBackupInfo _toInfo(Map<String, dynamic> row) => CloudBackupInfo(

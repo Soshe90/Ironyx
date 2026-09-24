@@ -121,12 +121,22 @@ class CloudBackupController extends _$CloudBackupController {
   Future<void> restoreFromCloud() async {
     final database = ref.read(appDatabaseProvider);
     final CloudBackupService cloud = ref.read(cloudBackupServiceProvider);
+    // Same guard as `backUpNow`, in the other direction: with the session
+    // switched underneath the app (a deep link), restoring would replace
+    // another account's data on this device without the conflict dialog
+    // ever asking. Checked before downloading anything.
+    final AuthUser? user = ref.read(authControllerProvider);
+    if (user != null &&
+        await ref.read(profileDaoProvider).hasConflictingAccount(user.id)) {
+      throw const CloudBackupFailure(CloudBackupFailureKind.accountMismatch);
+    }
     final String snapshotDir = await ref.read(snapshotDirectoryProvider.future);
     final String payload = await cloud.download();
     const DataExportService service = DataExportService();
 
     try {
-      final ImportEnvelope envelope = service.parseImport(payload);
+      final ImportEnvelope envelope =
+          await service.parseImportInBackground(payload);
       // `applyImport` validates too — schema version and every row — and
       // throws the same exception before it touches the database. The
       // realistic trigger is a backup taken before an app update migrated

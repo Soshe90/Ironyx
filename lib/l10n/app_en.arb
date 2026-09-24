@@ -91,7 +91,7 @@
   "backupErrorNoBackupYet": "There's no backup stored for this account yet.",
   "backupErrorOffline": "Couldn't reach the server. Check your connection and try again.",
   "backupErrorCorrupt": "That backup couldn't be read. It may have been made by a newer version of the app.",
-  "backupErrorAccountMismatch": "This device's local data is linked to a different account. Sign out, then sign back in with that account before backing up.",
+  "backupErrorAccountMismatch": "This device's local data is linked to a different account. Sign out, then sign back in with that account first.",
   "backupErrorTooLarge": "This backup is too large to store with your account. Use Settings → Data → Export data to save it as a file instead.",
   "backupErrorUnknown": "Something went wrong. Try again.",
 
