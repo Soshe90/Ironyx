@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show compute;
 import '../../features/settings/domain/export_envelope.dart';
 import '../database/app_database.dart';
 import '../error_reporting.dart';
+import 'export_schema_upgrades.dart';
 
 /// App version written into every export envelope (ADR-7). Kept as a plain
 /// constant rather than pulling in `package_info_plus` — the app has no
@@ -43,6 +44,13 @@ String _encodeExportEnvelope(_ExportEnvelopeData data) {
       indent ? const JsonEncoder.withIndent('  ') : const JsonEncoder();
   return encoder.convert(envelope);
 }
+
+/// [ImportEnvelope.parse] for [compute], which needs a top-level function.
+/// Decoding a large export is the mirror image of encoding one above.
+ImportEnvelope _parseExportEnvelope(String jsonContent) => ImportEnvelope.parse(
+      jsonContent,
+      currentFormatVersion: DataExportService.formatVersion,
+    );
 
 /// Reads, writes, and applies the ADR-7 versioned export envelope, and the
 /// destructive "delete all data" flow. The only file this ADR allows
@@ -193,10 +201,15 @@ class DataExportService {
   /// Parses and validates an export file's contents. Throws
   /// [ImportValidationException] (safe to show directly to the user) if the
   /// file isn't a valid, current-version Ironyx export.
-  ImportEnvelope parseImport(String jsonContent) => ImportEnvelope.parse(
-        jsonContent,
-        currentFormatVersion: formatVersion,
-      );
+  ImportEnvelope parseImport(String jsonContent) =>
+      _parseExportEnvelope(jsonContent);
+
+  /// [parseImport] off the UI isolate, for callers already awaiting
+  /// something slow (a download) where a multi-megabyte decode would
+  /// otherwise land as a dropped frame. Throws the same
+  /// [ImportValidationException].
+  Future<ImportEnvelope> parseImportInBackground(String jsonContent) =>
+      compute(_parseExportEnvelope, jsonContent);
 
   /// Applies a validated envelope inside a single transaction, preceded by
   /// automatic snapshot of the current database (ADR-7's safety net —
@@ -228,19 +241,16 @@ class DataExportService {
 
   Future<void> _applyImport(
     AppDatabase db,
-    ImportEnvelope envelope, {
+    ImportEnvelope original, {
     required ImportMode mode,
     required String snapshotDirPath,
     required bool createSnapshot,
     required bool preserveCatalogue,
   }) async {
-    if (envelope.dbSchemaVersion != db.schemaVersion) {
-      throw ImportValidationException(
-        'This backup uses database schema ${envelope.dbSchemaVersion}, '
-        'but this app uses schema ${db.schemaVersion}. Update or migrate '
-        'the backup before importing.',
-      );
-    }
+    // Refuses newer and too-old schemas; upgrades everything in between so
+    // a backup survives app updates (ADR-7).
+    final ImportEnvelope envelope =
+        upgradeEnvelope(original, toSchemaVersion: db.schemaVersion);
 
     final List<String> tableOrder =
         db.allTables.map((t) => t.actualTableName).toList();
@@ -294,15 +304,6 @@ class DataExportService {
       preserveCatalogue: preserveCatalogue,
     );
 
-    if (createSnapshot) {
-      final String snapshotJson = await buildJsonExport(db);
-      final File snapshotFile = File(
-        '$snapshotDirPath/pre_import_snapshot_'
-        '${DateTime.now().toUtc().millisecondsSinceEpoch}.json',
-      );
-      await snapshotFile.writeAsString(snapshotJson);
-    }
-
     // Preserve a populated local catalogue during replace so restoring an
     // older backup cannot downgrade it. An empty catalogue is allowed to be
     // restored, which keeps import useful for a fresh database.
@@ -327,6 +328,27 @@ class DataExportService {
         mode == ImportMode.replace &&
         protectedCatalogueTables.contains(tableName);
 
+    // A protected catalogue is kept as it is, but exercises the backup
+    // needs and this device lacks must still arrive: custom exercises (user
+    // data that happens to live in the catalogue table) and retired seed
+    // exercises a logged workout still uses. Without them every workout
+    // referencing one fails its foreign key and the whole restore is lost.
+    // Existing rows are never touched, so the catalogue still cannot be
+    // downgraded (ADR-7).
+    final List<Map<String, Object?>> missingExercises =
+        skipInReplace('exercises_table')
+            ? await _exercisesMissingLocally(db, envelope)
+            : const [];
+
+    if (createSnapshot) {
+      final String snapshotJson = await buildJsonExport(db);
+      final File snapshotFile = File(
+        '$snapshotDirPath/pre_import_snapshot_'
+        '${DateTime.now().toUtc().millisecondsSinceEpoch}.json',
+      );
+      await snapshotFile.writeAsString(snapshotJson);
+    }
+
     await db.transaction(() async {
       if (mode == ImportMode.replace) {
         for (final tableName in tableOrder.reversed) {
@@ -338,9 +360,14 @@ class DataExportService {
       }
 
       for (final tableName in tableOrder) {
-        if (skipInReplace(tableName)) continue;
-        final List<Map<String, Object?>> rows =
-            envelope.tables[tableName] ?? const [];
+        final List<Map<String, Object?>> rows;
+        if (!skipInReplace(tableName)) {
+          rows = envelope.tables[tableName] ?? const [];
+        } else if (tableName == 'exercises_table') {
+          rows = missingExercises;
+        } else {
+          continue;
+        }
         if (rows.isEmpty) continue;
 
         final Set<String> rowColumns = {
@@ -374,6 +401,58 @@ class DataExportService {
     if (createSnapshot) {
       await _cleanupSnapshots(snapshotDirPath);
     }
+  }
+
+  /// The backup's exercises that this device lacks and the backup needs:
+  /// custom ones, and any a backed-up workout or template uses. An unused
+  /// retired seed row is left out — nothing needs it, and it should not be
+  /// able to block a restore.
+  ///
+  /// Throws [ImportValidationException] if one would collide with a local
+  /// exercise's unique name or slug — raised here, before the snapshot and
+  /// the transaction, rather than as a raw SQLite error halfway through.
+  Future<List<Map<String, Object?>>> _exercisesMissingLocally(
+    AppDatabase db,
+    ImportEnvelope envelope,
+  ) async {
+    final Set<Object?> used = {
+      for (final table in const [
+        'workout_exercises_table',
+        'template_exercises_table',
+      ])
+        for (final row
+            in envelope.tables[table] ?? const <Map<String, Object?>>[])
+          row['exercise_id'],
+    };
+    final local = await db
+        .customSelect('SELECT id, slug, name FROM exercises_table')
+        .get();
+    final Set<String> localIds = {for (final r in local) r.read<String>('id')};
+    final Set<String> localSlugs = {
+      for (final r in local) r.read<String>('slug'),
+    };
+    final Set<String> localNames = {
+      for (final r in local) r.read<String>('name'),
+    };
+
+    final List<Map<String, Object?>> missing = [
+      for (final row in envelope.tables['exercises_table'] ??
+          const <Map<String, Object?>>[])
+        if (!localIds.contains(row['id']) &&
+            (row['is_custom'] == 1 || used.contains(row['id'])))
+          row,
+    ];
+    for (final row in missing) {
+      if (localNames.contains(row['name']) ||
+          localSlugs.contains(row['slug'])) {
+        throw ImportValidationException(
+          'This backup contains an exercise "${row['name']}" that this '
+          'device already has under a different id, so it cannot be '
+          'restored without renaming one of them.',
+        );
+      }
+    }
+    return missing;
   }
 
   Future<List<File>> listSnapshots(String snapshotDirPath) async {
