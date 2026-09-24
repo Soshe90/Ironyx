@@ -194,6 +194,14 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(failure.messageFor(l10n))));
+    } on Object catch (error) {
+      // Unmapped, so a bug rather than something the user can fix — same
+      // rule as `_backUp`. Without this, "Restoring…" stays up forever and
+      // the user cannot tell whether their data was replaced.
+      if (kDebugMode) debugPrint('[restore] $error');
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.backupErrorUnknown)));
     }
   }
 }

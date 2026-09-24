@@ -125,9 +125,19 @@ class CloudBackupController extends _$CloudBackupController {
     final String payload = await cloud.download();
     const DataExportService service = DataExportService();
 
-    final ImportEnvelope envelope;
     try {
-      envelope = service.parseImport(payload);
+      final ImportEnvelope envelope = service.parseImport(payload);
+      // `applyImport` validates too — schema version and every row — and
+      // throws the same exception before it touches the database. The
+      // realistic trigger is a backup taken before an app update migrated
+      // the schema, so it must be translated here as well, not only the
+      // parser's.
+      await service.applyImport(
+        database,
+        envelope,
+        mode: ImportMode.replace,
+        snapshotDirPath: snapshotDir,
+      );
     } on ImportValidationException catch (error) {
       // A backup that fails validation is corrupt or from an incompatible
       // build. Either way the user cannot act on the raw parser message.
@@ -136,12 +146,5 @@ class CloudBackupController extends _$CloudBackupController {
         detail: error.message,
       );
     }
-
-    await service.applyImport(
-      database,
-      envelope,
-      mode: ImportMode.replace,
-      snapshotDirPath: snapshotDir,
-    );
   }
 }

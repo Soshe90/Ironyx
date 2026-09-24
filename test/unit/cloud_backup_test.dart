@@ -297,6 +297,38 @@ void main() {
       );
     });
 
+    test(
+        'a backup from a different schema fails as corrupt and leaves '
+        'local data untouched', () async {
+      await seedWorkout(database, 'w1', 100);
+      container = await containerFor(database);
+      await container.read(cloudBackupControllerProvider.notifier).backUpNow();
+      await seedWorkout(database, 'w_local', 60);
+
+      // The realistic case: a backup taken before an app update that
+      // migrated the database. `parseImport` accepts it; only `applyImport`
+      // knows the schema no longer matches.
+      cloud.payload = cloud.payload!.replaceFirst(
+        '"dbSchemaVersion":${database.schemaVersion}',
+        '"dbSchemaVersion":${database.schemaVersion + 1}',
+      );
+
+      await expectLater(
+        container
+            .read(cloudBackupControllerProvider.notifier)
+            .restoreFromCloud(),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.corrupt,
+          ),
+        ),
+      );
+      final local = await WorkoutDao(database).watchAll().first;
+      expect(local.map((w) => w.id), containsAll(['w1', 'w_local']));
+    });
+
     test('status is null when signed out, without calling the backend',
         () async {
       container = await containerFor(database, user: null);
