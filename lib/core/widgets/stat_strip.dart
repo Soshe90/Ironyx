@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'metric_value.dart';
 
 /// One cell in a [StatStrip].
 class Stat {
@@ -64,7 +65,7 @@ class StatStrip extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      Text(
+                      MetricValue(
                         stats[i].value,
                         style: AppTypography.cardMetric(
                           scheme,
@@ -72,8 +73,6 @@ class StatStrip extends StatelessWidget {
                               ? AppTypography.metricSizeMd
                               : AppTypography.metricSizeSm,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

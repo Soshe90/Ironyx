@@ -18,6 +18,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
+import '../../../core/widgets/metric_value.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/section_header.dart';
@@ -459,13 +460,12 @@ class _WeekBody extends StatelessWidget {
                   Row(
                     children: <Widget>[
                       Flexible(
-                        child: Text(
+                        child: MetricValue(
                           UnitFormatters.volume(snapshot.volumeKg, unit),
                           style: AppTypography.cardMetric(
                             scheme,
                             size: AppTypography.metricSizeLg,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (trend != null) ...<Widget>[

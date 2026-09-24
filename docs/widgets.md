@@ -27,6 +27,7 @@ Two layers:
 | Widget | Purpose |
 | --- | --- |
 | `MetricBlock` (`metric_block.dart`) | Eyebrow label, large tabular number, caption, optional trend — the shape every fitness metric in this app takes. Deliberately *not* a card, so screens can render it straight onto a surface without nesting cards to show a number. |
+| `MetricValue` (`metric_value.dart`) | A single-line metric number that scales down to fit instead of ellipsizing. Used by `MetricBlock`, `StatStrip` and the dashboard's volume headline; use it for any headline number that could meet a narrow tile or large system text. |
 | `StatStrip`, `Stat` (`stat_strip.dart`) | A row of small stats separated by hairline rules ("volume / sets / duration"). Wraps to a second line rather than shrinking text below legibility. At most one `Stat` per strip sets `emphasis`. |
 | `TrendBadge`, `TrendDirection` (`trend_badge.dart`) | Small coloured pill with a direction arrow for "up / down / flat vs. last period". The enum is domain-neutral on purpose — features map their own trend types at the presentation boundary, which is what keeps `core/` free of feature imports. |
 | `PrBadge` (`pr_badge.dart`) | Marks a workout that set a new estimated-1RM personal record. Uses the dedicated `AppColors.personalRecord` accent so a PR reads identically everywhere and never collides with the primary action colour. |

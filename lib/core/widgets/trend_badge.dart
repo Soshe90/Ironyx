@@ -19,10 +19,24 @@ class TrendBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final (Color color, IconData icon) = switch (direction) {
-      TrendDirection.up => (AppColors.gain, Icons.arrow_upward_rounded),
-      TrendDirection.down => (AppColors.loss, Icons.arrow_downward_rounded),
-      TrendDirection.flat => (scheme.onSurfaceVariant, Icons.remove_rounded),
+    final bool light = scheme.brightness == Brightness.light;
+    // `color` tints the pill; `ink` draws on it (see AppColors.gainInkLight).
+    final (Color color, Color ink, IconData icon) = switch (direction) {
+      TrendDirection.up => (
+          AppColors.gain,
+          light ? AppColors.gainInkLight : AppColors.gain,
+          Icons.arrow_upward_rounded,
+        ),
+      TrendDirection.down => (
+          AppColors.loss,
+          light ? AppColors.lossInkLight : AppColors.loss,
+          Icons.arrow_downward_rounded,
+        ),
+      TrendDirection.flat => (
+          scheme.onSurfaceVariant,
+          scheme.onSurfaceVariant,
+          Icons.remove_rounded,
+        ),
     };
 
     return Container(
@@ -37,13 +51,13 @@ class TrendBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(icon, size: 12, color: color),
+          Icon(icon, size: 12, color: ink),
           if (label != null) ...<Widget>[
             const SizedBox(width: AppSpacing.xxs),
             Text(
               label!,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
+                    color: ink,
                     fontWeight: FontWeight.w600,
                   ),
             ),

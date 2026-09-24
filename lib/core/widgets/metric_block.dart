@@ -5,6 +5,7 @@ import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import 'error_view.dart';
 import 'loading_shimmer.dart';
+import 'metric_value.dart';
 import 'trend_badge.dart';
 
 /// Eyebrow label, big tabular number, caption, optional trend — the shape
@@ -95,10 +96,9 @@ class MetricBlock extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               Flexible(
-                child: Text(
+                child: MetricValue(
                   value ?? '—',
                   style: AppTypography.cardMetric(scheme, size: size),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (trend != null) ...<Widget>[
@@ -107,13 +107,18 @@ class MetricBlock extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(
-            caption ?? emptyCaption ?? context.l10n.metricNoDataYet,
-            style: AppTypography.caption(theme),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+          // The empty wording only when there is genuinely nothing to show —
+          // under a real value it contradicts it ("57m / Complete a workout
+          // to see this").
+          if (caption != null || value == null) ...<Widget>[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              caption ?? emptyCaption ?? context.l10n.metricNoDataYet,
+              style: AppTypography.caption(theme),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ],
     );
