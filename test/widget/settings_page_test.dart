@@ -150,6 +150,47 @@ void main() {
       expect(enabledButton.onPressed, isNotNull);
     });
 
+    // Found on a real phone: the field autofocuses, the keyboard takes most
+    // of the screen, and the dialog's content overflowed. No keyboard exists
+    // under test, so this fakes one with a bottom inset of the same size.
+    testWidgets(
+        'the delete-all dialog still fits with the keyboard open on a '
+        'small phone', (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        surfaceSize: const Size(360, 640),
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Delete all data'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete all data'));
+      await tester.pumpAndSettle();
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // The field can still be reached and used.
+      await tester.ensureVisible(find.byType(TextField));
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Delete everything'),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    });
+
     testWidgets(
         'tapping Delete everything actually deletes data and reseeds '
         'built-in programs', (tester) async {

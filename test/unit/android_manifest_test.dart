@@ -82,4 +82,26 @@ void main() {
     // pre-granted and would need a settings-screen prompt the app lacks.
     expect(match!.group(0), contains('android:maxSdkVersion="32"'));
   });
+
+  // Not the manifest, but the same kind of guard: a build-file rule no Dart
+  // test can observe. Without the suffix, a debug or on-device test build
+  // replaces a release install of the real app and Android deletes its data
+  // with it. That happened once (2026-09-29); the real proof is the checks
+  // in scripts/run_device_tests.sh, and this keeps the rule from going.
+  test('debug builds get their own application id', () {
+    final String gradle = File('android/app/build.gradle.kts')
+        .readAsStringSync()
+        .replaceAll(RegExp(r'//[^\n]*'), '');
+
+    expect(gradle, contains('applicationId = "com.soshe90.ironyx"'));
+    expect(
+      RegExp(r'debug\s*\{\s*applicationIdSuffix = "\.debug"').hasMatch(gradle),
+      isTrue,
+      reason: 'buildTypes.debug must set applicationIdSuffix = ".debug"',
+    );
+    // Release keeps the store id.
+    final String release =
+        RegExp(r'release\s*\{.*', dotAll: true).firstMatch(gradle)!.group(0)!;
+    expect(release, isNot(contains('applicationIdSuffix')));
+  });
 }
