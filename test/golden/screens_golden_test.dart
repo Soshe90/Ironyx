@@ -168,10 +168,33 @@ String _draftJson() => jsonEncode(<String, dynamic>{
       ],
     });
 
-/// Loads the real Roboto and MaterialIcons faces so the screenshots show
-/// text and icons instead of the test font's filled boxes.
+/// Loads the app's bundled Barlow faces, plus Roboto and MaterialIcons from
+/// the SDK, so the screenshots show text and icons instead of the test
+/// font's filled boxes.
 Future<void> _loadFonts() async {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  // The same files `pubspec.yaml` ships; tests run from the project root.
+  Future<void> loadBundled(String family, List<String> files) async {
+    final FontLoader loader = FontLoader(family);
+    for (final String file in files) {
+      loader.addFont(Future<ByteData>.value(
+        ByteData.sublistView(File('assets/fonts/$file').readAsBytesSync()),
+      ));
+    }
+    await loader.load();
+  }
+
+  await loadBundled('Barlow', <String>[
+    'Barlow-Regular.ttf',
+    'Barlow-Medium.ttf',
+    'Barlow-SemiBold.ttf',
+    'Barlow-Bold.ttf',
+  ]);
+  await loadBundled('BarlowCondensed', <String>[
+    'BarlowCondensed-SemiBold.ttf',
+    'BarlowCondensed-Bold.ttf',
+  ]);
 
   final String? root = _flutterRoot();
   if (root == null) return;

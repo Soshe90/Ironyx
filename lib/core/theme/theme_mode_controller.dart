@@ -42,10 +42,12 @@ class ThemeModeController extends _$ThemeModeController {
     await set(next);
   }
 
+  /// Dark is the app's primary look, so a fresh install (nothing stored)
+  /// opens dark. A stored choice, including "system", is always kept.
   static ThemeMode _decode(String? value) => switch (value) {
         'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
+        'system' => ThemeMode.system,
+        _ => ThemeMode.dark,
       };
 
   static String _encode(ThemeMode mode) => switch (mode) {

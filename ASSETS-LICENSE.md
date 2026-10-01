@@ -92,7 +92,26 @@ under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 The `cupertino_icons` package (MIT) supplies the iOS icon font Flutter's
 page transitions reference. Flutter surfaces both automatically in the
 app's own licence page (the standard `showLicensePage` route), so no
-additional attribution is owed. No other font files are bundled.
+additional attribution is owed.
+
+**Barlow and Barlow Condensed** (`assets/fonts/`), © 2017 The Barlow Project
+Authors, under the [SIL Open Font License 1.1](assets/fonts/OFL.txt). Taken
+unmodified from `google/fonts` (`ofl/barlow`, `ofl/barlowcondensed`, version
+1.408) on 2026-09-30. The OFL requires its text to accompany the fonts:
+`main.dart` registers `assets/fonts/OFL.txt` with `LicenseRegistry`, so it
+appears in Settings → About → Open-source licenses. The fonts are not sold on
+their own and keep their names, as the licence asks.
+
+| File | SHA-256 |
+| --- | --- |
+| `Barlow-Regular.ttf` | `95aa02c7c43096e0dd44d787ba6216864a67157e402adab59b35572e0c1577ea` |
+| `Barlow-Medium.ttf` | `f8906f762cb73dca441da034bc363b2d8e2e68bc10d5c05e58717646c20cc4b4` |
+| `Barlow-SemiBold.ttf` | `86577cb32f8abe3673db53ca0f4221e6856751a4f6730c867e00f720f8bb1fc5` |
+| `Barlow-Bold.ttf` | `84e6a4d61e7c3e21f3c50ea6a4f7e5303a3467864c038be6ea3759bab8d547f9` |
+| `BarlowCondensed-SemiBold.ttf` | `7b619d14bc2327509a9ef32b0890f709626f7ecc9ff61191c2a4314c5499d2d9` |
+| `BarlowCondensed-Bold.ttf` | `e476562ec9c1e16cf16475895b511f08c804f438cc9a9f80a44ea50a0eeb5b65` |
+
+Barlow has no Arabic glyphs; Arabic text falls back to the platform font.
 
 ---
 

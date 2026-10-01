@@ -123,6 +123,13 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               _InsightsSection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(
+                title: l10n.progressWeeklyVolumeTitle,
+                subtitle: l10n.progressWeeklyVolumeSubtitle(range.name),
+                explainer: ProgressExplainers.volume(l10n),
+              ),
+              _VolumeSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
                 title: l10n.progressStrengthChangeTitle,
                 subtitle: l10n.progressStrengthSubtitle(range.name),
                 explainer: ProgressExplainers.strengthChange(l10n),
@@ -142,13 +149,6 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                     setState(() => _exerciseId = id),
               ),
               _SessionVolumeSection(range: range, exerciseId: _exerciseId),
-              const SizedBox(height: AppSpacing.xl),
-              SectionHeader(
-                title: l10n.progressWeeklyVolumeTitle,
-                subtitle: l10n.progressWeeklyVolumeSubtitle(range.name),
-                explainer: ProgressExplainers.volume(l10n),
-              ),
-              _VolumeSection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(
                 title: l10n.progressConsistencyTitle,
@@ -1124,11 +1124,20 @@ Widget _valueAxisTick(
 }
 
 /// Keeps x-axis labels from colliding by showing at most a handful.
-double _labelInterval(int count) {
-  const int maxLabels = 4;
+double _labelInterval(int count, {int maxLabels = 4}) {
   if (count <= maxLabels) return 1;
   return (count / maxLabels).ceilToDouble();
 }
+
+/// Horizontal room one week-range label ("24 Aug–30 Aug") needs, gap
+/// included. A fixed four labels fitted on a tablet but ran two ranges
+/// together on a phone once the edge labels were kept inside the card.
+const double _weekLabelSlot = 120;
+
+/// How many week-range labels fit across [available] width, never fewer
+/// than two so the first and a later week are always anchored.
+int _weekLabelsThatFit(double available) =>
+    (available ~/ _weekLabelSlot).clamp(2, 4);
 
 class _VolumeSection extends ConsumerWidget {
   const _VolumeSection({required this.range});
@@ -1608,7 +1617,10 @@ class _WeeklyBarChart extends StatelessWidget {
             constraints.maxWidth,
             weekStarts.length,
           );
-          final int labelStep = _labelInterval(weekStarts.length).round();
+          final int labelStep = _labelInterval(
+            weekStarts.length,
+            maxLabels: _weekLabelsThatFit(constraints.maxWidth),
+          ).round();
           return BarChart(
             BarChartData(
               gridData: FlGridData(
@@ -1642,10 +1654,23 @@ class _WeeklyBarChart extends StatelessWidget {
                       // gets a label regardless of `interval`, and on a
                       // range with more than a handful of weeks they
                       // overlap into an unreadable smear.
-                      if (i % labelStep != 0) {
+                      //
+                      // Counted back from the newest week so the most recent
+                      // bars, the ones people look at, always carry a date.
+                      if ((weekStarts.length - 1 - i) % labelStep != 0) {
                         return const SizedBox.shrink();
                       }
-                      return _weeklyAxisDate(context, theme, weekStarts[i]);
+                      // A week range is wider than one bar, so the first
+                      // and last labels hung off the card and were clipped
+                      // ("2 Jun–28 Jun" lost its first digit).
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        fitInside: SideTitleFitInsideData.fromTitleMeta(
+                          meta,
+                          distanceFromEdge: 0,
+                        ),
+                        child: _weeklyAxisDate(context, theme, weekStarts[i]),
+                      );
                     },
                   ),
                 ),

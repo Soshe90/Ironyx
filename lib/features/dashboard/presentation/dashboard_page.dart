@@ -13,6 +13,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
@@ -169,7 +170,6 @@ class _TodayCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final draft = ref.watch(activeWorkoutProvider);
     final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
     final bool inProgress = draft != null;
     final AppLocalizations l10n = context.l10n;
 
@@ -182,13 +182,10 @@ class _TodayCard extends ConsumerWidget {
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
-      gradient: LinearGradient(
+      gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: <Color>[
-          scheme.primaryContainer,
-          theme.colorScheme.surfaceContainerHigh,
-        ],
+        colors: <Color>[AppColors.workoutHero, AppColors.workoutHeroEnd],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,7 +197,10 @@ class _TodayCard extends ConsumerWidget {
                   DateFormatters.of(context)
                       .dayHeadline(DateTime.now())
                       .toUpperCase(),
-                  style: AppTypography.eyebrow(theme),
+                  style: AppTypography.eyebrow(
+                    theme,
+                    color: AppColors.workoutHeroAccent,
+                  ),
                 ),
               ),
               if (inProgress)
@@ -208,16 +208,18 @@ class _TodayCard extends ConsumerWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Icon(
+                    const Icon(
                       Icons.fiber_manual_record,
                       size: 10,
-                      color: scheme.primary,
+                      color: AppColors.workoutHeroAccent,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
                       l10n.dashboardInProgressBadge,
-                      style:
-                          AppTypography.eyebrow(theme, color: scheme.primary),
+                      style: AppTypography.eyebrow(
+                        theme,
+                        color: AppColors.workoutHeroAccent,
+                      ),
                     ),
                   ],
                 ),
@@ -232,19 +234,21 @@ class _TodayCard extends ConsumerWidget {
                   inProgress
                       ? l10n.dashboardWorkoutInProgress
                       : l10n.dashboardReadyToTrain,
-                  style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: AppColors.workoutHeroForeground,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.12),
+                  color: AppColors.workoutHeroAccent.withValues(alpha: 0.14),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   inProgress ? Icons.play_arrow_rounded : Icons.bolt_rounded,
-                  color: scheme.primary,
+                  color: AppColors.workoutHeroAccent,
                   size: 28,
                 ),
               ),
@@ -255,7 +259,9 @@ class _TodayCard extends ConsumerWidget {
             inProgress
                 ? _draftSummary(l10n, draft.exercises.length, loggedSets)
                 : l10n.dashboardReadyToTrainCaption,
-            style: AppTypography.caption(theme),
+            style: AppTypography.caption(theme).copyWith(
+              color: AppColors.workoutHeroCaption,
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
           if (context.isAtLeast(Breakpoint.medium))
@@ -266,6 +272,12 @@ class _TodayCard extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.workoutHeroCaption,
+                        side: const BorderSide(
+                          color: AppColors.workoutHeroAccent,
+                        ),
+                      ),
                       onPressed: () => context.goNamed(Routes.trackerName),
                       icon: const Icon(Icons.event_note_outlined),
                       label: Text(l10n.dashboardStartFromProgram),
@@ -279,6 +291,10 @@ class _TodayCard extends ConsumerWidget {
             if (!inProgress) ...<Widget>[
               const SizedBox(height: AppSpacing.sm),
               OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.workoutHeroCaption,
+                  side: const BorderSide(color: AppColors.workoutHeroAccent),
+                ),
                 onPressed: () => context.goNamed(Routes.trackerName),
                 icon: const Icon(Icons.event_note_outlined),
                 label: Text(l10n.dashboardStartFromProgram),
@@ -296,6 +312,10 @@ class _TodayCard extends ConsumerWidget {
     bool inProgress,
   ) {
     return FilledButton.icon(
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.workoutHeroAccent,
+        foregroundColor: AppColors.workoutHero,
+      ),
       onPressed: () => context.pushNamed(Routes.activeWorkoutName),
       icon: Icon(inProgress ? Icons.play_arrow : Icons.add),
       label: Text(
@@ -668,8 +688,9 @@ class _SessionGoal extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         LinearProgressIndicator(
           value: progress,
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(4),
+          // Height comes from `progressIndicatorTheme`; a pill radius gives
+          // the same fully rounded ends at any height.
+          borderRadius: BorderRadius.circular(AppRadius.pill),
           backgroundColor: scheme.surfaceContainerHighest,
           color: scheme.primary,
         ),

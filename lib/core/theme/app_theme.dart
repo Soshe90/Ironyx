@@ -22,8 +22,11 @@ abstract final class AppTheme {
     );
 
     if (isDark) {
-      // Replace the violet-tinted generated surfaces with neutral charcoal.
+      // Replace the tinted generated surfaces with neutral ink, and the
+      // seed's pastel primary with the one vivid accent.
       scheme = scheme.copyWith(
+        primary: AppColors.darkAccent,
+        onPrimary: AppColors.onDarkAccent,
         surface: AppColors.darkSurface,
         surfaceContainerLowest: AppColors.darkSurfaceContainerLowest,
         surfaceContainerLow: AppColors.darkSurfaceContainerLow,
@@ -32,11 +35,23 @@ abstract final class AppTheme {
         surfaceContainerHighest: AppColors.darkSurfaceContainerHighest,
         outlineVariant: AppColors.darkOutlineVariant,
       );
+    } else {
+      // Keep the light canvas neutral so teal remains a purposeful accent.
+      scheme = scheme.copyWith(
+        surface: AppColors.lightSurface,
+        surfaceContainerLowest: AppColors.lightSurfaceContainerLowest,
+        surfaceContainerLow: AppColors.lightSurfaceContainerLow,
+        surfaceContainer: AppColors.lightSurfaceContainer,
+        surfaceContainerHigh: AppColors.lightSurfaceContainerHigh,
+        surfaceContainerHighest: AppColors.lightSurfaceContainerHighest,
+        outlineVariant: AppColors.lightOutlineVariant,
+      );
     }
 
     final ThemeData base = ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
+      fontFamily: AppTypography.fontFamily,
       scaffoldBackgroundColor: scheme.surface,
       visualDensity: VisualDensity.standard,
     );

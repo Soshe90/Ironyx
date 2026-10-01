@@ -56,8 +56,8 @@ Two layers:
 | `ExerciseDraftCard` (`draft_editor_widgets.dart`) | One exercise and its sets within a draft. Shared by the active-session and edit screens, both backed by a `DraftEditorController`. Laid out as a small table so column names appear once and the set rows stay scannable mid-set. |
 | `DraftSetRow` (`draft_editor_widgets.dart`) | A single set row. Owns and disposes its own controllers (ADR-5) and converts the entered weight into kilograms here — ADR-1's boundary, so a pound value never reaches the controller. |
 | `InlineRestTimer` (`draft_editor_widgets.dart`) | A compact rest countdown. Reuses `TimerEngine` but deliberately creates no saved session and uses no notifications, audio or wakelock. Rendered once per exercise rather than between every pair of sets. |
-| `HistoryCalendar` (`history_calendar.dart`) | Month grid marking every day with at least one logged workout, with tap-to-drill-in. A second lens on data the list view already shows — no new query, no new persisted state. |
-| `WorkoutXlsxImportAction` (`workout_xlsx_import_action.dart`) | Preview-first importer for a historical XLSX workout log: parse, show what will land, then write only on confirmation. |
+| `HistoryCalendar` (`history_calendar.dart`) | Month grid marking every day with at least one logged workout, with tap-to-drill-in. A second lens on data the list view already shows — no new query, no new persisted state. Hidden behind a toggle in the History header so the list stays above the fold. |
+| `WorkoutXlsxImportAction` (`workout_xlsx_import_action.dart`) | Preview-first importer for a historical XLSX workout log: parse, show what will land, then write only on confirmation. The Workouts tab reaches it from the History menu through the static `run`, which takes the caller's context because a menu item's own is gone once the menu closes. |
 
 ### Dashboard, Progress, Profile
 

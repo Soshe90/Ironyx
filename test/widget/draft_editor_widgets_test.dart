@@ -153,6 +153,27 @@ void main() {
     });
   });
 
+  testWidgets('an unlogged set is hollow and a logged one is filled',
+      (tester) async {
+    await pumpHarness(tester);
+    final Finder button = find.bySemanticsLabel('Set 1 complete');
+    Material box() => tester.widget<Material>(
+          find.descendant(of: button, matching: find.byType(Material)).first,
+        );
+    BorderSide side() => (box().shape! as RoundedRectangleBorder).side;
+    final ColorScheme scheme = Theme.of(tester.element(button)).colorScheme;
+
+    // A grey fill used to read as "already done" at arm's length.
+    expect(box().color, Colors.transparent);
+    expect(side().color, scheme.outline);
+
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(box().color, scheme.primary);
+    expect(side(), BorderSide.none);
+  });
+
   testWidgets('deleting a middle set preserves neighboring edited values',
       (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});

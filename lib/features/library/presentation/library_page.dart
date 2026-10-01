@@ -474,7 +474,7 @@ class _ExerciseRow extends StatelessWidget {
     final exercise = summary.exercise;
     final String equipmentLabel = summary.equipmentNames
         .map((String e) => localizedEquipmentName(context, e))
-        .join('، ');
+        .join(context.l10n.listSeparator);
     final String? muscle = summary.primaryMuscle?.localizedName(context);
     final String? thumbnailUrl = _pictureUrl(summary.media);
     final IconData fallbackIcon = summary.equipmentNames.isEmpty
@@ -568,7 +568,7 @@ class _ExerciseCard extends StatelessWidget {
     final exercise = summary.exercise;
     final equipmentLabel = summary.equipmentNames
         .map((String e) => localizedEquipmentName(context, e))
-        .join('، ');
+        .join(context.l10n.listSeparator);
 
     return AppCard(
       onTap: onTap,
@@ -898,8 +898,9 @@ class _ExerciseDetailBody extends StatelessWidget {
             if (secondary.isNotEmpty)
               _MetadataChip(
                 icon: Icons.fitness_center_outlined,
-                label:
-                    secondary.map((m) => m.localizedName(context)).join('، '),
+                label: secondary
+                    .map((m) => m.localizedName(context))
+                    .join(context.l10n.listSeparator),
                 color: scheme.secondary,
               ),
             for (final link in detail.equipment)

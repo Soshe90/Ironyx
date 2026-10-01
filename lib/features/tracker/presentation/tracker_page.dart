@@ -37,8 +37,15 @@ class TrackerPage extends ConsumerStatefulWidget {
   ConsumerState<TrackerPage> createState() => _TrackerPageState();
 }
 
+enum _HistoryMenuAction { importXlsx }
+
 class _TrackerPageState extends ConsumerState<TrackerPage> {
   DateTime _visibleMonth = _monthOnly(DateTime.now());
+
+  /// The calendar is a second lens on the same history. Shown by default it
+  /// pushed the list itself, the reason people open this tab, below the
+  /// fold, so it is opt-in for the session.
+  bool _showCalendar = false;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +55,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
     final historyAsync = ref.watch(workoutHistoryStreamProvider);
     final prWorkoutIds =
         ref.watch(personalRecordWorkoutIdsProvider).value ?? const <String>{};
+    final bool hasHistory = historyAsync.value?.isNotEmpty ?? false;
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.navTracker)),
@@ -62,12 +70,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
               ),
               sliver: SliverToBoxAdapter(
                 child: draft == null
-                    ? FilledButton.icon(
-                        onPressed: () =>
-                            context.pushNamed(Routes.activeWorkoutName),
-                        icon: const Icon(Icons.play_arrow),
-                        label: Text(context.l10n.dashboardStartWorkout),
-                      )
+                    ? const _StartWorkoutButton()
                     : _ResumeWorkoutBanner(
                         exerciseCount: draft.exercises.length,
                       ),
@@ -167,7 +170,51 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                     Expanded(
                       child: SectionHeader(title: context.l10n.trackerHistory),
                     ),
-                    const WorkoutXlsxImportAction(),
+                    // Aligned with the header text, which carries a bottom
+                    // gap of its own.
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          if (hasHistory)
+                            IconButton(
+                              isSelected: _showCalendar,
+                              icon: const Icon(Icons.calendar_month_outlined),
+                              selectedIcon: const Icon(Icons.calendar_month),
+                              tooltip: _showCalendar
+                                  ? context.l10n.trackerHideCalendar
+                                  : context.l10n.trackerShowCalendar,
+                              onPressed: () => setState(
+                                () => _showCalendar = !_showCalendar,
+                              ),
+                            ),
+                          // A rare, one-off import; it does not need the
+                          // section's only visible action.
+                          PopupMenuButton<_HistoryMenuAction>(
+                            tooltip: context.l10n.trackerHistoryOptions,
+                            onSelected: (_HistoryMenuAction action) =>
+                                switch (action) {
+                              _HistoryMenuAction.importXlsx =>
+                                WorkoutXlsxImportAction.run(context, ref),
+                            },
+                            itemBuilder: (BuildContext context) =>
+                                <PopupMenuEntry<_HistoryMenuAction>>[
+                              PopupMenuItem<_HistoryMenuAction>(
+                                value: _HistoryMenuAction.importXlsx,
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(
+                                    Icons.table_view_outlined,
+                                  ),
+                                  title: Text(context.l10n.importXlsxAction),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -184,29 +231,30 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                     )
                   : SliverMainAxisGroup(
                       slivers: [
-                        SliverPadding(
-                          padding: context.sliverGutter
-                              .copyWith(bottom: AppSpacing.lg),
-                          sliver: SliverToBoxAdapter(
-                            child: AppCard(
-                              child: HistoryCalendar(
-                                visibleMonth: _visibleMonth,
-                                markedDates: {
-                                  for (final workout in workouts)
-                                    _dateOnly(workout.startedAt),
-                                },
-                                onMonthChanged: (month) => setState(() {
-                                  _visibleMonth = _monthOnly(month);
-                                }),
-                                onDayTap: (date) => _openWorkoutForDay(
-                                  context,
-                                  workouts,
-                                  date,
+                        if (_showCalendar)
+                          SliverPadding(
+                            padding: context.sliverGutter
+                                .copyWith(bottom: AppSpacing.lg),
+                            sliver: SliverToBoxAdapter(
+                              child: AppCard(
+                                child: HistoryCalendar(
+                                  visibleMonth: _visibleMonth,
+                                  markedDates: {
+                                    for (final workout in workouts)
+                                      _dateOnly(workout.startedAt),
+                                  },
+                                  onMonthChanged: (month) => setState(() {
+                                    _visibleMonth = _monthOnly(month);
+                                  }),
+                                  onDayTap: (date) => _openWorkoutForDay(
+                                    context,
+                                    workouts,
+                                    date,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
                         SliverPadding(
                           padding: context.sliverGutter
                               .copyWith(bottom: AppSpacing.xl),
@@ -273,6 +321,20 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
       pathParameters: {'id': programId},
     );
   }
+}
+
+/// The tab's primary action. Deliberately a plain button, not the
+/// dashboard's "Ready to train" hero: the same card on two neighbouring tabs
+/// read as a copy, and here it pushed programs and history down the page.
+class _StartWorkoutButton extends StatelessWidget {
+  const _StartWorkoutButton();
+
+  @override
+  Widget build(BuildContext context) => FilledButton.icon(
+        onPressed: () => context.pushNamed(Routes.activeWorkoutName),
+        icon: const Icon(Icons.play_arrow),
+        label: Text(context.l10n.dashboardStartWorkout),
+      );
 }
 
 class _ProgramTile extends StatelessWidget {
@@ -375,12 +437,59 @@ class _ResumeWorkoutBanner extends StatelessWidget {
   }
 }
 
+/// One line of the history list: a month heading or a workout row.
+sealed class _HistoryEntry {
+  const _HistoryEntry();
+}
+
+final class _MonthEntry extends _HistoryEntry {
+  const _MonthEntry(this.month, this.workoutCount, this.volumeKg);
+
+  final DateTime month;
+  final int workoutCount;
+  final double volumeKg;
+}
+
+final class _WorkoutEntry extends _HistoryEntry {
+  const _WorkoutEntry(this.workout, {required this.firstInMonth});
+
+  final Workout workout;
+  final bool firstInMonth;
+}
+
 class _HistorySliverList extends ConsumerWidget {
   const _HistorySliverList(
       {required this.workouts, required this.prWorkoutIds});
 
   final List<Workout> workouts;
   final Set<String> prWorkoutIds;
+
+  /// Groups the newest-first list by month. One heading per month replaced
+  /// a heading above every row: with about one workout a day, half the list
+  /// was headings, and the day now lives in each row's date tile.
+  static List<_HistoryEntry> _group(List<Workout> workouts) {
+    final List<_HistoryEntry> entries = <_HistoryEntry>[];
+    int start = 0;
+    while (start < workouts.length) {
+      final DateTime first = workouts[start].startedAt;
+      int end = start;
+      double volume = 0;
+      while (end < workouts.length &&
+          workouts[end].startedAt.year == first.year &&
+          workouts[end].startedAt.month == first.month) {
+        volume += workouts[end].totalVolumeKg;
+        end++;
+      }
+      entries.add(
+        _MonthEntry(DateTime(first.year, first.month), end - start, volume),
+      );
+      for (int i = start; i < end; i++) {
+        entries.add(_WorkoutEntry(workouts[i], firstInMonth: i == start));
+      }
+      start = end;
+    }
+    return entries;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -390,33 +499,21 @@ class _HistorySliverList extends ConsumerWidget {
     final Map<String, List<WorkoutExerciseName>> namesByWorkout =
         ref.watch(workoutExerciseNamesProvider).value ?? const {};
     final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
+    final List<_HistoryEntry> entries = _group(workouts);
 
     return SliverList.builder(
-      itemCount: workouts.length,
-      itemBuilder: (context, index) {
-        final workout = workouts[index];
-        final showHeader = index == 0 ||
-            DateFormatters.of(context)
-                    .relativeDay(workouts[index - 1].startedAt) !=
-                DateFormatters.of(context).relativeDay(workout.startedAt);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      itemCount: entries.length,
+      itemBuilder: (context, index) => switch (entries[index]) {
+        _MonthEntry(:final month, :final workoutCount, :final volumeKg) =>
+          _MonthHeader(
+            month: month,
+            workoutCount: workoutCount,
+            volumeKg: volumeKg,
+          ),
+        _WorkoutEntry(:final workout, :final firstInMonth) => Column(
             children: [
-              if (showHeader)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    top: AppSpacing.sm,
-                    bottom: AppSpacing.sm,
-                  ),
-                  child: Text(
-                    DateFormatters.of(context)
-                        .relativeDay(workout.startedAt)
-                        .toUpperCase(),
-                    style: AppTypography.eyebrow(Theme.of(context)),
-                  ),
-                ),
+              if (!firstInMonth)
+                const Divider(indent: _dateTileWidth + AppSpacing.md),
               _WorkoutHistoryTile(
                 workout: workout,
                 isPersonalRecord: prWorkoutIds.contains(workout.id),
@@ -433,11 +530,65 @@ class _HistorySliverList extends ConsumerWidget {
               ),
             ],
           ),
-        );
       },
     );
   }
 }
+
+/// `SEPTEMBER 2026 ........ 9 workouts · 62,106 kg`
+class _MonthHeader extends ConsumerWidget {
+  const _MonthHeader({
+    required this.month,
+    required this.workoutCount,
+    required this.volumeKg,
+  });
+
+  final DateTime month;
+  final int workoutCount;
+  final double volumeKg;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = context.l10n;
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+
+    return Semantics(
+      header: true,
+      child: Padding(
+        padding: const EdgeInsets.only(
+          top: AppSpacing.lg,
+          bottom: AppSpacing.sm,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                DateFormatters.of(context).monthYear(month).toUpperCase(),
+                style: AppTypography.eyebrow(theme),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              l10n.trackerMonthSummary(
+                l10n.progressWorkoutCount(workoutCount),
+                UnitFormatters.volume(volumeKg, unit),
+              ),
+              style: AppTypography.caption(theme),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Width of a history row's date tile; the row dividers are inset by it so
+/// they start under the text, not under the tile.
+const double _dateTileWidth = 52;
+
+/// How many exercise names a row title spells out before "+N".
+const int _titleExerciseLimit = 2;
 
 class _WorkoutHistoryTile extends ConsumerWidget {
   const _WorkoutHistoryTile({
@@ -456,28 +607,35 @@ class _WorkoutHistoryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    final AppLocalizations l10n = context.l10n;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
-    final String time = DateFormatters.of(context).time(workout.startedAt);
+    final DateFormatters dates = DateFormatters.of(context);
+    final String time = dates.time(workout.startedAt);
     final String duration = workout.durationSeconds == null
-        ? context.l10n.trackerNoDuration
+        ? l10n.trackerNoDuration
         : UnitFormatters.durationShort(
             Duration(seconds: workout.durationSeconds!),
           );
-    // Named by what was trained; the start time is secondary. A time as the
-    // headline made every row read the same ("5:42 PM").
+    // Named by what was trained; the start time is secondary. The screen
+    // reader hears every exercise; the visible title is fitted by
+    // [_HistoryTitle].
     final String? title =
-        exerciseNames.isEmpty ? null : exerciseNames.join(', ');
+        exerciseNames.isEmpty ? null : exerciseNames.join(l10n.listSeparator);
     final String volumeText =
         UnitFormatters.volume(workout.totalVolumeKg, unit);
     final String summary = isPersonalRecord
-        ? context.l10n.trackerWorkoutSemanticPr(
-            DateFormatters.of(context).full(workout.startedAt),
+        ? l10n.trackerWorkoutSemanticPr(
+            dates.full(workout.startedAt),
             volumeText,
           )
-        : context.l10n.trackerWorkoutSemantic(
-            DateFormatters.of(context).full(workout.startedAt),
+        : l10n.trackerWorkoutSemantic(
+            dates.full(workout.startedAt),
             volumeText,
           );
+    final DateTime now = DateTime.now();
+    final bool isToday = workout.startedAt.year == now.year &&
+        workout.startedAt.month == now.month &&
+        workout.startedAt.day == now.day;
 
     return Semantics(
       label: title == null ? summary : '$title. $summary',
@@ -485,6 +643,7 @@ class _WorkoutHistoryTile extends ConsumerWidget {
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: () => context.pushNamed(
             Routes.workoutDetailName,
             pathParameters: {'id': workout.id},
@@ -493,17 +652,14 @@ class _WorkoutHistoryTile extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Row(
               children: [
+                _DateTile(date: workout.startedAt, isToday: isToday),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        title ?? time,
-                        style: theme.textTheme.titleSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      _HistoryTitle(names: exerciseNames, fallback: time),
                       const SizedBox(height: AppSpacing.xxs),
                       Row(
                         children: [
@@ -532,11 +688,189 @@ class _WorkoutHistoryTile extends ConsumerWidget {
                     size: AppTypography.metricSizeSm,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.xs),
-                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "+4": how many exercises a history row's title leaves out.
+class _MoreExercisesPill extends StatelessWidget {
+  const _MoreExercisesPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _padding,
+        vertical: AppSpacing.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(label, style: styleOf(theme)),
+    );
+  }
+
+  static const double _padding = AppSpacing.sm;
+
+  static TextStyle styleOf(ThemeData theme) => AppTypography.numeric(
+        theme.textTheme.labelMedium!.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+
+  /// The pill's horizontal padding, for callers measuring its width.
+  static double get horizontalPadding => _padding * 2;
+}
+
+/// A history row's title: up to two exercise names, then a "+N" pill for
+/// the rest. Measured before it is laid out, so when two names do not fit
+/// beside the pill the second is dropped and counted, rather than being
+/// cut mid-word ("Back Squat, Overhead P...").
+class _HistoryTitle extends StatelessWidget {
+  const _HistoryTitle({required this.names, required this.fallback});
+
+  /// Localized, in logged order.
+  final List<String> names;
+
+  /// Shown when the workout has no exercises.
+  final String fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final TextStyle style = theme.textTheme.titleSmall!;
+    if (names.isEmpty) {
+      return Text(
+        fallback,
+        style: style,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    final AppLocalizations l10n = context.l10n;
+    final TextScaler scaler = MediaQuery.textScalerOf(context);
+    final TextDirection direction = Directionality.of(context);
+
+    double widthOf(String text, TextStyle textStyle) {
+      final TextPainter painter = TextPainter(
+        text: TextSpan(text: text, style: textStyle),
+        textDirection: direction,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final double width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        double pillWidth(int extra) => extra == 0
+            ? 0
+            : widthOf(
+                  l10n.trackerMoreExercises(extra),
+                  _MoreExercisesPill.styleOf(theme),
+                ) +
+                _MoreExercisesPill.horizontalPadding +
+                AppSpacing.xs;
+
+        int shown = names.length < _titleExerciseLimit
+            ? names.length
+            : _titleExerciseLimit;
+        while (shown > 1 &&
+            widthOf(names.take(shown).join(l10n.listSeparator), style) +
+                    pillWidth(names.length - shown) >
+                constraints.maxWidth) {
+          shown--;
+        }
+        final int extra = names.length - shown;
+
+        return Row(
+          children: [
+            Flexible(
+              child: Text(
+                names.take(shown).join(l10n.listSeparator),
+                style: style,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (extra > 0) ...[
+              const SizedBox(width: AppSpacing.xs),
+              _MoreExercisesPill(label: l10n.trackerMoreExercises(extra)),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Day number over a short weekday: the row's visual anchor, and what used
+/// to be a heading above it. Today's tile takes the accent.
+class _DateTile extends StatelessWidget {
+  const _DateTile({required this.date, required this.isToday});
+
+  final DateTime date;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final DateFormatters dates = DateFormatters.of(context);
+    final Color ink = isToday ? scheme.primary : scheme.onSurface;
+
+    // The row's semantics label already carries the full date.
+    return ExcludeSemantics(
+      child: Container(
+        width: _dateTileWidth,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: isToday
+              ? scheme.primary.withValues(alpha: 0.16)
+              : scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              dates.dayOfMonth(date),
+              style: AppTypography.cardMetric(
+                scheme,
+                size: AppTypography.metricSizeMd,
+              ).copyWith(color: ink, height: 1),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            // Arabic has no short weekday names, so the label scales down
+            // rather than overflowing the tile.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                dates.weekdayShort(date).toUpperCase(),
+                maxLines: 1,
+                style: AppTypography.eyebrow(
+                  theme,
+                  color: isToday ? scheme.primary : null,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

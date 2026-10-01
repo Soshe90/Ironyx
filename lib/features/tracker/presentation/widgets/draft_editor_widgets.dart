@@ -986,24 +986,32 @@ class _SetDoneButton extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     // State is carried by the fill, not by hue alone: an unlogged set is a
-    // hollow tonal square, a logged one is a solid primary square.
+    // hollow outlined square, a logged one is a solid primary square. The
+    // hollow state used to be a grey fill with a grey tick, which read as
+    // "already done" at arm's length.
+    final BorderRadius radius = BorderRadius.circular(AppRadius.sm);
     return Semantics(
       label: context.l10n.draftSetCompleteSemantic(index),
       toggled: done,
       container: true,
       child: Material(
-        color: done ? scheme.primary : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        color: done ? scheme.primary : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: done
+              ? BorderSide.none
+              : BorderSide(color: scheme.outline, width: 1.5),
+        ),
         child: InkWell(
           onTap: () => onChanged(!done),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderRadius: radius,
           child: SizedBox(
             width: AppSpacing.minTapTarget,
             height: AppSpacing.minTapTarget,
             child: Icon(
               Icons.check,
               size: 20,
-              color: done ? scheme.onPrimary : scheme.onSurfaceVariant,
+              color: done ? scheme.onPrimary : scheme.outline,
             ),
           ),
         ),
