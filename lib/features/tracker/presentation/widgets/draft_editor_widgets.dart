@@ -15,6 +15,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../library/domain/exercise_catalogue_l10n.dart';
+import '../../../library/presentation/widgets/exercise_detail_sheet.dart';
 import '../../../timer/domain/timer_engine.dart';
 import '../../../timer/domain/timer_preset.dart';
 import '../../../timer/domain/timer_settings_controller.dart';
@@ -116,31 +117,47 @@ class ExerciseDraftCard extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.md),
                 ],
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        displayName,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      if (isInSuperset) ...<Widget>[
-                        const SizedBox(height: AppSpacing.xxs),
-                        _SupersetTag(label: context.l10n.draftSuperset),
-                      ],
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        _summary(
-                          context.l10n,
-                          completed,
-                          exercise.sets.length,
-                          volumeKg,
-                          unit,
+                  // Mid-session is exactly when someone wants a form
+                  // reminder, so the heading opens the how-to sheet. A
+                  // modal sheet over the session leaves the draft and any
+                  // running rest timer untouched.
+                  child: ExerciseInfoTapTarget(
+                    exerciseId: exercise.exerciseId,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Flexible(
+                              child: Text(
+                                displayName,
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            ExerciseInfoIcon(exerciseName: displayName),
+                          ],
                         ),
-                        style: AppTypography.caption(theme),
-                      ),
-                    ],
+                        if (isInSuperset) ...<Widget>[
+                          const SizedBox(height: AppSpacing.xxs),
+                          _SupersetTag(label: context.l10n.draftSuperset),
+                        ],
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          _summary(
+                            context.l10n,
+                            completed,
+                            exercise.sets.length,
+                            volumeKg,
+                            unit,
+                          ),
+                          style: AppTypography.caption(theme),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 PopupMenuButton<_DraftCardAction>(

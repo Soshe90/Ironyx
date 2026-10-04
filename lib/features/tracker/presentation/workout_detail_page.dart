@@ -22,6 +22,7 @@ import '../../../core/widgets/pr_badge.dart';
 import '../../../core/widgets/stat_strip.dart';
 import '../../../core/widgets/trend_badge.dart';
 import '../../library/domain/exercise_catalogue_l10n.dart';
+import '../../library/presentation/widgets/exercise_detail_sheet.dart';
 import '../../progress/domain/progress_providers.dart';
 
 /// Read-only summary of a saved workout, with edit and delete actions.
@@ -255,50 +256,12 @@ class _ExerciseBreakdown extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      if (isRunStart)
-                        Text(
-                          context.l10n.draftSuperset,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                            color: scheme.primary,
-                          ),
-                        ),
-                      Row(
-                        children: <Widget>[
-                          if (supersetLabel != null) ...<Widget>[
-                            Container(
-                              width: AppSpacing.lg,
-                              height: AppSpacing.lg,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: scheme.secondaryContainer,
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.sm),
-                              ),
-                              child: Text(
-                                supersetLabel!,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.onSecondaryContainer,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                          ],
-                          Expanded(
-                            child: Text(
-                              name,
-                              style: theme.textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  // The heading, not the whole card, opens the how-to sheet:
+                  // the set lines below are read, not acted on, and a
+                  // card-wide target would fold them into one button label.
+                  child: ExerciseInfoTapTarget(
+                    exerciseId: exerciseId,
+                    child: _buildHeading(context, theme, scheme),
                   ),
                 ),
                 if (performance != null && performance.isPersonalRecord)
@@ -324,6 +287,63 @@ class _ExerciseBreakdown extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeading(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme scheme,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (isRunStart)
+          Text(
+            context.l10n.draftSuperset,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: scheme.primary,
+            ),
+          ),
+        Row(
+          children: <Widget>[
+            if (supersetLabel != null) ...<Widget>[
+              Container(
+                width: AppSpacing.lg,
+                height: AppSpacing.lg,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  supersetLabel!,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+            ],
+            // Flexible, not Expanded, so the icon sits beside the name
+            // (as on the live session card) instead of beside the PR badge.
+            Flexible(
+              child: Text(
+                name,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            ExerciseInfoIcon(exerciseName: name),
+          ],
+        ),
+      ],
     );
   }
 }

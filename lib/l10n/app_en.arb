@@ -997,6 +997,11 @@
   "libraryVideoDemo": "Video demo",
   "librarySearchOnYoutube": "Search on YouTube",
   "libraryYoutubeOpenFailed": "Could not open YouTube",
+  "libraryHowToPerform": "How to do {name}",
+  "@libraryHowToPerform": {
+    "description": "Screen-reader label and tooltip for an exercise name that opens its instructions sheet.",
+    "placeholders": { "name": { "type": "String" } }
+  },
 
   "progressRangeLabel": "{range, select, twoWeeks{2W} month{1M} quarter{3M} year{1Y} all{All} other{All}}",
   "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },

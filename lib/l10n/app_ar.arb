@@ -957,6 +957,10 @@
   "libraryVideoDemo": "عرض فيديو",
   "librarySearchOnYoutube": "البحث على YouTube",
   "libraryYoutubeOpenFailed": "تعذّر فتح YouTube",
+  "libraryHowToPerform": "طريقة أداء {name}",
+  "@libraryHowToPerform": {
+    "placeholders": { "name": { "type": "String" } }
+  },
 
   "progressRangeLabel": "{range, select, twoWeeks{أسبوعان} month{شهر} quarter{3 أشهر} year{سنة} all{الكل} other{الكل}}",
   "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/providers.dart';
 import 'package:ironyx/core/services/haptics_service.dart';
+import 'package:ironyx/features/library/presentation/widgets/exercise_detail_sheet.dart';
 import 'package:ironyx/features/tracker/domain/draft_editor_controller.dart';
 import 'package:ironyx/features/tracker/domain/workout_draft.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/draft_editor_widgets.dart';
@@ -44,6 +45,9 @@ void main() {
           hapticsServiceProvider.overrideWithValue(haptics),
           previousPerformanceProvider('bench')
               .overrideWith((ref) => Stream.value(previous)),
+          // The how-to sheet resolves to "not found" here; that is enough
+          // to prove the card opened it for the right exercise.
+          exerciseDetailProvider('bench').overrideWith((ref) async => null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -74,6 +78,36 @@ void main() {
       harnessKey.currentState!.controller.removedExerciseIds,
       <String>['exercise-row'],
     );
+  });
+
+  testWidgets('tapping the exercise name opens its how-to sheet',
+      (tester) async {
+    await pumpHarness(tester);
+
+    await tester.tap(find.text('Bench Press'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExerciseDetailSheet), findsOneWidget);
+    expect(find.text('Exercise not found'), findsOneWidget);
+  });
+
+  testWidgets('the options menu and set rows do not open the how-to sheet',
+      (tester) async {
+    await pumpHarness(tester);
+
+    await tester.tap(find.byTooltip('Bench Press options'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExerciseDetailSheet), findsNothing);
+    await tester.tapAt(Offset.zero); // dismiss the menu
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.bySemanticsLabel(
+        RegExp('Set 1.*(complete|done)', caseSensitive: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(ExerciseDetailSheet), findsNothing);
   });
 
   group('last time', () {
