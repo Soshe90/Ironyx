@@ -572,7 +572,7 @@ class _MonthHeader extends ConsumerWidget {
             Text(
               l10n.trackerMonthSummary(
                 l10n.progressWorkoutCount(workoutCount),
-                UnitFormatters.volume(volumeKg, unit),
+                UnitFormatters.volume(volumeKg, unit, context.l10n),
               ),
               style: AppTypography.caption(theme),
             ),
@@ -615,6 +615,7 @@ class _WorkoutHistoryTile extends ConsumerWidget {
         ? l10n.trackerNoDuration
         : UnitFormatters.durationShort(
             Duration(seconds: workout.durationSeconds!),
+            context.l10n,
           );
     // Named by what was trained; the start time is secondary. The screen
     // reader hears every exercise; the visible title is fitted by
@@ -622,7 +623,7 @@ class _WorkoutHistoryTile extends ConsumerWidget {
     final String? title =
         exerciseNames.isEmpty ? null : exerciseNames.join(l10n.listSeparator);
     final String volumeText =
-        UnitFormatters.volume(workout.totalVolumeKg, unit);
+        UnitFormatters.volume(workout.totalVolumeKg, unit, context.l10n);
     final String summary = isPersonalRecord
         ? l10n.trackerWorkoutSemanticPr(
             dates.full(workout.startedAt),

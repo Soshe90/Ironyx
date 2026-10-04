@@ -154,7 +154,8 @@ class _WorkoutDetailBody extends ConsumerWidget {
             stats: <Stat>[
               Stat(
                 label: l10n.statVolume,
-                value: UnitFormatters.volume(workout.totalVolumeKg, unit),
+                value: UnitFormatters.volume(
+                    workout.totalVolumeKg, unit, context.l10n),
                 emphasis: true,
               ),
               Stat(
@@ -163,6 +164,7 @@ class _WorkoutDetailBody extends ConsumerWidget {
                     ? '—'
                     : UnitFormatters.durationShort(
                         Duration(seconds: workout.durationSeconds!),
+                        context.l10n,
                       ),
               ),
               Stat(
@@ -280,7 +282,7 @@ class _ExerciseBreakdown extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               context.l10n.workoutVolumeLine(
-                UnitFormatters.volume(volumeKg, unit),
+                UnitFormatters.volume(volumeKg, unit, context.l10n),
               ),
               style: AppTypography.caption(theme),
             ),
@@ -382,8 +384,12 @@ class _TopSet extends StatelessWidget {
           children: <Widget>[
             Flexible(
               child: Text(
-                '${UnitFormatters.weight(performance.bestWeightKg, unit)}'
-                ' × ${performance.bestReps}',
+                UnitFormatters.setLine(
+                  performance.bestWeightKg,
+                  performance.bestReps,
+                  unit,
+                  context.l10n,
+                ),
                 style: AppTypography.cardMetric(
                   scheme,
                   size: AppTypography.metricSizeMd,
@@ -404,11 +410,14 @@ class _TopSet extends StatelessWidget {
         Text(
           performance.isFirstTime
               ? context.l10n.workoutFirstTimeLogged(
-                  UnitFormatters.estimate(performance.bestOneRmKg, unit),
+                  UnitFormatters.estimate(
+                      performance.bestOneRmKg, unit, context.l10n),
                 )
               : context.l10n.workoutOneRmWithPrevious(
-                  UnitFormatters.estimate(performance.bestOneRmKg, unit),
-                  UnitFormatters.estimate(performance.previousBestKg!, unit),
+                  UnitFormatters.estimate(
+                      performance.bestOneRmKg, unit, context.l10n),
+                  UnitFormatters.estimate(
+                      performance.previousBestKg!, unit, context.l10n),
                 ),
           style: AppTypography.caption(theme),
         ),
@@ -437,7 +446,7 @@ class _SetLine extends StatelessWidget {
     return Semantics(
       label: context.l10n.workoutSetSemantic(
         index,
-        UnitFormatters.weight(set.weightKg, unit),
+        UnitFormatters.weight(set.weightKg, unit, context.l10n),
         set.reps,
         done
             ? context.l10n.workoutSetCompleted
@@ -468,7 +477,8 @@ class _SetLine extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                '${UnitFormatters.weight(set.weightKg, unit)} × ${set.reps}',
+                UnitFormatters.setLine(
+                    set.weightKg, set.reps, unit, context.l10n),
                 style: AppTypography.numeric(
                   theme.textTheme.bodyMedium ?? const TextStyle(),
                 ),

@@ -330,7 +330,7 @@ class _StrengthRow extends StatelessWidget {
     final AppLocalizations l10n = context.l10n;
     final double? change = row.change;
     final String currentEstimate =
-        UnitFormatters.estimate(row.currentBestKg, unit);
+        UnitFormatters.estimate(row.currentBestKg, unit, context.l10n);
 
     final TrendDirection? trend = change == null
         ? null
@@ -376,6 +376,7 @@ class _StrengthRow extends StatelessWidget {
                               UnitFormatters.estimate(
                                 row.previousBestKg!,
                                 unit,
+                                context.l10n,
                               ),
                             ),
                       style: AppTypography.caption(theme),
@@ -514,7 +515,7 @@ class _InsightTile extends StatelessWidget {
             insight.percentage!,
           ),
           figure: l10n.progressInsightStrengthFigure(
-            UnitFormatters.estimate(insight.currentBestKg!, unit),
+            UnitFormatters.estimate(insight.currentBestKg!, unit, context.l10n),
           ),
         ),
       InsightKind.consistencySlipping => (
@@ -805,18 +806,18 @@ class _OneRmSection extends ConsumerWidget {
             final LinearTrend? regression = linearTrend(ordered);
             final String trendCaption = regression == null
                 ? context.l10n.progressOneRmFromSessions(
-                    UnitFormatters.estimate(first, unit),
+                    UnitFormatters.estimate(first, unit, context.l10n),
                     ordered.length,
                   )
                 : context.l10n.progressOneRmMonthlyTrend(
                     '${regression.slopeKgPerMonth >= 0 ? '+' : ''}'
-                    '${UnitFormatters.weightRate(regression.slopeKgPerMonth, unit)}',
+                    '${UnitFormatters.weightRate(regression.slopeKgPerMonth, unit, context.l10n)}',
                     ordered.length,
                   );
 
             return _ChartCard(
               header: picker,
-              headline: UnitFormatters.estimate(current, unit),
+              headline: UnitFormatters.estimate(current, unit, context.l10n),
               caption: ordered.length == 1
                   ? context.l10n.progressOneDataPoint
                   : trendCaption,
@@ -873,7 +874,8 @@ class _SessionVolumeSection extends ConsumerWidget {
                           ValueRow(
                             label:
                                 DateFormatters.of(context).axisLabel(row.date),
-                            value: UnitFormatters.volume(row.volumeKg, unit),
+                            value: UnitFormatters.volume(
+                                row.volumeKg, unit, context.l10n),
                           ),
                       ],
                     ),
@@ -1002,7 +1004,7 @@ class _DatedLineChart extends StatelessWidget {
               getTooltipItems: (spots) => [
                 for (final spot in spots)
                   LineTooltipItem(
-                    '${UnitFormatters.weight(spot.y, unit)}\n',
+                    '${UnitFormatters.weight(spot.y, unit, context.l10n)}\n',
                     theme.textTheme.labelMedium!.copyWith(
                       color: scheme.onInverseSurface,
                       fontWeight: FontWeight.w600,
@@ -1118,7 +1120,7 @@ Widget _valueAxisTick(
     return const SizedBox.shrink();
   }
   return Text(
-    UnitFormatters.weight(value, unit, withUnit: false),
+    UnitFormatters.weight(value, unit, context.l10n, withUnit: false),
     style: AppTypography.eyebrow(Theme.of(context)),
   );
 }
@@ -1174,7 +1176,7 @@ class _VolumeSection extends ConsumerWidget {
             points.where((WeeklyVolume p) => p.totalVolumeKg > 0).length;
 
         return _ChartCard(
-          headline: UnitFormatters.volume(total, unit),
+          headline: UnitFormatters.volume(total, unit, context.l10n),
           caption: context.l10n.progressVolumeActiveWeeks(
             activeWeeks,
             points.length,
@@ -1186,8 +1188,8 @@ class _VolumeSection extends ConsumerWidget {
             values: <double>[
               for (final WeeklyVolume p in points) p.totalVolumeKg,
             ],
-            tooltipValue: (int i) =>
-                UnitFormatters.volume(points[i].totalVolumeKg, unit),
+            tooltipValue: (int i) => UnitFormatters.volume(
+                points[i].totalVolumeKg, unit, context.l10n),
           ),
         );
       },
@@ -1266,6 +1268,7 @@ class _RpeSection extends ConsumerWidget {
                               UnitFormatters.volume(
                                 row.volumeKg,
                                 ref.watch(weightUnitControllerProvider),
+                                context.l10n,
                               ),
                             ),
                           ),
@@ -1374,6 +1377,7 @@ class _WeeklyMuscleSection extends ConsumerWidget {
                         value: UnitFormatters.volume(
                           row.totalVolumeKg,
                           ref.watch(weightUnitControllerProvider),
+                          context.l10n,
                         ),
                       )
                   ])),
@@ -1799,7 +1803,8 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
         return _ChartCard(
           headline: grouped.first.muscleName,
           caption: context.l10n.progressMostTrained(
-            UnitFormatters.volume(grouped.first.totalVolumeKg, unit),
+            UnitFormatters.volume(
+                grouped.first.totalVolumeKg, unit, context.l10n),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1816,6 +1821,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                         UnitFormatters.volume(
                           grouped[touched].totalVolumeKg,
                           unit,
+                          context.l10n,
                         ),
                       ),
                 style: AppTypography.caption(theme),
@@ -1907,6 +1913,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                                     text: UnitFormatters.volume(
                                       muscle.totalVolumeKg,
                                       unit,
+                                      context.l10n,
                                     ),
                                     style:
                                         theme.textTheme.labelMedium?.copyWith(
@@ -2006,7 +2013,8 @@ class _BodyMetricsSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             _ChartCard(
-              headline: UnitFormatters.weight(latest.weightKg, unit),
+              headline:
+                  UnitFormatters.weight(latest.weightKg, unit, context.l10n),
               caption: [
                 DateFormatters.of(context).relativeDay(latest.date),
                 if (latest.bodyFatPercentage != null)

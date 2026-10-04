@@ -201,6 +201,22 @@
   "actionUndo": "Undo",
   "statVolume": "Volume",
   "statDuration": "Duration",
+  "durationShortMinutes": "{minutes}m",
+  "@durationShortMinutes": {
+    "description": "Compact duration in summaries, e.g. 48m.",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "durationShortHours": "{hours}h",
+  "@durationShortHours": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "durationShortHoursMinutes": "{hours}h {minutes}m",
+  "@durationShortHoursMinutes": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
   "statExercises": "Exercises",
   "statSets": "Sets",
 

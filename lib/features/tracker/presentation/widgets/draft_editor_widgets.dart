@@ -277,7 +277,7 @@ class ExerciseDraftCard extends ConsumerWidget {
     final String sets = l10n.draftSetsProgress(completed, total);
     return completed == 0
         ? sets
-        : '$sets · ${UnitFormatters.volume(volumeKg, unit)}';
+        : '$sets · ${UnitFormatters.volume(volumeKg, unit, l10n)}';
   }
 }
 
@@ -374,13 +374,11 @@ class _PreviousPerformanceLine extends ConsumerWidget {
     // Same set format as the workout detail screen, with non-breaking
     // spaces inside each set so a narrow phone wraps between sets, never
     // through one ("90 kg ×" / "6").
-    const String nbsp = '\u00A0';
     final String sets = previous.sets
         .map(
           (PreviousSet s) => isTimeBased && s.durationSeconds != null
               ? UnitFormatters.duration(Duration(seconds: s.durationSeconds!))
-              : '${UnitFormatters.weight(s.weightKg, unit)} × ${s.reps}'
-                  .replaceAll(' ', nbsp),
+              : UnitFormatters.setLine(s.weightKg, s.reps, unit, context.l10n),
         )
         .join(' · ');
 
@@ -423,10 +421,21 @@ class _SetTableHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
 
-    Widget label(String text, {TextAlign align = TextAlign.start}) => Text(
-          text,
-          textAlign: align,
-          style: AppTypography.eyebrow(theme),
+    // One line, shrunk to fit rather than wrapped: the set column is sized
+    // for digits, and Arabic's "المجموعة" (or any label at a large system
+    // font) would otherwise break mid-word onto a second line.
+    Widget label(String text, {TextAlign align = TextAlign.start}) => FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: align == TextAlign.center
+              ? Alignment.center
+              : AlignmentDirectional.centerStart,
+          child: Text(
+            text,
+            textAlign: align,
+            maxLines: 1,
+            softWrap: false,
+            style: AppTypography.eyebrow(theme),
+          ),
         );
 
     return ExcludeSemantics(

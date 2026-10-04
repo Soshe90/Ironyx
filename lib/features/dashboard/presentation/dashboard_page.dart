@@ -358,7 +358,7 @@ class _ThisWeekSection extends ConsumerWidget {
       loading: () => l10n.dashboardThisWeekSemanticLoading,
       error: (_, __) => l10n.dashboardThisWeekSemanticError,
       data: (s) => l10n.dashboardThisWeekSemantic(
-        UnitFormatters.volume(s.volumeKg, unit),
+        UnitFormatters.volume(s.volumeKg, unit, context.l10n),
         l10n.sessionCount(s.sessions),
       ),
     );
@@ -481,7 +481,8 @@ class _WeekBody extends StatelessWidget {
                     children: <Widget>[
                       Flexible(
                         child: MetricValue(
-                          UnitFormatters.volume(snapshot.volumeKg, unit),
+                          UnitFormatters.volume(
+                              snapshot.volumeKg, unit, context.l10n),
                           style: AppTypography.cardMetric(
                             scheme,
                             size: AppTypography.metricSizeLg,
@@ -540,8 +541,9 @@ class _WeekBody extends StatelessWidget {
             ),
             Stat(
               label: l10n.dashboardStatLastWeek,
-              value:
-                  previous == 0 ? '—' : UnitFormatters.volume(previous, unit),
+              value: previous == 0
+                  ? '—'
+                  : UnitFormatters.volume(previous, unit, context.l10n),
             ),
           ],
         ),
@@ -849,13 +851,14 @@ class _LastWorkoutRow extends ConsumerWidget {
       error: workoutAsync.error,
       value: workout == null
           ? null
-          : UnitFormatters.volume(workout.totalVolumeKg, unit),
+          : UnitFormatters.volume(workout.totalVolumeKg, unit, context.l10n),
       caption: workout == null
           ? null
           : <String>[
               DateFormatters.of(context).relativeDay(workout.startedAt),
               if (workout.durationSeconds case final int seconds)
-                UnitFormatters.durationShort(Duration(seconds: seconds)),
+                UnitFormatters.durationShort(
+                    Duration(seconds: seconds), context.l10n),
             ].join(' · '),
     );
   }
@@ -892,6 +895,7 @@ class _LastTimerRow extends ConsumerWidget {
             ? null
             : UnitFormatters.durationShort(
                 Duration(seconds: sessionAsync.value!.actualDurationSeconds!),
+                context.l10n,
               ),
       ),
     );
@@ -916,7 +920,8 @@ class _OneRmCard extends ConsumerWidget {
       error: oneRmAsync.error,
       metric: oneRmAsync.value == null
           ? null
-          : UnitFormatters.weight(oneRmAsync.value!.currentKg, unit),
+          : UnitFormatters.weight(
+              oneRmAsync.value!.currentKg, unit, context.l10n),
       caption: oneRmAsync.value == null
           ? null
           : localizedExerciseName(
@@ -958,6 +963,7 @@ class _AverageDurationCard extends ConsumerWidget {
           ? null
           : UnitFormatters.durationShort(
               Duration(seconds: averageSeconds.round()),
+              context.l10n,
             ),
       emptyCaption: context.l10n.dashboardAverageDurationEmpty,
     );
@@ -981,7 +987,8 @@ class _BodyWeightCard extends ConsumerWidget {
       error: metricsAsync.error,
       metric: metricsAsync.value == null
           ? null
-          : UnitFormatters.weight(metricsAsync.value!.weightKg, unit),
+          : UnitFormatters.weight(
+              metricsAsync.value!.weightKg, unit, context.l10n),
       caption: metricsAsync.value == null
           ? null
           : DateFormatters.of(context).relativeDay(metricsAsync.value!.date),

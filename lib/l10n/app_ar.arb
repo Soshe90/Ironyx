@@ -194,6 +194,21 @@
   "actionUndo": "تراجع",
   "statVolume": "الحجم التدريبي",
   "statDuration": "المدة",
+  "durationShortMinutes": "{minutes} د",
+  "@durationShortMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "durationShortHours": "{hours} س",
+  "@durationShortHours": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "durationShortHoursMinutes": "{hours} س {minutes} د",
+  "@durationShortHoursMinutes": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
   "statExercises": "التمارين",
   "statSets": "المجموعات",
 

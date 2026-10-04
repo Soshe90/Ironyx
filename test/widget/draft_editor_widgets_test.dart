@@ -34,6 +34,7 @@ void main() {
     HapticsService haptics = const NoopHapticsService(),
     bool showPreviousPerformance = false,
     PreviousPerformance? previous,
+    Locale locale = const Locale('en'),
   }) async {
     SharedPreferences.setMockInitialValues(prefs);
     final preferences = await SharedPreferences.getInstance();
@@ -52,6 +53,7 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
           home: _DraftHarness(
             key: harnessKey,
             showPreviousPerformance: showPreviousPerformance,
@@ -151,6 +153,42 @@ void main() {
       await pumpHarness(tester, showPreviousPerformance: true);
 
       expect(find.textContaining('Last time'), findsNothing);
+    });
+  });
+
+  group('Arabic (right-to-left)', () {
+    final PreviousPerformance previous = PreviousPerformance(
+      date: DateTime(2026, 10, 4),
+      sets: const <PreviousSet>[PreviousSet(weightKg: 60, reps: 8)],
+    );
+
+    testWidgets('"last time" keeps each set as one left-to-right run',
+        (tester) async {
+      await pumpHarness(
+        tester,
+        locale: const Locale('ar'),
+        showPreviousPerformance: true,
+        previous: previous,
+      );
+
+      // Isolated, so the bidi algorithm cannot reorder it into "60 8 × kg".
+      expect(
+        find.textContaining('\u206660\u00A0kg\u00A0×\u00A08\u2069'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('column headers stay on one line instead of breaking a word',
+        (tester) async {
+      await pumpHarness(tester, locale: const Locale('ar'));
+
+      // "المجموعة" is wider than the digit-sized set column; it used to
+      // wrap as "المجمو / عة". It must render at the same single-line
+      // height as a header that fits.
+      final double setHeader = tester.getSize(find.text('المجموعة')).height;
+      final double repsHeader = tester.getSize(find.text('التكرارات')).height;
+      expect(setHeader, lessThanOrEqualTo(repsHeader));
+      expect(tester.takeException(), isNull);
     });
   });
 
