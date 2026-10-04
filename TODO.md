@@ -203,6 +203,24 @@ Code and configuration:
       - [ ] Arabic (RTL), dark mode, and 200% font scale on Dashboard and
             Active workout: no clipped digits.
       - [ ] TalkBack: 10 minutes on Active workout and Timer.
+      *2026-09-29, automated on the LMR LX9 (Android 12) over USB with
+      `scripts/run_device_tests.sh` (debug build, 26 journeys in
+      `integration_test/`, all passing). Covered: first launch seeds 301
+      exercises in ~4.5–4.9 s; draft survives a simulated kill; timer
+      alarms really queued with Android (3 boundaries + completion) and
+      cleared on pause/end; 400 workouts / 6,400 sets export in ~0.4 s
+      (4 MB) and import in ~2 s; Arabic, 200 % text and dark mode lay out
+      without overflow. **Found and fixed:** the timer never finished on a
+      real device (just_audio's `play()` never completes at a clip's end, so
+      the screen stayed open and the session was never saved), and the
+      Delete-all dialog overflowed with the keyboard up. Both are in the
+      working tree, **not** in the 25 Sep release APK. Still manual: the
+      *release* build, a real force-kill, locked-screen alert timing,
+      denied notification permission, TalkBack.*
+      **Warning:** on 2026-09-29 an on-device test run uninstalled the
+      release app and its data. Debug builds now use
+      `com.soshe90.ironyx.debug`; run device tests only through the script,
+      which refuses while the release app is installed.
 
 Day 1 exit: a release-signed AAB that passed C4 and C6, and testers lined up.
 

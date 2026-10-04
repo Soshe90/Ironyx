@@ -470,26 +470,31 @@ class _DeleteAllDialogState extends State<_DeleteAllDialog> {
     final String confirmWord = l10n.dataDeleteConfirmWord;
     return AlertDialog(
       title: Text(l10n.dataDeleteAllConfirmTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.dataDeleteAllConfirmBody),
-          const SizedBox(height: 16),
-          Text(
-            l10n.dataDeleteAllTypeToConfirm(confirmWord),
-            style: TextStyle(color: scheme.error),
-          ),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            // Compared against the localized word shown just above, so the
-            // gate always asks for something the user can actually read and
-            // type on their own keyboard.
-            onChanged: (value) =>
-                setState(() => _canConfirm = value.trim() == confirmWord),
-          ),
-        ],
+      // Scrollable because the field autofocuses: on a phone the keyboard
+      // then takes most of the height, and a plain Column overflowed (found
+      // on-device, 2026-09-29), hiding part of the warning or the field.
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.dataDeleteAllConfirmBody),
+            const SizedBox(height: 16),
+            Text(
+              l10n.dataDeleteAllTypeToConfirm(confirmWord),
+              style: TextStyle(color: scheme.error),
+            ),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              // Compared against the localized word shown just above, so the
+              // gate always asks for something the user can actually read
+              // and type on their own keyboard.
+              onChanged: (value) =>
+                  setState(() => _canConfirm = value.trim() == confirmWord),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

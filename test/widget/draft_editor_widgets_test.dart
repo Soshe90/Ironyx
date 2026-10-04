@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/providers.dart';
 import 'package:ironyx/core/services/haptics_service.dart';
+import 'package:ironyx/features/library/presentation/widgets/exercise_detail_sheet.dart';
 import 'package:ironyx/features/tracker/domain/draft_editor_controller.dart';
 import 'package:ironyx/features/tracker/domain/workout_draft.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/draft_editor_widgets.dart';
@@ -33,6 +34,7 @@ void main() {
     HapticsService haptics = const NoopHapticsService(),
     bool showPreviousPerformance = false,
     PreviousPerformance? previous,
+    Locale locale = const Locale('en'),
   }) async {
     SharedPreferences.setMockInitialValues(prefs);
     final preferences = await SharedPreferences.getInstance();
@@ -44,10 +46,14 @@ void main() {
           hapticsServiceProvider.overrideWithValue(haptics),
           previousPerformanceProvider('bench')
               .overrideWith((ref) => Stream.value(previous)),
+          // The how-to sheet resolves to "not found" here; that is enough
+          // to prove the card opened it for the right exercise.
+          exerciseDetailProvider('bench').overrideWith((ref) async => null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
           home: _DraftHarness(
             key: harnessKey,
             showPreviousPerformance: showPreviousPerformance,
@@ -74,6 +80,36 @@ void main() {
       harnessKey.currentState!.controller.removedExerciseIds,
       <String>['exercise-row'],
     );
+  });
+
+  testWidgets('tapping the exercise name opens its how-to sheet',
+      (tester) async {
+    await pumpHarness(tester);
+
+    await tester.tap(find.text('Bench Press'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExerciseDetailSheet), findsOneWidget);
+    expect(find.text('Exercise not found'), findsOneWidget);
+  });
+
+  testWidgets('the options menu and set rows do not open the how-to sheet',
+      (tester) async {
+    await pumpHarness(tester);
+
+    await tester.tap(find.byTooltip('Bench Press options'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExerciseDetailSheet), findsNothing);
+    await tester.tapAt(Offset.zero); // dismiss the menu
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.bySemanticsLabel(
+        RegExp('Set 1.*(complete|done)', caseSensitive: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(ExerciseDetailSheet), findsNothing);
   });
 
   group('last time', () {
@@ -120,6 +156,42 @@ void main() {
     });
   });
 
+  group('Arabic (right-to-left)', () {
+    final PreviousPerformance previous = PreviousPerformance(
+      date: DateTime(2026, 10, 4),
+      sets: const <PreviousSet>[PreviousSet(weightKg: 60, reps: 8)],
+    );
+
+    testWidgets('"last time" keeps each set as one left-to-right run',
+        (tester) async {
+      await pumpHarness(
+        tester,
+        locale: const Locale('ar'),
+        showPreviousPerformance: true,
+        previous: previous,
+      );
+
+      // Isolated, so the bidi algorithm cannot reorder it into "60 8 × kg".
+      expect(
+        find.textContaining('\u206660\u00A0kg\u00A0×\u00A08\u2069'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('column headers stay on one line instead of breaking a word',
+        (tester) async {
+      await pumpHarness(tester, locale: const Locale('ar'));
+
+      // "المجموعة" is wider than the digit-sized set column; it used to
+      // wrap as "المجمو / عة". It must render at the same single-line
+      // height as a header that fits.
+      final double setHeader = tester.getSize(find.text('المجموعة')).height;
+      final double repsHeader = tester.getSize(find.text('التكرارات')).height;
+      expect(setHeader, lessThanOrEqualTo(repsHeader));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('logging a set gives a haptic tick', () {
     Finder doneButton(int set) => find.bySemanticsLabel(
           RegExp('Set $set.*(complete|done)', caseSensitive: false),
@@ -151,6 +223,27 @@ void main() {
       await tester.pump();
       expect(haptics.impacts, 0);
     });
+  });
+
+  testWidgets('an unlogged set is hollow and a logged one is filled',
+      (tester) async {
+    await pumpHarness(tester);
+    final Finder button = find.bySemanticsLabel('Set 1 complete');
+    Material box() => tester.widget<Material>(
+          find.descendant(of: button, matching: find.byType(Material)).first,
+        );
+    BorderSide side() => (box().shape! as RoundedRectangleBorder).side;
+    final ColorScheme scheme = Theme.of(tester.element(button)).colorScheme;
+
+    // A grey fill used to read as "already done" at arm's length.
+    expect(box().color, Colors.transparent);
+    expect(side().color, scheme.outline);
+
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(box().color, scheme.primary);
+    expect(side(), BorderSide.none);
   });
 
   testWidgets('deleting a middle set preserves neighboring edited values',

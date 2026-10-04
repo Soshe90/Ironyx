@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
@@ -69,12 +71,32 @@ class JustAudioCuePlayer implements TimerCuePlayer {
     await player.setAsset(assetPath);
   }
 
+  /// Longest a cue may take. The bundled cues are well under a second.
+  static const Duration _maxCueLength = Duration(seconds: 3);
+
   @override
   Future<void> play() async {
     final AudioPlayer? player = _player;
     if (player == null) return;
     await player.seek(Duration.zero);
-    await player.play();
+    // just_audio's `play()` future completes when playback is paused or
+    // stopped, *not* when the clip reaches its end: after the last sample it
+    // stays "playing" in the completed state. Awaiting it directly never
+    // returned on a real device, which left `TimerController._finish` stuck
+    // on the completion cue, so the timer screen never closed and the
+    // session was never saved (found on-device, 2026-09-29).
+    unawaited(player.play());
+    try {
+      await player.processingStateStream
+          .firstWhere((ProcessingState s) => s == ProcessingState.completed)
+          .timeout(_maxCueLength);
+    } on TimeoutException {
+      // A clip that has not finished by now is cut short, not waited on.
+    } finally {
+      // Leaves the player paused, so the pending `play()` future completes
+      // and the next cue starts from a clean state.
+      await player.pause();
+    }
   }
 
   @override
@@ -93,8 +115,12 @@ class PlatformTimerAudioService implements TimerAudioService {
   PlatformTimerAudioService({
     TimerCuePlayer Function()? playerFactory,
     Future<void> Function()? systemAlert,
+    this.cueTimeout = const Duration(seconds: 5),
   })  : _playerFactory = playerFactory ?? JustAudioCuePlayer.new,
         _systemAlert = systemAlert ?? _playSystemAlert;
+
+  /// The most a single [cue] call may wait on the platform.
+  final Duration cueTimeout;
 
   final TimerCuePlayer Function() _playerFactory;
   final Future<void> Function() _systemAlert;
@@ -166,10 +192,13 @@ class PlatformTimerAudioService implements TimerAudioService {
         );
       }
       final TimerCuePlayer? player = _players[cue];
+      // Bounded: the timer awaits the completion cue before it records the
+      // session, so a player that never reports "finished" must not be
+      // able to hold that up.
       if (player != null) {
-        await player.play();
+        await player.play().timeout(cueTimeout);
       } else {
-        await _systemAlert();
+        await _systemAlert().timeout(cueTimeout);
       }
     } on MissingPluginException {
       // A device without audio output is not an error worth surfacing.

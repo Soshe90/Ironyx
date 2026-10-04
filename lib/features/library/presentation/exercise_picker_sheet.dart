@@ -159,7 +159,7 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                         summary.equipmentNames
                             .map((String e) =>
                                 localizedEquipmentName(context, e))
-                            .join('، '),
+                            .join(context.l10n.listSeparator),
                     ].join(' · ');
                     return ListTile(
                       title: Text(summary.exercise.displayName(context)),

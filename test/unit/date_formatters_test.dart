@@ -147,6 +147,16 @@ void main() {
     });
   });
 
+  group('history date tile and month heading', () {
+    test('formats the day, short weekday and month', () {
+      // 15 Jan 2024 was a Monday.
+      final DateTime date = DateTime(2024, 1, 15);
+      expect(dates.dayOfMonth(date), '15');
+      expect(dates.weekdayShort(date), 'Mon');
+      expect(dates.monthYear(date), 'January 2024');
+    });
+  });
+
   group('DateFormatters in Arabic', () {
     late final DateFormatters arabic;
 
@@ -173,6 +183,8 @@ void main() {
         arabic.full(DateTime(2024, 1, 15)),
         arabic.time(DateTime(2024, 1, 15, 13, 30)),
         arabic.axisLabel(DateTime(2024, 1, 15)),
+        arabic.dayOfMonth(DateTime(2024, 1, 15)),
+        arabic.monthYear(DateTime(2024, 1, 15)),
       ]) {
         expect(
           rendered.split('').any(arabicIndic.contains),
