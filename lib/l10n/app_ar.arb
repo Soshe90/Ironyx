@@ -56,8 +56,8 @@
   "settingsHaptics": "الاهتزاز",
   "settingsHapticsSubtitle": "اهتزاز عند تغيّر المرحلة وعند تسجيل مجموعة",
   "settingsDataTitle": "البيانات",
-  "settingsDataSubtitle": "يحفظ Ironyx كل شيء على هذا الجهاز",
-  "settingsStorageNote": "لا تغادر بيانات تدريبك هذا الجهاز إلا إذا صدّرتها بنفسك.",
+  "settingsDataSubtitle": "تُحفظ بياناتك على هذا الجهاز",
+  "settingsStorageNote": "تبقى بيانات تدريبك على هذا الجهاز، ولا تُرفع إلى حسابك إلا إذا أنشأت نسخة احتياطية بنفسك.",
   "settingsAboutTitle": "حول التطبيق",
   "settingsAboutSubtitle": "الإصدار، التراخيص، ومصدر بيانات التمارين",
   "settingsExerciseCreditsTitle": "بيانات التمارين والصور",
@@ -108,7 +108,7 @@
     }
   },
   "backupNowTitle": "أنشئ نسخة احتياطية الآن",
-  "backupNowSubtitle": "يرفع كل ما على هذا الجهاز",
+  "backupNowSubtitle": "يرفع بيانات Ironyx المحفوظة على هذا الجهاز إلى حسابك.",
   "backupInProgress": "جارٍ النسخ الاحتياطي…",
   "backupInProgressSubtitle": "جارٍ تجهيز بياناتك ورفعها",
   "backupFailed": "تعذّر إكمال النسخ الاحتياطي.",
@@ -122,7 +122,7 @@
   "backupRestoreTitle": "الاستعادة من حسابي",
   "backupRestoreSubtitle": "يستبدل البيانات الموجودة على هذا الجهاز بنسختك الاحتياطية",
   "backupRestoreConfirmTitle": "الاستعادة من حسابك؟",
-  "backupRestoreConfirmBody": "كل ما هو موجود حاليًا على هذا الجهاز — التمارين والبرامج والقوالب وقياسات الجسم — سيُستبدل بنسختك الاحتياطية.\n\nتُحفظ نسخة من البيانات الحالية أولًا، فيمكنك التراجع عن ذلك من إدارة البيانات.",
+  "backupRestoreConfirmBody": "ستُستبدل كل بياناتك الحالية على هذا الجهاز بنسختك الاحتياطية.\n\nتُحفظ نسخة من البيانات الحالية أولًا، ويمكنك التراجع عن ذلك من إدارة البيانات.",
   "backupRestoreAction": "استعادة",
   "backupRestoring": "جارٍ الاستعادة…",
   "backupRestored": "تمت الاستعادة من حسابك",
@@ -221,13 +221,13 @@
     }
   },
   "workoutTopSet": "أفضل مجموعة",
-  "workoutFirstTimeLogged": "أول مرة تُسجَّل · أقصى تكرار مُقدَّر {oneRm}",
+  "workoutFirstTimeLogged": "أول تسجيل لهذا التمرين · الوزن التقديري لأقصى تكرار واحد: {oneRm}",
   "@workoutFirstTimeLogged": {
     "placeholders": {
       "oneRm": { "type": "String" }
     }
   },
-  "workoutOneRmWithPrevious": "أقصى تكرار مُقدَّر {oneRm} · أفضل سابق {previous}",
+  "workoutOneRmWithPrevious": "الوزن التقديري لأقصى تكرار واحد: {oneRm} · أفضل نتيجة سابقة: {previous}",
   "@workoutOneRmWithPrevious": {
     "placeholders": {
       "oneRm": { "type": "String" },
@@ -283,7 +283,7 @@
   "dataImportModeMerge": "دمج",
   "dataImportModeMergeSubtitle": "الإبقاء على البيانات الحالية وإضافة هذه فوقها",
   "dataImportModeReplace": "استبدال",
-  "dataImportModeReplaceSubtitle": "محو كل ما على هذا الجهاز أولًا",
+  "dataImportModeReplaceSubtitle": "استبدال بياناتك الحالية ببيانات النسخة الاحتياطية مع الإبقاء على مكتبة التمارين",
   "dataImportComplete": "اكتمل الاستيراد",
   "dataImportFailed": "تعذّر إكمال الاستيراد. لم يتغيّر شيء على هذا الجهاز — حاول مرة أخرى.",
   "dataImportProblemTitle": "مشكلة في الاستيراد",
@@ -318,7 +318,7 @@
   "programImportInvalidHeader": "\u064a\u062c\u0628 \u0623\u0646 \u064a\u062d\u062a\u0648\u064a \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0623\u0639\u0645\u062f\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629: \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c\u060c \u0648\u0627\u0644\u064a\u0648\u0645\u060c \u0648\u0627\u0644\u062a\u0645\u0631\u064a\u0646.",
   "programImportDone": "\u062a\u0645 \u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0627\u0644\u0628\u0631\u0627\u0645\u062c.",
   "programImportConfirmTitle": "\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0627\u0644\u0628\u0631\u0627\u0645\u062c\u061f",
-  "programImportSummary": "{programs} \u0628\u0631\u0646\u0627\u0645\u062c \u00b7 {days} \u064a\u0648\u0645 \u00b7 {exercises} \u062a\u0645\u0631\u064a\u0646",
+  "programImportSummary": "{programs, plural, zero{لا برامج} one{برنامج واحد} two{برنامجان} few{{programs} برامج} many{{programs} برنامجًا} other{{programs} برنامج}} · {days, plural, zero{لا أيام} one{يوم واحد} two{يومان} few{{days} أيام} many{{days} يومًا} other{{days} يوم}} · {exercises, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{exercises} تمارين} many{{exercises} تمرينًا} other{{exercises} تمرين}}", 
   "@programImportSummary": {
     "placeholders": {
       "programs": { "type": "int" },
@@ -348,9 +348,9 @@
 
   "categoryStrength": "قوة",
   "categoryCardio": "هوائي",
-  "categoryMobility": "مرونة حركية",
+  "categoryMobility": "الحركة والمرونة",
   "categoryBalance": "توازن",
-  "categoryPlyometric": "بلايومترك",
+  "categoryPlyometric": "تمارين انفجارية",
   "categoryOther": "أخرى",
   "difficultyBeginner": "مبتدئ",
   "difficultyIntermediate": "متوسط",
@@ -364,8 +364,8 @@
   "patternVerticalPush": "دفع عمودي",
   "patternHorizontalPull": "سحب أفقي",
   "patternVerticalPull": "سحب عمودي",
-  "patternKneeDominant": "اعتماد على الركبة",
-  "patternHipDominant": "اعتماد على الورك",
+  "patternKneeDominant": "تركيز على الركبة",
+  "patternHipDominant": "تركيز على الورك",
   "patternCarry": "حمل",
   "patternRotation": "دوران",
   "patternAntiRotation": "مقاومة الدوران",
@@ -462,13 +462,13 @@
   "importXlsxWrongType": "الرجاء اختيار ملف بصيغة ‎.xlsx‎.",
   "importXlsxReadFailed": "تعذّرت قراءة هذا الملف. تأكد من أنه ملف ‎.xlsx‎ المُصدَّر من سجلّ تمارينك.",
   "importXlsxApplyFailed": "تعذّر حفظ التمارين المستوردة. لم يُحفظ أي شيء — حاول مرة أخرى.",
-  "importXlsxDone": "تم استيراد {count} تمرين.",
+  "importXlsxDone": "{count, plural, zero{لم تُستورد أي جلسة تدريبية} one{تم استيراد جلسة تدريبية واحدة} two{تم استيراد جلستين تدريبيتين} few{تم استيراد {count} جلسات تدريبية} many{تم استيراد {count} جلسة تدريبية} other{تم استيراد {count} جلسة تدريبية}}.",
   "@importXlsxDone": {
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "importXlsxDoneWithSkips": "تم استيراد {count} تمرين (وتم تخطّي {skipped} موجودة في السجلّ مسبقًا).",
+  "importXlsxDoneWithSkips": "{count, plural, zero{لم تُستورد أي جلسة تدريبية} one{تم استيراد جلسة تدريبية واحدة} two{تم استيراد جلستين تدريبيتين} few{تم استيراد # جلسات تدريبية} many{تم استيراد # جلسة تدريبية} other{تم استيراد # جلسة تدريبية}}، و{skipped, plural, zero{لم تُتخطَّ أي جلسة تدريبية} one{تم تخطّي جلسة تدريبية واحدة} two{تم تخطّي جلستين تدريبيتين} few{تم تخطّي # جلسات تدريبية} many{تم تخطّي # جلسة تدريبية} other{تم تخطّي # جلسة تدريبية}} لوجودها مسبقًا في السجلّ.",
   "@importXlsxDoneWithSkips": {
     "placeholders": {
       "count": { "type": "int" },
@@ -567,7 +567,7 @@
     }
   },
   "timerPositiveValuesRequired": "يجب أن تكون قيم العمل والراحة والجولات موجبة.",
-  "timerFieldWork": "العمل (ث)",
+  "timerFieldWork": "مدة العمل (ث)",
   "timerFieldRest": "الراحة (ث)",
   "timerFieldRounds": "الجولات",
   "timerFieldWarmup": "الإحماء (ث)",
@@ -660,9 +660,9 @@
       "target": { "type": "int" }
     }
   },
-  "dashboardStatStreak": "التتابع",
+  "dashboardStatStreak": "سلسلة المواظبة",
   "dashboardStatLastWeek": "الأسبوع الماضي",
-  "dashboardStreakWeeks": "{count} أسبوع",
+  "dashboardStreakWeeks": "{count, plural, zero{لا أسابيع متتالية} one{أسبوع واحد متواصل} two{أسبوعان متواصلان} few{{count} أسابيع متتالية} many{{count} أسبوعًا متتاليًا} other{{count} أسبوع متتالٍ}}",
   "@dashboardStreakWeeks": {
     "placeholders": {
       "count": { "type": "int" }
@@ -673,8 +673,8 @@
   "dashboardNothingYet": "لا شيء بعد",
   "dashboardLastWorkout": "آخر تمرين",
   "dashboardLastTimer": "آخر مؤقّت",
-  "dashboardEstOneRm": "أقصى تكرار مُقدَّر",
-  "dashboardLogALiftToSeeThis": "سجّل رفعة لعرض هذا",
+  "dashboardEstOneRm": "الوزن التقديري لأقصى تكرار واحد",
+  "dashboardLogALiftToSeeThis": "سجّل تمرينًا بالأوزان لعرض هذا",
   "dashboardBodyWeight": "وزن الجسم",
   "dashboardAverageDuration": "متوسط المدة",
   "dashboardAverageDurationEmpty": "أكمل تمرينًا لعرض هذا",
@@ -735,10 +735,10 @@
       "max": { "type": "String" }
     }
   },
-  "profileBmiUnderweight": "تشير القيم المُدخَلة إلى درجة من نقص الوزن. تحقّق من صحة الوزن والطول المُدخَلين ثم أكّد.",
-  "profileBmiOverweight": "تشير القيم المُدخَلة إلى درجة من زيادة الوزن. تحقّق من صحة الوزن والطول المُدخَلين ثم أكّد.",
+  "profileBmiUnderweight": "تشير القيم المُدخَلة إلى نقص في الوزن. تحقّق من صحة الوزن والطول ثم أكّد.",
+  "profileBmiOverweight": "تشير القيم المُدخَلة إلى زيادة في الوزن. تحقّق من صحة الوزن والطول ثم أكّد.",
 
-  "welcomeTagline": "تدريبك، مُوثَّقًا.",
+  "welcomeTagline": "سجّل تدريبك، وتابع تقدّمك.",
   "welcomeFeatureLogTitle": "سجّل كل مجموعة وتكرار",
   "welcomeFeatureLogDetail": "الوزن والتكرارات والراحة، تُسجَّل أثناء تمرينك.",
   "welcomeFeatureProgramsTitle": "اتبع برامج جاهزة أو أنشئ برنامجك",
@@ -746,13 +746,13 @@
   "welcomeFeatureTimerTitle": "مؤقّت راحة دقيق",
   "welcomeFeatureTimerDetail": "يعمل في الخلفية، مع صوت واهتزاز.",
   "welcomeFeatureChartsTitle": "رسوم بيانية تُظهر تقدّمك",
-  "welcomeFeatureChartsDetail": "الحجم التدريبي، وتقدير أقصى تكرار واحد، وقياسات الجسم.",
+  "welcomeFeatureChartsDetail": "الحجم التدريبي، والوزن التقديري لأقصى تكرار واحد، وقياسات الجسم.",
   "welcomeCreateAccount": "أنشئ حسابًا مجانيًا",
   "welcomeHaveAccount": "لديّ حساب بالفعل",
   "welcomeContinueAsGuest": "المتابعة بدون حساب",
   "welcomeGetStarted": "لنبدأ",
-  "welcomeDataNotice": "تبقى تمارينك على هذا الجهاز. إلغاء تثبيت التطبيق يحذفها — احفظ نسخة احتياطية من الإعدادات في أي وقت.",
-  "welcomeDataNoticeWithAccounts": "تبقى تمارينك على هذا الجهاز، بحساب أو بدونه. إلغاء تثبيت التطبيق يحذفها — احفظ نسخة احتياطية من الإعدادات في أي وقت. الحساب المجاني يحفظ ملفك الشخصي.",
+  "welcomeDataNotice": "تبقى تمارينك على هذا الجهاز. إلغاء تثبيت التطبيق يحذفها — يمكنك إنشاء نسخة احتياطية لبياناتك من الإعدادات في أي وقت.",
+  "welcomeDataNoticeWithAccounts": "تبقى تمارينك على هذا الجهاز، بحساب أو بدونه. إلغاء تثبيت التطبيق يحذفها — يمكنك إنشاء نسخة احتياطية لبياناتك من الإعدادات في أي وقت. ويحفظ الحساب المجاني ملفك الشخصي.",
 
   "authSignInTitle": "تسجيل الدخول",
   "authSignInIntro": "تبقى تمارينك على هذا الجهاز في كل الأحوال — الحساب يحفظ بياناتك معك فقط.",
@@ -826,7 +826,7 @@
   "accountSectionSubtitle": "اختياري — تُحفظ تمارينك على هذا الجهاز في كل الأحوال",
   "accountUnavailableTitle": "الحسابات غير متاحة",
   "accountUnavailableSubtitle": "لم يُهيّأ تسجيل الدخول في هذه النسخة.",
-  "accountSignInSubtitle": "احفظ بياناتك مع حسابك",
+  "accountSignInSubtitle": "سجّل الدخول للوصول إلى النسخ الاحتياطي للحساب",
   "accountEmailNotConfirmedTitle": "البريد الإلكتروني غير مؤكَّد",
   "accountEmailNotConfirmedSubtitle": "افتح الرابط الذي أرسلناه لإكمال إعداد حسابك.",
   "accountPersonalDetailsTitle": "البيانات الشخصية",
@@ -965,9 +965,9 @@
   "progressRangeLabel": "{range, select, twoWeeks{أسبوعان} month{شهر} quarter{3 أشهر} year{سنة} all{الكل} other{الكل}}",
   "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },
   "progressStrengthChangeTitle": "تغيّر القوة",
-  "progressStrengthSubtitle": "{range, select, twoWeeks{أفضل رفعة خلال آخر 14 يومًا مقارنةً بالأيام الأربعة عشر السابقة} month{أفضل رفعة خلال آخر 30 يومًا مقارنةً بالأيام الثلاثين السابقة} quarter{أفضل رفعة خلال آخر 90 يومًا مقارنةً بالأيام التسعين السابقة} year{أفضل رفعة خلال آخر 12 شهرًا مقارنةً بالأشهر الاثني عشر السابقة} all{أفضل رفعة سجّلتها لكل تمرين} other{أفضل رفعة سجّلتها لكل تمرين}}",
+  "progressStrengthSubtitle": "{range, select, twoWeeks{أعلى وزن تقديري سجلته خلال آخر 14 يومًا مقارنةً بالأيام الأربعة عشر السابقة} month{أعلى وزن تقديري سجلته خلال آخر 30 يومًا مقارنةً بالأيام الثلاثين السابقة} quarter{أعلى وزن تقديري سجلته خلال آخر 90 يومًا مقارنةً بالأيام التسعين السابقة} year{أعلى وزن تقديري سجلته خلال آخر 12 شهرًا مقارنةً بالأشهر الاثني عشر السابقة} all{أعلى وزن تقديري سجلته لكل تمرين} other{أعلى وزن تقديري سجلته لكل تمرين}}",
   "@progressStrengthSubtitle": { "placeholders": { "range": { "type": "String" } } },
-  "progressEstimatedOneRmTitle": "الحد الأقصى المقدّر لتكرار واحد",
+  "progressEstimatedOneRmTitle": "الوزن التقديري لأقصى تكرار واحد",
   "progressEstimatedOneRmSubtitle": "تقدير بمعادلة إبلي اعتمادًا على أثقل مجموعاتك المسجّلة",
   "progressWeeklyVolumeTitle": "الحجم التدريبي الأسبوعي",
   "progressWeeklyVolumeSubtitle": "{range, select, twoWeeks{كل أسبوع خلال آخر 14 يومًا، بما فيها الأسابيع دون تدريب} month{كل أسبوع خلال آخر 30 يومًا، بما فيها الأسابيع دون تدريب} quarter{كل أسبوع خلال آخر 90 يومًا، بما فيها الأسابيع دون تدريب} year{كل أسبوع خلال آخر 12 شهرًا، بما فيها الأسابيع دون تدريب} all{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب} other{كل أسبوع مسجّل، بما فيها الأسابيع دون تدريب}}",
@@ -984,7 +984,7 @@
   "progressBodyMetricsSubtitle": "تغيّر الوزن ونسبة الدهون مع مرور الوقت",
   "progressStrengthEmpty": "سجّل بعض مجموعات العمل لمعرفة اتجاه كل رفعة.",
   "progressRelativeStrengthTitle": "القوة النسبية",
-  "progressRelativeStrengthSubtitle": "الحد الأقصى المقدّر لتكرار واحد ÷ أحدث وزن للجسم",
+  "progressRelativeStrengthSubtitle": "الوزن التقديري لأقصى تكرار واحد ÷ أحدث وزن للجسم",
   "progressRelativeStrengthRatio": "{ratio}×",
   "@progressRelativeStrengthRatio": { "placeholders": { "ratio": { "type": "String" } } },
   "progressStrengthSemantic": "{direction, select, up{{exercise}، {estimate}، تحسّن بنسبة {percent} بالمئة} down{{exercise}، {estimate}، تراجع بنسبة {percent} بالمئة} other{{exercise}، {estimate}، تغيّر بنسبة {percent} بالمئة}}",
@@ -1003,7 +1003,7 @@
   "progressInsightTargetBalance": "التوازن",
   "progressInsightStrengthHeadline": "{direction, select, up{تحسّن أداء {exercise} بنسبة {percent}%} down{تراجع أداء {exercise} بنسبة {percent}%} other{تغيّر أداء {exercise} بنسبة {percent}%}}",
   "@progressInsightStrengthHeadline": { "placeholders": { "direction": { "type": "String" }, "exercise": { "type": "String" }, "percent": { "type": "int" } } },
-  "progressInsightStrengthFigure": "الحد الأقصى المقدّر لتكرار واحد: {estimate}",
+  "progressInsightStrengthFigure": "الوزن التقديري لأقصى تكرار واحد: {estimate}",
   "@progressInsightStrengthFigure": { "placeholders": { "estimate": { "type": "String" } } },
   "progressInsightConsistencyHeadline": "المواظبة على التدريب آخذة في التراجع",
   "progressInsightConsistencyFigure": "بمتوسط {average} جلسة أسبوعيًا",
@@ -1123,7 +1123,7 @@
   "metricExplainerHowToRead": "كيف تقرأ هذا الرقم",
   "metricExplainerDismiss": "فهمت",
 
-  "explainerOneRmSummary": "«1RM» هو الحد الأقصى لتكرار واحد: أثقل وزن يمكنك رفعه مرة واحدة فقط. اختباره فعليًا مُتعب وفيه شيء من المخاطرة، لذا يقدّره التطبيق من المجموعات التي تسجّلها أصلًا. و«إبلي» ليس إلا اسم المعادلة المستخدمة، نسبةً إلى المدرّب الذي نشرها عام 1985.",
+  "explainerOneRmSummary": "يشير «1RM» إلى أقصى وزن يمكنك رفعه مرة واحدة. اختباره فعليًا قد يكون مرهقًا وينطوي على بعض المخاطر، لذلك يقدّره التطبيق من المجموعات التي تسجّلها بالفعل. أما «إبلي» فهو اسم المعادلة المستخدمة، نسبةً إلى المدرّب الذي نشرها عام 1985.",
   "explainerOneRmFormula": "1RM = الوزن × (1 + التكرارات ÷ 30)",
   "explainerOneRmExample": "80 kg × 8 تكرارات ← 101 kg",
   "explainerOneRmPoint1": "يضع مجموعة ثقيلة من ثلاثة تكرارات ومجموعة أخف من عشرة على المقياس نفسه، فترى تقدّمك أيًّا كانت طريقة تدريبك ذلك اليوم.",
@@ -1131,7 +1131,7 @@
   "explainerOneRmPoint3": "ارتفاع الخط يعني أنك تزداد قوة، بما في ذلك حين يبقى الوزن كما هو وتزيد عدد التكرارات.",
   "explainerOneRmCaveat": "هذا تقدير وليس هدفًا، فلا تتوجّه إلى البار وتحاول رفع الرقم مباشرة.",
 
-  "explainerRelativeStrengthSummary": "الحد الأقصى المقدّر مقسومًا على وزن جسمك، أي القوة لكل كيلوغرام منك. رفع 100 kg شيء مختلف تمامًا عند وزن جسم 60 kg عنه عند 100 kg.",
+  "explainerRelativeStrengthSummary": "الوزن التقديري لأقصى تكرار واحد مقسومًا على وزن جسمك؛ أي مقدار القوة نسبةً إلى كل كيلوغرام من وزن جسمك. فرفع 100 kg يختلف تمامًا عند وزن جسم 60 kg عنه عند وزن 100 kg.",
   "explainerRelativeStrengthFormula": "القوة النسبية = 1RM ÷ وزن الجسم",
   "explainerRelativeStrengthExample": "101 kg ÷ 80 kg ← 1.26 ×",
   "explainerRelativeStrengthPoint1": "القيمة 1.0 × تعني أنك ترفع ما يعادل وزن جسمك في ذلك التمرين.",
@@ -1170,7 +1170,7 @@
   "explainerConsistencyPoint2": "أطول سلسلة هي رقمك القياسي عبر تاريخك كله، لا ضمن النطاق المحدّد أعلاه فقط.",
   "explainerConsistencyCaveat": "على مدى سنة، انتظام الحضور يتنبأ بالتقدّم أفضل من أي جلسة منفردة.",
 
-  "explainerStrengthChangeSummary": "أفضل حد أقصى مقدّر لكل تمرين ضمن النطاق المحدّد، مقارنًا بالنطاق الذي يسبقه مباشرة.",
+  "explainerStrengthChangeSummary": "أفضل وزن تقديري لأقصى تكرار واحد لكل تمرين ضمن النطاق المحدّد، مقارنةً بالنطاق السابق مباشرةً.",
   "explainerStrengthChangePoint1": "الأخضر يعني أن أفضل رفعة تحسّنت عن الفترة السابقة، والأحمر يعني أنها تراجعت.",
   "explainerStrengthChangePoint2": "عند اختيار «كل الوقت» لا توجد فترة سابقة للمقارنة، فيُعرض ببساطة أفضل رقم لك في كل تمرين.",
   "explainerStrengthChangeCaveat": "التراجع غالبًا يعني أنك دربت تلك الرفعة بأوزان أخف هذه الفترة، لا أنك فقدت قوتك."
