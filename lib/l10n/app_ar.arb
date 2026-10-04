@@ -129,7 +129,7 @@
 
   "actionGotIt": "فهمت",
 
-  "navTracker": "السجلّ",
+  "navTracker": "التمارين",
   "routeNotFoundTitle": "غير موجود",
   "routeNotFoundBody": "لا يوجد مسار لـ {uri}",
   "@routeNotFoundBody": {
