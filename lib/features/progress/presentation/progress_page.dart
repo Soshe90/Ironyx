@@ -32,12 +32,17 @@ import '../domain/progress_providers.dart';
 import '../domain/strength_analytics.dart';
 import 'progress_explainers.dart';
 import 'widgets/body_metric_widgets.dart';
+import 'widgets/progress_visuals.dart';
 
 /// Height of a full chart. One value for all of them, so the page has a
 /// consistent rhythm instead of three hand-picked heights.
 const double _chartHeight = 220;
 const double _axisReserved = 28;
 const double _barWidth = 22;
+
+/// Dash pattern for chart gridlines: present enough to read values against,
+/// quiet enough not to compete with the data.
+const List<int> _gridDash = <int>[4, 4];
 
 /// Progress and analytics hub.
 ///
@@ -119,16 +124,13 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _RangeSelector(range: range),
+              const SizedBox(height: AppSpacing.lg),
+              ProgressOverviewHero(range: range),
               const SizedBox(height: AppSpacing.md),
               _InsightsSection(range: range),
-              const SizedBox(height: AppSpacing.xl),
-              SectionHeader(
-                title: l10n.progressWeeklyVolumeTitle,
-                subtitle: l10n.progressWeeklyVolumeSubtitle(range.name),
-                explainer: ProgressExplainers.volume(l10n),
-              ),
-              _VolumeSection(range: range),
-              const SizedBox(height: AppSpacing.xl),
+
+              // ---- Strength: "am I getting stronger?" ----
+              ProgressChapter(title: l10n.progressChapterStrength),
               SectionHeader(
                 title: l10n.progressStrengthChangeTitle,
                 subtitle: l10n.progressStrengthSubtitle(range.name),
@@ -149,19 +151,21 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                     setState(() => _exerciseId = id),
               ),
               _SessionVolumeSection(range: range, exerciseId: _exerciseId),
-              const SizedBox(height: AppSpacing.xl),
+
+              // ---- Volume: "how much work, and where did it go?" ----
+              ProgressChapter(title: l10n.progressChapterVolume),
               SectionHeader(
-                title: l10n.progressConsistencyTitle,
-                explainer: ProgressExplainers.consistency(l10n),
+                title: l10n.progressWeeklyVolumeTitle,
+                subtitle: l10n.progressWeeklyVolumeSubtitle(range.name),
+                explainer: ProgressExplainers.volume(l10n),
               ),
-              _ConsistencySection(range: range),
+              _VolumeSection(range: range),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader(
-                title: l10n.progressEffortRecoveryTitle,
-                explainer: ProgressExplainers.rpe(l10n),
-              ),
-              _RpeSection(range: range),
-              _RestSection(range: range),
+              SectionHeader(title: l10n.progressVolumeByMuscleGroupTitle),
+              _MuscleGroupSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(title: l10n.progressWeeklyVolumeByMuscleTitle),
+              _WeeklyMuscleSection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(
                 title: l10n.progressTrainingBalanceTitle,
@@ -169,24 +173,35 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               ),
               _BalanceSection(range: range),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.progressWorkoutFrequencyTitle),
-              _FrequencySection(range: range),
-              const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.progressWeeklyVolumeByMuscleTitle),
-              _WeeklyMuscleSection(range: range),
-              const SizedBox(height: AppSpacing.xl),
               SectionHeader(
                 title: l10n.progressRepRangeDistributionTitle,
                 explainer: ProgressExplainers.repRange(l10n),
               ),
               _RepRangeSection(range: range),
+
+              // ---- Habits: "am I showing up, and how hard?" ----
+              ProgressChapter(title: l10n.progressChapterHabits),
+              SectionHeader(
+                title: l10n.progressConsistencyTitle,
+                explainer: ProgressExplainers.consistency(l10n),
+              ),
+              _ConsistencySection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(title: l10n.progressWorkoutFrequencyTitle),
+              _FrequencySection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(title: l10n.progressTrainingDaysTitle),
               _WeekdaySection(range: range),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader(title: l10n.progressVolumeByMuscleGroupTitle),
-              _MuscleGroupSection(range: range),
-              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
+                title: l10n.progressEffortRecoveryTitle,
+                explainer: ProgressExplainers.rpe(l10n),
+              ),
+              _RpeSection(range: range),
+              _RestSection(range: range),
+
+              // ---- Body ----
+              ProgressChapter(title: l10n.progressChapterBody),
               SectionHeader(
                 title: l10n.progressBodyMetricsTitle,
                 subtitle: l10n.progressBodyMetricsSubtitle,
@@ -203,13 +218,29 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
 
 /// Per-lift strength comparison: the question "am I improving" answered
 /// directly, rather than inferred from a volume figure.
-class _StrengthChangeSection extends ConsumerWidget {
+///
+/// Shows the first [_strengthPreview] lifts and folds the rest behind a
+/// toggle: someone training fifteen exercises had a three-screen list here,
+/// which pushed every other chapter out of reach.
+class _StrengthChangeSection extends ConsumerStatefulWidget {
   const _StrengthChangeSection({required this.range});
 
   final ProgressRange range;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StrengthChangeSection> createState() =>
+      _StrengthChangeSectionState();
+}
+
+const int _strengthPreview = 5;
+
+class _StrengthChangeSectionState
+    extends ConsumerState<_StrengthChangeSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ProgressRange range = widget.range;
     final AsyncValue<List<StrengthChange>> async =
         ref.watch(strengthChangeProvider(range));
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
@@ -228,24 +259,48 @@ class _StrengthChangeSection extends ConsumerWidget {
             message: context.l10n.progressStrengthEmpty,
           );
         }
+        final int hidden = rows.length - _strengthPreview;
+        final List<StrengthChange> shown = _expanded || hidden <= 0
+            ? rows
+            : rows.take(_strengthPreview).toList();
+        final Color divider = Theme.of(context).colorScheme.outlineVariant;
         return AppCard(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
+            vertical: AppSpacing.xs,
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              for (final StrengthChange row in rows)
+              for (int i = 0; i < shown.length; i++) ...<Widget>[
+                if (i > 0) Divider(height: 1, thickness: 1, color: divider),
                 _StrengthRow(
-                  row: row,
+                  row: shown[i],
                   unit: unit,
                   displayName: localizedExerciseName(
                     context,
                     slugsById,
-                    row.exerciseId,
-                    row.exerciseName,
+                    shown[i].exerciseId,
+                    shown[i].exerciseName,
                   ),
                 ),
+              ],
+              if (hidden > 0) ...<Widget>[
+                Divider(height: 1, thickness: 1, color: divider),
+                TextButton.icon(
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  icon: Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                  ),
+                  label: Text(
+                    _expanded
+                        ? context.l10n.progressShowFewerLifts
+                        : context.l10n.progressShowAllLifts(hidden),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -539,6 +594,31 @@ class _InsightTile extends StatelessWidget {
           figure: l10n.progressInsightNeglectedFigure,
         ),
     };
+    final ThemeData theme = Theme.of(context);
+    final bool light = theme.brightness == Brightness.light;
+    // Records read amber everywhere (PrBadge); gains green, slips red, and a
+    // prompt to act in the brand colour rather than a third alarm hue.
+    final (IconData icon, Color color) = switch ((
+      insight.kind,
+      insight.severity,
+    )) {
+      (InsightKind.personalRecords, _) => (
+          Icons.emoji_events_rounded,
+          light ? AppColors.personalRecordInkLight : AppColors.personalRecord,
+        ),
+      (_, InsightSeverity.actionable) => (
+          Icons.flag_rounded,
+          theme.colorScheme.primary,
+        ),
+      (_, InsightSeverity.negative) => (
+          Icons.trending_down_rounded,
+          light ? AppColors.lossInkLight : AppColors.loss,
+        ),
+      _ => (
+          Icons.trending_up_rounded,
+          light ? AppColors.gainInkLight : AppColors.gain,
+        ),
+    };
     return Semantics(
       container: true,
       label: l10n.progressInsightSemantic(
@@ -546,17 +626,29 @@ class _InsightTile extends StatelessWidget {
         text.figure,
         target,
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        dense: true,
-        title: Text(text.headline),
-        subtitle: Text(l10n.progressInsightSubtitle(text.figure, target)),
-        leading: Icon(
-          insight.severity == InsightSeverity.actionable
-              ? Icons.priority_high
-              : insight.severity == InsightSeverity.negative
-                  ? Icons.trending_down
-                  : Icons.trending_up,
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              ProgressIconChip(icon: icon, color: color),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(text.headline, style: theme.textTheme.titleSmall),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      l10n.progressInsightSubtitle(text.figure, target),
+                      style: AppTypography.caption(theme),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -941,6 +1033,7 @@ class _DatedLineChart extends StatelessWidget {
             getDrawingHorizontalLine: (_) => FlLine(
               color: scheme.outlineVariant,
               strokeWidth: 1,
+              dashArray: _gridDash,
             ),
           ),
           borderData: FlBorderData(show: false),
@@ -1052,9 +1145,18 @@ class _DatedLineChart extends StatelessWidget {
                       : scheme.surfaceContainerLow,
                 ),
               ),
+              // Fades to nothing at the baseline so the area reads as the
+              // line's shadow rather than a filled block.
               belowBarData: BarAreaData(
                 show: true,
-                color: scheme.primary.withValues(alpha: 0.10),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[
+                    scheme.primary.withValues(alpha: 0.28),
+                    scheme.primary.withValues(alpha: 0),
+                  ],
+                ),
               ),
             ),
           ],
@@ -1200,328 +1302,412 @@ class _VolumeSection extends ConsumerWidget {
 class _ConsistencySection extends ConsumerWidget {
   const _ConsistencySection({required this.range});
   final ProgressRange range;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final bool light = theme.brightness == Brightness.light;
+    final AppLocalizations l10n = context.l10n;
     return ref.watch(consistencySummaryProvider(range)).when(
-          loading: () => const _ChartLoading(),
+          loading: () => const ProgressCardLoading(),
           error: (e, _) => _ChartError(
-              error: e,
-              onRetry: () => ref.invalidate(consistencySummaryProvider(range))),
+            error: e,
+            onRetry: () => ref.invalidate(consistencySummaryProvider(range)),
+          ),
           data: (summary) => AppCard(
-              child: Wrap(
-                  alignment: WrapAlignment.spaceAround,
-                  spacing: AppSpacing.lg,
-                  runSpacing: AppSpacing.md,
-                  children: [
-                _Metric(
-                  label: context.l10n.progressCurrentStreak,
-                  value: context.l10n.dashboardStreakWeeks(
-                    summary.currentStreakWeeks,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: ProgressStatTile(
+                    icon: Icons.local_fire_department_rounded,
+                    color: theme.colorScheme.primary,
+                    label: l10n.progressCurrentStreak,
+                    value: l10n.dashboardStreakWeeks(
+                      summary.currentStreakWeeks,
+                    ),
                   ),
                 ),
-                _Metric(
-                  label: context.l10n.progressLongestStreak,
-                  value: context.l10n.dashboardStreakWeeks(
-                    summary.longestStreakWeeks,
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: ProgressStatTile(
+                    icon: Icons.emoji_events_rounded,
+                    color: light
+                        ? AppColors.personalRecordInkLight
+                        : AppColors.personalRecord,
+                    label: l10n.progressLongestStreak,
+                    value: l10n.dashboardStreakWeeks(
+                      summary.longestStreakWeeks,
+                    ),
                   ),
                 ),
-                _Metric(
-                    label: context.l10n
-                        .progressAdherenceTarget(summary.targetSessionsPerWeek),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: ProgressStatTile(
+                    icon: Icons.task_alt_rounded,
+                    color: light ? AppColors.gainInkLight : AppColors.gain,
+                    label: l10n.progressAdherenceTarget(
+                      summary.targetSessionsPerWeek,
+                    ),
                     value: summary.adherenceFraction == null
                         ? '—'
-                        : '${(summary.adherenceFraction! * 100).round()}%'),
-              ])),
+                        : '${(summary.adherenceFraction! * 100).round()}%',
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
+  }
+}
+
+/// A titled card of dated rows: the shape both effort and rest take.
+class _DatedListCard extends StatelessWidget {
+  const _DatedListCard({required this.title, required this.rows});
+
+  final String title;
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color divider = Theme.of(context).colorScheme.outlineVariant;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(title, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: AppSpacing.sm),
+          for (int i = 0; i < rows.length; i++) ...<Widget>[
+            if (i > 0) Divider(height: 1, thickness: 1, color: divider),
+            rows[i],
+          ],
+        ],
+      ),
+    );
   }
 }
 
 class _RpeSection extends ConsumerWidget {
   const _RpeSection({required this.range});
   final ProgressRange range;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      ref.watch(rpeAnalyticsProvider(range)).when(
-            loading: () => const _ChartLoading(),
-            error: (e, _) => _ChartError(
-                error: e,
-                onRetry: () => ref.invalidate(rpeAnalyticsProvider(range))),
-            data: (rows) => rows.isEmpty
-                ? _ChartEmpty(
-                    icon: Icons.speed_outlined,
-                    message: context.l10n.progressRpeEmpty,
-                  )
-                : AppCard(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                        Text(
-                          context.l10n.progressSessionRpeTitle,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        for (final row in rows.take(8))
-                          ValueRow(
-                            label:
-                                DateFormatters.of(context).axisLabel(row.date),
-                            value: context.l10n.progressSessionRpeValue(
-                              row.averageRpe.toStringAsFixed(1),
-                              UnitFormatters.volume(
-                                row.volumeKg,
-                                ref.watch(weightUnitControllerProvider),
-                                context.l10n,
-                              ),
-                            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    return ref.watch(rpeAnalyticsProvider(range)).when(
+          loading: () => const ProgressCardLoading(),
+          error: (e, _) => _ChartError(
+            error: e,
+            onRetry: () => ref.invalidate(rpeAnalyticsProvider(range)),
+          ),
+          data: (rows) => rows.isEmpty
+              ? _ChartEmpty(
+                  icon: Icons.speed_outlined,
+                  message: context.l10n.progressRpeEmpty,
+                )
+              : _DatedListCard(
+                  title: context.l10n.progressSessionRpeTitle,
+                  rows: <Widget>[
+                    for (final row in rows.take(8))
+                      ValueRow(
+                        label: DateFormatters.of(context).axisLabel(row.date),
+                        value: context.l10n.progressSessionRpeValue(
+                          row.averageRpe.toStringAsFixed(1),
+                          UnitFormatters.volume(
+                            row.volumeKg,
+                            unit,
+                            context.l10n,
                           ),
-                      ])),
-          );
+                        ),
+                      ),
+                  ],
+                ),
+        );
+  }
 }
 
 class _RestSection extends ConsumerWidget {
   const _RestSection({required this.range});
   final ProgressRange range;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      ref.watch(restAnalyticsProvider(range)).when(
-            loading: () => const _ChartLoading(),
-            error: (e, _) => _ChartError(
-                error: e,
-                onRetry: () => ref.invalidate(restAnalyticsProvider(range))),
-            data: (rows) => rows.isEmpty
-                ? _ChartEmpty(
-                    icon: Icons.timer_outlined,
-                    message: context.l10n.progressRestEmpty,
-                  )
-                : AppCard(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                        Text(
-                          context.l10n.progressRestTimeTitle,
-                          style: Theme.of(context).textTheme.titleSmall,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Widget content = ref.watch(restAnalyticsProvider(range)).when(
+          loading: () => const ProgressCardLoading(),
+          error: (e, _) => _ChartError(
+            error: e,
+            onRetry: () => ref.invalidate(restAnalyticsProvider(range)),
+          ),
+          data: (rows) => rows.isEmpty
+              ? _ChartEmpty(
+                  icon: Icons.timer_outlined,
+                  message: context.l10n.progressRestEmpty,
+                )
+              : _DatedListCard(
+                  title: context.l10n.progressRestTimeTitle,
+                  rows: <Widget>[
+                    for (final row in rows.take(8))
+                      ValueRow(
+                        label: DateFormatters.of(context).axisLabel(row.date),
+                        // The sample size is part of the number: a session
+                        // where rest was recorded once reads as that
+                        // session's rest habit without it. It sits under the
+                        // date rather than beside the average, which
+                        // overflows a narrow phone.
+                        caption: context.l10n.progressRestFromSets(
+                          row.recordedSetCount,
                         ),
-                        for (final row in rows.take(8))
-                          ValueRow(
-                            label:
-                                DateFormatters.of(context).axisLabel(row.date),
-                            // The sample size is part of the number: a
-                            // session where rest was recorded once reads as
-                            // that session's rest habit without it. It sits
-                            // under the date rather than beside the average,
-                            // which overflows a narrow phone.
-                            caption: context.l10n.progressRestFromSets(
-                              row.recordedSetCount,
-                            ),
-                            value: context.l10n.progressAverageRestSeconds(
-                              row.averageRestSeconds.round(),
-                            ),
-                          ),
-                      ])),
-          );
+                        value: context.l10n.progressAverageRestSeconds(
+                          row.averageRestSeconds.round(),
+                        ),
+                      ),
+                  ],
+                ),
+        );
+    // Stacked under the effort card; without a gap the two read as one.
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: content,
+    );
+  }
 }
+
+/// Healthy range for both balance ratios; shaded on each gauge and named in
+/// the card's footnote (`progressReferenceBand`).
+const double _balanceBandLow = 0.75;
+const double _balanceBandHigh = 1.33;
 
 class _BalanceSection extends ConsumerWidget {
   const _BalanceSection({required this.range});
   final ProgressRange range;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) =>
       ref.watch(balanceRatiosProvider(range)).when(
-            loading: () => const _ChartLoading(),
+            loading: () => const ProgressCardLoading(),
             error: (e, _) => _ChartError(
-                error: e,
-                onRetry: () => ref.invalidate(balanceRatiosProvider(range))),
+              error: e,
+              onRetry: () => ref.invalidate(balanceRatiosProvider(range)),
+            ),
             data: (b) => AppCard(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
                   _RatioLine(
                     label: context.l10n.progressPushPull,
                     ratio: b.pushPullRatio,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.lg),
                   _RatioLine(
                     label: context.l10n.progressUpperLower,
                     ratio: b.upperLowerRatio,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: AppSpacing.lg),
                   Text(
                     context.l10n.progressReferenceBand,
                     style: AppTypography.caption(Theme.of(context)),
                   ),
-                ])),
+                ],
+              ),
+            ),
           );
 }
 
 class _WeeklyMuscleSection extends ConsumerWidget {
   const _WeeklyMuscleSection({required this.range});
   final ProgressRange range;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      ref.watch(weeklyMuscleGroupVolumeSeriesProvider(range)).when(
-            loading: () => const _ChartLoading(),
-            error: (e, _) => _ChartError(
-                error: e,
-                onRetry: () => ref
-                    .invalidate(weeklyMuscleGroupVolumeSeriesProvider(range))),
-            data: (rows) => rows.isEmpty
-                ? _ChartEmpty(
-                    icon: Icons.groups_outlined,
-                    message: context.l10n.progressWeeklyMuscleEmpty,
-                  )
-                : AppCard(
-                    child: Column(children: [
-                    for (final row in rows.take(12))
-                      ValueRow(
-                        label: row.muscleName,
-                        caption:
-                            DateFormatters.of(context).axisLabel(row.weekStart),
-                        value: UnitFormatters.volume(
-                          row.totalVolumeKg,
-                          ref.watch(weightUnitControllerProvider),
-                          context.l10n,
-                        ),
-                      )
-                  ])),
-          );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    return ref.watch(weeklyMuscleGroupVolumeSeriesProvider(range)).when(
+          loading: () => const ProgressCardLoading(),
+          error: (e, _) => _ChartError(
+            error: e,
+            onRetry: () =>
+                ref.invalidate(weeklyMuscleGroupVolumeSeriesProvider(range)),
+          ),
+          data: (all) {
+            // A muscle the week did not train is listed by the query at
+            // 0 kg; a column of zeros said nothing and pushed the real
+            // figures down, so only trained groups are shown.
+            final rows = all.where((r) => r.totalVolumeKg > 0).toList();
+            if (rows.isEmpty) {
+              return _ChartEmpty(
+                icon: Icons.groups_outlined,
+                message: context.l10n.progressWeeklyMuscleEmpty,
+              );
+            }
+            final Color divider = Theme.of(context).colorScheme.outlineVariant;
+            final List<Widget> lines = <Widget>[
+              for (final row in rows.take(12))
+                ValueRow(
+                  label: row.muscleName,
+                  caption: DateFormatters.of(context).axisLabel(row.weekStart),
+                  value: UnitFormatters.volume(
+                    row.totalVolumeKg,
+                    unit,
+                    context.l10n,
+                  ),
+                ),
+            ];
+            return AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (int i = 0; i < lines.length; i++) ...<Widget>[
+                    if (i > 0) Divider(height: 1, thickness: 1, color: divider),
+                    lines[i],
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+  }
 }
 
 class _RepRangeSection extends ConsumerWidget {
   const _RepRangeSection({required this.range});
   final ProgressRange range;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) => ref
-      .watch(repRangeDistributionProvider(range))
-      .when(
-        loading: () => const _ChartLoading(),
-        error: (e, _) => _ChartError(
+  Widget build(BuildContext context, WidgetRef ref) {
+    const List<Color> series = AppColors.chartSeries;
+    return ref.watch(repRangeDistributionProvider(range)).when(
+          loading: () => const ProgressCardLoading(),
+          error: (e, _) => _ChartError(
             error: e,
-            onRetry: () => ref.invalidate(repRangeDistributionProvider(range))),
-        data: (rows) => AppCard(
-            child: Column(children: [
-          for (final row in rows)
-            _DistributionLine(
-                label: switch (row.range) {
-                  RepRange.oneToFive => context.l10n.progressRepRangeOneToFive,
-                  RepRange.sixToTwelve =>
-                    context.l10n.progressRepRangeSixToTwelve,
-                  RepRange.thirteenPlus =>
-                    context.l10n.progressRepRangeThirteenPlus,
-                },
-                value: row.setCount)
-        ])),
-      );
+            onRetry: () => ref.invalidate(repRangeDistributionProvider(range)),
+          ),
+          data: (rows) => AppCard(
+            child: ProportionBar(
+              segments: <ProportionSegment>[
+                for (final row in rows)
+                  ProportionSegment(
+                    label: switch (row.range) {
+                      RepRange.oneToFive =>
+                        context.l10n.progressRepRangeOneToFive,
+                      RepRange.sixToTwelve =>
+                        context.l10n.progressRepRangeSixToTwelve,
+                      RepRange.thirteenPlus =>
+                        context.l10n.progressRepRangeThirteenPlus,
+                    },
+                    value: context.l10n.programTargetSets(row.setCount),
+                    count: row.setCount,
+                    // Fixed per bucket, so a colour keeps its meaning when
+                    // one bucket is empty and drops out of the bar.
+                    color: switch (row.range) {
+                      RepRange.oneToFive => series[0],
+                      RepRange.sixToTwelve => series[1],
+                      RepRange.thirteenPlus => series[2],
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+  }
 }
 
 class _WeekdaySection extends ConsumerWidget {
   const _WeekdaySection({required this.range});
   final ProgressRange range;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      ref.watch(weekdayDistributionProvider(range)).when(
-            loading: () => const _ChartLoading(),
-            error: (e, _) => _ChartError(
-                error: e,
-                onRetry: () =>
-                    ref.invalidate(weekdayDistributionProvider(range))),
-            data: (rows) => AppCard(
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [for (final row in rows) _WeekdayBar(row: row)])),
-          );
-}
 
-class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value});
-  final String label;
-  final String value;
+  static String _weekdayKey(int weekday) => switch (weekday) {
+        DateTime.monday => 'monday',
+        DateTime.tuesday => 'tuesday',
+        DateTime.wednesday => 'wednesday',
+        DateTime.thursday => 'thursday',
+        DateTime.friday => 'friday',
+        DateTime.saturday => 'saturday',
+        DateTime.sunday => 'sunday',
+        _ => 'unknown',
+      };
+
   @override
-  Widget build(BuildContext context) => Semantics(
-      label: context.l10n.progressMetricSemantic(label, value),
-      child: Column(children: [
-        Text(value, style: Theme.of(context).textTheme.titleLarge),
-        Text(label, style: AppTypography.caption(Theme.of(context)))
-      ]));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = context.l10n;
+    return ref.watch(weekdayDistributionProvider(range)).when(
+          loading: () => const ProgressCardLoading(),
+          error: (e, _) => _ChartError(
+            error: e,
+            onRetry: () => ref.invalidate(weekdayDistributionProvider(range)),
+          ),
+          data: (rows) => AppCard(
+            child: WeekdayBars(
+              days: <WeekdayBarData>[
+                for (final WeekdayDistribution row in rows)
+                  WeekdayBarData(
+                    shortLabel:
+                        l10n.progressWeekdayShort(_weekdayKey(row.weekday)),
+                    semanticLabel: l10n.progressWeekdaySemantic(
+                      l10n.progressWeekdayFull(_weekdayKey(row.weekday)),
+                      row.trainingDayCount,
+                      row.workoutCount,
+                    ),
+                    trainingDays: row.trainingDayCount,
+                  ),
+              ],
+            ),
+          ),
+        );
+  }
 }
 
 class _RatioLine extends StatelessWidget {
   const _RatioLine({required this.label, required this.ratio});
   final String label;
   final double? ratio;
+
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
     final AppLocalizations l10n = context.l10n;
-    final String status = ratio == null
+    final double? value = ratio;
+    final bool inBand =
+        value != null && value >= _balanceBandLow && value <= _balanceBandHigh;
+    final String status = value == null
         ? l10n.progressRatioInsufficient
-        : ratio! >= .75 && ratio! <= 1.33
+        : inBand
             ? l10n.progressRatioBalanced
             : l10n.progressRatioOutsideBand;
-    final String? formattedRatio = ratio?.toStringAsFixed(2);
+    final String? formattedRatio = value?.toStringAsFixed(2);
     return Semantics(
-        label: formattedRatio == null
-            ? l10n.progressRatioInsufficientSemantic(label)
-            : l10n.progressRatioSemantic(label, formattedRatio, status),
-        child: ExcludeSemantics(
-          child: ValueRow(
-            label: label,
-            value: formattedRatio == null
-                ? status
-                : l10n.progressRatioValueStatus(formattedRatio, status),
-          ),
-        ));
-  }
-}
-
-class _DistributionLine extends StatelessWidget {
-  const _DistributionLine({required this.label, required this.value});
-
-  final String label;
-  final int value;
-
-  @override
-  Widget build(BuildContext context) => ValueRow(
-        label: label,
-        value: context.l10n.programTargetSets(value),
-      );
-}
-
-class _WeekdayBar extends StatelessWidget {
-  const _WeekdayBar({required this.row});
-  final WeekdayDistribution row;
-  @override
-  Widget build(BuildContext context) {
-    final String weekday = switch (row.weekday) {
-      DateTime.monday => 'monday',
-      DateTime.tuesday => 'tuesday',
-      DateTime.wednesday => 'wednesday',
-      DateTime.thursday => 'thursday',
-      DateTime.friday => 'friday',
-      DateTime.saturday => 'saturday',
-      DateTime.sunday => 'sunday',
-      _ => 'unknown',
-    };
-    final String shortLabel = context.l10n.progressWeekdayShort(weekday);
-    return Semantics(
-        label: context.l10n.progressWeekdaySemantic(
-          context.l10n.progressWeekdayFull(weekday),
-          row.trainingDayCount,
-          row.workoutCount,
+      label: formattedRatio == null
+          ? l10n.progressRatioInsufficientSemantic(label)
+          : l10n.progressRatioSemantic(label, formattedRatio, status),
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(label, style: theme.textTheme.titleSmall),
+                ),
+                if (formattedRatio != null)
+                  Text(
+                    formattedRatio,
+                    style: AppTypography.cardMetric(
+                      theme.colorScheme,
+                      size: AppTypography.metricSizeSm,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(status, style: AppTypography.caption(theme)),
+            const SizedBox(height: AppSpacing.sm),
+            RatioGauge(
+              ratio: value,
+              bandLow: _balanceBandLow,
+              bandHigh: _balanceBandHigh,
+            ),
+          ],
         ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-              height: 72,
-              child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                      width: 18,
-                      height: row.trainingDayCount == 0
-                          ? 0
-                          : 8.0 + row.trainingDayCount * 10,
-                      color: Theme.of(context).colorScheme.primary))),
-          const SizedBox(height: 4),
-          Text(shortLabel),
-          Text('${row.workoutCount}',
-              style: Theme.of(context).textTheme.labelSmall)
-        ]));
+      ),
+    );
   }
 }
 
@@ -1633,6 +1819,7 @@ class _WeeklyBarChart extends StatelessWidget {
                 getDrawingHorizontalLine: (_) => FlLine(
                   color: scheme.outlineVariant,
                   strokeWidth: 1,
+                  dashArray: _gridDash,
                 ),
               ),
               borderData: FlBorderData(show: false),
@@ -1709,7 +1896,11 @@ class _WeeklyBarChart extends StatelessWidget {
                     barRods: [
                       BarChartRodData(
                         toY: values[i],
-                        color: scheme.primary,
+                        // The newest week is the one being judged; earlier
+                        // weeks are context, so they step back.
+                        color: i == values.length - 1
+                            ? scheme.primary
+                            : scheme.primary.withValues(alpha: 0.45),
                         width: width,
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(AppRadius.sm),
@@ -1737,37 +1928,40 @@ double _barWidthFor(double available, int count) {
   return perBar < minWidth ? minWidth : perBar;
 }
 
-class _MuscleGroupSection extends ConsumerStatefulWidget {
+/// Where the volume went, as a ranked list of share bars.
+///
+/// This was a vertical bar chart whose names sat under bars a few dp wide,
+/// so "Shoulders" broke over two lines and the exact figures existed only
+/// in a canvas tooltip. Horizontal bars give every name a full line and
+/// every figure plain text, at the cost of a little height.
+class _MuscleGroupSection extends ConsumerWidget {
   const _MuscleGroupSection({required this.range});
 
   final ProgressRange range;
 
   @override
-  ConsumerState<_MuscleGroupSection> createState() =>
-      _MuscleGroupSectionState();
-}
-
-class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
-  int? _touchedIndex;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<MuscleGroupVolume>> async =
-        ref.watch(muscleGroupSeriesProvider(widget.range));
+        ref.watch(muscleGroupSeriesProvider(range));
     // Volumes arrive in kilograms like every other stored weight; this card
-    // used to print them raw with a hardcoded "kg" suffix, so a pounds user
+    // once printed them raw with a hardcoded "kg" suffix, so a pounds user
     // read kilogram figures on the one card that never converted (ADR-1).
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
 
     return async.when(
       loading: () => const _ChartLoading(),
       error: (error, _) => _ChartError(
         error: error,
-        onRetry: () => ref.invalidate(muscleGroupSeriesProvider(widget.range)),
+        onRetry: () => ref.invalidate(muscleGroupSeriesProvider(range)),
       ),
-      data: (points) {
+      data: (all) {
+        // A group linked only through bodyweight sets totals 0 kg; as a
+        // ranked bar it is an empty track that reads like missing data.
+        final List<MuscleGroupVolume> points = <MuscleGroupVolume>[
+          for (final MuscleGroupVolume p in all)
+            if (p.totalVolumeKg > 0) p,
+        ];
         if (points.isEmpty) {
           return _ChartEmpty(
             icon: Icons.pie_chart_outline,
@@ -1798,7 +1992,12 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
             ? AppColors.muscleGroupOther
             : palette[index % palette.length];
 
-        final int? touched = _touchedIndex;
+        final double total =
+            grouped.fold<double>(0, (sum, p) => sum + p.totalVolumeKg);
+        final double largest = grouped.fold<double>(
+          0,
+          (max, p) => p.totalVolumeKg > max ? p.totalVolumeKg : max,
+        );
 
         return _ChartCard(
           headline: grouped.first.muscleName,
@@ -1807,145 +2006,21 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                 grouped.first.totalVolumeKg, unit, context.l10n),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              // Mirrors the canvas tooltip as real text — canvas-painted
-              // tooltips aren't reachable by screen readers or widget
-              // tests, so every value the tooltip shows needs a plain-text
-              // home too.
-              Text(
-                touched == null
-                    ? context.l10n.progressChartInteractionHelp
-                    : context.l10n.progressMuscleVolumeDetail(
-                        grouped[touched].muscleName,
-                        UnitFormatters.volume(
-                          grouped[touched].totalVolumeKg,
-                          unit,
-                          context.l10n,
-                        ),
-                      ),
-                style: AppTypography.caption(theme),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SizedBox(
-                height: _chartHeight,
-                // fl_chart centers each bottom title on its bar's tick but
-                // sizes the title to the Text's own intrinsic width, not to
-                // the slot the bar occupies — a name like "Shoulders" is
-                // wider than its bar's slot and bleeds into the neighboring
-                // label ("CalvesShoulders"). Measuring the available width
-                // here and capping each label to its slot forces a wrap
-                // instead.
-                child: LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints constraints) {
-                    final double slotWidth =
-                        constraints.maxWidth / grouped.length;
-                    return BarChart(
-                      BarChartData(
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                            color: scheme.outlineVariant,
-                            strokeWidth: 1,
-                          ),
-                        ),
-                        borderData: FlBorderData(show: false),
-                        titlesData: FlTitlesData(
-                          leftTitles: const AxisTitles(),
-                          rightTitles: const AxisTitles(),
-                          topTitles: const AxisTitles(),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: _axisReserved + AppSpacing.md,
-                              getTitlesWidget: (double value, TitleMeta meta) {
-                                final int index = value.toInt();
-                                if (index < 0 || index >= grouped.length) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.only(top: AppSpacing.xs),
-                                  child: SizedBox(
-                                    width: slotWidth,
-                                    child: Text(
-                                      grouped[index].muscleName,
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      style: AppTypography.eyebrow(theme),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        barTouchData: BarTouchData(
-                          longPressDuration: kChartNoLongPress,
-                          // handleBuiltInTouches keeps the canvas tooltip (mouse
-                          // hover and touch tap both drive it, via fl_chart's
-                          // shared FlTouchEvent pipeline); touchCallback
-                          // additionally mirrors the touched bar into the
-                          // plain-text readout above.
-                          touchCallback: (event, response) {
-                            final spot = response?.spot;
-                            setState(() {
-                              _touchedIndex =
-                                  event.isInterestedForInteractions &&
-                                          spot != null
-                                      ? spot.touchedBarGroupIndex
-                                      : null;
-                            });
-                          },
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              final muscle = grouped[group.x];
-                              return BarTooltipItem(
-                                '${muscle.muscleName}\n',
-                                theme.textTheme.labelMedium!.copyWith(
-                                  color: scheme.onInverseSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: UnitFormatters.volume(
-                                      muscle.totalVolumeKg,
-                                      unit,
-                                      context.l10n,
-                                    ),
-                                    style:
-                                        theme.textTheme.labelMedium?.copyWith(
-                                      color: scheme.onInverseSurface,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                        barGroups: [
-                          for (var i = 0; i < grouped.length; i++)
-                            BarChartGroupData(
-                              x: i,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: grouped[i].totalVolumeKg,
-                                  color: colorFor(i, grouped[i].muscleId),
-                                  width: _barWidth,
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(AppRadius.sm),
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    );
-                  },
+              for (int i = 0; i < grouped.length; i++)
+                ShareBarRow(
+                  label: grouped[i].muscleName,
+                  value: UnitFormatters.volume(
+                    grouped[i].totalVolumeKg,
+                    unit,
+                    context.l10n,
+                  ),
+                  share: total <= 0 ? 0 : grouped[i].totalVolumeKg / total,
+                  relative:
+                      largest <= 0 ? 0 : grouped[i].totalVolumeKg / largest,
+                  color: colorFor(i, grouped[i].muscleId),
                 ),
-              ),
             ],
           ),
         );

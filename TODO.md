@@ -221,6 +221,24 @@ Code and configuration:
       release app and its data. Debug builds now use
       `com.soshe90.ironyx.debug`; run device tests only through the script,
       which refuses while the release app is installed.
+      *2026-10-22: the SM N970F (Android 12) ran the debug-build workout
+      journey: 9/9 passed, including immediate Finish after typing reps and
+      two rapid Finish taps. The discard journey's old assertion was updated
+      to the current immediate-discard/Undo behavior. This did not test the
+      release build, real force-kill, locked-screen alerts, denied permission,
+      export/import, Arabic layout or TalkBack; C6 stays open.*
+      *2026-10-22 release-build check on SM N970F: `scripts/build_android.sh
+      apk -P kotlin.incremental=false` built 1.0.2+3 with Supabase defines,
+      release minification and 15 packaged native libraries confirmed stripped.
+      The APK's upload-key signer SHA-256 begins `57:08:11:C8`, but the
+      already-installed `com.soshe90.ironyx` 1.0.2+3 APK's signer begins
+      `5D:8A:EA:72` (checked with `apksigner` after pulling its base APK).
+      Android cannot update an installed app with a differently signed APK;
+      uninstalling would erase local data. Nothing was installed or cleared.
+      Release runtime checks remain open until a separate device/emulator is
+      available, or the owner confirms a verified backup and explicitly
+      authorizes a destructive reinstall. The debug integration test is not
+      a substitute for release-build testing.*
 
 Day 1 exit: a release-signed AAB that passed C4 and C6, and testers lined up.
 
@@ -288,6 +306,162 @@ the 12-week time-tracking table, per-table cloud sync, premium and in-app
 purchases, the `WorkoutXlsxImportService` per-row duplicate query, the
 unreproduced A2.14 delete-all race, and the "remove local data on sign-out"
 question.
+
+## Product research backlog — 2026-10-22 (not part of the two-day finish)
+
+Read-only market and repo review. **No feature below is approved for implementation.**
+Finish C4/C6 and the closed test before expanding scope; use tester evidence to
+choose one improvement at a time. Sources describe competitor *claims*, not
+hands-on verification. US advertised prices are not verified checkout prices.
+The store listing is still a draft, not proof of actual users or positioning.
+
+### Current product and positioning
+
+- **Verified in repo:** unpublished, Android-first offline strength-training
+  log: five areas (Home, Tracker, Library, Timer, Progress); sets/reps/weights,
+  reusable programs, 301 seeded exercises, progress charts, English/Arabic,
+  versioned export/import and optional account/manual one-slot cloud backup.
+  Local SQLite is the source of truth; backup/restore **is not sync**
+  (`README.md`, `docs/ADR.md` ADR-1, 3, 7, 8).
+- **Assumed audience, to validate:** adults following repeatable lifting plans
+  who want fast set entry, previous-session context and reliable gym-time use
+  without a network or mandatory account. No customer research establishes the
+  segment size, retention, willingness to pay or reasons to switch.
+- **Proposed positioning, not approved store copy:** “Ironyx is a focused
+  workout log for lifters who want to follow their plan, record every set, and
+  understand their progress—even without a connection. Training stays on your
+  device by default, with export and optional manual backup under your
+  control.” Never imply automatic protection, multi-device sync, AI coaching,
+  iOS/web support at launch, or exclusive Arabic/offline capabilities.
+- **Verified limitations:** C4 still needs the real account/backend journey;
+  C6 still needs release-build device checks; S1 needs store screenshots.
+  Account backup contains training and profile data, is manual and last-write-
+  wins; restore replaces local user data. Gzip is not client-side encryption.
+  Uninstalling without a file export or successful backup can lose history.
+  Web persistence and iOS operation are unverified (`docs/ADR.md`, `SETUP.md`).
+  CSV program import has a specified format; XLSX history import targets a
+  particular workbook layout, not arbitrary competitor exports (`README.md`).
+
+### Competitor watchlist and source notes
+
+Checked 2026-10-22: public US store listings, official pages and displayed
+reviews. Product descriptions, UI imagery and release notes are developer
+claims; no competitor app was installed. Prices, offers, review selection and
+features may change by region/date. **Do not claim “only offline” or “only
+Arabic”: Hevy lists Arabic, and Hevy, Alpha Progression and Boostcamp advertise
+some offline logging; FitNotes is already free and ad-free on Android.**
+
+| Comparator | Relevant offering / AI evidence | Advertised US price and recent update | Evidence |
+|---|---|---|---|
+| Strong (direct) | Focused routines, previous workouts, timer, charts, Watch, sync; no native-AI claim established | Free unlimited workouts/3 custom routines; Pro $4.99/mo or $29.99/yr advertised (other purchase entries exist). iOS 6.5.1, Oct 8: sign-in/sync fixes | [App Store](https://apps.apple.com/us/app/strong-workout-tracker-gym-log/id464254577) |
+| Hevy (direct/social) | Sets, routines, charts, friends, desktop/watch, advertised offline; Trainer guidance has unverified generation method; **iOS lists Arabic** | Pro entries include $2.99/mo, $23.99/yr, $74.99 lifetime; another monthly entry exists. iOS 3.2.2 around Oct 21: notes update | [App Store](https://apps.apple.com/us/app/hevy-workout-tracker-gym-log/id1458862350), [site](https://www.hevyapp.com/) |
+| FitNotes (direct/lean Android) | Daily exercise → save sets → history, timer, routines, backup, CSV; no native-AI claim established | Core free/no ads; Play displays Oct 24, 2025 update; iOS not planned per developer | [Play](https://play.google.com/store/apps/details?id=com.github.jamesgay.fitnotes&hl=en_US&gl=US), [quick start](https://www.fitnotesapp.com/quick_start/), [FAQ](https://www.fitnotesapp.com/faq/) |
+| JEFIT (broad planner) | Large exercise/program catalogue, Wear OS, charts; markets AI adaptive plans and weight/rep suggestions, quality/method unverified | Basic free; Elite $12.99/mo or $69.99/yr in US listing. Play Oct 10: Wear OS timer/timed sets | [Play](https://play.google.com/store/apps/details?id=je.fit&hl=en_US&gl=US) |
+| Alpha Progression (guided) | Account-free logging/manual plans; performance-based recommendations and generated plans are Pro. Existing plans/recommendations advertised offline; new plan generation needs network. Generative-AI claim **not** established | Pro regular US $12.99/mo or $79.99/yr. iOS 7.7, Oct 6: additional CSV export routes | [site/FAQ](https://alphaprogression.com/), [App Store](https://apps.apple.com/us/app/alpha-progression-gym-tracker/id1462277793) |
+| Boostcamp (program-first/indirect) | Free program library, tracker; markets questionnaire “AI coach”, Pro auto progression, offline workouts; AI method unverified. Official and store library counts disagree | Pro $59.99/yr or $14.99/mo advertised. iOS 266, Oct 2: auto progression and alternatives | [Pro](https://www.boostcamp.app/pro), [App Store](https://apps.apple.com/us/app/boostcamp-workout-tracker/id1529354455) |
+
+**User-review signals, not prevalence or verified current defects:** a 2023
+[Strong review](https://apps.apple.com/us/app/strong-workout-tracker-gym-log/id464254577)
+requested flexible exercise types; a 2024
+[Hevy review](https://apps.apple.com/us/app/hevy-workout-tracker-gym-log/id1458862350)
+reported tedious backdated-workout entry; a 2025
+[Boostcamp review](https://apps.apple.com/us/app/boostcamp-workout-tracker/id1529354455)
+reported a finish-workout freeze. Boostcamp's older offline complaint has a
+2024 developer reply saying offline mode was added: **do not** call offline
+absence a current defect. No specific recurring FitNotes complaint was
+substantiated by the displayed reviews. Review samples do not prove a market
+trend. Competitor UI conclusions are limited to official descriptions/images,
+not measured usability or task completion.
+
+### Prioritized findings and validation gates
+
+- [ ] **me + dev — launch gate (C4/C6/S1, not new scope):** verify sign-up,
+      confirmation, manual backup/restore, recovery and deletion against the
+      live backend; review live RLS, data access/retention and account deletion
+      before strengthening privacy claims. Smoke-test the release APK on a
+      physical Android device, including real kill/resume, airplane mode,
+      background/locked timer, denied permission and TalkBack. Capture *real*
+      populated Library, data-management, light/dark and Arabic/RTL screens.
+      The `test/golden/` files are skipped review fixtures: Library is loading,
+      and Settings renders Arabic as replacement glyphs; neither proves
+      real-device RTL quality. Preserve the D2 no-telemetry decision unless
+      explicitly reconsidered with policy/listing updates.
+- [x] **dev — P0, CSV import discoverability:** the Programs heading now has
+      an always-visible options menu with a labeled CSV import item; the empty
+      state still offers import. Widget tests cover both states and `README.md`
+      describes the actual entry point. Code and tests verified locally
+      2026-10-22; a manual device usability check is still worthwhile.
+- [x] **dev — P0, CSV import validation and failure handling:** preview now
+      names skipped unknown exercises, existing programs and malformed rows;
+      invalid set counts are not silently defaulted. Apply failure is caught
+      and reported without showing raw database errors. Unit and widget tests
+      cover invalid input and forced write failure; CI-equivalent checks passed
+      locally 2026-10-22. This is not a general spreadsheet migration tool.
+      Large historical XLSX profiling remains deferred under the launch plan.
+- [ ] **me + dev — P0 discovery:** run 8–12 consent-based Android usability
+      sessions, including 4+ active Arabic users and people currently using
+      rival loggers; compare first workout, repeat session, kill/resume,
+      offline session, backup explanation and finding import. Observe task
+      time, errors, corrections and return choice; do not collect unnecessary
+      health data. Proposed gates: zero lost/duplicated sets in scripted
+      recovery, every participant distinguishes local save from cloud backup,
+      and no critical Arabic task failure. These are *targets*, not results.
+- [ ] **dev + me — P1 candidate, select only after discovery:** make the
+      already auto-persisted draft and last *successful* manual backup status
+      legible; show backup date and replacement impact before restore. Problem:
+      fear of lost data; competitors market sync/backup. Difference: explicit
+      local/file/cloud provenance, not falsely reassuring “saved” after a
+      failed write. Complexity **medium**; ongoing account-support/testing
+      cost; risks are stale backups, false success, multi-device overwrites.
+      Prototype copy and test users' understanding plus kill/network failures.
+- [ ] **dev + me — P1 candidate:** refine existing “last time → today” set
+      context instead of building a coach. Hevy shows past sets; Ironyx already
+      displays them in `test/golden/active_workout.png`. Test speed, errors and
+      visual clutter with a small optional display. Complexity **low–medium**,
+      local-query maintenance; avoid comparing warm-ups, imported anomalies or
+      different exercises as equivalent.
+- [ ] **dev + me — P1 candidate, separate approval:** prototype explainable,
+      optional progression prompts from sufficient comparable logged sets.
+      Alpha Progression/JEFIT/Boostcamp already recommend targets; distinguish
+      with inspectable source sets and user control, **not** “AI”. Validate
+      comprehension and demand first. Complexity **medium–high**, local
+      computation but substantial rules/tests; risks: misleading fitness
+      guidance, sparse history, exercise equivalence and alert fatigue. No
+      automatic plan edits or health/injury claims.
+- [ ] **dev + me — P1 candidate, separate approval:** prototype one permitted
+      source-format import with column/exercise/unit mapping, unmatched and
+      duplicate preview, atomic apply and pre-import recovery. Strong and
+      Alpha Progression offer CSV export; historical entry is a user pain,
+      but no broad Ironyx importer exists. Complexity/support **high**;
+      malformed files, memory, large-history query cost, unit and identity
+      errors. Measure completed migrations and correction effort first.
+- [ ] **dev + me — P1 candidate:** conduct bilingual device usability and
+      accessibility passes across the *whole workout* (search, weights/units,
+      timer, recovery), then fix measured RTL, mixed-numeral, typography,
+      focus-order or clipping problems. Hevy already lists Arabic; quality,
+      not exclusivity, must be proven. Complexity **medium** with recurring
+      translation QA; test task time and error rate in both languages.
+- [ ] **dev + me — P2 candidate:** optional factual weekly progress brief
+      linking to underlying workouts, with explicit insufficient-data state.
+      Competitors already offer charts. Complexity **medium**; SQL/index and
+      multi-year profiling needed; avoid extrapolation or punitive streaks.
+      Validate whether it helps users decide what to do next.
+
+**Table stakes to protect:** fast editable set logging, previous performance,
+programs, timer, search, interpretable progress, offline draft recovery and
+portable history. **Avoid until evidence/approval:** social feed, AI/LLM health
+coach or sensitive-data upload, automatic per-table sync, copying competitors'
+branding/media/layouts or racing their program-library counts. Sync would
+change ADR-8, conflict handling, privacy and operating costs: propose it
+separately and obtain approval before any design or implementation. Reuse the
+existing teal theme, five-tab navigation and focused workout UI; device-test
+large text, keyboard and touch targets instead of reskinning from screenshots.
+
+**Research exit:** after closed testing, compare whether users choose Ironyx
+for a calmer, trustworthy repeat workout over the alternatives. If they
+mainly need guided plans or social/community, do not build a shallow imitation.
+Choose one proven problem, specify measurable success and maintenance cost,
+then update the live plan before coding.
 
 ## Risks
 

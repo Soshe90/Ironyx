@@ -104,44 +104,78 @@ void main() {
       expect(sets.map((s) => s.weightKg), [0.0, 20.0, 30.0]);
     });
 
-    test('scheduleDiscard keeps the draft until the undo window elapses',
+    Future<SharedPreferences> prefs() => SharedPreferences.getInstance();
+
+    test('discardWithUndo clears the draft at once, in memory and on disk',
         () async {
       final notifier = container.read(activeWorkoutProvider.notifier);
       await notifier.start();
       await notifier.addExercise(exerciseId: 'squat', name: 'Squat');
 
-      notifier.scheduleDiscard();
-      expect(container.read(activeWorkoutProvider), isNotNull);
+      await notifier.discardWithUndo();
 
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      expect(
-        container.read(activeWorkoutProvider),
-        isNotNull,
-        reason: 'draft must survive until the undo window elapses',
-      );
+      expect(container.read(activeWorkoutProvider), isNull,
+          reason: 'every screen must stop showing the workout immediately');
+      expect((await prefs()).getString('active_workout_draft'), isNull,
+          reason: 'a kill inside the undo window must not keep the draft');
+    });
 
-      notifier.cancelScheduledDiscard();
-      await Future<void>.delayed(
-        AppDuration.undoWindow + const Duration(seconds: 1),
-      );
-      expect(
-        container.read(activeWorkoutProvider),
-        isNotNull,
-        reason: 'cancelScheduledDiscard must prevent the eventual discard',
-      );
+    test('undoDiscard inside the window restores the same draft', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'squat', name: 'Squat');
+      final before = container.read(activeWorkoutProvider)!;
+
+      await notifier.discardWithUndo();
+      expect(await notifier.undoDiscard(), isTrue);
+
+      final after = container.read(activeWorkoutProvider)!;
+      expect(after.id, before.id);
+      expect(after.exercises.single.id, before.exercises.single.id);
+      expect((await prefs()).getString('active_workout_draft'), isNotNull,
+          reason: 'the restored draft is persisted again');
+
+      expect(await notifier.undoDiscard(), isFalse,
+          reason: 'one discard can be undone once');
+    });
+
+    test('undoDiscard never replaces a workout started since', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.discardWithUndo();
+      await notifier.start();
+      final fresh = container.read(activeWorkoutProvider)!;
+
+      expect(await notifier.undoDiscard(), isFalse);
+      expect(container.read(activeWorkoutProvider)!.id, fresh.id);
+    });
+
+    test('undoDiscard with nothing discarded does nothing', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      expect(await notifier.undoDiscard(), isFalse);
+      expect(container.read(activeWorkoutProvider), isNull);
+    });
+
+    test('a plain discard closes any open undo window', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.discardWithUndo();
+      await notifier.discard();
+      expect(await notifier.undoDiscard(), isFalse);
     });
 
     test(
-      'scheduleDiscard clears the draft once the window elapses',
+      'undoDiscard after the window has closed does nothing',
       () async {
         final notifier = container.read(activeWorkoutProvider.notifier);
         await notifier.start();
-
-        notifier.scheduleDiscard();
+        await notifier.discardWithUndo();
         await Future<void>.delayed(
           AppDuration.undoWindow + const Duration(seconds: 1),
         );
 
+        expect(await notifier.undoDiscard(), isFalse,
+            reason: 'a stale Undo must not resurrect the workout');
         expect(container.read(activeWorkoutProvider), isNull);
       },
       // Must exceed the undo window plus the buffer above.

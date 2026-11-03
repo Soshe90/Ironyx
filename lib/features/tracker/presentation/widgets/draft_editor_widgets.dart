@@ -596,6 +596,20 @@ class _InlineRestTimerState extends State<InlineRestTimer> {
   }
 }
 
+/// Pushes up whatever a [DraftSetRow] is still holding back for its input
+/// debounce. Call before reading the draft to save it.
+///
+/// Rows flush when focus leaves them, so this takes focus off the field
+/// being typed in and waits for that to take effect. Focus changes are
+/// applied in a microtask; a zero-length timer runs only after every pending
+/// microtask, so by the time this returns the rows have flushed. Without it,
+/// a value typed less than [AppDuration.inputDebounce] before "Finish" was
+/// saved as whatever the field held before.
+Future<void> commitPendingSetEdits() async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  await Future<void>.delayed(Duration.zero);
+}
+
 /// A single set row. Owns and disposes its own controllers (ADR-5) and
 /// pushes changes up to whichever [DraftEditorController] it was given.
 ///
@@ -627,6 +641,9 @@ class DraftSetRow extends ConsumerStatefulWidget {
   ConsumerState<DraftSetRow> createState() => _DraftSetRowState();
 }
 
+/// The text fields of a [DraftSetRow], each with its own input debounce.
+enum _SetField { weight, reps, duration }
+
 class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   late final TextEditingController _weightController;
   late final TextEditingController _repsController;
@@ -636,9 +653,43 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   /// switches kg/lb mid-workout the displayed number has to be rewritten,
   /// otherwise a 100 entered as kg would silently be re-read as 100 lb.
   WeightUnit? _renderedUnit;
-  Timer? _weightDebounce;
-  Timer? _repsDebounce;
-  Timer? _durationDebounce;
+
+  /// Each field's running input debounce, and the push it will make when it
+  /// fires. Kept apart so [_flushPending] can make the push early.
+  final Map<_SetField, Timer> _debounces = <_SetField, Timer>{};
+  final Map<_SetField, VoidCallback> _pendingPushes =
+      <_SetField, VoidCallback>{};
+
+  /// Pushes [push] once [field] has been still for
+  /// [AppDuration.inputDebounce], replacing any push already waiting.
+  void _debounce(_SetField field, VoidCallback push) {
+    _debounces.remove(field)?.cancel();
+    _pendingPushes[field] = push;
+    _debounces[field] = Timer(AppDuration.inputDebounce, () {
+      _debounces.remove(field);
+      _pendingPushes.remove(field)?.call();
+    });
+  }
+
+  /// Drops [field]'s waiting push: its text no longer holds a usable value.
+  void _cancelDebounce(_SetField field) {
+    _debounces.remove(field)?.cancel();
+    _pendingPushes.remove(field);
+  }
+
+  /// Makes every waiting push now. Runs when focus leaves the row, which is
+  /// what [commitPendingSetEdits] relies on before a save.
+  void _flushPending() {
+    for (final Timer timer in _debounces.values) {
+      timer.cancel();
+    }
+    _debounces.clear();
+    final List<VoidCallback> pushes = _pendingPushes.values.toList();
+    _pendingPushes.clear();
+    for (final VoidCallback push in pushes) {
+      push();
+    }
+  }
 
   @override
   void initState() {
@@ -660,9 +711,9 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
 
   @override
   void dispose() {
-    _weightDebounce?.cancel();
-    _repsDebounce?.cancel();
-    _durationDebounce?.cancel();
+    for (final Timer timer in _debounces.values) {
+      timer.cancel();
+    }
     _weightController.dispose();
     _repsController.dispose();
     _durationController.dispose();
@@ -683,170 +734,177 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
     final bool done = widget.set.isCompleted;
     final int index = widget.index;
 
-    // A logged set reads as done at a glance, not only by its checkbox.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: AnimatedContainer(
-        duration: AppDuration.fast,
-        decoration: BoxDecoration(
-          color: done
-              ? scheme.primary.withValues(alpha: 0.08)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: Row(
-          children: <Widget>[
-            SizedBox(
-              width: _setNumberWidth,
-              child: Text(
-                '$index',
-                style: AppTypography.numeric(
-                  theme.textTheme.titleSmall ?? const TextStyle(),
-                ).copyWith(
-                  color: done ? scheme.primary : scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
+    // Leaving the row (another row, a menu, the Finish button's unfocus)
+    // pushes any edit still inside its debounce. Never takes focus itself.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (bool hasFocus) {
+        if (!hasFocus) _flushPending();
+      },
+      // A logged set reads as done at a glance, not only by its checkbox.
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+        child: AnimatedContainer(
+          duration: AppDuration.fast,
+          decoration: BoxDecoration(
+            color: done
+                ? scheme.primary.withValues(alpha: 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: _setNumberWidth,
+                child: Text(
+                  '$index',
+                  style: AppTypography.numeric(
+                    theme.textTheme.titleSmall ?? const TextStyle(),
+                  ).copyWith(
+                    color: done ? scheme.primary : scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _NumberField(
-                controller: _weightController,
-                semanticLabel:
-                    context.l10n.draftSetWeightSemantic(index, unit.label),
-                decimal: true,
-                onChanged: (String value) {
-                  final double? entered = double.tryParse(value);
-                  if (entered == null || !entered.isFinite || entered < 0) {
-                    _weightDebounce?.cancel();
-                    return;
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _NumberField(
+                  controller: _weightController,
+                  semanticLabel:
+                      context.l10n.draftSetWeightSemantic(index, unit.label),
+                  decimal: true,
+                  onChanged: (String value) {
+                    final double? entered = double.tryParse(value);
+                    if (entered == null || !entered.isFinite || entered < 0) {
+                      _cancelDebounce(_SetField.weight);
+                      return;
+                    }
+                    final double kg = UnitFormatters.toKg(entered, unit);
+                    if (kg > _maxWeightKg) {
+                      _cancelDebounce(_SetField.weight);
+                      return;
+                    }
+                    _debounce(_SetField.weight, () {
+                      if (!mounted) return;
+                      widget.controller.updateSet(
+                        widget.exerciseId,
+                        widget.set.id,
+                        weightKg: kg,
+                      );
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: widget.isTimeBased
+                    ? _NumberField(
+                        controller: _durationController,
+                        semanticLabel:
+                            context.l10n.draftSetDurationSemantic(index),
+                        onChanged: (String value) {
+                          final int? seconds = int.tryParse(value);
+                          if (seconds == null ||
+                              seconds < 0 ||
+                              seconds > _maxDurationSeconds) {
+                            _cancelDebounce(_SetField.duration);
+                            return;
+                          }
+                          _debounce(_SetField.duration, () {
+                            if (!mounted) return;
+                            widget.controller.updateSet(
+                              widget.exerciseId,
+                              widget.set.id,
+                              durationSeconds: seconds,
+                            );
+                          });
+                        },
+                      )
+                    : _NumberField(
+                        controller: _repsController,
+                        semanticLabel: context.l10n.draftSetRepsSemantic(index),
+                        onChanged: (String value) {
+                          final int? reps = int.tryParse(value);
+                          if (reps == null || reps < 0 || reps > _maxReps) {
+                            _cancelDebounce(_SetField.reps);
+                            return;
+                          }
+                          _debounce(_SetField.reps, () {
+                            if (!mounted) return;
+                            widget.controller.updateSet(
+                              widget.exerciseId,
+                              widget.set.id,
+                              reps: reps,
+                            );
+                          });
+                        },
+                      ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _SetDoneButton(
+                done: done,
+                index: index,
+                onChanged: (bool value) {
+                  // Logging a set is the most frequent action in the app; give it
+                  // the tick HapticsService.impact() exists for. Same switch as
+                  // the timer's cues, so "Haptics off" means off everywhere.
+                  if (value &&
+                      ref
+                          .read(timerSettingsControllerProvider)
+                          .hapticsEnabled) {
+                    unawaited(ref.read(hapticsServiceProvider).impact());
                   }
-                  final double kg = UnitFormatters.toKg(entered, unit);
-                  if (kg > _maxWeightKg) {
-                    _weightDebounce?.cancel();
-                    return;
-                  }
-                  _weightDebounce?.cancel();
-                  _weightDebounce = Timer(AppDuration.inputDebounce, () {
-                    if (!mounted) return;
-                    widget.controller.updateSet(
-                      widget.exerciseId,
-                      widget.set.id,
-                      weightKg: kg,
-                    );
-                  });
+                  widget.controller.updateSet(
+                    widget.exerciseId,
+                    widget.set.id,
+                    isCompleted: value,
+                  );
                 },
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: widget.isTimeBased
-                  ? _NumberField(
-                      controller: _durationController,
-                      semanticLabel:
-                          context.l10n.draftSetDurationSemantic(index),
-                      onChanged: (String value) {
-                        final int? seconds = int.tryParse(value);
-                        if (seconds == null ||
-                            seconds < 0 ||
-                            seconds > _maxDurationSeconds) {
-                          _durationDebounce?.cancel();
-                          return;
-                        }
-                        _durationDebounce?.cancel();
-                        _durationDebounce =
-                            Timer(AppDuration.inputDebounce, () {
-                          if (!mounted) return;
-                          widget.controller.updateSet(
-                            widget.exerciseId,
-                            widget.set.id,
-                            durationSeconds: seconds,
-                          );
-                        });
-                      },
-                    )
-                  : _NumberField(
-                      controller: _repsController,
-                      semanticLabel: context.l10n.draftSetRepsSemantic(index),
-                      onChanged: (String value) {
-                        final int? reps = int.tryParse(value);
-                        if (reps == null || reps < 0 || reps > _maxReps) {
-                          _repsDebounce?.cancel();
-                          return;
-                        }
-                        _repsDebounce?.cancel();
-                        _repsDebounce = Timer(AppDuration.inputDebounce, () {
-                          if (!mounted) return;
-                          widget.controller.updateSet(
-                            widget.exerciseId,
-                            widget.set.id,
-                            reps: reps,
-                          );
-                        });
-                      },
+              SizedBox(
+                width: _rowMenuWidth,
+                child: PopupMenuButton<_SetAction>(
+                  tooltip: context.l10n.draftSetOptionsSemantic(index),
+                  icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                  padding: EdgeInsets.zero,
+                  onSelected: (_SetAction action) => switch (action) {
+                    _SetAction.details => _showSetDetails(),
+                    _SetAction.duplicate => widget.controller
+                        .duplicateSet(widget.exerciseId, widget.set.id),
+                    _SetAction.remove => widget.controller
+                        .removeSet(widget.exerciseId, widget.set.id),
+                  },
+                  itemBuilder: (_) => <PopupMenuEntry<_SetAction>>[
+                    PopupMenuItem<_SetAction>(
+                      value: _SetAction.details,
+                      child: ListTile(
+                        leading: const Icon(Icons.speed_outlined),
+                        title: Text(context.l10n.draftRpeAndRest),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            _SetDoneButton(
-              done: done,
-              index: index,
-              onChanged: (bool value) {
-                // Logging a set is the most frequent action in the app; give it
-                // the tick HapticsService.impact() exists for. Same switch as
-                // the timer's cues, so "Haptics off" means off everywhere.
-                if (value &&
-                    ref.read(timerSettingsControllerProvider).hapticsEnabled) {
-                  unawaited(ref.read(hapticsServiceProvider).impact());
-                }
-                widget.controller.updateSet(
-                  widget.exerciseId,
-                  widget.set.id,
-                  isCompleted: value,
-                );
-              },
-            ),
-            SizedBox(
-              width: _rowMenuWidth,
-              child: PopupMenuButton<_SetAction>(
-                tooltip: context.l10n.draftSetOptionsSemantic(index),
-                icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
-                padding: EdgeInsets.zero,
-                onSelected: (_SetAction action) => switch (action) {
-                  _SetAction.details => _showSetDetails(),
-                  _SetAction.duplicate => widget.controller
-                      .duplicateSet(widget.exerciseId, widget.set.id),
-                  _SetAction.remove => widget.controller
-                      .removeSet(widget.exerciseId, widget.set.id),
-                },
-                itemBuilder: (_) => <PopupMenuEntry<_SetAction>>[
-                  PopupMenuItem<_SetAction>(
-                    value: _SetAction.details,
-                    child: ListTile(
-                      leading: const Icon(Icons.speed_outlined),
-                      title: Text(context.l10n.draftRpeAndRest),
-                      contentPadding: EdgeInsets.zero,
+                    PopupMenuItem<_SetAction>(
+                      value: _SetAction.duplicate,
+                      child: ListTile(
+                        leading: const Icon(Icons.copy_outlined),
+                        title: Text(context.l10n.draftDuplicateSet),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                  ),
-                  PopupMenuItem<_SetAction>(
-                    value: _SetAction.duplicate,
-                    child: ListTile(
-                      leading: const Icon(Icons.copy_outlined),
-                      title: Text(context.l10n.draftDuplicateSet),
-                      contentPadding: EdgeInsets.zero,
+                    PopupMenuItem<_SetAction>(
+                      value: _SetAction.remove,
+                      child: ListTile(
+                        leading: const Icon(Icons.remove_circle_outline),
+                        title: Text(context.l10n.draftRemoveSet),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                  ),
-                  PopupMenuItem<_SetAction>(
-                    value: _SetAction.remove,
-                    child: ListTile(
-                      leading: const Icon(Icons.remove_circle_outline),
-                      title: Text(context.l10n.draftRemoveSet),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

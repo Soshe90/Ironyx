@@ -7,6 +7,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/core/services/program_import_service.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/history_calendar.dart';
 
@@ -282,6 +283,38 @@ void main() {
     // Entirely on screen and clear of the volume, however long the names.
     expect(pill.left, greaterThan(0));
     expect(pill.right, lessThanOrEqualTo(volume.left));
+
+    await disposeTracker(tester);
+  });
+
+  testWidgets(
+      'CSV program import is reachable when programs already exist, '
+      'not only from the no-programs card', (tester) async {
+    await const ProgramImportService().apply(
+      database,
+      await const ProgramImportService().parse(
+        'program,day,exercise,sets\nStrength Block,Day 1,Incline Press,3\n',
+        database,
+      ),
+    );
+    await pumpTracker(tester);
+
+    expect(find.text('Strength Block'), findsOneWidget);
+    expect(find.text('Import programs from CSV'), findsNothing);
+    await tester.tap(find.byTooltip('Program options'));
+    await tester.pumpAndSettle();
+    expect(find.text('Import programs from CSV'), findsOneWidget);
+
+    await disposeTracker(tester);
+  });
+
+  testWidgets('with no programs the empty card keeps its own import button',
+      (tester) async {
+    await pumpTracker(tester);
+
+    expect(find.text('No programs yet'), findsOneWidget);
+    expect(find.byTooltip('Import programs from CSV'), findsOneWidget);
+    expect(find.byTooltip('Program options'), findsOneWidget);
 
     await disposeTracker(tester);
   });

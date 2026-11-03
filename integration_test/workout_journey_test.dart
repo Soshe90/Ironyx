@@ -123,6 +123,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('typing reps just before Finish saves the latest value',
+      (tester) async {
+    final E2eApp app = await launchOnDashboard(tester);
+    await startWithBenchPress(tester);
+
+    await tester.enterText(setField(0, 1), '8');
+    // Tap without waiting for the 300 ms debounce.
+    await tester.tap(find.text('Finish workout'));
+    await pumpUntilFound(tester, find.text('Workout saved'));
+
+    final List<WorkoutSetsTableData> sets =
+        await io(tester, () => app.db.select(app.db.workoutSetsTable).get());
+    expect(sets, hasLength(1));
+    expect(sets.single.reps, 8);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('two Finish taps save once and report only success',
+      (tester) async {
+    final E2eApp app = await launchOnDashboard(tester);
+    await startWithBenchPress(tester);
+
+    // Both taps arrive before a frame rebuilds the disabled button.
+    await tester.tap(find.text('Finish workout'));
+    await tester.tap(find.text('Finish workout'));
+    await pumpUntilFound(tester, find.text('Workout saved'));
+
+    expect(await io(tester, () => app.db.select(app.db.workoutsTable).get()),
+        hasLength(1));
+    expect(find.text('Start workout'), findsOneWidget);
+    // A failed second save used to queue an error behind the success snackbar.
+    for (var i = 0; i < 3; i++) {
+      await pumpFor(tester, const Duration(seconds: 5));
+      expect(find.textContaining("Couldn't save"), findsNothing);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a workout in progress survives the app being killed',
       (tester) async {
     final E2eApp app = await launchOnDashboard(tester);
@@ -253,8 +291,9 @@ void main() {
     expect(draftOf(tester, app)?.id, draftId);
 
     await discard();
-    // The undo window is 12 s; the draft stays restorable until it closes.
-    expect(draftOf(tester, app), isNotNull);
+    // Discard clears the live draft at once; only the in-memory undo copy
+    // survives until the window closes.
+    expect(draftOf(tester, app), isNull);
     await pumpFor(tester, const Duration(seconds: 13));
     expect(draftOf(tester, app), isNull);
     await pumpUntilFound(tester, find.text('Start workout'));

@@ -283,12 +283,7 @@
   "workoutAddExercise": "Add exercise",
   "workoutSaveChanges": "Save changes",
   "workoutUpdated": "Workout updated",
-  "workoutSaveChangesFailed": "Could not save changes: {error}",
-  "@workoutSaveChangesFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "workoutSaveChangesFailed": "Couldn't save your changes. They're still here — try again.",
 
   "actionOk": "OK",
 
@@ -352,6 +347,29 @@
     }
   },
   "programImportSkippedUnknown": "Skipped unknown exercises:",
+  "programImportSkippedExisting": "Skipped programs that already exist. Rename them in the file to import them:",
+  "programImportSkippedRows": "Skipped rows:",
+  "programImportRowMissingField": "Row {row}: program, day or exercise is empty",
+  "@programImportRowMissingField": {
+    "placeholders": {
+      "row": { "type": "int" }
+    }
+  },
+  "programImportRowInvalidSets": "Row {row}: sets must be a whole number from 1 to {max}",
+  "@programImportRowInvalidSets": {
+    "placeholders": {
+      "row": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "programImportMore": "…and {count} more",
+  "@programImportMore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "programImportApplyFailed": "Couldn't save the imported programs. Nothing was written — try again.",
+  "trackerProgramOptions": "Program options",
   "dataAllDeleted": "All data deleted",
   "dataDeleteAllConfirmTitle": "Delete all data?",
   "dataDeleteAllConfirmBody": "This permanently deletes every workout, timer session, program, template, and body-metrics entry (built-in programs will be restored). The exercise library is kept. This cannot be undone.",
@@ -1145,9 +1163,6 @@
   "progressOtherMuscles": "Other",
   "progressMostTrained": "Most trained · {volume}",
   "@progressMostTrained": { "placeholders": { "volume": { "type": "String" } } },
-  "progressChartInteractionHelp": "Tap or hover a bar for details.",
-  "progressMuscleVolumeDetail": "{muscle}: {volume}",
-  "@progressMuscleVolumeDetail": { "placeholders": { "muscle": { "type": "String" }, "volume": { "type": "String" } } },
   "progressNoMeasurementsTitle": "No measurements yet",
   "progressNoMeasurementsMessage": "Track weight and body fat over time.",
   "progressNoMeasurementsInRange": "{range, select, twoWeeks{Nothing was logged in the last 14 days.} month{Nothing was logged in the last 30 days.} quarter{Nothing was logged in the last 90 days.} year{Nothing was logged in the last 12 months.} all{No measurements have been logged yet.} other{No measurements have been logged yet.}}",
@@ -1230,5 +1245,22 @@
   "explainerStrengthChangeSummary": "Your best estimated 1RM for each exercise in the selected window, set against the window immediately before it.",
   "explainerStrengthChangePoint1": "Green means the best lift improved on the previous period; red means it fell back.",
   "explainerStrengthChangePoint2": "With \"All time\" selected there is no earlier window to compare against, so it simply shows your best ever per exercise.",
-  "explainerStrengthChangeCaveat": "A drop often just means you trained that lift lighter this period — not that you lost strength."
+  "explainerStrengthChangeCaveat": "A drop often just means you trained that lift lighter this period — not that you lost strength.",
+  "progressOverviewRange": "{range, select, twoWeeks{Last 14 days} month{Last 30 days} quarter{Last 90 days} year{Last 12 months} all{All time} other{All time}}",
+  "@progressOverviewRange": { "placeholders": { "range": { "type": "String" } } },
+  "progressOverviewTotalVolume": "Total volume lifted",
+  "progressOverviewWorkouts": "Workouts",
+  "progressOverviewPerWeek": "Per week",
+  "progressOverviewRecords": "PRs",
+  "progressChapterStrength": "Strength",
+  "progressChapterVolume": "Volume",
+  "progressChapterHabits": "Habits",
+  "progressChapterBody": "Body",
+  "progressShowAllLifts": "{count, plural, =1{Show 1 more lift} other{Show {count} more lifts}}",
+  "@progressShowAllLifts": { "placeholders": { "count": { "type": "int" } } },
+  "progressShowFewerLifts": "Show fewer",
+  "progressShareOfTotal": "{percent}%",
+  "@progressShareOfTotal": { "placeholders": { "percent": { "type": "int" } } },
+  "progressShareSemantic": "{label}: {value}, {percent}% of the total",
+  "@progressShareSemantic": { "placeholders": { "label": { "type": "String" }, "value": { "type": "String" }, "percent": { "type": "int" } } }
 }

@@ -274,12 +274,7 @@
   "workoutAddExercise": "إضافة تمرين",
   "workoutSaveChanges": "حفظ التغييرات",
   "workoutUpdated": "تم تحديث التمرين",
-  "workoutSaveChangesFailed": "تعذّر حفظ التغييرات: {error}",
-  "@workoutSaveChangesFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "workoutSaveChangesFailed": "تعذّر حفظ تغييراتك. ما زالت هنا — حاول مرة أخرى.",
 
   "actionOk": "حسنًا",
 
@@ -342,6 +337,29 @@
     }
   },
   "programImportSkippedUnknown": "\u062a\u064f\u062e\u0637\u0651\u064a\u062a \u062a\u0645\u0627\u0631\u064a\u0646 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629:",
+  "programImportSkippedExisting": "\u062a\u064f\u062e\u0637\u0651\u064a\u062a \u0628\u0631\u0627\u0645\u062c \u0645\u0648\u062c\u0648\u062f\u0629 \u0645\u0633\u0628\u0642\u064b\u0627. \u063a\u064a\u0651\u0631 \u0623\u0633\u0645\u0627\u0621\u0647\u0627 \u0641\u064a \u0627\u0644\u0645\u0644\u0641 \u0644\u0627\u0633\u062a\u064a\u0631\u0627\u062f\u0647\u0627:",
+  "programImportSkippedRows": "\u062a\u064f\u062e\u0637\u0651\u064a\u062a \u0635\u0641\u0648\u0641:",
+  "programImportRowMissingField": "\u0627\u0644\u0635\u0641 {row}: \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c \u0623\u0648 \u0627\u0644\u064a\u0648\u0645 \u0623\u0648 \u0627\u0644\u062a\u0645\u0631\u064a\u0646 \u0641\u0627\u0631\u063a",
+  "@programImportRowMissingField": {
+    "placeholders": {
+      "row": { "type": "int" }
+    }
+  },
+  "programImportRowInvalidSets": "\u0627\u0644\u0635\u0641 {row}: \u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0639\u062f\u062f \u0627\u0644\u0645\u062c\u0645\u0648\u0639\u0627\u062a \u0639\u062f\u062f\u064b\u0627 \u0635\u062d\u064a\u062d\u064b\u0627 \u0645\u0646 1 \u0625\u0644\u0649 {max}",
+  "@programImportRowInvalidSets": {
+    "placeholders": {
+      "row": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "programImportMore": "\u2026\u0648{count} \u063a\u064a\u0631\u0647\u0627",
+  "@programImportMore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "programImportApplyFailed": "\u062a\u0639\u0630\u0651\u0631 \u062d\u0641\u0638 \u0627\u0644\u0628\u0631\u0627\u0645\u062c \u0627\u0644\u0645\u0633\u062a\u0648\u0631\u062f\u0629. \u0644\u0645 \u064a\u064f\u062d\u0641\u0638 \u0623\u064a \u0634\u064a\u0621 \u2014 \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.",
+  "trackerProgramOptions": "\u062e\u064a\u0627\u0631\u0627\u062a \u0627\u0644\u0628\u0631\u0627\u0645\u062c",
   "dataAllDeleted": "تم حذف كل البيانات",
   "dataDeleteAllConfirmTitle": "حذف كل البيانات؟",
   "dataDeleteAllConfirmBody": "سيحذف هذا نهائيًا كل تمرين وجلسة مؤقّت وبرنامج وقالب وقياس جسم (ستُستعاد البرامج المدمجة). تبقى مكتبة التمارين كما هي. لا يمكن التراجع عن هذا.",
@@ -1103,9 +1121,6 @@
   "progressOtherMuscles": "أخرى",
   "progressMostTrained": "الأكثر تدريبًا · {volume}",
   "@progressMostTrained": { "placeholders": { "volume": { "type": "String" } } },
-  "progressChartInteractionHelp": "اضغط على أحد الأعمدة أو مرّر المؤشر فوقه لعرض التفاصيل.",
-  "progressMuscleVolumeDetail": "{muscle}: {volume}",
-  "@progressMuscleVolumeDetail": { "placeholders": { "muscle": { "type": "String" }, "volume": { "type": "String" } } },
   "progressNoMeasurementsTitle": "لا توجد قياسات بعد",
   "progressNoMeasurementsMessage": "تتبّع الوزن ونسبة الدهون مع مرور الوقت.",
   "progressNoMeasurementsInRange": "{range, select, twoWeeks{لم يُسجَّل أي قياس خلال آخر 14 يومًا.} month{لم يُسجَّل أي قياس خلال آخر 30 يومًا.} quarter{لم يُسجَّل أي قياس خلال آخر 90 يومًا.} year{لم يُسجَّل أي قياس خلال آخر 12 شهرًا.} all{لم يُسجَّل أي قياس بعد.} other{لم يُسجَّل أي قياس بعد.}}",
@@ -1188,5 +1203,18 @@
   "explainerStrengthChangeSummary": "أفضل وزن تقديري لأقصى تكرار واحد لكل تمرين ضمن النطاق المحدّد، مقارنةً بالنطاق السابق مباشرةً.",
   "explainerStrengthChangePoint1": "الأخضر يعني أن أفضل رفعة تحسّنت عن الفترة السابقة، والأحمر يعني أنها تراجعت.",
   "explainerStrengthChangePoint2": "عند اختيار «كل الوقت» لا توجد فترة سابقة للمقارنة، فيُعرض ببساطة أفضل رقم لك في كل تمرين.",
-  "explainerStrengthChangeCaveat": "التراجع غالبًا يعني أنك دربت تلك الرفعة بأوزان أخف هذه الفترة، لا أنك فقدت قوتك."
+  "explainerStrengthChangeCaveat": "التراجع غالبًا يعني أنك دربت تلك الرفعة بأوزان أخف هذه الفترة، لا أنك فقدت قوتك.",
+  "progressOverviewRange": "{range, select, twoWeeks{آخر 14 يومًا} month{آخر 30 يومًا} quarter{آخر 90 يومًا} year{آخر 12 شهرًا} all{كل الوقت} other{كل الوقت}}",
+  "progressOverviewTotalVolume": "إجمالي الحجم التدريبي",
+  "progressOverviewWorkouts": "التمارين",
+  "progressOverviewPerWeek": "أسبوعيًا",
+  "progressOverviewRecords": "أرقام قياسية",
+  "progressChapterStrength": "القوة",
+  "progressChapterVolume": "الحجم التدريبي",
+  "progressChapterHabits": "العادات",
+  "progressChapterBody": "الجسم",
+  "progressShowAllLifts": "{count, plural, zero{لا رفعات أخرى} one{عرض رفعة أخرى} two{عرض رفعتين أخريين} few{عرض {count} رفعات أخرى} many{عرض {count} رفعة أخرى} other{عرض {count} رفعة أخرى}}",
+  "progressShowFewerLifts": "عرض أقل",
+  "progressShareOfTotal": "{percent}%",
+  "progressShareSemantic": "{label}: {value}، {percent}% من الإجمالي"
 }

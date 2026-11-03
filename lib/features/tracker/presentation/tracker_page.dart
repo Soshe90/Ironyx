@@ -39,6 +39,8 @@ class TrackerPage extends ConsumerStatefulWidget {
 
 enum _HistoryMenuAction { importXlsx }
 
+enum _ProgramsMenuAction { importCsv }
+
 class _TrackerPageState extends ConsumerState<TrackerPage> {
   DateTime _visibleMonth = _monthOnly(DateTime.now());
 
@@ -79,11 +81,44 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
             SliverPadding(
               padding: context.sliverGutter,
               sliver: SliverToBoxAdapter(
-                child: SectionHeader(
-                  title: context.l10n.trackerPrograms,
-                  subtitle: context.l10n.trackerProgramsSubtitle,
-                  actionLabel: context.l10n.trackerNew,
-                  onAction: () => context.pushNamed(Routes.programNewName),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: SectionHeader(
+                        title: context.l10n.trackerPrograms,
+                        subtitle: context.l10n.trackerProgramsSubtitle,
+                        actionLabel: context.l10n.trackerNew,
+                        onAction: () =>
+                            context.pushNamed(Routes.programNewName),
+                      ),
+                    ),
+                    // CSV import lived only in the no-programs card, which
+                    // the seeded built-in programs mean almost nobody sees.
+                    // Here it is always reachable; a menu, as in History,
+                    // because it is rare next to "New".
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: PopupMenuButton<_ProgramsMenuAction>(
+                        tooltip: context.l10n.trackerProgramOptions,
+                        onSelected: (_ProgramsMenuAction action) =>
+                            switch (action) {
+                          _ProgramsMenuAction.importCsv =>
+                            ProgramImportAction.run(context, ref),
+                        },
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<_ProgramsMenuAction>>[
+                          PopupMenuItem<_ProgramsMenuAction>(
+                            value: _ProgramsMenuAction.importCsv,
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.upload_file_outlined),
+                              title: Text(context.l10n.programImportTooltip),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

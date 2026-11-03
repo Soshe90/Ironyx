@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
 import '../database/daos/program_dao.dart';
+import '../database/tables/templates.dart' show kMaxTargetSets;
 
 const _uuid = Uuid();
 
@@ -15,24 +16,26 @@ const _uuid = Uuid();
 ///
 /// - `program` and `day` group rows into a program and its day-templates.
 /// - `exercise` is matched against the seeded catalogue by name.
-/// - `sets` is the target number of sets (integer).
+/// - `sets` is the target number of sets: a whole number from 1 to
+///   [kMaxTargetSets]. A blank cell, or no `sets` column, means 1.
 /// - `reps` is an optional target-rep string (e.g. `8-12`); empty means AMRAP.
 ///
-/// Exercises whose names don't match the catalogue are reported in
-/// [ProgramImportResult.unknownExercises] and excluded from the write.
+/// Nothing in the file is silently dropped or guessed at. Every row that is
+/// not imported is accounted for in the preview:
+/// - exercises whose names don't match the catalogue are listed in
+///   [ProgramImportResult.unknownExercises];
+/// - programs whose name is already taken on this device (program names are
+///   UNIQUE) are listed in [ProgramImportResult.existingPrograms];
+/// - rows with an empty required cell or an unusable `sets` value are listed,
+///   by spreadsheet row number, in [ProgramImportResult.rejectedRows].
 class ProgramImportService {
   const ProgramImportService();
 
+  /// Throws [ProgramImportException] when the file has no header row with
+  /// `program`, `day` and `exercise` columns.
   Future<ProgramImportResult> parse(String csvText, AppDatabase db) async {
-    final rows = _parseCsv(csvText);
-    if (rows.isEmpty) {
-      return const ProgramImportResult(
-        programs: [],
-        unknownExercises: [],
-        totalDays: 0,
-        totalExercises: 0,
-      );
-    }
+    final rows = _parseCsv(_withoutByteOrderMark(csvText));
+    if (rows.isEmpty) throw const ProgramImportException();
 
     final header = rows.first.map((c) => c.trim().toLowerCase()).toList();
     final programIndex = header.indexOf('program');
@@ -45,17 +48,38 @@ class ProgramImportService {
     }
 
     final exerciseNameToId = await _exerciseNameToId(db);
+    final Set<String> takenProgramNames =
+        await ProgramDao(db).allProgramNames();
 
-    final programOrder = <String>[];
     final programMap = <String, Map<String, List<ImportedExercise>>>{};
     final unknownExercises = <String>[];
+    final existingPrograms = <String>[];
+    final rejectedRows = <ProgramImportRowIssue>[];
 
-    for (final row in rows.skip(1)) {
+    for (var i = 1; i < rows.length; i++) {
+      final row = rows[i];
+      // Numbered as a spreadsheet app shows them: the header is row 1.
+      final int rowNumber = i + 1;
       if (row.every((cell) => cell.trim().isEmpty)) continue;
       final programName = _cell(row, programIndex);
       final dayName = _cell(row, dayIndex);
       final exerciseName = _cell(row, exerciseIndex);
       if (programName.isEmpty || dayName.isEmpty || exerciseName.isEmpty) {
+        rejectedRows.add(
+          ProgramImportRowIssue(
+            rowNumber: rowNumber,
+            problem: ProgramImportRowProblem.missingField,
+          ),
+        );
+        continue;
+      }
+
+      // Inserting it would break the UNIQUE name and fail the whole import,
+      // so it is left out and named in the preview instead.
+      if (takenProgramNames.contains(programName)) {
+        if (!existingPrograms.contains(programName)) {
+          existingPrograms.add(programName);
+        }
         continue;
       }
 
@@ -67,32 +91,40 @@ class ProgramImportService {
         continue;
       }
 
-      final sets = int.tryParse(_cell(row, setsIndex)) ?? 1;
+      final String setsText = _cell(row, setsIndex);
+      final int? sets = setsText.isEmpty ? 1 : int.tryParse(setsText);
+      if (sets == null || sets < 1 || sets > kMaxTargetSets) {
+        rejectedRows.add(
+          ProgramImportRowIssue(
+            rowNumber: rowNumber,
+            problem: ProgramImportRowProblem.invalidSets,
+          ),
+        );
+        continue;
+      }
       final reps = repsIndex < 0 ? null : _nullableCell(row, repsIndex);
 
-      final days = programMap.putIfAbsent(programName, () => {});
-      if (!programMap.containsKey(programName) ||
-          !programOrder.contains(programName)) {
-        programOrder.add(programName);
-      }
-      final dayExercises =
-          days.putIfAbsent(dayName, () => <ImportedExercise>[]);
-      dayExercises.add(
-        ImportedExercise(
-          exerciseId: exerciseId,
-          exerciseName: exerciseName,
-          sets: sets < 1 ? 1 : sets,
-          reps: reps,
-        ),
-      );
+      // Map literals keep insertion order, so programs and days come out in
+      // the order they first appear in the file.
+      programMap
+          .putIfAbsent(programName, () => {})
+          .putIfAbsent(dayName, () => <ImportedExercise>[])
+          .add(
+            ImportedExercise(
+              exerciseId: exerciseId,
+              exerciseName: exerciseName,
+              sets: sets,
+              reps: reps,
+            ),
+          );
     }
 
     final programs = [
-      for (final name in programOrder)
+      for (final MapEntry(key: name, value: days) in programMap.entries)
         ImportedProgram(
           name: name,
           days: [
-            for (final entry in programMap[name]!.entries)
+            for (final entry in days.entries)
               ImportedDay(dayName: entry.key, exercises: entry.value),
           ],
         ),
@@ -101,6 +133,8 @@ class ProgramImportService {
     return ProgramImportResult(
       programs: programs,
       unknownExercises: unknownExercises,
+      existingPrograms: existingPrograms,
+      rejectedRows: rejectedRows,
       totalDays: programs.fold(0, (sum, p) => sum + p.days.length),
       totalExercises: programs.fold(0,
           (sum, p) => sum + p.days.fold(0, (s, d) => s + d.exercises.length)),
@@ -129,7 +163,7 @@ class ProgramImportService {
           ),
           [
             for (var i = 0; i < program.days.length; i++)
-              _dayInsert(program, program.days[i], i, now),
+              _dayInsert(program.days[i], i, now),
           ],
         );
       }
@@ -137,7 +171,6 @@ class ProgramImportService {
   }
 
   ProgramDayInsert _dayInsert(
-    ImportedProgram program,
     ImportedDay day,
     int index,
     DateTime now,
@@ -149,7 +182,11 @@ class ProgramImportService {
       orderIndex: index,
       template: TemplatesTableCompanion.insert(
         id: templateId,
-        name: '${program.name} ${day.dayName}',
+        // A UUID, as in the program editor: template names are UNIQUE and
+        // never shown, and "<program> <day>" collided with the templates a
+        // deleted program leaves behind, and within one file ("A B" + "C"
+        // against "A" + "B C").
+        name: _uuid.v4(),
         createdAt: now,
         updatedAt: now,
       ),
@@ -181,8 +218,10 @@ class ProgramImportService {
     };
   }
 
+  /// The trimmed cell, or '' for a short row or an optional column the
+  /// header does not have (index -1).
   String _cell(List<String> row, int index) =>
-      index < row.length ? row[index].trim() : '';
+      index >= 0 && index < row.length ? row[index].trim() : '';
 
   String? _nullableCell(List<String> row, int index) {
     final value = _cell(row, index);
@@ -191,6 +230,11 @@ class ProgramImportService {
 
   /// Minimal RFC-4180 CSV parser (handles quoted fields and embedded
   /// commas/newlines). Deliberately small — the import format is simple.
+  /// Excel's "CSV UTF-8" starts the file with a byte-order mark, which would
+  /// otherwise stick to the first header cell and hide the `program` column.
+  String _withoutByteOrderMark(String text) =>
+      text.startsWith('﻿') ? text.substring(1) : text;
+
   List<List<String>> _parseCsv(String text) {
     final rows = <List<String>>[];
     var row = <String>[];
@@ -234,7 +278,7 @@ class ProgramImportService {
   }
 }
 
-/// Thrown when a spreadsheet is missing the required header columns.
+/// Thrown when a spreadsheet is empty or missing the required header columns.
 ///
 /// Carries no message: this is a service class with no `BuildContext`, and
 /// the previous hardcoded-English message shipped verbatim to the UI even
@@ -250,12 +294,40 @@ class ProgramImportResult {
     required this.unknownExercises,
     required this.totalDays,
     required this.totalExercises,
+    this.existingPrograms = const [],
+    this.rejectedRows = const [],
   });
 
   final List<ImportedProgram> programs;
   final List<String> unknownExercises;
+
+  /// Program names in the file that already exist on this device, in file
+  /// order. None of their rows are imported.
+  final List<String> existingPrograms;
+
+  /// Rows left out because a cell was empty or unusable, in file order.
+  final List<ProgramImportRowIssue> rejectedRows;
+
   final int totalDays;
   final int totalExercises;
+}
+
+/// Why a spreadsheet row was left out of an import.
+enum ProgramImportRowProblem {
+  /// The `program`, `day` or `exercise` cell is empty.
+  missingField,
+
+  /// The `sets` cell is not a whole number from 1 to [kMaxTargetSets].
+  invalidSets,
+}
+
+/// One spreadsheet row that was left out of an import, and why.
+class ProgramImportRowIssue {
+  const ProgramImportRowIssue({required this.rowNumber, required this.problem});
+
+  /// The row number a spreadsheet app shows for it; the header is row 1.
+  final int rowNumber;
+  final ProgramImportRowProblem problem;
 }
 
 class ImportedProgram {
