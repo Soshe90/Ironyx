@@ -13,6 +13,7 @@ import '../../../../core/theme/app_spacing.dart';
 class HistoryCalendar extends StatelessWidget {
   const HistoryCalendar({
     required this.visibleMonth,
+    required this.today,
     required this.markedDates,
     required this.onMonthChanged,
     required this.onDayTap,
@@ -21,6 +22,11 @@ class HistoryCalendar extends StatelessWidget {
 
   /// Any date within the month to display — only year/month are used.
   final DateTime visibleMonth;
+
+  /// The current local date, from `todayProvider`. Passed in rather than
+  /// read from the clock so the "today" ring and the next-month limit move
+  /// when the day does, and so tests can pin the date.
+  final DateTime today;
 
   /// Date-only (`DateTime(y, m, d)`) dates that have at least one workout.
   final Set<DateTime> markedDates;
@@ -36,15 +42,13 @@ class HistoryCalendar extends StatelessWidget {
         () => DateFormat('MMMM yyyy', locale),
       );
 
-  bool get _isCurrentMonth {
-    final DateTime now = DateTime.now();
-    return visibleMonth.year == now.year && visibleMonth.month == now.month;
-  }
+  bool get _isCurrentMonth =>
+      visibleMonth.year == today.year && visibleMonth.month == today.month;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final DateTime today = _dateOnly(DateTime.now());
+    final DateTime todayDate = _dateOnly(today);
     final List<DateTime?> cells = _gridDays(visibleMonth);
 
     return Column(
@@ -102,7 +106,7 @@ class HistoryCalendar extends StatelessWidget {
                 Expanded(
                   child: _DayCell(
                     date: cells[week * 7 + weekday],
-                    isToday: cells[week * 7 + weekday] == today,
+                    isToday: cells[week * 7 + weekday] == todayDate,
                     isMarked: cells[week * 7 + weekday] != null &&
                         markedDates.contains(cells[week * 7 + weekday]),
                     onTap: onDayTap,

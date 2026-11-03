@@ -7,6 +7,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/services/program_import_service.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/history_calendar.dart';
@@ -93,11 +94,15 @@ void main() {
   Future<void> pumpTracker(
     WidgetTester tester, {
     Size surfaceSize = const Size(400, 2000),
+    DateTime Function()? clock,
   }) async {
     await pumpApp(
       tester,
       initialLocation: Routes.tracker,
-      overrides: [appDatabaseProvider.overrideWithValue(database)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        if (clock != null) clockProvider.overrideWithValue(clock),
+      ],
       prefs: const <String, Object>{
         'exercise_seed_version': 999999,
         'program_seed_version': 999999,
@@ -147,6 +152,138 @@ void main() {
     expect(find.byType(HistoryCalendar), findsNothing);
 
     await disposeTracker(tester);
+  });
+
+  // The tab stays alive in the shell, so the app can outlive the day and
+  // month it was opened in (seen on a phone on 2026-11-03 on the dashboard,
+  // which had the same pattern).
+  group('across a day change', () {
+    Future<void> resume(WidgetTester tester) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+    }
+
+    HistoryCalendar calendar(WidgetTester tester) =>
+        tester.widget<HistoryCalendar>(find.byType(HistoryCalendar));
+
+    testWidgets('the calendar moves on to the new month it was showing',
+        (tester) async {
+      DateTime fakeNow = DateTime(2026, 10, 31, 23);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(1400, 2000),
+        clock: () => fakeNow,
+      );
+      await tester.tap(find.byTooltip('Show calendar'));
+      await tester.pump();
+      expect(calendar(tester).visibleMonth, DateTime(2026, 10));
+      expect(calendar(tester).today, DateTime(2026, 10, 31));
+
+      fakeNow = DateTime(2026, 11, 1, 8);
+      await resume(tester);
+
+      expect(calendar(tester).visibleMonth, DateTime(2026, 11));
+      expect(calendar(tester).today, DateTime(2026, 11, 1));
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a month the user browsed back to stays put', (tester) async {
+      DateTime fakeNow = DateTime(2026, 10, 31, 23);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(1400, 2000),
+        clock: () => fakeNow,
+      );
+      await tester.tap(find.byTooltip('Show calendar'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pump();
+      expect(calendar(tester).visibleMonth, DateTime(2026, 9));
+
+      fakeNow = DateTime(2026, 11, 1, 8);
+      await resume(tester);
+
+      expect(calendar(tester).visibleMonth, DateTime(2026, 9));
+      expect(calendar(tester).today, DateTime(2026, 11, 1));
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('the next-month limit follows the given today, not the clock',
+        (tester) async {
+      Future<IconButton> nextButton(DateTime visibleMonth) async {
+        await pumpWidgetUnderTest(
+          tester,
+          HistoryCalendar(
+            visibleMonth: visibleMonth,
+            today: DateTime(2026, 11, 3),
+            markedDates: const <DateTime>{},
+            onMonthChanged: (_) {},
+            onDayTap: (_) {},
+          ),
+        );
+        return tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.chevron_right),
+        );
+      }
+
+      expect((await nextButton(DateTime(2026, 11))).onPressed, isNull);
+      expect((await nextButton(DateTime(2026, 10))).onPressed, isNotNull);
+
+      // This test never boots the app, but setUp opened a database for it;
+      // leaving it open makes Drift warn in every later test.
+      await database.close();
+    });
+
+    testWidgets("yesterday's workout stops being highlighted as today",
+        (tester) async {
+      // A fixed past date, so the real clock can never make it "today".
+      final DateTime start = DateTime(2026, 11, 2, 10);
+      await WorkoutDao(database).insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'w-nov2',
+          startedAt: start,
+          endedAt: Value(start.add(const Duration(minutes: 40))),
+          durationSeconds: const Value(2400),
+          totalVolumeKg: const Value(500),
+        ),
+        [
+          WorkoutExercisesTableCompanion.insert(
+            id: 'w-nov2_a',
+            workoutId: 'w-nov2',
+            exerciseId: 'my-bench',
+            orderIndex: 0,
+          ),
+        ],
+        const [],
+      );
+      DateTime fakeNow = DateTime(2026, 11, 2, 18);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(1400, 2000),
+        clock: () => fakeNow,
+      );
+      final Color primary =
+          Theme.of(tester.element(find.byType(Scaffold).first))
+              .colorScheme
+              .primary;
+      // The date tile's day number is primary-coloured only for today.
+      int highlightedDayTwo() => tester
+          .widgetList<Text>(find.text('2'))
+          .where((Text t) => t.style?.color == primary)
+          .length;
+
+      expect(highlightedDayTwo(), 1);
+
+      fakeNow = DateTime(2026, 11, 3, 7);
+      await resume(tester);
+
+      expect(highlightedDayTwo(), 0);
+
+      await disposeTracker(tester);
+    });
   });
 
   testWidgets('XLSX import moved into the history menu', (tester) async {

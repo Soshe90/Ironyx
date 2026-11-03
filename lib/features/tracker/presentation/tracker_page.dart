@@ -10,6 +10,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/services/clock.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
@@ -42,7 +43,10 @@ enum _HistoryMenuAction { importXlsx }
 enum _ProgramsMenuAction { importCsv }
 
 class _TrackerPageState extends ConsumerState<TrackerPage> {
-  DateTime _visibleMonth = _monthOnly(DateTime.now());
+  /// Month shown by the calendar. Starts on the current month and follows
+  /// a month change only while the user is still looking at the month that
+  /// was current (see the `todayProvider` listener in [build]).
+  late DateTime _visibleMonth = _monthOnly(ref.read(todayProvider));
 
   /// The calendar is a second lens on the same history. Shown by default it
   /// pushed the list itself, the reason people open this tab, below the
@@ -52,6 +56,17 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
   @override
   Widget build(BuildContext context) {
     final WidgetRef ref = this.ref;
+    final DateTime today = ref.watch(todayProvider);
+    // The tab stays alive in the shell, so the app can outlive the month it
+    // was opened in. A month the user browsed back to stays put; the month
+    // that was current moves on to the new one.
+    ref.listen<DateTime>(todayProvider, (DateTime? previous, DateTime next) {
+      if (previous == null) return;
+      final DateTime wasCurrent = _monthOnly(previous);
+      if (_visibleMonth == wasCurrent && _monthOnly(next) != wasCurrent) {
+        setState(() => _visibleMonth = _monthOnly(next));
+      }
+    });
     final draft = ref.watch(activeWorkoutProvider);
     final programsAsync = ref.watch(programSummariesProvider);
     final historyAsync = ref.watch(workoutHistoryStreamProvider);
@@ -274,6 +289,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                               child: AppCard(
                                 child: HistoryCalendar(
                                   visibleMonth: _visibleMonth,
+                                  today: today,
                                   markedDates: {
                                     for (final workout in workouts)
                                       _dateOnly(workout.startedAt),
@@ -668,10 +684,12 @@ class _WorkoutHistoryTile extends ConsumerWidget {
             dates.full(workout.startedAt),
             volumeText,
           );
-    final DateTime now = DateTime.now();
-    final bool isToday = workout.startedAt.year == now.year &&
-        workout.startedAt.month == now.month &&
-        workout.startedAt.day == now.day;
+    // Watched, not read from the clock: the list outlives the day it was
+    // built on, and yesterday's row must stop saying "today".
+    final DateTime today = ref.watch(todayProvider);
+    final bool isToday = workout.startedAt.year == today.year &&
+        workout.startedAt.month == today.month &&
+        workout.startedAt.day == today.day;
 
     return Semantics(
       label: title == null ? summary : '$title. $summary',
