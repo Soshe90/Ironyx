@@ -34,9 +34,10 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 - Fixed 2026-11-03: the dashboard greeting, date and week windows went stale
   while the app stayed in memory (seen on the phone as "Good evening, Friday
   30 Oct" on Tuesday 3 Nov morning). They now follow `localNowProvider` /
-  `todayProvider` in `core/services/clock.dart`. **Same pattern, not yet
-  fixed:** the Tracker calendar's visible month and "today" marker
-  (`tracker_page.dart`, `history_calendar.dart`).
+  `todayProvider` in `core/services/clock.dart`. The Tracker calendar's
+  visible month, "today" ring and history-row highlight had the same
+  pattern and use the same providers now. **Not audited:** other
+  `DateTime.now()` reads in Progress and body-metric widgets.
 
 Checked 2026-09-20, not copied from old notes:
 
