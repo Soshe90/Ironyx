@@ -13,6 +13,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/services/clock.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -141,17 +142,21 @@ const double _sparklineWidthWide = 200;
 
 /// Time-of-day greeting. Orients the user faster than a static wordmark,
 /// which they already know — they just opened the app.
-class _Greeting extends StatelessWidget {
+///
+/// Watches [localNowProvider] rather than reading the clock in `build()`,
+/// so it changes at noon and 18:00 and after a resume, not only when
+/// something else happens to rebuild the app bar.
+class _Greeting extends ConsumerWidget {
   const _Greeting();
 
   @override
-  Widget build(BuildContext context) {
-    final int hour = DateTime.now().hour;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final DayPart part = ref.watch(localNowProvider.select(DayPart.of));
     final AppLocalizations l10n = context.l10n;
-    final String greeting = switch (hour) {
-      < 12 => l10n.greetingMorning,
-      < 18 => l10n.greetingAfternoon,
-      _ => l10n.greetingEvening,
+    final String greeting = switch (part) {
+      DayPart.morning => l10n.greetingMorning,
+      DayPart.afternoon => l10n.greetingAfternoon,
+      DayPart.evening => l10n.greetingEvening,
     };
     return Text(greeting);
   }
@@ -169,6 +174,7 @@ class _TodayCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final draft = ref.watch(activeWorkoutProvider);
+    final DateTime today = ref.watch(todayProvider);
     final ThemeData theme = Theme.of(context);
     final bool inProgress = draft != null;
     final AppLocalizations l10n = context.l10n;
@@ -194,9 +200,7 @@ class _TodayCard extends ConsumerWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  DateFormatters.of(context)
-                      .dayHeadline(DateTime.now())
-                      .toUpperCase(),
+                  DateFormatters.of(context).dayHeadline(today).toUpperCase(),
                   style: AppTypography.eyebrow(
                     theme,
                     color: AppColors.workoutHeroAccent,

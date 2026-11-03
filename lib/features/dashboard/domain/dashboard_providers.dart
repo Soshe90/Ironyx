@@ -8,6 +8,7 @@ import '../../../core/database/tables/profiles.dart';
 import '../../../core/database/tables/timer_sessions.dart';
 import '../../../core/database/tables/workouts.dart';
 import '../../../core/formatters/date_formatters.dart';
+import '../../../core/services/clock.dart';
 
 part 'dashboard_providers.g.dart';
 
@@ -53,20 +54,32 @@ Stream<double?> dashboardAverageWorkoutDuration(Ref ref) =>
 Stream<Profile?> dashboardProfile(Ref ref) =>
     ref.watch(profileDaoProvider).watch();
 
+// The windows below are keyed on [todayProvider] rather than
+// `DateTime.now()`: the dashboard tab stays alive in the shell, so a window
+// captured once at first build went stale as soon as the app outlived the
+// day (or the week) it was opened in. Watching the day re-runs each query
+// when the date changes and at no other time.
+
 /// Completed workouts for each day in the current Monday-Sunday week.
 @riverpod
-Stream<List<WeekdayDistribution>> dashboardWeekdayDistribution(Ref ref) =>
-    ref.watch(workoutDaoProvider).watchWeekdayDistribution(
-          since: DateFormatters.startOfWeek(DateTime.now()),
-          utcOffset: DateTime.now().timeZoneOffset,
-        );
+Stream<List<WeekdayDistribution>> dashboardWeekdayDistribution(Ref ref) {
+  final DateTime today = ref.watch(todayProvider);
+  return ref.watch(workoutDaoProvider).watchWeekdayDistribution(
+        since: DateFormatters.startOfWeek(today),
+        utcOffset: today.timeZoneOffset,
+      );
+}
+
+/// Start of the hero window: midnight, [_heroWeeks] weeks before [today].
+DateTime _heroWindowStart(DateTime today) =>
+    DateTime(today.year, today.month, today.day - _heroWeeks * 7);
 
 /// Last 8 weeks of training volume, for the dashboard's hero card
 /// (headline number, trend vs. the prior week, and a sparkline).
 @riverpod
 Stream<List<WeeklyVolume>> dashboardWeeklyVolume(Ref ref) =>
     ref.watch(workoutDaoProvider).watchWeeklyVolume(
-          since: DateTime.now().subtract(const Duration(days: _heroWeeks * 7)),
+          since: _heroWindowStart(ref.watch(todayProvider)),
         );
 
 /// Last 8 weeks of completed-workout counts, paired with the volume series
@@ -74,7 +87,7 @@ Stream<List<WeeklyVolume>> dashboardWeeklyVolume(Ref ref) =>
 @riverpod
 Stream<List<WorkoutFrequency>> dashboardWeeklyFrequency(Ref ref) =>
     ref.watch(workoutDaoProvider).watchWorkoutFrequency(
-          since: DateTime.now().subtract(const Duration(days: _heroWeeks * 7)),
+          since: _heroWindowStart(ref.watch(todayProvider)),
         );
 
 /// Window backing the dashboard's "this week" card and its sparkline.
@@ -90,11 +103,18 @@ const int dashboardHeroWeeks = _heroWeeks;
 /// half-populated header while the second query is still in flight.
 @riverpod
 Future<WeekSnapshot> dashboardWeekSnapshot(Ref ref) async {
+  // Watched before the awaits: dependencies registered after an async gap
+  // are easy to lose if the provider rebuilds while it is suspended.
+  final DateTime today = ref.watch(todayProvider);
   final List<WeeklyVolume> volume =
       await ref.watch(dashboardWeeklyVolumeProvider.future);
   final List<WorkoutFrequency> frequency =
       await ref.watch(dashboardWeeklyFrequencyProvider.future);
-  return WeekSnapshot.from(volume: volume, frequency: frequency);
+  return WeekSnapshot.from(
+    volume: volume,
+    frequency: frequency,
+    today: today,
+  );
 }
 
 /// Derived training status for the current week.
@@ -114,11 +134,16 @@ class WeekSnapshot {
   /// still means there is no history in the requested window. "This week" is
   /// therefore whichever bucket matches the current week start, not simply
   /// `last`; using `last` would report a stale week's volume after a rest week.
+  ///
+  /// [today] decides which bucket is "this week". It defaults to the device
+  /// clock for callers that have no [todayProvider] to hand.
   factory WeekSnapshot.from({
     required List<WeeklyVolume> volume,
     required List<WorkoutFrequency> frequency,
+    DateTime? today,
   }) {
-    final DateTime thisWeek = DateFormatters.startOfWeek(DateTime.now());
+    final DateTime thisWeek =
+        DateFormatters.startOfWeek(today ?? DateTime.now());
     final DateTime lastWeek =
         thisWeek.subtract(const Duration(days: DateTime.daysPerWeek));
 

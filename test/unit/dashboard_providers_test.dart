@@ -1,9 +1,12 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/formatters/date_formatters.dart';
+import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
 
 /// Covers the two new dashboard-card queries added in M6:
@@ -12,6 +15,9 @@ import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
 /// providers are thin pass-throughs over these — this is where the actual
 /// logic (and the empty-state case) lives.
 void main() {
+  // LocalNow observes the app lifecycle through WidgetsBinding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase database;
   late ExerciseDao exerciseDao;
   late WorkoutDao workoutDao;
@@ -277,6 +283,79 @@ void main() {
 
       final result = await workoutDao.watchMostLoggedExerciseOneRM().first;
       expect(result!.trend, OneRMTrend.flat);
+    });
+  });
+
+  group('WeekSnapshot.from with an explicit today', () {
+    test('"this week" follows the given day, not the device clock', () {
+      final DateTime weekOfOct26 = DateTime(2026, 10, 26);
+      final DateTime weekOfNov2 = DateTime(2026, 11, 2);
+      final List<WeeklyVolume> volume = <WeeklyVolume>[
+        WeeklyVolume(weekStart: weekOfOct26, totalVolumeKg: 100),
+        WeeklyVolume(weekStart: weekOfNov2, totalVolumeKg: 250),
+      ];
+      final List<WorkoutFrequency> frequency = <WorkoutFrequency>[
+        WorkoutFrequency(weekStart: weekOfOct26, workoutCount: 1),
+        WorkoutFrequency(weekStart: weekOfNov2, workoutCount: 2),
+      ];
+
+      final WeekSnapshot friday = WeekSnapshot.from(
+        volume: volume,
+        frequency: frequency,
+        today: DateTime(2026, 10, 30),
+      );
+      final WeekSnapshot tuesday = WeekSnapshot.from(
+        volume: volume,
+        frequency: frequency,
+        today: DateTime(2026, 11, 3),
+      );
+
+      expect(friday.volumeKg, 100);
+      expect(friday.sessions, 1);
+      expect(tuesday.volumeKg, 250);
+      expect(tuesday.previousVolumeKg, 100);
+      expect(tuesday.sessions, 2);
+    });
+  });
+
+  group('dashboardWeekSnapshot across a day change', () {
+    // The dashboard tab stays alive in the shell. Before LocalNow, its week
+    // window was captured once at first build, so an app left in memory
+    // from Friday to Tuesday kept reporting the previous week.
+    test('a workout from the new week appears once the day rolls over',
+        () async {
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'monday',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 2, 12),
+        weightKg: 100,
+        reps: 5,
+      );
+
+      DateTime fakeNow = DateTime(2026, 10, 30, 19, 50);
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Keep the auto-dispose chain alive between reads, as the mounted
+      // dashboard does.
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+
+      final WeekSnapshot before =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(before.sessions, 0, reason: 'Monday 2 Nov is next week on Fri');
+
+      fakeNow = DateTime(2026, 11, 3, 11, 37);
+      container.read(localNowProvider.notifier).refresh();
+
+      final WeekSnapshot after =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(after.sessions, 1);
+      expect(after.volumeKg, 500);
     });
   });
 }

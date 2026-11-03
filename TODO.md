@@ -10,7 +10,35 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 
 ## Where the app really stands
 
-Checked today, not copied from old notes:
+**Update 2026-11-03 (after the drive failure).** This section below is from
+2026-09-20; these are the current facts:
+
+- The original drive failed. Work from Oct 5 to 22 that had never been pushed was rebuilt from
+  recovered files as commit `a27f910` on `recovery/2026-10-22`. The audit
+  record is `RECOVERY_MERGE_MANIFEST.json`.
+- **1.0.3 (versionCode 4) is on a Play track.** The owner's SM N970F installed
+  it from Play on 2026-10-24. Its signer `5D:8A:EA:72…` is Google's
+  app-signing key, which explains the C6 "different signer" note: Play
+  re-signs uploads. A locally signed APK therefore cannot update that
+  install; test release builds through a Play testing track. The next upload
+  needs versionCode ≥ 5.
+- **The reconstruction was verified against that Play build.** Rebuilt from the
+  same `F:\Ironyx` path, the Dart machine code is byte-identical, the strings,
+  614 bundled assets and the app's own Android resources match, and Library and Timer
+  screens are pixel-identical side by side. The Dart data snapshot differs
+  by a few bytes in what looks like ordering. That is not fully explained, and the visual check
+  found no visible difference.
+- Upload keystore and `key.properties`: backed up to the owner's Google Drive
+  (owner-reported 2026-11-03).
+- `flutter test`: **673 passed, 1 skipped, 0 failed** (2026-11-03).
+- Fixed 2026-11-03: the dashboard greeting, date and week windows went stale
+  while the app stayed in memory (seen on the phone as "Good evening, Friday
+  30 Oct" on Tuesday 3 Nov morning). They now follow `localNowProvider` /
+  `todayProvider` in `core/services/clock.dart`. **Same pattern, not yet
+  fixed:** the Tracker calendar's visible month and "today" marker
+  (`tracker_page.dart`, `history_calendar.dart`).
+
+Checked 2026-09-20, not copied from old notes:
 
 - `flutter analyze --fatal-infos --fatal-warnings`: **no issues**.
 - `flutter test`: **438 passed, 1 skipped, 0 failed** (the README's 423 was stale).

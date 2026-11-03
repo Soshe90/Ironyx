@@ -6,6 +6,7 @@ import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
 
@@ -237,6 +238,62 @@ void main() {
         greaterThan(tester.getCenter(sunday).dx),
       );
       expect(tester.takeException(), isNull);
+
+      await disposeApp(tester);
+    });
+    // Regression, found on a phone on 2026-11-03: the dashboard read the
+    // clock in build() and stayed alive in the shell, so after days in the
+    // background it greeted "Good evening" with Friday's date on a Tuesday
+    // morning.
+    testWidgets('greeting and date refresh when the app resumes on a new day',
+        (tester) async {
+      DateTime fakeNow = DateTime(2026, 10, 30, 19, 50);
+      await pumpApp(
+        tester,
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Good evening'), findsOneWidget);
+      expect(find.text('FRIDAY, 30 OCT'), findsOneWidget);
+
+      fakeNow = DateTime(2026, 11, 3, 11, 37);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Good morning'), findsOneWidget);
+      expect(find.text('TUESDAY, 3 NOV'), findsOneWidget);
+      expect(find.text('FRIDAY, 30 OCT'), findsNothing);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('greeting changes at noon while the app stays open',
+        (tester) async {
+      DateTime fakeNow = DateTime(2026, 11, 3, 11, 59, 30);
+      await pumpApp(
+        tester,
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Good morning'), findsOneWidget);
+
+      // No resume: only LocalNow's boundary timer can notice noon.
+      fakeNow = DateTime(2026, 11, 3, 12, 0, 1);
+      await tester.pump(const Duration(seconds: 40));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Good afternoon'), findsOneWidget);
+      expect(find.text('TUESDAY, 3 NOV'), findsOneWidget);
 
       await disposeApp(tester);
     });
