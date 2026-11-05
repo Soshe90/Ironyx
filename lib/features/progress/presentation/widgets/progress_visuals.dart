@@ -52,23 +52,113 @@ class ProgressChapter extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Text(
-              title.toUpperCase(),
-              style: AppTypography.eyebrow(
-                theme,
+            // A short bar in the brand colour, then the name at heading
+            // size. The old small-capitals eyebrow was the quietest text on
+            // the page while marking its biggest division.
+            Container(
+              width: AppSpacing.xs,
+              height: AppSpacing.xl,
+              decoration: BoxDecoration(
                 color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: Divider(
-                height: 1,
-                thickness: 1,
-                color: theme.colorScheme.outlineVariant,
-              ),
+              child: Text(title, style: theme.textTheme.headlineSmall),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The chapters of the Progress page as a row of tabs: tapping one asks the
+/// page to scroll there, and [active] follows the reader's position.
+///
+/// Not a `TabBar`: the chapters are one scrolling page, not separate views,
+/// and no tab is selected above the first chapter. The cells share the
+/// width, so the row never scrolls sideways.
+class ProgressChapterTabs<T> extends StatelessWidget {
+  const ProgressChapterTabs({
+    required this.chapters,
+    required this.active,
+    required this.onSelected,
+    super.key,
+  });
+
+  /// Value and already-localized label, in page order.
+  final List<(T, String)> chapters;
+
+  /// The chapter being read, or null above the first one.
+  final T? active;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return SizedBox(
+      height: AppSpacing.minTapTarget,
+      child: Row(
+        children: <Widget>[
+          for (final (T value, String label) in chapters)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: value == active,
+                label: label,
+                onTap: () => onSelected(value),
+                child: ExcludeSemantics(
+                  child: InkWell(
+                    onTap: () => onSelected(value),
+                    child: Column(
+                      children: <Widget>[
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xs,
+                            ),
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  label,
+                                  maxLines: 1,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: value == active
+                                        ? scheme.primary
+                                        : scheme.onSurfaceVariant,
+                                    fontWeight: value == active
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        AnimatedContainer(
+                          duration: AppDuration.fast,
+                          height: AppSpacing.xxs,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          decoration: BoxDecoration(
+                            color: value == active
+                                ? scheme.primary
+                                : scheme.primary.withValues(alpha: 0),
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -458,6 +548,8 @@ class ShareBarRow extends StatelessWidget {
     required this.share,
     required this.relative,
     required this.color,
+    this.selected = false,
+    this.onTap,
     super.key,
   });
 
@@ -473,60 +565,84 @@ class ShareBarRow extends StatelessWidget {
   final double relative;
   final Color color;
 
+  /// Marks the row whose detail is showing elsewhere on the card.
+  final bool selected;
+
+  /// Makes the row a button that picks this entry. Null leaves it plain.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final AppLocalizations l10n = context.l10n;
     final int percent = (share * 100).round();
+    final BorderRadius radius = BorderRadius.circular(AppRadius.md);
     return Semantics(
       label: l10n.progressShareSemantic(label, value, percent),
+      button: onTap != null,
+      selected: onTap != null ? selected : null,
+      onTap: onTap,
       child: ExcludeSemantics(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Row(
+        child: Material(
+          // The same tint the navigation bar uses for "selected", so the
+          // chosen row reads as chosen without a second accent colour.
+          color: selected
+              ? theme.colorScheme.primary.withValues(alpha: 0.08)
+              : Colors.transparent,
+          borderRadius: radius,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Container(
-                    width: AppSpacing.sm,
-                    height: AppSpacing.sm,
-                    decoration:
-                        BoxDecoration(color: color, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: theme.textTheme.titleSmall,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    value,
-                    style: AppTypography.numeric(
-                      theme.textTheme.bodyMedium!
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  SizedBox(
-                    width: AppSpacing.xxl + AppSpacing.sm,
-                    child: Text(
-                      l10n.progressShareOfTotal(percent),
-                      textAlign: TextAlign.end,
-                      style: AppTypography.numeric(
-                        AppTypography.caption(theme),
+                  Row(
+                    children: <Widget>[
+                      Container(
+                        width: AppSpacing.sm,
+                        height: AppSpacing.sm,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: theme.textTheme.titleSmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        value,
+                        style: AppTypography.numeric(
+                          theme.textTheme.bodyMedium!
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      SizedBox(
+                        width: AppSpacing.xxl + AppSpacing.sm,
+                        child: Text(
+                          l10n.progressShareOfTotal(percent),
+                          textAlign: TextAlign.end,
+                          style: AppTypography.numeric(
+                            AppTypography.caption(theme),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _Track(fraction: relative, color: color),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
-              _Track(fraction: relative, color: color),
-            ],
+            ),
           ),
         ),
       ),

@@ -39,6 +39,16 @@ extension EquipmentL10n on Equipment {
       _lookup(context, kEquipmentNamesAr, id) ?? name;
 }
 
+/// Translates a muscle-group name for a query result that carries only the
+/// id and the stored English name (the Progress analytics), rather than a
+/// [Muscle] for [MuscleL10n.localizedName].
+String localizedMuscleName(
+  BuildContext context,
+  String muscleId,
+  String fallbackName,
+) =>
+    _lookup(context, kMuscleNamesAr, muscleId) ?? fallbackName;
+
 /// Translates an equipment name as `ExerciseSummary` carries it.
 ///
 /// That list holds `EquipmentTable.name`, which the seed keeps equal to the

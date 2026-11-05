@@ -52,6 +52,93 @@ void main() {
       expect(fill.widthFactor, 1);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('is a plain row unless it is given something to do',
+        (tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await pumpWidgetUnderTest(
+        tester,
+        const ShareBarRow(
+          label: 'Chest',
+          value: '1 kg',
+          share: 1,
+          relative: 1,
+          color: Colors.blue,
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.byType(ShareBarRow)),
+        matchesSemantics(label: 'Chest: 1 kg, 100% of the total'),
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('with an action it is a button that says when it is chosen',
+        (tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      int taps = 0;
+      await pumpWidgetUnderTest(
+        tester,
+        ShareBarRow(
+          label: 'Chest',
+          value: '1 kg',
+          share: 1,
+          relative: 1,
+          color: Colors.blue,
+          selected: true,
+          onTap: () => taps++,
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.byType(ShareBarRow)),
+        matchesSemantics(
+          label: 'Chest: 1 kg, 100% of the total',
+          isButton: true,
+          hasSelectedState: true,
+          isSelected: true,
+          hasTapAction: true,
+        ),
+      );
+      await tester.tap(find.text('Chest'));
+      expect(taps, 1);
+      semantics.dispose();
+    });
+  });
+
+  group('ProgressChapterTabs', () {
+    testWidgets('reports the tapped chapter and fits a narrow phone',
+        (tester) async {
+      final List<int> tapped = <int>[];
+      await pumpWidgetUnderTest(
+        tester,
+        ProgressChapterTabs<int>(
+          chapters: const <(int, String)>[
+            (1, 'Strength'),
+            (2, 'Training volume'),
+            (3, 'Habits'),
+            (4, 'Body'),
+          ],
+          active: 2,
+          onSelected: tapped.add,
+        ),
+        surfaceSize: const Size(320, 600),
+      );
+
+      await tester.tap(find.text('Habits'));
+      // The chapter being read can be tapped again, to return to its top.
+      await tester.tap(find.text('Training volume'));
+
+      expect(tapped, <int>[3, 2]);
+      expect(tester.takeException(), isNull);
+      // Four equal cells, however long a label is.
+      expect(
+        tester.getCenter(find.text('Body')).dx -
+            tester.getCenter(find.text('Habits')).dx,
+        moreOrLessEquals(80, epsilon: 1),
+      );
+    });
   });
 
   group('ProportionBar', () {
