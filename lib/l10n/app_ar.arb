@@ -995,6 +995,9 @@
   "libraryVideoDemo": "عرض فيديو",
   "librarySearchOnYoutube": "البحث على YouTube",
   "libraryYoutubeOpenFailed": "تعذّر فتح YouTube",
+  "libraryPictureStart": "وضعية البداية",
+  "libraryPictureEnd": "وضعية النهاية",
+  "libraryPictureOf": "الصورة {index} من {count}",
   "libraryHowToPerform": "طريقة أداء {name}",
   "@libraryHowToPerform": {
     "placeholders": { "name": { "type": "String" } }

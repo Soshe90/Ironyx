@@ -156,6 +156,12 @@ class _ExerciseDetailBody extends StatelessWidget {
         .where((m) => m.role != MuscleRole.primary)
         .map((m) => m.muscle);
     final picture = exercisePictureUrl(bestMedia(detail.media));
+    final List<String> pictures = exercisePictures(detail.media);
+    final String? videoPicture = exercisePictureUrl(
+      detail.media.firstWhereOrNull(
+        (media) => media.type == ExerciseMediaType.video,
+      ),
+    );
     final fallbackIcon = detail.equipment.isEmpty
         ? Icons.fitness_center
         : equipmentIcon(detail.equipment.first.equipment.id);
@@ -186,14 +192,18 @@ class _ExerciseDetailBody extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    if (picture != null)
+                    // Catalogue exercises have a start and an end picture;
+                    // both are shown, one at a time.
+                    if (pictures.length > 1)
+                      _PictureSwiper(
+                        pictures: pictures,
+                        fallbackUrl: videoPicture,
+                        fallbackIcon: fallbackIcon,
+                      )
+                    else if (picture != null)
                       ExerciseThumbnail(
                         url: picture,
-                        fallbackUrl: exercisePictureUrl(
-                          detail.media.firstWhereOrNull(
-                            (media) => media.type == ExerciseMediaType.video,
-                          ),
-                        ),
+                        fallbackUrl: videoPicture,
                         fallbackIcon: fallbackIcon,
                       )
                     else
@@ -211,16 +221,23 @@ class _ExerciseDetailBody extends StatelessWidget {
                           size: 36,
                         ),
                       ),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.search,
-                        color: Colors.white,
-                        size: 28,
+                    // Decoration only: the whole box is the search button.
+                    // Ignoring touches lets a swipe that starts on the
+                    // circle reach the pictures underneath; a tap still
+                    // reaches the box's onTap.
+                    IgnorePointer(
+                      child: Container(
+                        key: const ValueKey<String>('exercise-search-badge'),
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.search,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                     ),
                   ],
@@ -364,6 +381,116 @@ class _ExerciseDetailBody extends StatelessWidget {
         SnackBar(content: Text(context.l10n.libraryYoutubeOpenFailed)),
       );
     }
+  }
+}
+
+/// An exercise's pictures, one at a time: swipe between them, with a dot
+/// per picture showing which is on screen.
+///
+/// Sits inside the sheet's YouTube search button, so a tap still searches;
+/// only a horizontal drag changes the picture. `PageView` follows the text
+/// direction, so in Arabic the next picture comes in from the left.
+class _PictureSwiper extends StatefulWidget {
+  const _PictureSwiper({
+    required this.pictures,
+    required this.fallbackUrl,
+    required this.fallbackIcon,
+  });
+
+  final List<String> pictures;
+  final String? fallbackUrl;
+  final IconData fallbackIcon;
+
+  @override
+  State<_PictureSwiper> createState() => _PictureSwiperState();
+}
+
+class _PictureSwiperState extends State<_PictureSwiper> {
+  final PageController _controller = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _label(BuildContext context, int index) {
+    final int count = widget.pictures.length;
+    if (count == 2) {
+      return index == 0
+          ? context.l10n.libraryPictureStart
+          : context.l10n.libraryPictureEnd;
+    }
+    return context.l10n.libraryPictureOf(index + 1, count);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.expand(
+      key: const ValueKey<String>('exercise-picture-swiper'),
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: widget.pictures.length,
+            onPageChanged: (int page) => setState(() => _page = page),
+            itemBuilder: (BuildContext context, int index) => Semantics(
+              label: _label(context, index),
+              image: true,
+              child: ExerciseThumbnail(
+                key: ValueKey<String>(widget.pictures[index]),
+                url: widget.pictures[index],
+                fallbackUrl: widget.fallbackUrl,
+                fallbackIcon: widget.fallbackIcon,
+              ),
+            ),
+          ),
+          // The page label above already tells a screen reader which
+          // picture is showing; the dots are for the eye only.
+          Positioned(
+            bottom: AppSpacing.sm,
+            left: 0,
+            right: 0,
+            child: ExcludeSemantics(
+              child: Center(
+                child: Container(
+                  key: const ValueKey<String>('exercise-picture-dots'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  // Same treatment as the search button: readable on light
+                  // and dark pictures alike.
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (int i = 0; i < widget.pictures.length; i++)
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: i == _page
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.45),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

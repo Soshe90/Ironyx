@@ -1036,6 +1036,12 @@
   "libraryVideoDemo": "Video demo",
   "librarySearchOnYoutube": "Search on YouTube",
   "libraryYoutubeOpenFailed": "Could not open YouTube",
+  "libraryPictureStart": "Start position",
+  "@libraryPictureStart": {"description": "Screen-reader label of an exercise's first picture, when it has a start and an end picture."},
+  "libraryPictureEnd": "End position",
+  "@libraryPictureEnd": {"description": "Screen-reader label of an exercise's second picture, when it has a start and an end picture."},
+  "libraryPictureOf": "Picture {index} of {count}",
+  "@libraryPictureOf": {"description": "Screen-reader label of one of an exercise's pictures, when it has more than two.", "placeholders": {"index": {"type": "int"}, "count": {"type": "int"}}},
   "libraryHowToPerform": "How to do {name}",
   "@libraryHowToPerform": {
     "description": "Screen-reader label and tooltip for an exercise name that opens its instructions sheet.",
