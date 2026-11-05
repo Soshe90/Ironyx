@@ -30,7 +30,23 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **673 passed, 1 skipped, 0 failed** (2026-11-03).
+- `flutter test`: **717 passed, 1 skipped, 0 failed** (2026-11-05).
+- Fixed 2026-11-05: a debug build sometimes showed a full-screen
+  `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
+  and rest time" dialog. The dialog disposed its text controllers while it
+  was still animating closed. The body-measurement dialog on Progress had
+  the same fault. Each dialog now owns its controllers. Release builds strip
+  the assertion, so the Play build never showed the screen. **Not checked on
+  a phone.**
+- Fixed 2026-11-05, same dialog: an RPE or rest time could not be removed
+  once entered, and an out-of-range value made Save do nothing without
+  saying why.
+- Changed 2026-11-05: the debug error screen now names the first error of a
+  burst, the widget blamed and the top stack frames, and the release one is
+  translated (`UncaughtErrorView`, `ErrorBurst` in `core/error_reporting.dart`).
+- **Open, found 2026-11-05:** the body-measurement dialog closes and saves
+  nothing, without a message, when the weight is empty, zero or not a
+  number, and it accepts any positive weight and any body-fat value.
 - Fixed 2026-11-03: the dashboard greeting, date and week windows went stale
   while the app stayed in memory (seen on the phone as "Good evening, Friday
   30 Oct" on Tuesday 3 Nov morning). They now follow `localNowProvider` /
