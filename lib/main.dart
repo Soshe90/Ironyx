@@ -9,7 +9,7 @@ import 'app.dart';
 import 'core/config/supabase_config.dart';
 import 'core/error_reporting.dart';
 import 'core/providers.dart';
-import 'core/widgets/error_view.dart';
+import 'core/widgets/uncaught_error_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,8 +42,13 @@ Future<void> main() async {
 /// channel callbacks — which would otherwise reach the zone's default
 /// handler and, on some platforms, terminate the process.
 void _installErrorHandlers() {
+  // Debug only: lets the error screen name the error that started a run of
+  // them, not just the one that ended up on screen.
+  final ErrorBurst burst = ErrorBurst();
+
   final FlutterExceptionHandler? previousOnError = FlutterError.onError;
   FlutterError.onError = (FlutterErrorDetails details) {
+    if (kDebugMode) burst.record(details.exception);
     reportError(details.exception, details.stack, context: 'FlutterError');
     previousOnError?.call(details);
   };
@@ -60,23 +65,11 @@ void _installErrorHandlers() {
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
     reportError(details.exception, details.stack, context: 'ErrorWidget');
-    // Wrapped in `Directionality` + `Material` rather than relying on
-    // ancestors: this replaces whatever widget failed to build, which can be
-    // above `MaterialApp` itself (a bad `theme:`/`locale:` computation, say),
-    // so neither is guaranteed to exist yet. `title` is passed explicitly
-    // rather than left to `ErrorView`'s default for the same reason — that
-    // default reads `context.l10n`, which throws if `Localizations` isn't
-    // mounted, and the widget standing in for "everything else already
-    // failed" cannot itself have a failure mode.
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Material(
-        child: ErrorView(
-          title: kDebugMode
-              ? '${details.exception}'
-              : 'Something went wrong. Please restart the app.',
-        ),
-      ),
+    // A build error reaches `FlutterError.onError` before it reaches this
+    // builder, so the burst already includes it.
+    return UncaughtErrorView(
+      details: details,
+      firstInBurst: kDebugMode ? burst.firstOtherThan(details.exception) : null,
     );
   };
 }

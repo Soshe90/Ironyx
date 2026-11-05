@@ -35,6 +35,7 @@
   "navSettings": "Settings",
 
   "errorTryAgain": "Try again",
+  "errorUncaught": "Something went wrong. Please restart the app.",
   "metricNoDataYet": "No data yet",
   "metricCouldNotLoad": "Could not load",
   "filterAll": "All",

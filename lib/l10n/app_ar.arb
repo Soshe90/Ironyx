@@ -34,6 +34,7 @@
   "navSettings": "الإعدادات",
 
   "errorTryAgain": "حاول مرة أخرى",
+  "errorUncaught": "حدث خطأ ما. يُرجى إعادة تشغيل التطبيق.",
   "metricNoDataYet": "لا توجد بيانات بعد",
   "metricCouldNotLoad": "تعذّر التحميل",
   "filterAll": "الكل",
