@@ -511,11 +511,46 @@ void main() {
         (tester) async {
       await pumpHarness(tester);
       await openDialog(tester);
+      // The comma is a decimal mark (see `NumberInputFormatter`); rest is a
+      // whole number of seconds, so it has none.
       await tester.enterText(rpeField, '-7,5e');
       await tester.enterText(restField, '1.5m');
 
-      expect(find.widgetWithText(TextField, '75'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '7.5'), findsOneWidget);
       expect(find.widgetWithText(TextField, '15'), findsOneWidget);
+    });
+
+    testWidgets('a decimal comma and Arabic digits are saved as typed',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '٨٫٥');
+      await tester.enterText(restField, '١٢٠');
+
+      expect(find.widgetWithText(TextField, '8.5'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '120'), findsOneWidget);
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final DraftSet saved = harnessKey.currentState!.exercise.sets.first;
+      expect(saved.rpeTimes10, 85);
+      expect(saved.restSeconds, 120);
+    });
+
+    testWidgets('set rows take a decimal comma and Arabic digits',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      final Finder fields = find.byType(TextField);
+      // Set 1: weight, then reps. Before, the comma was dropped as it was
+      // typed and 82,5 was logged as 825 kg.
+      await tester.enterText(fields.at(0), '82,5');
+      await tester.enterText(fields.at(1), '٨');
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.widgetWithText(TextField, '82.5'), findsOneWidget);
+      final DraftSet set = harnessKey.currentState!.exercise.sets.first;
+      expect(set.weightKg, 82.5);
+      expect(set.reps, 8);
     });
 
     testWidgets('emptying a field clears that value on the set',

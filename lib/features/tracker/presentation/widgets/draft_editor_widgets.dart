@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/daos/workout_dao.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/formatters/date_formatters.dart';
+import '../../../../core/formatters/number_input.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
@@ -781,7 +782,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
                       context.l10n.draftSetWeightSemantic(index, unit.label),
                   decimal: true,
                   onChanged: (String value) {
-                    final double? entered = double.tryParse(value);
+                    final double? entered = parseDecimalInput(value);
                     if (entered == null || !entered.isFinite || entered < 0) {
                       _cancelDebounce(_SetField.weight);
                       return;
@@ -810,7 +811,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
                         semanticLabel:
                             context.l10n.draftSetDurationSemantic(index),
                         onChanged: (String value) {
-                          final int? seconds = int.tryParse(value);
+                          final int? seconds = parseIntegerInput(value);
                           if (seconds == null ||
                               seconds < 0 ||
                               seconds > _maxDurationSeconds) {
@@ -831,7 +832,7 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
                         controller: _repsController,
                         semanticLabel: context.l10n.draftSetRepsSemantic(index),
                         onChanged: (String value) {
-                          final int? reps = int.tryParse(value);
+                          final int? reps = parseIntegerInput(value);
                           if (reps == null || reps < 0 || reps > _maxReps) {
                             _cancelDebounce(_SetField.reps);
                             return;
@@ -1012,8 +1013,8 @@ class _SetDetailsDialogState extends State<_SetDetailsDialog> {
     // Empty is a valid answer ("no RPE"). Anything else has to be a number
     // in range: text that does not parse must not be read as empty, or a
     // typo would silently wipe the value.
-    final double? rpe = rpeText.isEmpty ? null : double.tryParse(rpeText);
-    final int? rest = restText.isEmpty ? null : int.tryParse(restText);
+    final double? rpe = rpeText.isEmpty ? null : parseDecimalInput(rpeText);
+    final int? rest = restText.isEmpty ? null : parseIntegerInput(restText);
     final bool rpeInvalid = rpeText.isNotEmpty &&
         (rpe == null || !rpe.isFinite || rpe < _minRpe || rpe > _maxRpe);
     final bool restInvalid = restText.isNotEmpty &&
@@ -1042,7 +1043,7 @@ class _SetDetailsDialogState extends State<_SetDetailsDialog> {
             controller: _rpeController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: <TextInputFormatter>[
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              const NumberInputFormatter.decimal(),
             ],
             decoration: InputDecoration(
               labelText: context.l10n.draftRpeField,
@@ -1057,7 +1058,7 @@ class _SetDetailsDialogState extends State<_SetDetailsDialog> {
             controller: _restController,
             keyboardType: TextInputType.number,
             inputFormatters: <TextInputFormatter>[
-              FilteringTextInputFormatter.digitsOnly,
+              const NumberInputFormatter.integer(),
             ],
             decoration: InputDecoration(
               labelText: context.l10n.draftRestBeforeSetField,
@@ -1119,9 +1120,10 @@ class _NumberField extends StatelessWidget {
           theme.textTheme.titleMedium ?? const TextStyle(),
         ),
         inputFormatters: <TextInputFormatter>[
-          FilteringTextInputFormatter.allow(
-            decimal ? RegExp(r'[0-9.]') : RegExp(r'[0-9]'),
-          ),
+          if (decimal)
+            const NumberInputFormatter.decimal()
+          else
+            const NumberInputFormatter.integer(),
         ],
         decoration: const InputDecoration(
           hintText: '0',

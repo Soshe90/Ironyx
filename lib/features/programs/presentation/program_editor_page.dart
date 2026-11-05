@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/templates.dart' show kMaxTargetSets;
+import '../../../core/formatters/number_input.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -573,6 +575,9 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                 child: TextField(
                   controller: _setsController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: const <TextInputFormatter>[
+                    NumberInputFormatter.integer(),
+                  ],
                   style: AppTypography.numeric(
                     theme.textTheme.bodyLarge ?? const TextStyle(),
                   ),
@@ -580,7 +585,7 @@ class _ExerciseEditorRowState extends ConsumerState<_ExerciseEditorRow> {
                     labelText: context.l10n.programSetsField,
                   ),
                   onChanged: (value) {
-                    final sets = int.tryParse(value);
+                    final sets = parseIntegerInput(value);
                     if (sets != null && sets > 0 && sets <= kMaxTargetSets) {
                       _notifier.setExerciseTargetSets(
                         widget.dayId,

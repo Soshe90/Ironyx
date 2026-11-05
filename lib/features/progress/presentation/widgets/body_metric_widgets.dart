@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -8,6 +9,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/tables/body_metrics.dart';
 import '../../../../core/formatters/date_formatters.dart';
+import '../../../../core/formatters/number_input.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -207,9 +209,8 @@ class _BodyMetricDialogState extends State<_BodyMetricDialog> {
     final AppLocalizations l10n = context.l10n;
     final String text = (value ?? '').trim();
     if (text.isEmpty) return required ? l10n.profileEnterANumber : null;
-    final double? parsed = double.tryParse(text);
-    // `tryParse` reads "NaN" and "Infinity" as numbers.
-    if (parsed == null || !parsed.isFinite) return l10n.profileEnterANumber;
+    final double? parsed = parseDecimalInput(text);
+    if (parsed == null) return l10n.profileEnterANumber;
     if (parsed < min || parsed > max) {
       return l10n.profileEnterValueBetween(
         UnitFormatters.plain(min),
@@ -225,9 +226,10 @@ class _BodyMetricDialogState extends State<_BodyMetricDialog> {
       return;
     }
     final String fat = _bodyFat.text.trim();
+    // Validated just above, so both parse.
     Navigator.pop(context, (
-      double.parse(_weight.text.trim()),
-      fat.isEmpty ? null : double.parse(fat),
+      parseDecimalInput(_weight.text)!,
+      fat.isEmpty ? null : parseDecimalInput(fat)!,
     ));
   }
 
@@ -262,6 +264,9 @@ class _BodyMetricDialogState extends State<_BodyMetricDialog> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: const <TextInputFormatter>[
+                NumberInputFormatter.decimal(),
+              ],
               decoration: InputDecoration(
                 labelText: context.l10n.progressWeightField(widget.unit.label),
                 errorMaxLines: 3,
@@ -274,6 +279,9 @@ class _BodyMetricDialogState extends State<_BodyMetricDialog> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: const <TextInputFormatter>[
+                NumberInputFormatter.decimal(),
+              ],
               decoration: InputDecoration(
                 labelText: context.l10n.progressBodyFatOptionalField,
                 errorMaxLines: 3,

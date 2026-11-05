@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/body_limits.dart';
+import '../../../core/formatters/number_input.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
@@ -343,6 +345,9 @@ class _NumberInputDialogState extends State<_NumberInputDialog> {
           controller: _controller,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: const <TextInputFormatter>[
+            NumberInputFormatter.decimal(),
+          ],
           decoration: InputDecoration(suffixText: widget.suffix),
           validator: _validate,
           onFieldSubmitted: (_) => _submit(),
@@ -363,7 +368,7 @@ class _NumberInputDialogState extends State<_NumberInputDialog> {
 
   String? _validate(String? value) {
     final AppLocalizations l10n = context.l10n;
-    final double? parsed = double.tryParse((value ?? '').trim());
+    final double? parsed = parseDecimalInput(value ?? '');
     if (parsed == null) return l10n.profileEnterANumber;
     if (parsed < widget.min || parsed > widget.max) {
       return l10n.profileEnterValueBetween(
@@ -376,6 +381,7 @@ class _NumberInputDialogState extends State<_NumberInputDialog> {
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.pop(context, double.parse(_controller.text.trim()));
+    // Validated just above, so it parses.
+    Navigator.pop(context, parseDecimalInput(_controller.text)!);
   }
 }

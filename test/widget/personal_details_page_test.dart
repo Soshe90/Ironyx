@@ -101,6 +101,25 @@ void main() {
     await disposeApp(tester);
   });
 
+  testWidgets('takes a weight typed with a decimal comma or Arabic digits',
+      (tester) async {
+    await pumpPage(tester);
+
+    await enterNumber(tester, rowLabel: 'Height', value: '172,5');
+    // ٨١٫٥
+    await enterNumber(tester,
+        rowLabel: 'Weight', value: '\u0668\u0661\u066b\u0665');
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.pumpAndSettle();
+
+    final profile = await ProfileDao(database).get();
+    expect(profile!.heightCm, 172.5);
+    final metric = await BodyMetricsDao(database).getLatest();
+    expect(metric!.weightKg, 81.5);
+
+    await disposeApp(tester);
+  });
+
   testWidgets('reloads what was saved instead of showing an empty form',
       (tester) async {
     await pumpPage(tester);

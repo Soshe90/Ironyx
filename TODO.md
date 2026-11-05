@@ -30,8 +30,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **843 passed, 1 skipped, 0 failed** (2026-11-05), also
-  under `TZ=PST8PDT` (UTC−8), `TZ=NZT-12` (UTC+12) and `TZ=IST-5:30`.
+- `flutter test`: **863 passed, 1 skipped, 0 failed** (2026-11-05), also
+  under `TZ=PST8PDT` (UTC−8).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -91,9 +91,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   The tests for it pass on CI under America/Los_Angeles and
   Pacific/Auckland, which change their clocks. The old code was reasoned to
   fail there, not run there.
-- **Open, found 2026-11-05:** number fields read a decimal comma ("82,5")
-  as not a number, and the set rows' fields drop the comma as it is typed.
-  Not checked what the Arabic keyboard on the owner's phone sends.
+- Fixed 2026-11-05: number fields dropped a decimal comma as it was typed,
+  so "82,5" in a set row was logged as 825 kg, and dropped Arabic-Indic
+  digits entirely. Every number field (set rows, RPE and rest, body
+  measurement, Personal details, timer, a program's target sets) now goes
+  through `NumberInputFormatter` in `core/formatters/number_input.dart`,
+  which reads `,`, `٫` and `،` as a decimal point and Arabic-Indic and
+  Persian digits as 0–9. A comma is never a thousands separator. **Not
+  checked:** what the owner's Samsung keyboard actually sends in Arabic.
+  Not changed: the XLSX importer still reads text cells with
+  `double.tryParse`, so a cell holding the text "82,5" is skipped.
 - Fixed 2026-11-03: the dashboard greeting, date and week windows went stale
   while the app stayed in memory (seen on the phone as "Good evening, Friday
   30 Oct" on Tuesday 3 Nov morning). They now follow `localNowProvider` /

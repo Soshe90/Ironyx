@@ -179,7 +179,7 @@ void main() {
       expect(find.text(_weightRangeKg), findsNothing);
     });
 
-    for (final String bad in <String>['0', '24.99', '350.01', '825', '-80']) {
+    for (final String bad in <String>['0', '24.99', '350.01', '825', '1e999']) {
       testWidgets('$bad kg is refused as out of range', (tester) async {
         await openEditor(tester);
         await tester.enterText(weightField(), bad);
@@ -191,7 +191,7 @@ void main() {
       });
     }
 
-    for (final String bad in <String>['8..5', '82,5', 'abc', 'NaN', '1e999']) {
+    for (final String bad in <String>['8..5', '8,,5', '1.2,3', 'abc', 'NaN']) {
       testWidgets('"$bad" is refused as not a number', (tester) async {
         await openEditor(tester);
         await tester.enterText(weightField(), bad);
@@ -207,6 +207,13 @@ void main() {
       ('25', 25),
       ('350', 350),
       (' 80.5 ', 80.5),
+      // A decimal comma; Arabic digits and decimal separator; Persian
+      // digits with a comma.
+      ('82,5', 82.5),
+      ('\u0668\u0662\u066b\u0665', 82.5),
+      ('\u06f8\u06f2,\u06f5', 82.5),
+      // A minus sign cannot be typed, so this is 80.
+      ('-80', 80),
     ]) {
       testWidgets('"$text" kg is accepted', (tester) async {
         await openEditor(tester);
