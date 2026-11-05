@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/body_limits.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
@@ -42,8 +43,6 @@ String _sexLabel(String option, AppLocalizations l10n) => switch (option) {
 /// anyone real, narrow enough to catch a cm/kg mix-up.
 const double _minHeightCm = 90;
 const double _maxHeightCm = 250;
-const double _minWeightKg = 25;
-const double _maxWeightKg = 350;
 
 /// Name, date of birth, sex, height and current weight.
 class PersonalDetailsPage extends ConsumerWidget {
@@ -233,8 +232,8 @@ class _BodyState extends ConsumerState<_Body> {
       initial: widget.draft.weightKg == null
           ? null
           : UnitFormatters.fromKg(widget.draft.weightKg!, unit),
-      min: UnitFormatters.fromKg(_minWeightKg, unit),
-      max: UnitFormatters.fromKg(_maxWeightKg, unit),
+      min: UnitFormatters.fromKg(kMinBodyWeightKg, unit),
+      max: UnitFormatters.fromKg(kMaxBodyWeightKg, unit),
     );
     if (entered != null) {
       _notifier.setWeightKg(UnitFormatters.toKg(entered, unit));

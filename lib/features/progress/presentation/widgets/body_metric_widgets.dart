@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/body_limits.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/tables/body_metrics.dart';
@@ -96,29 +97,31 @@ Future<void> showBodyMetricEditor(
 }) async {
   final DateTime date = entry?.date ?? DateTime.now();
 
-  final (String, String)? texts = await showDialog<(String, String)>(
+  final (double, double?)? values = await showDialog<(double, double?)>(
     context: context,
     builder: (_) => _BodyMetricDialog(unit: unit, entry: entry, date: date),
   );
-  if (texts == null) return;
-
-  final double? entered = double.tryParse(texts.$1);
-  if (entered == null || entered <= 0) return;
-  final double weightKg = UnitFormatters.toKg(entered, unit);
-  final double? fat = double.tryParse(texts.$2);
+  if (values == null) return;
 
   await ref.read(bodyMetricsDaoProvider).upsert(
         BodyMetricsTableCompanion.insert(
           id: entry?.id ?? _uuid.v4(),
           date: date,
-          weightKg: weightKg,
-          bodyFatPercentage: Value(fat),
+          weightKg: UnitFormatters.toKg(values.$1, unit),
+          bodyFatPercentage: Value(values.$2),
         ),
       );
 }
 
-/// The dialog behind [showBodyMetricEditor]. Pops with the weight and
-/// body-fat fields' text on Save, or with nothing when cancelled.
+/// The dialog behind [showBodyMetricEditor]. Pops with the weight, in the
+/// display unit, and the body-fat percentage (null when left empty), or
+/// with nothing when cancelled.
+///
+/// It only pops with values it has checked. It used to pop with whatever
+/// the fields held, and the caller then dropped an empty, zero or
+/// unreadable weight without a word: the dialog closed as if it had saved.
+/// Nothing bounded either number, so 825 for 82.5 went straight into the
+/// charts.
 ///
 /// A widget of its own so that it owns its controllers and disposes them
 /// when it leaves the tree. [showBodyMetricEditor] used to create them and
@@ -143,6 +146,7 @@ class _BodyMetricDialog extends StatefulWidget {
 }
 
 class _BodyMetricDialogState extends State<_BodyMetricDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _weight = TextEditingController(
     text: widget.entry == null
         ? ''
@@ -156,11 +160,75 @@ class _BodyMetricDialogState extends State<_BodyMetricDialog> {
         : UnitFormatters.plain(widget.entry!.bodyFatPercentage!),
   );
 
+  /// Off until Save has been refused once, so the fields do not complain
+  /// while they are first being filled in; on after that, so a message goes
+  /// away as soon as its field is put right.
+  bool _validateAsTyped = false;
+
+  /// The weight limits in the display unit, rounded outwards to the two
+  /// decimals the fields show. Rounded so that the limits the message
+  /// quotes are themselves accepted: 25 kg is 55.1155… lb.
+  late final double _minWeight =
+      (UnitFormatters.fromKg(kMinBodyWeightKg, widget.unit) * 100)
+              .floorToDouble() /
+          100;
+  late final double _maxWeight =
+      (UnitFormatters.fromKg(kMaxBodyWeightKg, widget.unit) * 100)
+              .ceilToDouble() /
+          100;
+
   @override
   void dispose() {
     _weight.dispose();
     _bodyFat.dispose();
     super.dispose();
+  }
+
+  String? _validateWeight(String? value) => _validateNumber(
+        value,
+        min: _minWeight,
+        max: _maxWeight,
+        required: true,
+      );
+
+  String? _validateBodyFat(String? value) => _validateNumber(
+        value,
+        min: kMinBodyFatPercentage,
+        max: kMaxBodyFatPercentage,
+        required: false,
+      );
+
+  String? _validateNumber(
+    String? value, {
+    required double min,
+    required double max,
+    required bool required,
+  }) {
+    final AppLocalizations l10n = context.l10n;
+    final String text = (value ?? '').trim();
+    if (text.isEmpty) return required ? l10n.profileEnterANumber : null;
+    final double? parsed = double.tryParse(text);
+    // `tryParse` reads "NaN" and "Infinity" as numbers.
+    if (parsed == null || !parsed.isFinite) return l10n.profileEnterANumber;
+    if (parsed < min || parsed > max) {
+      return l10n.profileEnterValueBetween(
+        UnitFormatters.plain(min),
+        UnitFormatters.plain(max),
+      );
+    }
+    return null;
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      setState(() => _validateAsTyped = true);
+      return;
+    }
+    final String fat = _bodyFat.text.trim();
+    Navigator.pop(context, (
+      double.parse(_weight.text.trim()),
+      fat.isEmpty ? null : double.parse(fat),
+    ));
   }
 
   @override
@@ -171,36 +239,50 @@ class _BodyMetricDialogState extends State<_BodyMetricDialog> {
             ? context.l10n.progressLogMeasurement
             : context.l10n.progressEditMeasurement,
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            DateFormatters.of(context).full(widget.date),
-            style: AppTypography.caption(Theme.of(context)),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          TextField(
-            controller: _weight,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
+      // With an error line under each field and the keyboard up, the
+      // content can be taller than a small phone has room for.
+      scrollable: true,
+      content: Form(
+        key: _formKey,
+        autovalidateMode: _validateAsTyped
+            ? AutovalidateMode.onUserInteraction
+            : AutovalidateMode.disabled,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              DateFormatters.of(context).full(widget.date),
+              style: AppTypography.caption(Theme.of(context)),
             ),
-            decoration: InputDecoration(
-              labelText: context.l10n.progressWeightField(widget.unit.label),
+            const SizedBox(height: AppSpacing.lg),
+            TextFormField(
+              controller: _weight,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: context.l10n.progressWeightField(widget.unit.label),
+                errorMaxLines: 3,
+              ),
+              validator: _validateWeight,
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _bodyFat,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
+            const SizedBox(height: AppSpacing.sm),
+            TextFormField(
+              controller: _bodyFat,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: context.l10n.progressBodyFatOptionalField,
+                errorMaxLines: 3,
+              ),
+              validator: _validateBodyFat,
+              onFieldSubmitted: (_) => _submit(),
             ),
-            decoration: InputDecoration(
-              labelText: context.l10n.progressBodyFatOptionalField,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: <Widget>[
         TextButton(
@@ -208,8 +290,7 @@ class _BodyMetricDialogState extends State<_BodyMetricDialog> {
           child: Text(context.l10n.actionCancel),
         ),
         FilledButton(
-          onPressed: () =>
-              Navigator.pop(context, (_weight.text, _bodyFat.text)),
+          onPressed: _submit,
           child: Text(context.l10n.actionSave),
         ),
       ],
