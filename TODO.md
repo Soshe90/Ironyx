@@ -30,8 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **863 passed, 1 skipped, 0 failed** (2026-11-05), also
-  under `TZ=PST8PDT` (UTC−8).
+- `flutter test`: **876 passed, 1 skipped, 0 failed** (2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -101,6 +100,29 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   checked:** what the owner's Samsung keyboard actually sends in Arabic.
   Not changed: the XLSX importer still reads text cells with
   `double.tryParse`, so a cell holding the text "82,5" is skipped.
+  **Checked on the SM N970F, 2026-11-05:** in English (en-GB) Samsung's
+  number keyboard shows a comma key that sends nothing in these fields
+  (Android's decimal input type accepts only "."); the dot key works.
+- Changed 2026-11-05, seed 17 → 18 (304 exercises): the Intermediate 3-,
+  4- and 5-day programme workbooks name 40 exercises. 37 were already in
+  the catalogue under other names and are now aliases of them; 3 were
+  missing from free-exercise-db and were written for the app (Behind-the-
+  Body Cable Curl, Lean-In Lateral Raise, Banded Hip Abduction: no images,
+  source `ironyx` in ASSETS-LICENSE.md). Both importers now match names and
+  aliases (`ExerciseDao.exerciseIdsByLookupName`); the workout importer's
+  private name list is gone, and three of its matches were wrong (low-
+  incline press to the flat press, chest-supported machine row to the
+  cable row, leg-press calf raise to the standing calf raise). Before this,
+  importing those workbooks created 19 bare custom duplicates. Upgrade from
+  seed 17 checked on the phone (debug build): 304 exercises, data kept.
+- **Open, found 2026-11-05:** if those workbooks were imported into the
+  Play app before seed 18, the custom duplicates ("Hammer Curls",
+  "Barbell Deadlift", …) are still there with their sets. New imports go to
+  the catalogue exercise; merging the old ones needs a separate fix.
+  Waiting on the owner to say whether that import ever happened.
+- **Open, found 2026-11-05:** in Arabic, the Library list shows equipment
+  in English ("Bodyweight", "Machine") in each row's subtitle; the detail
+  sheet translates it.
 - Fixed 2026-11-03: the dashboard greeting, date and week windows went stale
   while the app stayed in memory (seen on the phone as "Good evening, Friday
   30 Oct" on Tuesday 3 Nov morning). They now follow `localNowProvider` /
