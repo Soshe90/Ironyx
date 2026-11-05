@@ -30,6 +30,12 @@ const int _maxReps = 100;
 /// Longest hold, in seconds, a time-based set row will accept (30 minutes).
 const int _maxDurationSeconds = 1800;
 
+/// Bounds of the "RPE and rest time" dialog. The RPE range is the scale
+/// itself; an hour is longer than any rest worth logging.
+const double _minRpe = 1;
+const double _maxRpe = 10;
+const int _maxRestSeconds = 3600;
+
 /// One exercise within a draft, with its sets. Shared by the active-session
 /// screen and the edit screen — both back it with a [DraftEditorController].
 ///
@@ -920,7 +926,9 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
       ),
     );
     if (!mounted || result == null) return;
-    await widget.controller.updateSet(
+    // Not `updateSet`: an emptied field has to clear the value, and there a
+    // null means "unchanged".
+    await widget.controller.replaceSetDetails(
       widget.exerciseId,
       widget.set.id,
       rpeTimes10: result.$1,
@@ -949,7 +957,8 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
 enum _SetAction { details, duplicate, remove }
 
 /// The "RPE and rest time" dialog of a [DraftSetRow]. Pops with
-/// `(rpeTimes10, restSeconds)`, or with nothing when cancelled.
+/// `(rpeTimes10, restSeconds)`, or with nothing when cancelled. An empty
+/// field pops as null, which clears that value on the set.
 ///
 /// A widget of its own so that it owns its controllers (ADR-5) and disposes
 /// them when it leaves the tree. They used to be created by the row and
@@ -991,11 +1000,29 @@ class _SetDetailsDialogState extends State<_SetDetailsDialog> {
     super.dispose();
   }
 
+  /// What the field said was wrong the last time Save was pressed. Cleared
+  /// as soon as that field is edited.
+  String? _rpeError;
+  String? _restError;
+
   void _save() {
-    final double? rpe = double.tryParse(_rpeController.text);
-    final int? rest = int.tryParse(_restController.text);
-    if ((rpe != null && (rpe < 1 || rpe > 10)) ||
-        (rest != null && (rest < 0 || rest > 3600))) {
+    final AppLocalizations l10n = context.l10n;
+    final String rpeText = _rpeController.text.trim();
+    final String restText = _restController.text.trim();
+    // Empty is a valid answer ("no RPE"). Anything else has to be a number
+    // in range: text that does not parse must not be read as empty, or a
+    // typo would silently wipe the value.
+    final double? rpe = rpeText.isEmpty ? null : double.tryParse(rpeText);
+    final int? rest = restText.isEmpty ? null : int.tryParse(restText);
+    final bool rpeInvalid = rpeText.isNotEmpty &&
+        (rpe == null || !rpe.isFinite || rpe < _minRpe || rpe > _maxRpe);
+    final bool restInvalid = restText.isNotEmpty &&
+        (rest == null || rest < 0 || rest > _maxRestSeconds);
+    if (rpeInvalid || restInvalid) {
+      setState(() {
+        _rpeError = rpeInvalid ? l10n.draftRpeInvalid : null;
+        _restError = restInvalid ? l10n.draftRestInvalid : null;
+      });
       return;
     }
     Navigator.pop(context, (rpe == null ? null : (rpe * 10).round(), rest));
@@ -1005,20 +1032,41 @@ class _SetDetailsDialogState extends State<_SetDetailsDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(context.l10n.draftSetDetailsTitle(widget.index)),
+      // With an error line under each field and the keyboard up, the
+      // content can be taller than a small phone has room for.
+      scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           TextField(
             controller: _rpeController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(labelText: context.l10n.draftRpeField),
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            ],
+            decoration: InputDecoration(
+              labelText: context.l10n.draftRpeField,
+              errorText: _rpeError,
+              errorMaxLines: 3,
+            ),
+            onChanged: (_) {
+              if (_rpeError != null) setState(() => _rpeError = null);
+            },
           ),
           TextField(
             controller: _restController,
             keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
+            ],
             decoration: InputDecoration(
               labelText: context.l10n.draftRestBeforeSetField,
+              errorText: _restError,
+              errorMaxLines: 3,
             ),
+            onChanged: (_) {
+              if (_restError != null) setState(() => _restError = null);
+            },
           ),
         ],
       ),

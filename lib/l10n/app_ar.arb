@@ -489,6 +489,8 @@
   },
   "draftRpeField": "معدّل الجهد المُدرَك (1–10)",
   "draftRestBeforeSetField": "الراحة قبل المجموعة (ثوانٍ)",
+  "draftRpeInvalid": "أدخل رقمًا من 1 إلى 10، أو اترك الحقل فارغًا",
+  "draftRestInvalid": "أدخل من 0 إلى 3600 ثانية، أو اترك الحقل فارغًا",
 
   "importXlsxAction": "استيراد XLSX",
   "importXlsxPickerTitle": "اختر ملف سجلّ تمارينك بصيغة XLSX",

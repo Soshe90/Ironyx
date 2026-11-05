@@ -508,6 +508,8 @@
   },
   "draftRpeField": "RPE (1–10)",
   "draftRestBeforeSetField": "Rest before set (seconds)",
+  "draftRpeInvalid": "Enter a number from 1 to 10, or leave it empty",
+  "draftRestInvalid": "Enter 0 to 3600 seconds, or leave it empty",
 
   "importXlsxAction": "Import XLSX",
   "importXlsxPickerTitle": "Choose your XLSX workout log",

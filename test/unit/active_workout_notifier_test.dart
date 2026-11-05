@@ -75,6 +75,76 @@ void main() {
       expect(restored.read(activeWorkoutProvider)!.exercises.last.id, firstId);
     });
 
+    test('replaceSetDetails sets, replaces and clears RPE and rest time',
+        () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'bench', name: 'Bench Press');
+      await notifier.addSet(
+        container.read(activeWorkoutProvider)!.exercises.single.id,
+      );
+      DraftExercise exercise() =>
+          container.read(activeWorkoutProvider)!.exercises.single;
+      final String exerciseId = exercise().id;
+      final String first = exercise().sets[0].id;
+      final String second = exercise().sets[1].id;
+      await notifier.updateSet(exerciseId, first, weightKg: 100, reps: 5);
+
+      await notifier.replaceSetDetails(
+        exerciseId,
+        first,
+        rpeTimes10: 85,
+        restSeconds: 120,
+      );
+      expect(exercise().sets[0].rpeTimes10, 85);
+      expect(exercise().sets[0].restSeconds, 120);
+
+      // `updateSet` cannot clear: null there means "unchanged".
+      await notifier.updateSet(exerciseId, first, isCompleted: true);
+      expect(exercise().sets[0].rpeTimes10, 85);
+
+      await notifier.replaceSetDetails(
+        exerciseId,
+        first,
+        rpeTimes10: null,
+        restSeconds: 60,
+      );
+      expect(exercise().sets[0].rpeTimes10, isNull);
+      expect(exercise().sets[0].restSeconds, 60);
+      // Nothing else on the set, and no other set, is touched.
+      expect(exercise().sets[0].weightKg, 100);
+      expect(exercise().sets[0].reps, 5);
+      expect(exercise().sets[0].isCompleted, isTrue);
+      expect(exercise().sets[1].id, second);
+      expect(exercise().sets[1].restSeconds, isNull);
+
+      // An id that matches nothing changes nothing.
+      final WorkoutDraft before = container.read(activeWorkoutProvider)!;
+      await notifier.replaceSetDetails(
+        exerciseId,
+        'no-such-set',
+        rpeTimes10: 70,
+        restSeconds: 30,
+      );
+      await notifier.replaceSetDetails(
+        'no-such-exercise',
+        first,
+        rpeTimes10: 70,
+        restSeconds: 30,
+      );
+      expect(container.read(activeWorkoutProvider), before);
+
+      // The cleared value is what a relaunch reads back.
+      final restored = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+        ],
+      );
+      addTearDown(restored.dispose);
+      expect(restored.read(activeWorkoutProvider), before);
+    });
+
     test('deleting a middle set does not corrupt neighbouring sets', () async {
       final notifier = container.read(activeWorkoutProvider.notifier);
       await notifier.start();

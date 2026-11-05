@@ -40,4 +40,16 @@ abstract interface class DraftEditorController {
     int? restSeconds,
     int? durationSeconds,
   });
+
+  /// Replaces a set's RPE and rest time with exactly the values given.
+  ///
+  /// [updateSet] cannot do this: there a null argument means "leave that
+  /// field as it is", so an RPE or rest time, once entered, could never be
+  /// removed again. Here null clears the value.
+  Future<void> replaceSetDetails(
+    String exerciseId,
+    String setId, {
+    required int? rpeTimes10,
+    required int? restSeconds,
+  });
 }
