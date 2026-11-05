@@ -179,6 +179,14 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     by a test at 1.6x text.
   - History rows, the calendar and both import menus are unchanged.
     **Not checked:** many programs on a device; tablet width.
+- **Version 1.0.4 (versionCode 5), 2026-11-05.** Bumped for the next Play
+  upload: exercise pictures and the picture swiper, the Progress, Home and
+  Workouts restyles, and the fixes listed above since 1.0.3. Build with
+  `scripts/build_android.sh bundle`; keep `build/symbols/1.0.4+5` with it.
+  **Before a wide rollout:** read the ChatGPT and Gemini terms for the
+  three exercise pictures (ASSETS-LICENSE.md), and try the build from a
+  Play testing track on a phone, since a locally signed build cannot
+  update the Play install.
 - **Parked by the owner, 2026-11-05:** "EZ bar wide-grip upright row" is
   not in the catalogue (only the narrow-grip Upright Row). The programme
   workbooks list "Wide Grip BB Upright Row (last resort)" as an
