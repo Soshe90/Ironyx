@@ -36,6 +36,22 @@ jobs:
       - name: Test
         run: flutter test --coverage
 
+      # The runner's clock is UTC, the one zone where a calendar day stored
+      # as UTC midnight and a local day are always the same day. A body
+      # measurement once read back as the evening before for anyone west of
+      # UTC, so that an edit overwrote the previous day's entry; no run in
+      # UTC could have shown it. These files are the ones that pin that.
+      - name: Test calendar days west and east of UTC
+        run: |
+          for zone in America/Los_Angeles Pacific/Auckland Asia/Kolkata; do
+            echo "::group::TZ=$zone"
+            TZ="$zone" flutter test \
+              test/unit/body_metrics_dao_test.dart \
+              test/unit/profile_controller_test.dart \
+              test/widget/body_metric_editor_test.dart
+            echo "::endgroup::"
+          done
+
       - name: Build Android (debug)
         run: flutter build apk --debug
 
