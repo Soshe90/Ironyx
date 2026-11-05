@@ -127,7 +127,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
-- Changed 2026-11-05, Progress tab (uncommitted at the time of writing):
+- Changed 2026-11-05, Progress tab:
   - **Wrong data fixed.** Effort, rest, session volume and weekly-by-muscle
     were tables that printed the first 8 or 12 rows of an oldest-first
     query, so a three-month view showed the sessions from three months ago
@@ -148,7 +148,23 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   - **Not done:** a per-session value is now reachable by touch (tooltip)
     and summarised for screen readers (latest, lowest, highest), but is no
     longer listed row by row. Weekly bar charts still have no value axis.
-- **Open, owner's question 2026-11-05:** "EZ bar wide-grip upright row" is
+- Changed 2026-11-05, Home tab:
+  - **Figures.** The Est. 1RM tile printed two decimals ("96.25 kg") where
+    Progress shows the same estimate as "96 kg"; it is rounded the same way
+    now. A timer shorter than a minute read "0m"; timers show mm:ss.
+  - **This week.** The session count was on the card three times (goal,
+    day checks, a "Sessions" stat). The stats row is gone: last week's
+    volume sits under this week's, and the streak is a Progress tile. The
+    goal is one segment per target session. The day strip marks today with
+    a ring and draws days still to come as outlines, so they no longer look
+    like missed days.
+  - **Start card.** Its caption says when the last workout was; "Start from
+    a program" is a text action instead of a second outlined button.
+  - **Progress.** Two rows of two tiles (Est. 1RM, body weight, streak,
+    average duration) in place of two tiles and a lone full-width one.
+  - No query or provider changed. **Not checked:** tablet width on a
+    device; TalkBack.
+- **Parked by the owner, 2026-11-05:** "EZ bar wide-grip upright row" is
   not in the catalogue (only the narrow-grip Upright Row). The programme
   workbooks list "Wide Grip BB Upright Row (last resort)" as an
   alternative. Proposed and not started: add "Wide-Grip Upright Row" as a

@@ -715,7 +715,6 @@
   },
   "dashboardNoRecentTrainingCaption": "Log a workout and your weekly volume, streak and trends will appear here. Older history is on the Progress tab.",
   "dashboardVolumeEyebrow": "VOLUME",
-  "dashboardStatSessions": "Sessions",
   "dashboardSessionGoal": "Weekly session goal",
   "dashboardSessionGoalProgress": "{completed} / {target}",
   "@dashboardSessionGoalProgress": {
@@ -726,7 +725,12 @@
     }
   },
   "dashboardStatStreak": "Streak",
-  "dashboardStatLastWeek": "Last week",
+  "dashboardLastWeekVolume": "Last week {volume}",
+  "@dashboardLastWeekVolume": {"description": "Caption under this week's volume on the dashboard: last week's total, already formatted with its unit.", "placeholders": {"volume": {"type": "String"}}},
+  "dashboardLastTrained": "Last workout: {when}",
+  "@dashboardLastTrained": {"description": "Caption of the dashboard's start card. {when} is a relative day already in the user's language: Today, Yesterday, Monday, 3 Nov.", "placeholders": {"when": {"type": "String"}}},
+  "dashboardStreakEmpty": "Train this week to start one",
+  "@dashboardStreakEmpty": {"description": "Caption of the dashboard's Streak tile when there is no current streak of trained weeks."},
   "dashboardStreakWeeks": "{count} wk",
   "@dashboardStreakWeeks": {
     "description": "Streak length in weeks, abbreviated to fit a narrow stat cell.",
