@@ -115,11 +115,14 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   cable row, leg-press calf raise to the standing calf raise). Before this,
   importing those workbooks created 19 bare custom duplicates. Upgrade from
   seed 17 checked on the phone (debug build): 304 exercises, data kept.
-- **Open, found 2026-11-05:** if those workbooks were imported into the
-  Play app before seed 18, the custom duplicates ("Hammer Curls",
-  "Barbell Deadlift", …) are still there with their sets. New imports go to
-  the catalogue exercise; merging the old ones needs a separate fix.
-  Waiting on the owner to say whether that import ever happened.
+- Closed 2026-11-05: the owner confirmed those workbooks were never
+  imported into the Play app (they were a reference for which exercises to
+  add), so no custom duplicates exist to merge.
+- **Next, owner's request 2026-11-05:** pictures for the three exercises
+  written for the app (Behind-the-Body Cable Curl, Lean-In Lateral Raise,
+  Banded Hip Abduction), which ship with none. See the handoff notes in the
+  session summary: an image needs a redistributable licence recorded in
+  ASSETS-LICENSE.md, and `tool/check_asset_licenses.dart` enforces it.
 - **Open, found 2026-11-05:** in Arabic, the Library list shows equipment
   in English ("Bodyweight", "Machine") in each row's subtitle; the detail
   sheet translates it.
