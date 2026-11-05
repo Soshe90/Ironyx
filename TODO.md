@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **717 passed, 1 skipped, 0 failed** (2026-11-05).
+- `flutter test`: **751 passed, 1 skipped, 0 failed** (2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -44,9 +44,21 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 - Changed 2026-11-05: the debug error screen now names the first error of a
   burst, the widget blamed and the top stack frames, and the release one is
   translated (`UncaughtErrorView`, `ErrorBurst` in `core/error_reporting.dart`).
-- **Open, found 2026-11-05:** the body-measurement dialog closes and saves
-  nothing, without a message, when the weight is empty, zero or not a
-  number, and it accepts any positive weight and any body-fat value.
+- Fixed 2026-11-05: the body-measurement dialog closed and saved nothing,
+  without a message, when the weight was empty, zero or not a number, and
+  it accepted any positive weight and any body-fat value. It now stays open
+  and says what it accepts: 25 to 350 kg (the limits Personal details
+  already used, now shared in `core/body_limits.dart`) and 2 to 70 % body
+  fat. Rows already stored outside those limits are left alone.
+- **Open, found 2026-11-05, reasoned from the code and not reproduced:** a
+  measurement's date is stored as UTC midnight and read back as local time.
+  West of UTC that is the evening before, so the entry shows the previous
+  day, and each edit moves it a day earlier (`BodyMetricsDao._dateOnlyUtc`
+  takes the year, month and day of the local value). East of UTC, which
+  includes the owner's phone, it is not visible.
+- **Open, found 2026-11-05:** number fields read a decimal comma ("82,5")
+  as not a number, and the set rows' fields drop the comma as it is typed.
+  Not checked what the Arabic keyboard on the owner's phone sends.
 - Fixed 2026-11-03: the dashboard greeting, date and week windows went stale
   while the app stayed in memory (seen on the phone as "Good evening, Friday
   30 Oct" on Tuesday 3 Nov morning). They now follow `localNowProvider` /
