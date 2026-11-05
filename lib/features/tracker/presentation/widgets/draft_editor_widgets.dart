@@ -911,70 +911,21 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   }
 
   Future<void> _showSetDetails() async {
-    final rpeController = TextEditingController(
-      text: widget.set.rpeTimes10 == null
-          ? ''
-          : (widget.set.rpeTimes10! / 10).toStringAsFixed(1),
+    final (int?, int?)? result = await showDialog<(int?, int?)>(
+      context: context,
+      builder: (_) => _SetDetailsDialog(
+        index: widget.index,
+        rpeTimes10: widget.set.rpeTimes10,
+        restSeconds: widget.set.restSeconds,
+      ),
     );
-    final restController = TextEditingController(
-      text: widget.set.restSeconds?.toString() ?? '',
+    if (!mounted || result == null) return;
+    await widget.controller.updateSet(
+      widget.exerciseId,
+      widget.set.id,
+      rpeTimes10: result.$1,
+      restSeconds: result.$2,
     );
-    try {
-      final result = await showDialog<(int?, int?)>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(context.l10n.draftSetDetailsTitle(widget.index)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: rpeController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration:
-                    InputDecoration(labelText: context.l10n.draftRpeField),
-              ),
-              TextField(
-                controller: restController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                    labelText: context.l10n.draftRestBeforeSetField),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.l10n.actionCancel)),
-            FilledButton(
-              onPressed: () {
-                final rpe = double.tryParse(rpeController.text);
-                final rest = int.tryParse(restController.text);
-                if ((rpe != null && (rpe < 1 || rpe > 10)) ||
-                    (rest != null && (rest < 0 || rest > 3600))) {
-                  return;
-                }
-                Navigator.pop(context, (
-                  rpe == null ? null : (rpe * 10).round(),
-                  rest,
-                ));
-              },
-              child: Text(context.l10n.actionSave),
-            ),
-          ],
-        ),
-      );
-      if (!mounted || result == null) return;
-      await widget.controller.updateSet(
-        widget.exerciseId,
-        widget.set.id,
-        rpeTimes10: result.$1,
-        restSeconds: result.$2,
-      );
-    } finally {
-      rpeController.dispose();
-      restController.dispose();
-    }
   }
 
   void _sync(TextEditingController controller, String value) {
@@ -996,6 +947,94 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
 }
 
 enum _SetAction { details, duplicate, remove }
+
+/// The "RPE and rest time" dialog of a [DraftSetRow]. Pops with
+/// `(rpeTimes10, restSeconds)`, or with nothing when cancelled.
+///
+/// A widget of its own so that it owns its controllers (ADR-5) and disposes
+/// them when it leaves the tree. They used to be created by the row and
+/// disposed as soon as `showDialog` returned, which is while the dialog is
+/// still animating out with both fields mounted. A rebuild in that window
+/// threw "TextEditingController was used after being disposed", and tearing
+/// the route down afterwards failed Flutter's `_dependents.isEmpty`
+/// assertion, replacing the whole screen with the error view.
+class _SetDetailsDialog extends StatefulWidget {
+  const _SetDetailsDialog({
+    required this.index,
+    required this.rpeTimes10,
+    required this.restSeconds,
+  });
+
+  /// 1-based position of the set, for the title.
+  final int index;
+  final int? rpeTimes10;
+  final int? restSeconds;
+
+  @override
+  State<_SetDetailsDialog> createState() => _SetDetailsDialogState();
+}
+
+class _SetDetailsDialogState extends State<_SetDetailsDialog> {
+  late final TextEditingController _rpeController = TextEditingController(
+    text: widget.rpeTimes10 == null
+        ? ''
+        : (widget.rpeTimes10! / 10).toStringAsFixed(1),
+  );
+  late final TextEditingController _restController = TextEditingController(
+    text: widget.restSeconds?.toString() ?? '',
+  );
+
+  @override
+  void dispose() {
+    _rpeController.dispose();
+    _restController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final double? rpe = double.tryParse(_rpeController.text);
+    final int? rest = int.tryParse(_restController.text);
+    if ((rpe != null && (rpe < 1 || rpe > 10)) ||
+        (rest != null && (rest < 0 || rest > 3600))) {
+      return;
+    }
+    Navigator.pop(context, (rpe == null ? null : (rpe * 10).round(), rest));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(context.l10n.draftSetDetailsTitle(widget.index)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _rpeController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: context.l10n.draftRpeField),
+          ),
+          TextField(
+            controller: _restController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: context.l10n.draftRestBeforeSetField,
+            ),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: Text(context.l10n.actionSave),
+        ),
+      ],
+    );
+  }
+}
 
 /// Bare numeric field sized for a table cell.
 ///

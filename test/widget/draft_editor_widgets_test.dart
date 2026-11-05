@@ -350,6 +350,112 @@ void main() {
     expect(find.text('SUPERSET'), findsOneWidget);
     expect(find.text('A'), findsOneWidget);
   });
+
+  // The dialog's text controllers used to be disposed as soon as
+  // `showDialog` returned, while the dialog was still animating out with
+  // both fields mounted. On a phone that showed up, some of the time, as a
+  // full-screen "'_dependents.isEmpty': is not true" after pressing Save.
+  group('RPE and rest time dialog', () {
+    Future<void> openDialog(WidgetTester tester) async {
+      await tester.tap(find.byTooltip('Set 1 options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RPE and rest time'));
+      await tester.pumpAndSettle();
+      expect(find.text('Set 1 details'), findsOneWidget);
+    }
+
+    final Finder rpeField = find.widgetWithText(TextField, 'RPE (1–10)');
+    final Finder restField =
+        find.widgetWithText(TextField, 'Rest before set (seconds)');
+
+    /// Types the way a soft keyboard does, leaving the text underlined as
+    /// still being composed when the next tap lands.
+    Future<void> typeComposing(
+      WidgetTester tester,
+      Finder field,
+      String text,
+    ) async {
+      await tester.showKeyboard(field);
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+          composing: TextRange(start: 0, end: text.length),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('Save stores both values and closes without an error',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '8.5');
+      await typeComposing(tester, restField, '90');
+      await tester.tap(find.text('Save'));
+
+      // Frame by frame through the closing animation: the failure was a
+      // rebuild in the middle of it, which a single settle could step over.
+      for (int frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.takeException(), isNull, reason: 'frame $frame');
+      }
+
+      expect(find.text('Set 1 details'), findsNothing);
+      final DraftSet saved = harnessKey.currentState!.exercise.sets.first;
+      expect(saved.rpeTimes10, 85);
+      expect(saved.restSeconds, 90);
+    });
+
+    testWidgets('Cancel closes without an error and changes nothing',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await typeComposing(tester, rpeField, '8');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Set 1 details'), findsNothing);
+      final DraftSet set = harnessKey.currentState!.exercise.sets.first;
+      expect(set.rpeTimes10, isNull);
+      expect(set.restSeconds, isNull);
+    });
+
+    testWidgets('an out-of-range value keeps the dialog open', (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '11');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Set 1 details'), findsOneWidget);
+      expect(
+        harnessKey.currentState!.exercise.sets.first.rpeTimes10,
+        isNull,
+      );
+
+      await tester.enterText(rpeField, '');
+      await tester.enterText(restField, '3601');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Set 1 details'), findsOneWidget);
+    });
+
+    testWidgets('reopening shows what was saved', (tester) async {
+      await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '7');
+      await tester.enterText(restField, '120');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      await openDialog(tester);
+      expect(find.widgetWithText(TextField, '7.0'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '120'), findsOneWidget);
+    });
+  });
 }
 
 class _DraftHarness extends StatefulWidget {

@@ -94,89 +94,125 @@ Future<void> showBodyMetricEditor(
   required WeightUnit unit,
   BodyMetrics? entry,
 }) async {
-  final TextEditingController weight = TextEditingController(
-    text: entry == null
-        ? ''
-        : UnitFormatters.plain(UnitFormatters.fromKg(entry.weightKg, unit)),
-  );
-  final TextEditingController bodyFat = TextEditingController(
-    text: entry?.bodyFatPercentage == null
-        ? ''
-        : UnitFormatters.plain(entry!.bodyFatPercentage!),
-  );
   final DateTime date = entry?.date ?? DateTime.now();
 
-  try {
-    final bool? saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          entry == null
-              ? context.l10n.progressLogMeasurement
-              : context.l10n.progressEditMeasurement,
+  final (String, String)? texts = await showDialog<(String, String)>(
+    context: context,
+    builder: (_) => _BodyMetricDialog(unit: unit, entry: entry, date: date),
+  );
+  if (texts == null) return;
+
+  final double? entered = double.tryParse(texts.$1);
+  if (entered == null || entered <= 0) return;
+  final double weightKg = UnitFormatters.toKg(entered, unit);
+  final double? fat = double.tryParse(texts.$2);
+
+  await ref.read(bodyMetricsDaoProvider).upsert(
+        BodyMetricsTableCompanion.insert(
+          id: entry?.id ?? _uuid.v4(),
+          date: date,
+          weightKg: weightKg,
+          bodyFatPercentage: Value(fat),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              DateFormatters.of(context).full(date),
-              style: AppTypography.caption(Theme.of(context)),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            TextField(
-              controller: weight,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: InputDecoration(
-                labelText: context.l10n.progressWeightField(unit.label),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: bodyFat,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: InputDecoration(
-                labelText: context.l10n.progressBodyFatOptionalField,
-              ),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.actionCancel),
+      );
+}
+
+/// The dialog behind [showBodyMetricEditor]. Pops with the weight and
+/// body-fat fields' text on Save, or with nothing when cancelled.
+///
+/// A widget of its own so that it owns its controllers and disposes them
+/// when it leaves the tree. [showBodyMetricEditor] used to create them and
+/// dispose them as soon as `showDialog` returned, which is while the dialog
+/// is still animating out with both fields mounted. A rebuild in that window
+/// threw "TextEditingController was used after being disposed", and tearing
+/// the route down afterwards failed Flutter's `_dependents.isEmpty`
+/// assertion, replacing the whole screen with the error view.
+class _BodyMetricDialog extends StatefulWidget {
+  const _BodyMetricDialog({
+    required this.unit,
+    required this.entry,
+    required this.date,
+  });
+
+  final WeightUnit unit;
+  final BodyMetrics? entry;
+  final DateTime date;
+
+  @override
+  State<_BodyMetricDialog> createState() => _BodyMetricDialogState();
+}
+
+class _BodyMetricDialogState extends State<_BodyMetricDialog> {
+  late final TextEditingController _weight = TextEditingController(
+    text: widget.entry == null
+        ? ''
+        : UnitFormatters.plain(
+            UnitFormatters.fromKg(widget.entry!.weightKg, widget.unit),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(context.l10n.actionSave),
+  );
+  late final TextEditingController _bodyFat = TextEditingController(
+    text: widget.entry?.bodyFatPercentage == null
+        ? ''
+        : UnitFormatters.plain(widget.entry!.bodyFatPercentage!),
+  );
+
+  @override
+  void dispose() {
+    _weight.dispose();
+    _bodyFat.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(
+        widget.entry == null
+            ? context.l10n.progressLogMeasurement
+            : context.l10n.progressEditMeasurement,
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            DateFormatters.of(context).full(widget.date),
+            style: AppTypography.caption(Theme.of(context)),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _weight,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            decoration: InputDecoration(
+              labelText: context.l10n.progressWeightField(widget.unit.label),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _bodyFat,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            decoration: InputDecoration(
+              labelText: context.l10n.progressBodyFatOptionalField,
+            ),
           ),
         ],
       ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () =>
+              Navigator.pop(context, (_weight.text, _bodyFat.text)),
+          child: Text(context.l10n.actionSave),
+        ),
+      ],
     );
-    if (saved != true) return;
-
-    final double? entered = double.tryParse(weight.text);
-    if (entered == null || entered <= 0) return;
-    final double weightKg = UnitFormatters.toKg(entered, unit);
-    final double? fat = double.tryParse(bodyFat.text);
-
-    await ref.read(bodyMetricsDaoProvider).upsert(
-          BodyMetricsTableCompanion.insert(
-            id: entry?.id ?? _uuid.v4(),
-            date: date,
-            weightKg: weightKg,
-            bodyFatPercentage: Value(fat),
-          ),
-        );
-  } finally {
-    // The dialog is gone by now either way; leaving these attached leaked a
-    // controller per open-and-cancel.
-    weight.dispose();
-    bodyFat.dispose();
   }
 }
