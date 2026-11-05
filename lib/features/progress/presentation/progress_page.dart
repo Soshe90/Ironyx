@@ -1175,8 +1175,10 @@ Widget _axisDate(BuildContext context, ThemeData theme, DateTime date) =>
       ),
     );
 
-/// Weekly bars represent Monday through Sunday, so a start date alone can
-/// make a Sunday workout appear to have been logged on the prior Monday.
+/// Weekly bars represent seven days from the first day of the week chosen
+/// in Settings (Monday unless changed), so a start date alone can
+/// make a workout on the last of them appear to have been logged on the
+/// first.
 Widget _weeklyAxisDate(
   BuildContext context,
   ThemeData theme,

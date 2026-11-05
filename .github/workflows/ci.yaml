@@ -41,14 +41,27 @@ jobs:
       # measurement once read back as the evening before for anyone west of
       # UTC, so that an edit overwrote the previous day's entry; no run in
       # UTC could have shown it. These files are the ones that pin that.
-      - name: Test calendar days west and east of UTC
+      #
+      # The week tests are here for the same reason, and one more: two of
+      # these zones change their clocks, which no zone that can be set on a
+      # Windows machine does. A weekly streak used to break in the week of a
+      # clock change, and only this step can show that it no longer does.
+      - name: Test calendar days and weeks west and east of UTC
         run: |
           for zone in America/Los_Angeles Pacific/Auckland Asia/Kolkata; do
             echo "::group::TZ=$zone"
             TZ="$zone" flutter test \
               test/unit/body_metrics_dao_test.dart \
               test/unit/profile_controller_test.dart \
-              test/widget/body_metric_editor_test.dart
+              test/widget/body_metric_editor_test.dart \
+              test/unit/week_start_test.dart \
+              test/unit/week_start_queries_test.dart \
+              test/unit/progress_week_start_test.dart \
+              test/unit/date_formatters_test.dart \
+              test/unit/dashboard_providers_test.dart \
+              test/unit/consistency_calculators_test.dart \
+              test/unit/workout_dao_test.dart \
+              test/widget/history_calendar_test.dart
             echo "::endgroup::"
           done
 

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:ironyx/core/formatters/date_formatters.dart';
+import 'package:ironyx/core/formatters/week_start.dart';
 import 'package:ironyx/l10n/app_localizations_ar.dart';
 import 'package:ironyx/l10n/app_localizations_en.dart';
 
@@ -97,37 +98,37 @@ void main() {
       test('returns Monday for any day of the week', () {
         // Monday
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 15)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 15), WeekStart.monday),
           DateTime(2024, 1, 15),
         );
         // Tuesday
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 16)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 16), WeekStart.monday),
           DateTime(2024, 1, 15),
         );
         // Wednesday
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 17)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 17), WeekStart.monday),
           DateTime(2024, 1, 15),
         );
         // Thursday
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 18)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 18), WeekStart.monday),
           DateTime(2024, 1, 15),
         );
         // Friday
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 19)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 19), WeekStart.monday),
           DateTime(2024, 1, 15),
         );
         // Saturday
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 20)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 20), WeekStart.monday),
           DateTime(2024, 1, 15),
         );
         // Sunday
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 21)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 21), WeekStart.monday),
           DateTime(2024, 1, 15),
         );
       });
@@ -135,12 +136,12 @@ void main() {
       test('handles month/year boundaries', () {
         // Sunday Dec 31, 2023 -> Monday Dec 25, 2023
         expect(
-          DateFormatters.startOfWeek(DateTime(2023, 12, 31)),
+          DateFormatters.startOfWeek(DateTime(2023, 12, 31), WeekStart.monday),
           DateTime(2023, 12, 25),
         );
         // Monday Jan 1, 2024 -> Monday Jan 1, 2024
         expect(
-          DateFormatters.startOfWeek(DateTime(2024, 1, 1)),
+          DateFormatters.startOfWeek(DateTime(2024, 1, 1), WeekStart.monday),
           DateTime(2024, 1, 1),
         );
       });

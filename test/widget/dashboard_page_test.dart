@@ -241,6 +241,73 @@ void main() {
 
       await disposeApp(tester);
     });
+    testWidgets('the weekday strip starts on the day chosen in Settings',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: <String, Object>{...seededPrefs, 'week_start': 'saturday'},
+      );
+      await tester.pumpAndSettle();
+
+      // The short labels repeat (S, S, T, T), so the cells are found by
+      // the full day name each one announces.
+      double xOf(String day) => tester
+          .getCenter(
+            find.byWidgetPredicate(
+              (Widget widget) =>
+                  widget is Semantics &&
+                  (widget.properties.label?.startsWith('$day:') ?? false),
+            ),
+          )
+          .dx;
+      final List<double> xs = <double>[
+        for (final String day in <String>[
+          'Saturday',
+          'Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+        ])
+          xOf(day),
+      ];
+      for (int i = 1; i < xs.length; i++) {
+        expect(xs[i], greaterThan(xs[i - 1]), reason: 'cell $i');
+      }
+      expect(tester.takeException(), isNull);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('right to left, the chosen first day is the rightmost cell',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: <String, Object>{
+          ...seededPrefs,
+          'app_locale': 'ar',
+          'week_start': 'sunday',
+        },
+      );
+      await tester.pumpAndSettle();
+
+      final AppLocalizations ar = await AppLocalizations.delegate.load(
+        const Locale('ar'),
+      );
+      double xOf(String day) =>
+          tester.getCenter(find.text(ar.progressWeekdayShort(day))).dx;
+      // Sunday leads, Saturday closes: right to left.
+      expect(xOf('sunday'), greaterThan(xOf('monday')));
+      expect(xOf('monday'), greaterThan(xOf('friday')));
+      expect(xOf('friday'), greaterThan(xOf('saturday')));
+      expect(tester.takeException(), isNull);
+
+      await disposeApp(tester);
+    });
+
     // Regression, found on a phone on 2026-11-03: the dashboard read the
     // clock in build() and stayed alive in the shell, so after days in the
     // background it greeted "Good evening" with Friday's date on a Tuesday

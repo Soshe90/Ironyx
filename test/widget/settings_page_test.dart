@@ -6,8 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/formatters/unit_formatters.dart';
+import 'package:ironyx/core/formatters/week_start.dart';
+import 'package:ironyx/core/formatters/week_start_controller.dart';
 import 'package:ironyx/core/formatters/weight_unit_controller.dart';
 import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -70,6 +74,122 @@ void main() {
         weightUnitControllerProvider,
       );
       expect(unit, WeightUnit.lb);
+    });
+
+    group('first day of the week', () {
+      Future<void> openSetting(
+        WidgetTester tester, {
+        Map<String, Object> prefs = const <String, Object>{},
+        Size surfaceSize = const Size(400, 800),
+      }) async {
+        await pumpApp(
+          tester,
+          initialLocation: '/settings',
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          prefs: prefs,
+          surfaceSize: surfaceSize,
+        );
+        await tester.pumpAndSettle();
+        // Below the fold, and lazily built: see the units test above.
+        await tester.scrollUntilVisible(
+          find.byType(SegmentedButton<WeekStart>),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+      }
+
+      WeekStart selected(WidgetTester tester) => tester
+          .widget<SegmentedButton<WeekStart>>(
+            find.byType(SegmentedButton<WeekStart>),
+          )
+          .selected
+          .single;
+
+      WeekStart stored(WidgetTester tester) => ProviderScope.containerOf(
+            tester.element(find.byType(SegmentedButton<WeekStart>)),
+          ).read(weekStartControllerProvider);
+
+      testWidgets('offers Saturday, Sunday and Monday, with Monday chosen',
+          (tester) async {
+        await openSetting(tester);
+
+        // The header ends up just above the viewport once the control is
+        // scrolled to; it is built, only not on screen.
+        expect(
+          find.text('Week starts on', skipOffstage: false),
+          findsOneWidget,
+        );
+        final Finder button = find.byType(SegmentedButton<WeekStart>);
+        for (final String day in <String>['Saturday', 'Sunday', 'Monday']) {
+          expect(
+            find.descendant(of: button, matching: find.text(day)),
+            findsOneWidget,
+          );
+        }
+        expect(
+          find.descendant(of: button, matching: find.text('Friday')),
+          findsNothing,
+        );
+        expect(selected(tester), WeekStart.monday);
+      });
+
+      testWidgets('choosing a day selects it and saves it', (tester) async {
+        await openSetting(tester);
+        final Finder button = find.byType(SegmentedButton<WeekStart>);
+
+        await tester.tap(
+          find.descendant(of: button, matching: find.text('Saturday')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(selected(tester), WeekStart.saturday);
+        expect(stored(tester), WeekStart.saturday);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('week_start'), 'saturday');
+
+        await tester.tap(
+          find.descendant(of: button, matching: find.text('Sunday')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(selected(tester), WeekStart.sunday);
+        expect(prefs.getString('week_start'), 'sunday');
+      });
+
+      testWidgets('shows the day saved on an earlier launch', (tester) async {
+        await openSetting(
+          tester,
+          prefs: <String, Object>{'week_start': 'saturday'},
+        );
+
+        expect(selected(tester), WeekStart.saturday);
+      });
+
+      testWidgets('fits a narrow phone in Arabic without overflowing',
+          (tester) async {
+        await openSetting(
+          tester,
+          prefs: <String, Object>{'app_locale': 'ar'},
+          surfaceSize: const Size(320, 640),
+        );
+
+        final AppLocalizations ar = lookupAppLocalizations(const Locale('ar'));
+        expect(
+          find.text(ar.settingsWeekStartTitle, skipOffstage: false),
+          findsOneWidget,
+        );
+        final Finder button = find.byType(SegmentedButton<WeekStart>);
+        expect(
+          find.descendant(
+            of: button,
+            matching: find.text(ar.progressWeekdayFull('saturday')),
+          ),
+          findsOneWidget,
+        );
+        // A layout overflow would be reported here as an exception.
+        expect(tester.takeException(), isNull);
+      });
     });
 
     testWidgets(

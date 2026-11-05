@@ -50,6 +50,8 @@
   "settingsUnitsSubtitle": "تُطبَّق في كل موضع تُعرض فيه الأوزان أو تُدخَل",
   "settingsUnitKilograms": "كيلوغرام (kg)",
   "settingsUnitPounds": "رطل (lb)",
+  "settingsWeekStartTitle": "بداية الأسبوع",
+  "settingsWeekStartSubtitle": "تُطبَّق على المجاميع الأسبوعية وسلاسل المواظبة والتقويم",
   "settingsFeedbackTitle": "التنبيهات",
   "settingsFeedbackSubtitle": "تنبيهات عند انتهاء مرحلة المؤقّت",
   "settingsSoundCues": "التنبيهات الصوتية",

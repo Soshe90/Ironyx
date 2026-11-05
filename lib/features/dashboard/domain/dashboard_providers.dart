@@ -8,6 +8,8 @@ import '../../../core/database/tables/profiles.dart';
 import '../../../core/database/tables/timer_sessions.dart';
 import '../../../core/database/tables/workouts.dart';
 import '../../../core/formatters/date_formatters.dart';
+import '../../../core/formatters/week_start.dart';
+import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/services/clock.dart';
 
 part 'dashboard_providers.g.dart';
@@ -59,13 +61,19 @@ Stream<Profile?> dashboardProfile(Ref ref) =>
 // captured once at first build went stale as soon as the app outlived the
 // day (or the week) it was opened in. Watching the day re-runs each query
 // when the date changes and at no other time.
+//
+// They are keyed on [weekStartControllerProvider] as well, and every weekly
+// query is given the device's UTC offset: the day strip, the weekly totals
+// and "this week" must all mean the same seven days, in the user's time.
 
-/// Completed workouts for each day in the current Monday-Sunday week.
+/// Completed workouts for each day in the current week, first day first.
 @riverpod
 Stream<List<WeekdayDistribution>> dashboardWeekdayDistribution(Ref ref) {
   final DateTime today = ref.watch(todayProvider);
+  final WeekStart weekStart = ref.watch(weekStartControllerProvider);
   return ref.watch(workoutDaoProvider).watchWeekdayDistribution(
-        since: DateFormatters.startOfWeek(today),
+        since: DateFormatters.startOfWeek(today, weekStart),
+        weekStart: weekStart,
         utcOffset: today.timeZoneOffset,
       );
 }
@@ -77,18 +85,26 @@ DateTime _heroWindowStart(DateTime today) =>
 /// Last 8 weeks of training volume, for the dashboard's hero card
 /// (headline number, trend vs. the prior week, and a sparkline).
 @riverpod
-Stream<List<WeeklyVolume>> dashboardWeeklyVolume(Ref ref) =>
-    ref.watch(workoutDaoProvider).watchWeeklyVolume(
-          since: _heroWindowStart(ref.watch(todayProvider)),
-        );
+Stream<List<WeeklyVolume>> dashboardWeeklyVolume(Ref ref) {
+  final DateTime today = ref.watch(todayProvider);
+  return ref.watch(workoutDaoProvider).watchWeeklyVolume(
+        since: _heroWindowStart(today),
+        weekStart: ref.watch(weekStartControllerProvider),
+        utcOffset: today.timeZoneOffset,
+      );
+}
 
 /// Last 8 weeks of completed-workout counts, paired with the volume series
 /// above to answer "did I train enough this week", not just "how heavy".
 @riverpod
-Stream<List<WorkoutFrequency>> dashboardWeeklyFrequency(Ref ref) =>
-    ref.watch(workoutDaoProvider).watchWorkoutFrequency(
-          since: _heroWindowStart(ref.watch(todayProvider)),
-        );
+Stream<List<WorkoutFrequency>> dashboardWeeklyFrequency(Ref ref) {
+  final DateTime today = ref.watch(todayProvider);
+  return ref.watch(workoutDaoProvider).watchWorkoutFrequency(
+        since: _heroWindowStart(today),
+        weekStart: ref.watch(weekStartControllerProvider),
+        utcOffset: today.timeZoneOffset,
+      );
+}
 
 /// Window backing the dashboard's "this week" card and its sparkline.
 const int _heroWeeks = 8;
@@ -106,6 +122,7 @@ Future<WeekSnapshot> dashboardWeekSnapshot(Ref ref) async {
   // Watched before the awaits: dependencies registered after an async gap
   // are easy to lose if the provider rebuilds while it is suspended.
   final DateTime today = ref.watch(todayProvider);
+  final WeekStart weekStart = ref.watch(weekStartControllerProvider);
   final List<WeeklyVolume> volume =
       await ref.watch(dashboardWeeklyVolumeProvider.future);
   final List<WorkoutFrequency> frequency =
@@ -113,6 +130,7 @@ Future<WeekSnapshot> dashboardWeekSnapshot(Ref ref) async {
   return WeekSnapshot.from(
     volume: volume,
     frequency: frequency,
+    weekStart: weekStart,
     today: today,
   );
 }
@@ -136,16 +154,21 @@ class WeekSnapshot {
   /// `last`; using `last` would report a stale week's volume after a rest week.
   ///
   /// [today] decides which bucket is "this week". It defaults to the device
-  /// clock for callers that have no [todayProvider] to hand.
+  /// clock for callers that have no [todayProvider] to hand. [weekStart]
+  /// has to be the one the two series were bucketed with, or no bucket
+  /// would ever match.
   factory WeekSnapshot.from({
     required List<WeeklyVolume> volume,
     required List<WorkoutFrequency> frequency,
+    required WeekStart weekStart,
     DateTime? today,
   }) {
     final DateTime thisWeek =
-        DateFormatters.startOfWeek(today ?? DateTime.now());
-    final DateTime lastWeek =
-        thisWeek.subtract(const Duration(days: DateTime.daysPerWeek));
+        DateFormatters.startOfWeek(today ?? DateTime.now(), weekStart);
+    // By calendar day, not by 168 hours: across a daylight-saving change
+    // that lands on 23:00 the day before, which is not the same day as any
+    // bucket, so last week read as empty and the streak as broken.
+    final DateTime lastWeek = DateFormatters.previousWeek(thisWeek);
 
     double volumeFor(DateTime week) {
       for (final WeeklyVolume w in volume) {
@@ -168,7 +191,7 @@ class WeekSnapshot {
     DateTime cursor = sessionsFor(thisWeek) > 0 ? thisWeek : lastWeek;
     while (sessionsFor(cursor) > 0) {
       streak++;
-      cursor = cursor.subtract(const Duration(days: DateTime.daysPerWeek));
+      cursor = DateFormatters.previousWeek(cursor);
     }
 
     return WeekSnapshot(

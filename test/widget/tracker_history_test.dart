@@ -6,6 +6,7 @@ import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/formatters/week_start.dart';
 import 'package:ironyx/core/router/routes.dart';
 import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/services/program_import_service.dart';
@@ -219,6 +220,7 @@ void main() {
           HistoryCalendar(
             visibleMonth: visibleMonth,
             today: DateTime(2026, 11, 3),
+            weekStart: WeekStart.monday,
             markedDates: const <DateTime>{},
             onMonthChanged: (_) {},
             onDayTap: (_) {},

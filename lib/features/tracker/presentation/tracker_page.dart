@@ -7,6 +7,7 @@ import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/workouts.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/unit_formatters.dart';
+import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
@@ -290,6 +291,9 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                                 child: HistoryCalendar(
                                   visibleMonth: _visibleMonth,
                                   today: today,
+                                  weekStart: ref.watch(
+                                    weekStartControllerProvider,
+                                  ),
                                   markedDates: {
                                     for (final workout in workouts)
                                       _dateOnly(workout.startedAt),

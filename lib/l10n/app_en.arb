@@ -54,6 +54,8 @@
   "settingsUnitsSubtitle": "Applies everywhere weights are shown or entered",
   "settingsUnitKilograms": "Kilograms (kg)",
   "settingsUnitPounds": "Pounds (lb)",
+  "settingsWeekStartTitle": "Week starts on",
+  "settingsWeekStartSubtitle": "Applies to weekly totals, streaks and the calendar",
   "settingsFeedbackTitle": "Feedback",
   "settingsFeedbackSubtitle": "Cues when a timer phase ends",
   "settingsSoundCues": "Sound cues",
