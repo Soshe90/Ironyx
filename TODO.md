@@ -30,7 +30,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **751 passed, 1 skipped, 0 failed** (2026-11-05).
+- `flutter test`: **764 passed, 1 skipped, 0 failed** (2026-11-05), also
+  under `TZ=PST8PDT` (UTC−8) and `TZ=NZT-12` (UTC+12).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -50,12 +51,21 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   and says what it accepts: 25 to 350 kg (the limits Personal details
   already used, now shared in `core/body_limits.dart`) and 2 to 70 % body
   fat. Rows already stored outside those limits are left alone.
-- **Open, found 2026-11-05, reasoned from the code and not reproduced:** a
-  measurement's date is stored as UTC midnight and read back as local time.
-  West of UTC that is the evening before, so the entry shows the previous
-  day, and each edit moves it a day earlier (`BodyMetricsDao._dateOnlyUtc`
-  takes the year, month and day of the local value). East of UTC, which
-  includes the owner's phone, it is not visible.
+- Fixed 2026-11-05: a measurement's day is stored as UTC midnight and was
+  read back as local time, which west of UTC is the evening before.
+  Reproduced with `TZ=PST8PDT flutter test`: the entry showed the previous
+  day, saving an edit overwrote the previous day's entry, deleting removed
+  it, and five edits moved the date back five days. `BodyMetrics.fromDrift`
+  now carries the stored day as a local date. East of UTC, which includes
+  the owner's phone, none of this was visible. Rows already damaged by an
+  edit west of UTC cannot be told apart from correct ones and are not
+  repaired.
+- Fixed 2026-11-05: Personal details logged the weight under the UTC date,
+  so a weight saved between midnight and 03:00 in Baghdad went to
+  yesterday. It uses the local day now.
+- CI runs the three calendar-day test files in three more time zones
+  (2026-11-05; the step itself has not run yet). Locally, on Windows, the
+  equivalent is `TZ=PST8PDT flutter test` (three-letter zone names only).
 - **Open, found 2026-11-05:** number fields read a decimal comma ("82,5")
   as not a number, and the set rows' fields drop the comma as it is typed.
   Not checked what the Arabic keyboard on the owner's phone sends.
