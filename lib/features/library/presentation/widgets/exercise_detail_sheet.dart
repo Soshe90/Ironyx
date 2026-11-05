@@ -197,14 +197,18 @@ class _ExerciseDetailBody extends StatelessWidget {
                         fallbackIcon: fallbackIcon,
                       )
                     else
+                      // Above the centre, not on it: the YouTube search
+                      // button below is drawn there, and used to cover the
+                      // icon completely. Only the exercises written for
+                      // the app have no picture (see ASSETS-LICENSE.md).
                       Container(
+                        key: const ValueKey<String>('exercise-no-picture'),
                         color: scheme.surfaceContainerHighest,
-                        child: Center(
-                          child: Icon(
-                            fallbackIcon,
-                            color: scheme.onSurfaceVariant,
-                            size: 28,
-                          ),
+                        alignment: const Alignment(0, -0.5),
+                        child: Icon(
+                          fallbackIcon,
+                          color: scheme.onSurfaceVariant,
+                          size: 36,
                         ),
                       ),
                     Container(
