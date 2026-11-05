@@ -118,11 +118,41 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 - Closed 2026-11-05: the owner confirmed those workbooks were never
   imported into the Play app (they were a reference for which exercises to
   add), so no custom duplicates exist to merge.
-- **Next, owner's request 2026-11-05:** pictures for the three exercises
-  written for the app (Behind-the-Body Cable Curl, Lean-In Lateral Raise,
-  Banded Hip Abduction), which ship with none. See the handoff notes in the
-  session summary: an image needs a redistributable licence recorded in
-  ASSETS-LICENSE.md, and `tool/check_asset_licenses.dart` enforces it.
+- Done 2026-11-05, seed 23: pictures for the three exercises written for
+  the app, from images the owner generated (two with ChatGPT, the lateral
+  raise with Google Gemini). Originals, checksums and what is unverified
+  about the tools' terms are in ASSETS-LICENSE.md;
+  `scripts/prepare_owner_images.py` makes the bundled frames. The Lean-In
+  Lateral Raise's steps now lean away from the post, as its picture does
+  (owner's decision). The exercise sheet shows every picture of an exercise
+  (start and end), swiped between. **Open:** the owner has to read the
+  ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-05, Progress tab (uncommitted at the time of writing):
+  - **Wrong data fixed.** Effort, rest, session volume and weekly-by-muscle
+    were tables that printed the first 8 or 12 rows of an oldest-first
+    query, so a three-month view showed the sessions from three months ago
+    and never the newest. They are charts over every session now. The
+    smoothed lines no longer dip below real values
+    (`preventCurveOverShooting`), a series of equal values is drawn
+    mid-chart instead of on the bottom edge, and axis dates no longer
+    overprint in Arabic. Muscle-group names and the insight's exercise name
+    are translated.
+  - **Layout.** The range and four chapter tabs (Strength, Volume, Habits,
+    Body) are pinned above the scroll view; a tab scrolls to its chapter and
+    follows the reader. Est. 1RM and session volume share one card with a
+    switch, as do effort and rest; tapping a muscle group shows its weeks.
+    New shared control: `SegmentedPills` (docs/widgets.md).
+  - No query, provider or schema changed. Review pictures of the whole
+    page: `flutter test test/golden/progress_review_golden_test.dart
+    --update-goldens --run-skipped`, output in `build/progress_review/`.
+  - **Not done:** a per-session value is now reachable by touch (tooltip)
+    and summarised for screen readers (latest, lowest, highest), but is no
+    longer listed row by row. Weekly bar charts still have no value axis.
+- **Open, owner's question 2026-11-05:** "EZ bar wide-grip upright row" is
+  not in the catalogue (only the narrow-grip Upright Row). The programme
+  workbooks list "Wide Grip BB Upright Row (last resort)" as an
+  alternative. Proposed and not started: add "Wide-Grip Upright Row" as a
+  fourth exercise written for the app.
 - **Open, found 2026-11-05:** in Arabic, the Library list shows equipment
   in English ("Bodyweight", "Machine") in each row's subtitle; the detail
   sheet translates it.
