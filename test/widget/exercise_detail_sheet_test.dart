@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/database/tables/equipment.dart';
+import 'package:ironyx/core/database/tables/exercises.dart';
 import 'package:ironyx/features/library/presentation/widgets/exercise_detail_sheet.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
 
@@ -41,6 +43,56 @@ void main() {
       ),
     );
   }
+
+  testWidgets(
+      'an exercise with no picture shows its equipment icon clear of the '
+      'YouTube search button', (tester) async {
+    // User-created exercises can still have no images.
+    final DateTime now = DateTime(2026, 11, 5);
+    await pumpTarget(
+      tester,
+      load: () async => ExerciseDetail(
+        exercise: Exercise(
+          id: 'bench',
+          slug: 'custom-band-exercise',
+          name: 'Custom Band Exercise',
+          description: '',
+          category: ExerciseCategory.strength,
+          difficulty: Difficulty.beginner,
+          movementPattern: MovementPattern.other,
+          isUnilateral: false,
+          isBodyweight: false,
+          isTimeBased: false,
+          seedVersion: 0,
+          isCustom: true,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        muscles: const [],
+        equipment: const [
+          (equipment: Equipment(id: 'band', name: 'band'), isRequired: true),
+        ],
+        instructions: const [],
+        aliases: const [],
+        media: const [],
+        tags: const [],
+      ),
+    );
+
+    await tester.tap(find.text('Bench Press'));
+    await tester.pumpAndSettle();
+
+    final Finder placeholder =
+        find.byKey(const ValueKey<String>('exercise-no-picture'));
+    expect(placeholder, findsOneWidget);
+    final Rect icon = tester.getRect(
+      find.descendant(
+          of: placeholder, matching: find.byIcon(Icons.linear_scale)),
+    );
+    final Rect search = tester.getRect(find.byIcon(Icons.search));
+    expect(icon.overlaps(search), isFalse);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('an exercise that no longer exists shows not-found, not a crash',
       (tester) async {

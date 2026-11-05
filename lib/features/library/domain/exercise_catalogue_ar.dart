@@ -324,6 +324,10 @@ const Map<String, String> kExerciseNamesAr = <String, String>{
   'yoke-walk': 'مشية اليوك',
   'tire-flip': 'قلب الإطار',
   'rope-climb': 'تسلق الحبل',
+  // Written for Ironyx, not from free-exercise-db (see ASSETS-LICENSE.md).
+  'behind-the-body-cable-curl': 'ثني الذراع بالكابل من خلف الجسم',
+  'lean-in-lateral-raise': 'رفرفة جانبية مع الميل',
+  'banded-hip-abduction': 'تبعيد الوركين بالحبل المطاطي',
 };
 
 /// Muscle group display name by `MusclesTable.id`.

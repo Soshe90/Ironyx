@@ -7,6 +7,11 @@ import 'exercises.dart';
 
 part 'templates.freezed.dart';
 
+/// Upper bound on a template exercise's target sets. Guards a typo (in the
+/// program editor or an imported CSV) turning one exercise into a hundred
+/// preloaded set rows.
+const int kMaxTargetSets = 20;
+
 /// Template table — reusable workout structures.
 ///
 /// A template defines exercises, target sets/reps, and optional notes.
@@ -50,7 +55,7 @@ class TemplateExercisesTable extends Table {
   /// Display order within the template (0-based).
   IntColumn get orderIndex => integer()();
 
-  /// Target number of sets.
+  /// Target number of sets, 1 to [kMaxTargetSets].
   IntColumn get targetSets => integer()();
 
   /// Target reps per set. Can be a range like "8-12" stored as "8,12".

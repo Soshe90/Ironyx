@@ -4,6 +4,8 @@ import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/database/tables/profiles.dart';
+import '../../../core/formatters/week_start_controller.dart';
+import '../../../core/services/clock.dart';
 
 import 'consistency_calculators.dart';
 import 'strength_analytics.dart';
@@ -70,16 +72,30 @@ Stream<List<SessionVolumeLoad>> sessionVolumeLoad(
           since: range.since,
         );
 
+// Every series grouped by week or by weekday is given the first day of the
+// week chosen in Settings and the device's UTC offset, so that Progress,
+// the dashboard and the history calendar all mean the same seven days, in
+// the user's own time. The offset is read off [todayProvider], which also
+// re-runs these when the day changes.
+
 @riverpod
 Stream<List<WeeklyVolume>> weeklyVolumeSeries(Ref ref, ProgressRange range) =>
-    ref.watch(workoutDaoProvider).watchWeeklyVolume(since: range.since);
+    ref.watch(workoutDaoProvider).watchWeeklyVolume(
+          since: range.since,
+          weekStart: ref.watch(weekStartControllerProvider),
+          utcOffset: ref.watch(todayProvider).timeZoneOffset,
+        );
 
 @riverpod
 Stream<List<WorkoutFrequency>> workoutFrequencySeries(
   Ref ref,
   ProgressRange range,
 ) =>
-    ref.watch(workoutDaoProvider).watchWorkoutFrequency(since: range.since);
+    ref.watch(workoutDaoProvider).watchWorkoutFrequency(
+          since: range.since,
+          weekStart: ref.watch(weekStartControllerProvider),
+          utcOffset: ref.watch(todayProvider).timeZoneOffset,
+        );
 
 @riverpod
 Stream<List<SessionRpe>> rpeAnalytics(Ref ref, ProgressRange range) =>
@@ -98,9 +114,11 @@ Stream<List<WeeklyMuscleGroupVolume>> weeklyMuscleGroupVolumeSeries(
   Ref ref,
   ProgressRange range,
 ) =>
-    ref
-        .watch(workoutDaoProvider)
-        .watchWeeklyMuscleGroupVolume(since: range.since);
+    ref.watch(workoutDaoProvider).watchWeeklyMuscleGroupVolume(
+          since: range.since,
+          weekStart: ref.watch(weekStartControllerProvider),
+          utcOffset: ref.watch(todayProvider).timeZoneOffset,
+        );
 
 @riverpod
 Stream<List<RepRangeDistribution>> repRangeDistribution(
@@ -110,17 +128,27 @@ Stream<List<RepRangeDistribution>> repRangeDistribution(
 @riverpod
 Stream<List<WeekdayDistribution>> weekdayDistribution(
         Ref ref, ProgressRange range) =>
-    ref.watch(workoutDaoProvider).watchWeekdayDistribution(since: range.since);
+    ref.watch(workoutDaoProvider).watchWeekdayDistribution(
+          since: range.since,
+          weekStart: ref.watch(weekStartControllerProvider),
+          utcOffset: ref.watch(todayProvider).timeZoneOffset,
+        );
 
 @riverpod
 Future<ConsistencySummary> consistencySummary(
     Ref ref, ProgressRange range) async {
+  // Watched before the awaits: dependencies registered after an async gap
+  // are easy to lose if the provider rebuilds while it is suspended.
+  final weekStart = ref.watch(weekStartControllerProvider);
+  final Duration utcOffset = ref.watch(todayProvider).timeZoneOffset;
   final weeks = await ref.watch(workoutFrequencySeriesProvider(range).future);
   final Profile? profile = await ref.watch(profileDaoProvider).get();
   return calculateConsistency(
     weeks: weeks,
     targetSessionsPerWeek:
         profile?.weeklySessionTarget ?? defaultWeeklySessionTarget,
+    weekStart: weekStart,
+    utcOffset: utcOffset,
   );
 }
 

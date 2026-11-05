@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 import '../l10n/l10n_extension.dart';
+import 'week_start.dart';
 
 /// Date rendering, plus the pure week-bucket maths the analytics queries need.
 ///
@@ -109,38 +110,59 @@ final class DateFormatters {
     ]);
   }
 
-  /// Monday-based week start, used for weekly volume buckets (M5).
-  static DateTime startOfWeek(DateTime date) {
-    final DateTime d = _dateOnly(date);
-    return d.subtract(Duration(days: d.weekday - DateTime.monday));
-  }
-
-  /// Monday-based week start derived from the *UTC* calendar day, returned
-  /// as a local-midnight `DateTime`.
+  /// The first day of the week [date] falls in, as local midnight, for a
+  /// week that begins on [weekStart].
   ///
-  /// This is the bucket SQLite produces for
-  /// `date(started_at, 'unixepoch', 'weekday 0', '-6 days')` once drift hands
-  /// it back and `DateTime.parse` reads it as a bare date. That expression
-  /// resolves the stored epoch in UTC, so gap-filling those buckets has to
-  /// use the UTC calendar day too — [startOfWeek] would land a week off for
-  /// any workout logged near midnight in a non-UTC zone.
-  static DateTime utcWeekStart(DateTime instant) {
-    final DateTime utc = instant.toUtc();
-    final DateTime monday = DateTime.utc(utc.year, utc.month, utc.day)
-        .subtract(Duration(days: utc.weekday - DateTime.monday));
-    return DateTime(monday.year, monday.month, monday.day);
+  /// Steps by calendar day rather than by 24-hour days: subtracting a
+  /// `Duration` from local midnight lands on 23:00 the day before whenever
+  /// a daylight-saving change lies in between.
+  static DateTime startOfWeek(DateTime date, WeekStart weekStart) => DateTime(
+        date.year,
+        date.month,
+        date.day - weekStart.indexOf(date.weekday),
+      );
+
+  /// The weekly bucket the analytics queries file [instant] under, as a
+  /// local-midnight `DateTime`.
+  ///
+  /// The queries bucket in SQL with
+  /// `date(started_at + offset, 'unixepoch', 'weekday N', '-6 days')`
+  /// (see `WorkoutDao`), which resolves the stored epoch in UTC after
+  /// shifting it by a fixed [utcOffset]. Anything that has to name the same
+  /// bucket in Dart, such as gap-filling or finding "this week" in a series,
+  /// must derive the day the same way, so it goes through here with the
+  /// same [weekStart] and [utcOffset] the query was given. [startOfWeek] on
+  /// a local time agrees with it except within an hour of midnight in a
+  /// week where the clocks change.
+  static DateTime weekBucketStart(
+    DateTime instant, {
+    required WeekStart weekStart,
+    required Duration utcOffset,
+  }) {
+    final DateTime shifted = instant.toUtc().add(utcOffset);
+    return startOfWeek(
+      DateTime(shifted.year, shifted.month, shifted.day),
+      weekStart,
+    );
   }
 
   /// The next weekly bucket after [weekStart].
   ///
-  /// Steps through UTC so a `+7 days` hop across a daylight-saving boundary
-  /// cannot land on 23:00 the previous day and desynchronise the sequence.
-  static DateTime nextWeek(DateTime weekStart) {
-    final DateTime next =
-        DateTime.utc(weekStart.year, weekStart.month, weekStart.day)
-            .add(const Duration(days: DateTime.daysPerWeek));
-    return DateTime(next.year, next.month, next.day);
-  }
+  /// Steps by calendar day so a `+7 days` hop across a daylight-saving
+  /// boundary cannot land on 23:00 the previous day and desynchronise the
+  /// sequence.
+  static DateTime nextWeek(DateTime weekStart) => DateTime(
+        weekStart.year,
+        weekStart.month,
+        weekStart.day + DateTime.daysPerWeek,
+      );
+
+  /// The weekly bucket before [weekStart]. See [nextWeek].
+  static DateTime previousWeek(DateTime weekStart) => DateTime(
+        weekStart.year,
+        weekStart.month,
+        weekStart.day - DateTime.daysPerWeek,
+      );
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 }

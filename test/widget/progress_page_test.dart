@@ -386,9 +386,14 @@ void main() {
       expect(find.text('Rep-range distribution'), findsOneWidget);
       expect(find.text('Training days'), findsOneWidget);
       expect(find.textContaining('/month'), findsOneWidget);
-      // A rest average is only as good as the number of sets behind it.
-      expect(find.textContaining('90 sec average'), findsWidgets);
-      expect(find.text('from 1 set'), findsWidgets);
+      // Rest shares a card with effort now, behind its switch.
+      await tester.tap(find.text('Rest'));
+      await tester.pumpAndSettle();
+      // A rest average is only as good as the number of sets behind it,
+      // so that count is text beside the average, not only a tooltip:
+      // thirteen seeded sessions, one timed rest in each.
+      expect(find.text('90 sec average'), findsOneWidget);
+      expect(find.text('13 sessions · from 13 sets'), findsOneWidget);
 
       await disposeApp(tester);
     });

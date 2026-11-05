@@ -23,7 +23,7 @@ has been run on a physical device, and nothing has been run on iOS at all.
 |---|---|---|
 | M0 | Repo, tooling, CI, ADRs | done |
 | M1 | Theme, router shell, shared widgets | done (teal brand — decision D3) |
-| M2 | Drift schema + Library (301 exercises, public-domain media) | done |
+| M2 | Drift schema + Library (304 exercises: 301 public-domain, 3 written for the app) | done |
 | M3 | Tracker: workouts, history, calendar, programs, XLSX/CSV import | done in code; real-device validation open |
 | M4 | Timer: wall-clock engine, presets, notifications, haptics, bundled sound cues | core done; cues confirmed on an emulator only; physical-device and iOS validation open |
 | M5 | Progress & analytics: insights, consistency, strength, RPE/rest | done |
@@ -102,17 +102,23 @@ Push/Pull/Legs) above workout history. Open a program to see its day-templates
 (Workout A/B/C…) and start one as a workout.
 
 Programs can be imported from a **CSV** spreadsheet (Excel can save/export
-`.csv`). Use the import button next to the Programs heading. Expected header:
+`.csv`, including "CSV UTF-8"). Open the ⋮ menu next to the Programs heading
+and choose **Import programs from CSV**. Expected header:
 
     program,day,exercise,sets,reps
 
 - `program` — the program name (groups rows into a program).
 - `day` — the day label, e.g. `Workout A`.
-- `exercise` — matched against the seeded exercise catalogue by name.
-- `sets` — target sets (integer).
+- `exercise` — matched against the seeded exercise catalogue by its English
+  name, ignoring case.
+- `sets` — optional; a whole number from 1 to 20. Blank means 1.
 - `reps` — optional, e.g. `8-12` (empty means AMRAP).
 
-Unknown exercise names are skipped and reported before import.
+Nothing is dropped silently. The preview lists, before anything is written:
+unknown exercise names; programs whose name already exists on the device
+(rename them in the file to import them); and rows left out because a required
+cell is empty or `sets` is unusable, by spreadsheet row number. The import is
+one transaction: if saving fails, nothing is written and the app says so.
 
 ### Historical XLSX workout import
 

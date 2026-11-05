@@ -6,6 +6,7 @@ import '../../../core/database/tables/muscles.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import 'exercise_catalogue_ar.dart';
 import 'exercise_instructions_ar_1.dart';
+import 'exercise_instructions_ar_10.dart';
 import 'exercise_instructions_ar_2.dart';
 import 'exercise_instructions_ar_3.dart';
 import 'exercise_instructions_ar_4.dart';
@@ -37,6 +38,16 @@ extension EquipmentL10n on Equipment {
   String localizedName(BuildContext context) =>
       _lookup(context, kEquipmentNamesAr, id) ?? name;
 }
+
+/// Translates a muscle-group name for a query result that carries only the
+/// id and the stored English name (the Progress analytics), rather than a
+/// [Muscle] for [MuscleL10n.localizedName].
+String localizedMuscleName(
+  BuildContext context,
+  String muscleId,
+  String fallbackName,
+) =>
+    _lookup(context, kMuscleNamesAr, muscleId) ?? fallbackName;
 
 /// Translates an equipment name as `ExerciseSummary` carries it.
 ///
@@ -78,6 +89,7 @@ const Map<String, List<String>> kExerciseInstructionsAr =
   ...kExerciseInstructionsAr7,
   ...kExerciseInstructionsAr8,
   ...kExerciseInstructionsAr9,
+  ...kExerciseInstructionsAr10,
 };
 
 /// Returns translated instruction steps when the active locale is Arabic.

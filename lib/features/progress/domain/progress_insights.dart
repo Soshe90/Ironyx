@@ -23,6 +23,7 @@ class ProgressInsight {
     required this.severity,
     required this.target,
     required this.kind,
+    this.subjectId,
     this.subjectName,
     this.direction,
     this.percentage,
@@ -34,6 +35,11 @@ class ProgressInsight {
   final InsightSeverity severity;
   final InsightTarget target;
   final InsightKind kind;
+
+  /// Id of the exercise or muscle group [subjectName] names, so the
+  /// presentation layer can show the name in the user's language. The name
+  /// itself is the stored English one.
+  final String? subjectId;
   final String? subjectName;
   final InsightDirection? direction;
   final int? percentage;
@@ -65,6 +71,7 @@ List<ProgressInsight> buildProgressInsights({
             change < 0 ? InsightSeverity.negative : InsightSeverity.positive,
         target: InsightTarget.strength,
         kind: InsightKind.strengthChange,
+        subjectId: mover.exerciseId,
         subjectName: mover.exerciseName,
         direction: change < 0 ? InsightDirection.down : InsightDirection.up,
         percentage: (change.abs() * 100).round(),
@@ -148,6 +155,7 @@ List<ProgressInsight> buildProgressInsights({
         severity: InsightSeverity.actionable,
         target: InsightTarget.balance,
         kind: InsightKind.neglectedMuscle,
+        subjectId: group.muscleId,
         subjectName: group.muscleName,
       ),
     );

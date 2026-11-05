@@ -1,0 +1,661 @@
+{
+  "baseline": "GitHub ui/athletic-restyle-and-device-tests at 11c745b43b2e37401b1d73bda6153b9cac4e4a94 (2026-10-04)",
+  "recovery_commit": "8b47ff0aaa9ce25e88607f04e9ae144f22c46ed (local, 2026-10-22; GitHub does not contain this object)",
+  "policy": "Only UTF-8, NUL-free, unambiguous recovered candidates differing from baseline were overlaid. Conflicting candidates were preserved under recovery_alternatives. Generated files excluded for regeneration. No test/build performed yet. Alternative snapshots are stored as .txt to keep forensic variants out of Dart analysis.",
+  "overlays": [
+    {
+      "source": "readme_1.md",
+      "target": "README.md",
+      "sha256": "1dc0bd8a675861941e3e10d49c9501f550e9d35257d8230dcfb4177a336345a1",
+      "bytes": 8104
+    },
+    {
+      "source": "setup_1.md",
+      "target": "SETUP.md",
+      "sha256": "70ffa3f9376e63e2aa074257a3d70b5684d09560f7cf54b1268b570de98f4855",
+      "bytes": 8252
+    },
+    {
+      "source": "todo_1.md",
+      "target": "TODO.md",
+      "sha256": "d0dff553d350f01fa0803dbb19209796b44f539244122eb8297bd470e285b9a3",
+      "bytes": 33005
+    },
+    {
+      "source": "android/app/proguard-rules_1.pro",
+      "target": "android/app/proguard-rules.pro",
+      "sha256": "4d5ceda5f2afc060ecdf6a39d068cc764ab7373b552e7232ab49a4990b1cf17c",
+      "bytes": 1164
+    },
+    {
+      "source": "android/app/src/main/res/drawable-v21/launch_background_1.xml",
+      "target": "android/app/src/main/res/drawable-v21/launch_background.xml",
+      "sha256": "6a13f684e9a6e982038aa3b7a5bde6d9687560a8902d99c5793331b1ccfcf720",
+      "bytes": 661
+    },
+    {
+      "source": "android/app/src/main/res/drawable/ic_launcher_background.xml",
+      "target": "android/app/src/main/res/drawable/ic_launcher_background.xml",
+      "sha256": "4b5c57a06dc1fe75e4d21135950edfea4770359644bd789ce10f2abaa88d1548",
+      "bytes": 344
+    },
+    {
+      "source": "android/app/src/main/res/drawable/ic_launcher_foreground_1.xml",
+      "target": "android/app/src/main/res/drawable/ic_launcher_foreground.xml",
+      "sha256": "341f3808155e11c280090d0e5779fd769ccdeba22800aa0569587310523dbbd9",
+      "bytes": 1816
+    },
+    {
+      "source": "android/app/src/main/res/drawable/ic_launcher_monochrome.xml",
+      "target": "android/app/src/main/res/drawable/ic_launcher_monochrome.xml",
+      "sha256": "33c73b47433e0aa9ece9effb0f1dd3a7572365258871b96c2903605140ffa29a",
+      "bytes": 635
+    },
+    {
+      "source": "android/app/src/main/res/drawable/ic_notification_1.xml",
+      "target": "android/app/src/main/res/drawable/ic_notification.xml",
+      "sha256": "020ddd4ff58ed5e406a05a27b75fd518144982e28316401d4009af31eab53fca",
+      "bytes": 770
+    },
+    {
+      "source": "android/app/src/main/res/drawable/launch_background_1.xml",
+      "target": "android/app/src/main/res/drawable/launch_background.xml",
+      "sha256": "6a13f684e9a6e982038aa3b7a5bde6d9687560a8902d99c5793331b1ccfcf720",
+      "bytes": 661
+    },
+    {
+      "source": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "target": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "sha256": "ada31da9e23f4520f3753e71ca23799a107431473daa3774b6cecac26847260c",
+      "bytes": 344
+    },
+    {
+      "source": "android/app/src/main/res/raw/keep.xml",
+      "target": "android/app/src/main/res/raw/keep.xml",
+      "sha256": "355b5361eb9b3892059bbebda84f7a8181849b5627e95ea83d93bd16652fc93d",
+      "bytes": 442
+    },
+    {
+      "source": "android/app/src/main/res/values-night-v31/styles.xml",
+      "target": "android/app/src/main/res/values-night-v31/styles.xml",
+      "sha256": "e5cf4a837f2cd60007ae31ad10771a5ef6e4a4a59e707d29c25b9a3da9cd1af6",
+      "bytes": 589
+    },
+    {
+      "source": "android/app/src/main/res/values/colors.xml",
+      "target": "android/app/src/main/res/values/colors.xml",
+      "sha256": "20e542cacce482050747cafbac89ecd87fbcfceaf7ade6cd56e19ebdfa019eec",
+      "bytes": 186
+    },
+    {
+      "source": "assets/fonts/ofl_1.txt",
+      "target": "assets/fonts/OFL.txt",
+      "sha256": "186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f",
+      "bytes": 4377
+    },
+    {
+      "source": "docs/_config.yml",
+      "target": "docs/_config.yml",
+      "sha256": "5e094e56085813daa97c546e1d72c59ac4cf77db6fbb8ebb657417cd0bbd9d9f",
+      "bytes": 451
+    },
+    {
+      "source": "docs/delete-account_1.md",
+      "target": "docs/delete-account.md",
+      "sha256": "4b8ff78399b361e541efdb2b571d855fddbff5d4c1ed0b26aea542baf42023bb",
+      "bytes": 1529
+    },
+    {
+      "source": "docs/index.md",
+      "target": "docs/index.md",
+      "sha256": "2d7e8f931b44f7ca1df35e31d046feef8d3f62b75c5d104c62693fee29c4403d",
+      "bytes": 334
+    },
+    {
+      "source": "docs/v2-ideas_1.md",
+      "target": "docs/v2-ideas.md",
+      "sha256": "82ac99f118f06c4ada46f79714c325bc33e897b062320d0eaab5c7df3a89eff0",
+      "bytes": 2838
+    },
+    {
+      "source": "docs/widgets_1.md",
+      "target": "docs/widgets.md",
+      "sha256": "70dc4555eed8b7a4958b7fc980d9b670c6bb177ac68d92f0cf207ab5f2fbca8e",
+      "bytes": 13275
+    },
+    {
+      "source": "integration_test/app_test_1.dart",
+      "target": "integration_test/app_test.dart",
+      "sha256": "b43af578dabbff78a00a09f99f446d3bf7e9583ba78b518f328499543e4d6ea3",
+      "bytes": 4108
+    },
+    {
+      "source": "integration_test/data_journey_test_1.dart",
+      "target": "integration_test/data_journey_test.dart",
+      "sha256": "44b1dc0193d0f0ced58a4d93519287d04ad750f92f7111c08340605058babdab",
+      "bytes": 10956
+    },
+    {
+      "source": "integration_test/helpers/e2e_harness_1.dart",
+      "target": "integration_test/helpers/e2e_harness.dart",
+      "sha256": "fc5e7fc22535de19cb7be90ce59a263b52e0753cae613a8610f1acbe0c46dff7",
+      "bytes": 7543
+    },
+    {
+      "source": "integration_test/layout_journey_test_1.dart",
+      "target": "integration_test/layout_journey_test.dart",
+      "sha256": "5d3e165df18e6863a5a50690e47e2859e08d5a31c435e45ab23e81e0c2086058",
+      "bytes": 5162
+    },
+    {
+      "source": "integration_test/timer_journey_test_1.dart",
+      "target": "integration_test/timer_journey_test.dart",
+      "sha256": "e6418908ef5dcc19c6c6ce1b047368700c403e420950b2f5bb92a639e22d8c2f",
+      "bytes": 10986
+    },
+    {
+      "source": "integration_test/workout_journey_test_1.dart",
+      "target": "integration_test/workout_journey_test.dart",
+      "sha256": "844fa4f459812555eafe5f34f909149b69c69a8b5ab5148c9fce2f84ee53727d",
+      "bytes": 14071
+    },
+    {
+      "source": "lib/core/database/tables/templates_1.dart",
+      "target": "lib/core/database/tables/templates.dart",
+      "sha256": "d56a95ded3ca2df9a3159494a19b20cb73bfe2bd1943627d13d60af7ed911699",
+      "bytes": 4115
+    },
+    {
+      "source": "lib/core/formatters/date_formatters_1.dart",
+      "target": "lib/core/formatters/date_formatters.dart",
+      "sha256": "8c0a4617349bdfec07a8c49175790c317eed9104c7e3d7279bbaf3409a722eb4",
+      "bytes": 6353
+    },
+    {
+      "source": "lib/core/formatters/unit_formatters_1.dart",
+      "target": "lib/core/formatters/unit_formatters.dart",
+      "sha256": "9cca12d8847ea1b51255326c19c2e5a022b9ffb0ac0c21c980f265c701e6da94",
+      "bytes": 5489
+    },
+    {
+      "source": "lib/core/services/data_export_service_1.dart",
+      "target": "lib/core/services/data_export_service.dart",
+      "sha256": "7069efd6b2e6c54ed34d1ede8607b7e128ac099f42f2f89a4c4732603b70fa63",
+      "bytes": 31151
+    },
+    {
+      "source": "lib/core/services/program_import_service_1.dart",
+      "target": "lib/core/services/program_import_service.dart",
+      "sha256": "838026166017271ab0276c82a7a9641b6a0745fda5a50181e1c4b0ae6362b6b0",
+      "bytes": 12104
+    },
+    {
+      "source": "lib/core/services/timer_audio_service_1.dart",
+      "target": "lib/core/services/timer_audio_service.dart",
+      "sha256": "1e47d30e8a65495cf0a595e40778a7fd90b0e8f3371b221aa6c7f320d33389ff",
+      "bytes": 8411
+    },
+    {
+      "source": "lib/core/theme/app_colors_1.dart",
+      "target": "lib/core/theme/app_colors.dart",
+      "sha256": "b27ea356db96326f3a7345adb50f7cf26e5654c1b84a0ef3946deebc1ecabf42",
+      "bytes": 5857
+    },
+    {
+      "source": "lib/core/theme/app_spacing_1.dart",
+      "target": "lib/core/theme/app_spacing.dart",
+      "sha256": "2a5e3201154f5caeb34d65f713d2467091efd1bf0530798c249590e129b41c4a",
+      "bytes": 2431
+    },
+    {
+      "source": "lib/core/theme/app_typography_1.dart",
+      "target": "lib/core/theme/app_typography.dart",
+      "sha256": "16f038eb0e393258ac76e1d6a9e093ed3e058743214a4530942d0b42381398d6",
+      "bytes": 6150
+    },
+    {
+      "source": "lib/features/auth/presentation/reset_password_page_1.dart",
+      "target": "lib/features/auth/presentation/reset_password_page.dart",
+      "sha256": "c74ee7c8dfc9a69d045ec8ed9b76778c29904fd938f081c44a89999a8e814c1b",
+      "bytes": 4454
+    },
+    {
+      "source": "lib/features/dashboard/presentation/dashboard_page_1.dart",
+      "target": "lib/features/dashboard/presentation/dashboard_page.dart",
+      "sha256": "c1ec900db11c47850e5a2ee3c577eb76ac8a358905d1266984c0642f35d95fa4",
+      "bytes": 34425
+    },
+    {
+      "source": "lib/features/library/presentation/exercise_picker_sheet_1.dart",
+      "target": "lib/features/library/presentation/exercise_picker_sheet.dart",
+      "sha256": "f4f4ddccfb7ec38cbf5c896f0bf909f3d7d638d1f3f2829a4f5dc717a2b4fd84",
+      "bytes": 7720
+    },
+    {
+      "source": "lib/features/library/presentation/library_page_1.dart",
+      "target": "lib/features/library/presentation/library_page.dart",
+      "sha256": "1dd1546156e6ea0b61777427fa5558b2cc2f25e1d48051daf57f750b53b4f88d",
+      "bytes": 24058
+    },
+    {
+      "source": "lib/features/library/presentation/widgets/exercise_detail_sheet_1.dart",
+      "target": "lib/features/library/presentation/widgets/exercise_detail_sheet.dart",
+      "sha256": "4b85879b25935e657a786c70f3e553a45f698e69e5a149cc7fd7027ef9c1ee48",
+      "bytes": 13694
+    },
+    {
+      "source": "lib/features/library/presentation/widgets/exercise_media_1.dart",
+      "target": "lib/features/library/presentation/widgets/exercise_media.dart",
+      "sha256": "84779826390fe05ade76995610bce2cdb19c335ba4ed7b2d60123eeca5bb0ce7",
+      "bytes": 5098
+    },
+    {
+      "source": "lib/features/profile/presentation/personal_details_page_1.dart",
+      "target": "lib/features/profile/presentation/personal_details_page.dart",
+      "sha256": "ffbdfa30d114a86c37fd975934c623ddc96415df7e0111885acab006f014cf15",
+      "bytes": 13111
+    },
+    {
+      "source": "lib/features/programs/presentation/program_detail_page_1.dart",
+      "target": "lib/features/programs/presentation/program_detail_page.dart",
+      "sha256": "f4a82827de7a6821a276f72e889224586d2a48f728e62b9d7b32eb715b7e6fed",
+      "bytes": 15336
+    },
+    {
+      "source": "lib/features/programs/presentation/program_editor_page_1.dart",
+      "target": "lib/features/programs/presentation/program_editor_page.dart",
+      "sha256": "a5bc71f8754e0b21bdbc19b8209a49456aeba6e4774aa781d87e8113cd37914c",
+      "bytes": 22776
+    },
+    {
+      "source": "lib/features/programs/presentation/program_import_action_1.dart",
+      "target": "lib/features/programs/presentation/program_import_action.dart",
+      "sha256": "7bf3ac88c5a8df98df7e437db158c8a45b006a3b176f297d12f5767db54a69f3",
+      "bytes": 6976
+    },
+    {
+      "source": "lib/features/progress/presentation/progress_page_1.dart",
+      "target": "lib/features/progress/presentation/progress_page.dart",
+      "sha256": "7222542838f7fdfe696380438f73d29c93f1f1b1cd1086254ec99b9ba0f92aaa",
+      "bytes": 81995
+    },
+    {
+      "source": "lib/features/tracker/domain/active_workout_notifier_1.dart",
+      "target": "lib/features/tracker/domain/active_workout_notifier.dart",
+      "sha256": "d8a00d0c9bf4f39f6f55b8720f1139dbce9c5ee47629e5f868fc55ee04f583ad",
+      "bytes": 16510
+    },
+    {
+      "source": "lib/features/tracker/presentation/active_workout_page_1.dart",
+      "target": "lib/features/tracker/presentation/active_workout_page.dart",
+      "sha256": "c0a5a8950b88e758fda6c726d1b0a6a327f6779e9f678e6eb6a35830073b979d",
+      "bytes": 15225
+    },
+    {
+      "source": "lib/features/tracker/presentation/tracker_page_1.dart",
+      "target": "lib/features/tracker/presentation/tracker_page.dart",
+      "sha256": "bba26d1da164e49206a9a310e2623757b6e71dfd3f3055f56863c5c6a978502d",
+      "bytes": 33909
+    },
+    {
+      "source": "lib/features/tracker/presentation/widgets/draft_editor_widgets_1.dart",
+      "target": "lib/features/tracker/presentation/widgets/draft_editor_widgets.dart",
+      "sha256": "ca43aa64cd57b4447afaa19bee115502db53992083fe40f23356bd59d087ecbf",
+      "bytes": 39831
+    },
+    {
+      "source": "lib/features/tracker/presentation/widgets/workout_xlsx_import_action_1.dart",
+      "target": "lib/features/tracker/presentation/widgets/workout_xlsx_import_action.dart",
+      "sha256": "a42e80f05542b8ba18338c28244ca37be481c00b05dbd208b9a28217673e3e54",
+      "bytes": 6571
+    },
+    {
+      "source": "lib/features/tracker/presentation/workout_detail_page_1.dart",
+      "target": "lib/features/tracker/presentation/workout_detail_page.dart",
+      "sha256": "0f52a35a7ff47152fe90674fe78475c330713b30d62ae835dd8bdadcee2c8a9f",
+      "bytes": 17183
+    },
+    {
+      "source": "lib/features/tracker/presentation/workout_edit_page_1.dart",
+      "target": "lib/features/tracker/presentation/workout_edit_page.dart",
+      "sha256": "08c10f75bcbf96baa38a79d9524a279dfb61826d10638f2bdb32d2333d1b5ef4",
+      "bytes": 7489
+    },
+    {
+      "source": "lib/l10n/app_ar_2.arb",
+      "target": "lib/l10n/app_ar.arb",
+      "sha256": "275d5ec74f94d5e0829265ddc040dcaa2e8a78c634d446d1e17d1f5186ad390a",
+      "bytes": 83004
+    },
+    {
+      "source": "lib/l10n/app_en_1.arb",
+      "target": "lib/l10n/app_en.arb",
+      "sha256": "e9660eb00308cd0f39168ab55ca2a3380c004ac41f93f519ff44398b6dd2f34a",
+      "bytes": 64432
+    },
+    {
+      "source": "pubspec_1.yaml",
+      "target": "pubspec.yaml",
+      "sha256": "1066b8b2f7c49d1a99ec0fd8d81d064b6a32e5f51671909ba86befe1b89d455c",
+      "bytes": 2969
+    },
+    {
+      "source": "scripts/build_android_1.sh",
+      "target": "scripts/build_android.sh",
+      "sha256": "593a2087c03e0d7ec33f40fb0dbdbef08b97d254e541b9a2998e6d50c331629b",
+      "bytes": 4038
+    },
+    {
+      "source": "scripts/build_timer_cues_1.py",
+      "target": "scripts/build_timer_cues.py",
+      "sha256": "1f2363008c538bdd9c3a39bd97ff943d8b5c5929a37821df148003e516ad6a81",
+      "bytes": 2874
+    },
+    {
+      "source": "scripts/check_release_stripped_1.py",
+      "target": "scripts/check_release_stripped.py",
+      "sha256": "2a480d6c90a5f37a62748043b7ee0a99e469367dfd27b8224056b2990ed97ca6",
+      "bytes": 3593
+    },
+    {
+      "source": "scripts/run_device_tests_1.sh",
+      "target": "scripts/run_device_tests.sh",
+      "sha256": "0b05eab51607acd324e1912b4962c14a318938c5a4229b4a2b5bc15a03411b24",
+      "bytes": 4562
+    },
+    {
+      "source": "test/golden/screens_golden_test_1.dart",
+      "target": "test/golden/screens_golden_test.dart",
+      "sha256": "5206cc403cc062de85fd9012d8995cc8bdf381e8ea13d54eb1cac1f14fe24338",
+      "bytes": 13987
+    },
+    {
+      "source": "test/unit/active_workout_notifier_test_1.dart",
+      "target": "test/unit/active_workout_notifier_test.dart",
+      "sha256": "0d9bc0fda96358711fc7bac6f88781f1af79a0d8778e803ad335c52dbf864b2e",
+      "bytes": 14744
+    },
+    {
+      "source": "test/unit/active_workout_persistence_test_2.dart",
+      "target": "test/unit/active_workout_persistence_test.dart",
+      "sha256": "64d7f6f4e364ab1acc0ab7159c8b21d823ea22d68c3b9dbd7fe07ae273f0a07a",
+      "bytes": 19862
+    },
+    {
+      "source": "test/unit/android_manifest_test_1.dart",
+      "target": "test/unit/android_manifest_test.dart",
+      "sha256": "74b9ace697a1d9b8ecb76ae045aad543eb8714a9a7e3bdcd0a5d5d874c2147b9",
+      "bytes": 4252
+    },
+    {
+      "source": "test/unit/app_theme_test_1.dart",
+      "target": "test/unit/app_theme_test.dart",
+      "sha256": "03e8baa5db7b121f484896b284078e049e152476592d49a2056d86f9a88c3496",
+      "bytes": 7261
+    },
+    {
+      "source": "test/unit/app_version_test_1.dart",
+      "target": "test/unit/app_version_test.dart",
+      "sha256": "e6b8d17ffd32f1b5ff66465b24f0aec2da5791c4fcfcbe7cfd44de985bc4cb18",
+      "bytes": 762
+    },
+    {
+      "source": "test/unit/date_formatters_test_1.dart",
+      "target": "test/unit/date_formatters_test.dart",
+      "sha256": "240bbdce1e3735a73e0008dfe4859dbf679701a280e8fbded47203842994b941",
+      "bytes": 7365
+    },
+    {
+      "source": "test/unit/preference_controllers_test_1.dart",
+      "target": "test/unit/preference_controllers_test.dart",
+      "sha256": "ed90c1d0f83807713c4b061bcaa851b48b8a357429ed4f8323e0b406a43939b7",
+      "bytes": 6929
+    },
+    {
+      "source": "test/unit/program_import_service_test_1.dart",
+      "target": "test/unit/program_import_service_test.dart",
+      "sha256": "2276bb2d94037b682aa829d4e871fc80e48f93a4548150fd44689cbbe3e83ef9",
+      "bytes": 10462
+    },
+    {
+      "source": "test/unit/timer_audio_service_test_1.dart",
+      "target": "test/unit/timer_audio_service_test.dart",
+      "sha256": "4505e273e40baeef1264fab3a888fdc1cd912355e6e318251073f4fd808cdfb0",
+      "bytes": 8735
+    },
+    {
+      "source": "test/unit/unit_formatters_test_1.dart",
+      "target": "test/unit/unit_formatters_test.dart",
+      "sha256": "7dc87f057fa19c35a73de930b3c98fba7384ad1e686f0a23ba9bc7e4b57d7e27",
+      "bytes": 6900
+    },
+    {
+      "source": "test/widget/active_timer_page_test_1.dart",
+      "target": "test/widget/active_timer_page_test.dart",
+      "sha256": "bd1083989d5ff9b31ff2502fc1b180b9b50310dd78129e8a532c2f152c9011ce",
+      "bytes": 6093
+    },
+    {
+      "source": "test/widget/draft_editor_widgets_test_1.dart",
+      "target": "test/widget/draft_editor_widgets_test.dart",
+      "sha256": "2c8f8c6f8643990c3f16750e632141f35552fc614b994ac7f99de26d8138bcdd",
+      "bytes": 15887
+    },
+    {
+      "source": "test/widget/exercise_detail_sheet_test_1.dart",
+      "target": "test/widget/exercise_detail_sheet_test.dart",
+      "sha256": "00c6fdf9e64b0702942d4ec12e7de822909ae88f9ddcbc419ff3cd012190bd94",
+      "bytes": 4455
+    },
+    {
+      "source": "test/widget/exercise_how_to_test_1.dart",
+      "target": "test/widget/exercise_how_to_test.dart",
+      "sha256": "d761fd58e356d4466739e119e12aeab0b4fb30fdf5e329a3ed4e0ba3db54e281",
+      "bytes": 8859
+    },
+    {
+      "source": "test/widget/reset_password_page_test_1.dart",
+      "target": "test/widget/reset_password_page_test.dart",
+      "sha256": "5ed58bacff5c966ef8a418e9ccdaa2a393d06b64a9cb6bf7ccf6f16445393c74",
+      "bytes": 6163
+    },
+    {
+      "source": "test/widget/theme_mode_test_1.dart",
+      "target": "test/widget/theme_mode_test.dart",
+      "sha256": "d9fa5a974dee8c8c32e7c759ec9dad2f9c6cb617b89656eac3bb0b8bf958871f",
+      "bytes": 1968
+    }
+  ],
+  "conflicts": [
+    {
+      "target": "android/app/src/main/res/values-v31/styles.xml",
+      "candidates": [
+        {
+          "source": "android/app/src/main/res/values-v31/styles.xml",
+          "preserved_as": "recovery_alternatives/android__app__src__main__res__values-v31__styles.xml__styles.xml.txt",
+          "sha256": "dc7dca0110a1e28317d68d3500709a71670c9aca0ddf5b6285cd027f50771f34",
+          "bytes": 744
+        },
+        {
+          "source": "android/app/src/main/res/values-v31/styles_1.xml",
+          "preserved_as": "recovery_alternatives/android__app__src__main__res__values-v31__styles.xml__styles_1.xml.txt",
+          "sha256": "bded41e6152ee457a438e6a0ac88aba26cec62537e3d2347fec253ff5cac3b1f",
+          "bytes": 744
+        }
+      ]
+    },
+    {
+      "target": "lib/features/progress/presentation/widgets/body_metric_widgets.dart",
+      "candidates": [
+        {
+          "source": "lib/features/progress/presentation/widgets/body_metric_widgets.dart",
+          "preserved_as": "recovery_alternatives/lib__features__progress__presentation__widgets__body_metric_widgets.dart__body_metric_widgets.dart.txt",
+          "sha256": "87848e43eb1cb23b493233a56f71268dc1af26d4e80ce2f4a0575dc40a9715ae",
+          "bytes": 6254
+        },
+        {
+          "source": "lib/features/progress/presentation/widgets/body_metric_widgets_1.dart",
+          "preserved_as": "recovery_alternatives/lib__features__progress__presentation__widgets__body_metric_widgets.dart__body_metric_widgets_1.dart.txt",
+          "sha256": "90c8f774a628470fa948f2954dd99b9b7d14c861f90ab5e419ad7dbb63657148",
+          "bytes": 6254
+        }
+      ]
+    },
+    {
+      "target": "test/widget/tracker_history_test.dart",
+      "candidates": [
+        {
+          "source": "test/widget/tracker_history_test_2.dart",
+          "preserved_as": "recovery_alternatives/test__widget__tracker_history_test.dart__tracker_history_test_2.dart.txt",
+          "sha256": "5a0ef6e941451fa41b8df24db5af4d5f74530b1035d4431ef2fa0f9633f5c71f",
+          "bytes": 11072
+        },
+        {
+          "source": "test/widget/tracker_history_test_3.dart",
+          "preserved_as": "recovery_alternatives/test__widget__tracker_history_test.dart__tracker_history_test_3.dart.txt",
+          "sha256": "209dab74c8c8191d3f1a9b80d47d09c70244eb4dcd8da4c08463f91205708976",
+          "bytes": 9917
+        }
+      ]
+    }
+  ],
+  "local_additions": [
+    {
+      "source": "lib/features/progress/presentation/widgets/progress_visuals_1.dart",
+      "target": "lib/features/progress/presentation/widgets/progress_visuals.dart",
+      "sha256": "b9a1d20ee729a00f3cebfb17d6141e18cb00d7d21543898d25f19305f3864b80",
+      "bytes": 29100
+    },
+    {
+      "source": "test/widget/active_workout_discard_test_1.dart",
+      "target": "test/widget/active_workout_discard_test.dart",
+      "sha256": "27c2fab7973afa576c98332fe4a54c7d1de3d5047a2422c2c71eeed00d62b877",
+      "bytes": 4351
+    },
+    {
+      "source": "test/widget/draft_save_test_1.dart",
+      "target": "test/widget/draft_save_test.dart",
+      "sha256": "31a09b135e4fb3390817854036e69127891bccc791459d77d13ddc65f6919f18",
+      "bytes": 6852
+    },
+    {
+      "source": "test/widget/program_import_action_test_1.dart",
+      "target": "test/widget/program_import_action_test.dart",
+      "sha256": "b5d67b33575be46b65d5045e21ec515c9e5565addc853f8eca2e208481a0ea63",
+      "bytes": 6103
+    },
+    {
+      "source": "test/widget/progress_overview_test_1.dart",
+      "target": "test/widget/progress_overview_test.dart",
+      "sha256": "f3dec7d33e3a62d58e00f48cbe0cbc21523fed285bdfbabcde5f369073d29825",
+      "bytes": 6215
+    },
+    {
+      "source": "test/widget/progress_visuals_test_1.dart",
+      "target": "test/widget/progress_visuals_test.dart",
+      "sha256": "a449a0801b2290476f093bdbd33dc08925e0557783bb2addf576ac6fce220d01",
+      "bytes": 6972
+    }
+  ],
+  "generated_candidates_excluded": [
+    "lib/core/database/app_database.g_1.dart",
+    "lib/core/database/daos/body_metrics_dao.g.dart",
+    "lib/core/database/daos/equipment_dao.g.dart",
+    "lib/core/database/daos/exercise_dao.g_1.dart",
+    "lib/core/database/daos/muscle_dao.g.dart",
+    "lib/core/database/daos/profile_dao.g.dart",
+    "lib/core/database/daos/program_dao.g_1.dart",
+    "lib/core/database/daos/template_dao.g_1.dart",
+    "lib/core/database/daos/timer_dao.g_1.dart",
+    "lib/core/database/daos/timer_preset_dao.g.dart",
+    "lib/core/database/daos/workout_dao.g_1.dart",
+    "lib/core/database/database_providers.g_1.dart",
+    "lib/core/database/tables/body_metrics.freezed_1.dart",
+    "lib/core/database/tables/equipment.freezed_1.dart",
+    "lib/core/database/tables/exercise_aliases.freezed_1.dart",
+    "lib/core/database/tables/exercise_equipment.freezed_1.dart",
+    "lib/core/database/tables/exercise_instructions.freezed_1.dart",
+    "lib/core/database/tables/exercise_media.freezed_1.dart",
+    "lib/core/database/tables/exercise_muscles.freezed_1.dart",
+    "lib/core/database/tables/exercise_sources.freezed_1.dart",
+    "lib/core/database/tables/exercise_tags.freezed_1.dart",
+    "lib/core/database/tables/exercise_variations.freezed_1.dart",
+    "lib/core/database/tables/exercises.freezed_1.dart",
+    "lib/core/database/tables/muscles.freezed_1.dart",
+    "lib/core/database/tables/profiles.freezed_1.dart",
+    "lib/core/database/tables/programs.freezed_1.dart",
+    "lib/core/database/tables/templates.freezed_1.dart",
+    "lib/core/database/tables/timer_sessions.freezed_1.dart",
+    "lib/core/database/tables/workout_exercises.freezed_1.dart",
+    "lib/core/database/tables/workout_sets.freezed_1.dart",
+    "lib/core/database/tables/workouts.freezed_1.dart",
+    "lib/core/formatters/weight_unit_controller.g_1.dart",
+    "lib/core/l10n/l10n_provider.g_1.dart",
+    "lib/core/l10n/locale_controller.g_1.dart",
+    "lib/core/services/exercise_seeder.g_1.dart",
+    "lib/core/services/program_seeder.g_1.dart",
+    "lib/core/theme/theme_mode_controller.g_1.dart",
+    "lib/features/auth/domain/auth_controller.g_1.dart",
+    "lib/features/backup/domain/cloud_backup_controller.g_1.dart",
+    "lib/features/dashboard/domain/dashboard_providers.g_1.dart",
+    "lib/features/onboarding/domain/onboarding_controller.g_1.dart",
+    "lib/features/profile/domain/profile_controller.g_1.dart",
+    "lib/features/programs/domain/program_draft.freezed_1.dart",
+    "lib/features/programs/domain/program_editor_controller.g_1.dart",
+    "lib/features/programs/domain/program_providers.g_1.dart",
+    "lib/features/progress/domain/progress_providers.g_1.dart",
+    "lib/features/timer/domain/timer_controller.g_1.dart",
+    "lib/features/timer/domain/timer_preset.freezed_1.dart",
+    "lib/features/timer/domain/timer_settings_controller.freezed_1.dart",
+    "lib/features/timer/domain/timer_settings_controller.g_1.dart",
+    "lib/features/tracker/domain/active_workout_notifier.g_1.dart",
+    "lib/features/tracker/domain/edit_workout_notifier.g_1.dart",
+    "lib/features/tracker/domain/workout_draft.freezed_1.dart",
+    "lib/l10n/app_localizations_1.dart",
+    "lib/l10n/untranslated.json"
+  ],
+  "validation": {
+    "flutter_pub_get": "passed; dependency resolution succeeded",
+    "build_runner": "passed; wrote 611 outputs; Drift warned of duplicate exerciseVariationsTableRefs references",
+    "flutter_analyze": "passed: no issues with --fatal-infos --fatal-warnings",
+    "dart_format": "passed: 318 files, 0 changed",
+    "flutter_test": "passed: 654 passed, 1 skipped, 0 failed (full suite)",
+    "asset_licenses": "passed: 301 exercises, 602 images cleared",
+    "platform_builds": "Android debug APK passed: flutter build apk --debug (259.5s); release build not run",
+    "physical_device_and_live_supabase": "not tested",
+    "security": "no supabase.json, key.properties, or upload keystore copied into reconstruction"
+  },
+  "asset_reconciliation": {
+    "tracked_asset_targets_compared": 675,
+    "targets_with_at_least_one_byte_exact_recovery_candidate_matching_baseline": 663,
+    "remaining_assets": "12 had no byte-exact local candidate; readable text candidates were selectively overlaid where unambiguous, and conflicting Android style resource was left at the GitHub baseline and preserved as alternatives. Asset license check and Android debug build pass.",
+    "policy": "Binary media were not bulk-overlaid; GitHub baseline retained unless a text candidate passed UTF-8/integrity criteria."
+  },
+  "conflict_resolutions_2026_11_03": [
+    {
+      "target": "test/widget/tracker_history_test.dart",
+      "chosen": "test/widget/tracker_history_test_2.dart",
+      "sha256": "5a0ef6e941451fa41b8df24db5af4d5f74530b1035d4431ef2fa0f9633f5c71f",
+      "reason": "Same mtime (10-22 16:17) and size (11072) as corrupt canonical; _3 is a 10-01 snapshot. Adds 2 CSV-import regression tests (lost commit 809249e). Format/analyze clean; file 9/9 pass."
+    },
+    {
+      "target": "lib/features/progress/presentation/widgets/body_metric_widgets.dart",
+      "chosen": "GitHub baseline (unchanged)",
+      "reason": "Canonical candidate contains foreign minified JS (cross-linked clusters); _1 equals baseline ignoring CRLF."
+    },
+    {
+      "target": "android/app/src/main/res/values-v31/styles.xml",
+      "chosen": "GitHub baseline (unchanged)",
+      "reason": "Canonical candidate contains foreign minified JS; _1 equals baseline ignoring CRLF."
+    }
+  ],
+  "staleness_audit_2026_11_03": "22 corrupt recovered files had mtime after baseline (2026-10-04). 17 hand-written ones were overlaid from readable copies with identical mtime and size; 3 app_localizations*.dart regenerated from overlaid .arb; GeneratedPluginRegistrant.java is generated; tracker_history_test.dart resolved above. No post-baseline file left at baseline.",
+  "independent_revalidation_2026_11_03": {
+    "dart_format": "passed on lib test integration_test tool scripts (dart format . crashes on build/ long Windows paths; not a source issue)",
+    "flutter_analyze": "passed",
+    "asset_licenses": "passed",
+    "flutter_test_full": "654 passed, 1 skipped (before tracker_history_test resolution)",
+    "tracker_history_test": "9/9 passed after resolution",
+    "drift_warning": "pre-existing: exercise_variations.dart identical to GitHub; two FKs to exercises; generated reverse-ref helper unused; no change"
+  }
+}

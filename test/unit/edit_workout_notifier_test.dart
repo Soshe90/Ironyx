@@ -139,5 +139,53 @@ void main() {
       final onDisk = await dao.getWithDetails('w1');
       expect(onDisk!.setsByExercise['w1_ex1']!.single.weightKg, 42);
     });
+
+    test('replaceSetDetails can clear a saved RPE and rest time', () async {
+      container.listen(editWorkoutProvider('w1'), (_, __) {});
+      final notifier = container.read(editWorkoutProvider('w1').notifier);
+      await container.read(editWorkoutProvider('w1').future);
+      final dao = container.read(workoutDaoProvider);
+
+      await notifier.replaceSetDetails(
+        'w1_ex1',
+        'w1_ex1_set1',
+        rpeTimes10: 85,
+        restSeconds: 120,
+      );
+      await notifier.save();
+      var onDisk =
+          (await dao.getWithDetails('w1'))!.setsByExercise['w1_ex1']!.single;
+      expect(onDisk.rpeTimes10, 85);
+      expect(onDisk.restSeconds, 120);
+
+      // `updateSet` leaves them alone: null there means "unchanged".
+      await notifier.updateSet('w1_ex1', 'w1_ex1_set1', reps: 6);
+      await notifier.replaceSetDetails(
+        'w1_ex1',
+        'w1_ex1_set1',
+        rpeTimes10: null,
+        restSeconds: null,
+      );
+      await notifier.save();
+      onDisk =
+          (await dao.getWithDetails('w1'))!.setsByExercise['w1_ex1']!.single;
+      expect(onDisk.rpeTimes10, isNull);
+      expect(onDisk.restSeconds, isNull);
+      // The rest of the set is untouched.
+      expect(onDisk.weightKg, 60);
+      expect(onDisk.reps, 6);
+
+      // An id that matches nothing changes nothing.
+      await notifier.replaceSetDetails(
+        'w1_ex1',
+        'no-such-set',
+        rpeTimes10: 70,
+        restSeconds: 30,
+      );
+      await notifier.save();
+      onDisk =
+          (await dao.getWithDetails('w1'))!.setsByExercise['w1_ex1']!.single;
+      expect(onDisk.rpeTimes10, isNull);
+    });
   });
 }

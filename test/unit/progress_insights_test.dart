@@ -48,6 +48,30 @@ void main() {
     expect(insights.length, lessThanOrEqualTo(4));
   });
 
+  test('names its subject by id as well, so the page can translate it', () {
+    final insights = buildProgressInsights(
+      strengthChanges: [strength('Bench', -.2), strength('Row', -.1)],
+      volume: const [],
+      frequency: const [],
+      currentMuscleVolume: const [],
+      previousMuscleVolume: const [
+        MuscleGroupVolume(
+            muscleId: 'legs', muscleName: 'Legs', totalVolumeKg: 500),
+      ],
+    );
+
+    final ProgressInsight muscle = insights.singleWhere(
+      (i) => i.kind == InsightKind.neglectedMuscle,
+    );
+    expect(muscle.subjectId, 'legs');
+    expect(muscle.subjectName, 'Legs');
+    final ProgressInsight lift = insights.singleWhere(
+      (i) => i.kind == InsightKind.strengthChange,
+    );
+    // The fixture uses the id as the name; the larger mover is Bench.
+    expect(lift.subjectId, 'Bench');
+  });
+
   test('requires four weeks before making consistency or volume claims', () {
     final insights = buildProgressInsights(
       strengthChanges: const [],

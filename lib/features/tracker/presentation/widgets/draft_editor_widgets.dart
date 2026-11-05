@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/daos/workout_dao.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/formatters/date_formatters.dart';
+import '../../../../core/formatters/number_input.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
@@ -29,6 +30,12 @@ const int _maxReps = 100;
 
 /// Longest hold, in seconds, a time-based set row will accept (30 minutes).
 const int _maxDurationSeconds = 1800;
+
+/// Bounds of the "RPE and rest time" dialog. The RPE range is the scale
+/// itself; an hour is longer than any rest worth logging.
+const double _minRpe = 1;
+const double _maxRpe = 10;
+const int _maxRestSeconds = 3600;
 
 /// One exercise within a draft, with its sets. Shared by the active-session
 /// screen and the edit screen — both back it with a [DraftEditorController].
@@ -596,6 +603,20 @@ class _InlineRestTimerState extends State<InlineRestTimer> {
   }
 }
 
+/// Pushes up whatever a [DraftSetRow] is still holding back for its input
+/// debounce. Call before reading the draft to save it.
+///
+/// Rows flush when focus leaves them, so this takes focus off the field
+/// being typed in and waits for that to take effect. Focus changes are
+/// applied in a microtask; a zero-length timer runs only after every pending
+/// microtask, so by the time this returns the rows have flushed. Without it,
+/// a value typed less than [AppDuration.inputDebounce] before "Finish" was
+/// saved as whatever the field held before.
+Future<void> commitPendingSetEdits() async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  await Future<void>.delayed(Duration.zero);
+}
+
 /// A single set row. Owns and disposes its own controllers (ADR-5) and
 /// pushes changes up to whichever [DraftEditorController] it was given.
 ///
@@ -627,6 +648,9 @@ class DraftSetRow extends ConsumerStatefulWidget {
   ConsumerState<DraftSetRow> createState() => _DraftSetRowState();
 }
 
+/// The text fields of a [DraftSetRow], each with its own input debounce.
+enum _SetField { weight, reps, duration }
+
 class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   late final TextEditingController _weightController;
   late final TextEditingController _repsController;
@@ -636,9 +660,43 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
   /// switches kg/lb mid-workout the displayed number has to be rewritten,
   /// otherwise a 100 entered as kg would silently be re-read as 100 lb.
   WeightUnit? _renderedUnit;
-  Timer? _weightDebounce;
-  Timer? _repsDebounce;
-  Timer? _durationDebounce;
+
+  /// Each field's running input debounce, and the push it will make when it
+  /// fires. Kept apart so [_flushPending] can make the push early.
+  final Map<_SetField, Timer> _debounces = <_SetField, Timer>{};
+  final Map<_SetField, VoidCallback> _pendingPushes =
+      <_SetField, VoidCallback>{};
+
+  /// Pushes [push] once [field] has been still for
+  /// [AppDuration.inputDebounce], replacing any push already waiting.
+  void _debounce(_SetField field, VoidCallback push) {
+    _debounces.remove(field)?.cancel();
+    _pendingPushes[field] = push;
+    _debounces[field] = Timer(AppDuration.inputDebounce, () {
+      _debounces.remove(field);
+      _pendingPushes.remove(field)?.call();
+    });
+  }
+
+  /// Drops [field]'s waiting push: its text no longer holds a usable value.
+  void _cancelDebounce(_SetField field) {
+    _debounces.remove(field)?.cancel();
+    _pendingPushes.remove(field);
+  }
+
+  /// Makes every waiting push now. Runs when focus leaves the row, which is
+  /// what [commitPendingSetEdits] relies on before a save.
+  void _flushPending() {
+    for (final Timer timer in _debounces.values) {
+      timer.cancel();
+    }
+    _debounces.clear();
+    final List<VoidCallback> pushes = _pendingPushes.values.toList();
+    _pendingPushes.clear();
+    for (final VoidCallback push in pushes) {
+      push();
+    }
+  }
 
   @override
   void initState() {
@@ -660,9 +718,9 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
 
   @override
   void dispose() {
-    _weightDebounce?.cancel();
-    _repsDebounce?.cancel();
-    _durationDebounce?.cancel();
+    for (final Timer timer in _debounces.values) {
+      timer.cancel();
+    }
     _weightController.dispose();
     _repsController.dispose();
     _durationController.dispose();
@@ -683,240 +741,200 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
     final bool done = widget.set.isCompleted;
     final int index = widget.index;
 
-    // A logged set reads as done at a glance, not only by its checkbox.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: AnimatedContainer(
-        duration: AppDuration.fast,
-        decoration: BoxDecoration(
-          color: done
-              ? scheme.primary.withValues(alpha: 0.08)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: Row(
-          children: <Widget>[
-            SizedBox(
-              width: _setNumberWidth,
-              child: Text(
-                '$index',
-                style: AppTypography.numeric(
-                  theme.textTheme.titleSmall ?? const TextStyle(),
-                ).copyWith(
-                  color: done ? scheme.primary : scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
+    // Leaving the row (another row, a menu, the Finish button's unfocus)
+    // pushes any edit still inside its debounce. Never takes focus itself.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (bool hasFocus) {
+        if (!hasFocus) _flushPending();
+      },
+      // A logged set reads as done at a glance, not only by its checkbox.
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+        child: AnimatedContainer(
+          duration: AppDuration.fast,
+          decoration: BoxDecoration(
+            color: done
+                ? scheme.primary.withValues(alpha: 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: _setNumberWidth,
+                child: Text(
+                  '$index',
+                  style: AppTypography.numeric(
+                    theme.textTheme.titleSmall ?? const TextStyle(),
+                  ).copyWith(
+                    color: done ? scheme.primary : scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _NumberField(
-                controller: _weightController,
-                semanticLabel:
-                    context.l10n.draftSetWeightSemantic(index, unit.label),
-                decimal: true,
-                onChanged: (String value) {
-                  final double? entered = double.tryParse(value);
-                  if (entered == null || !entered.isFinite || entered < 0) {
-                    _weightDebounce?.cancel();
-                    return;
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _NumberField(
+                  controller: _weightController,
+                  semanticLabel:
+                      context.l10n.draftSetWeightSemantic(index, unit.label),
+                  decimal: true,
+                  onChanged: (String value) {
+                    final double? entered = parseDecimalInput(value);
+                    if (entered == null || !entered.isFinite || entered < 0) {
+                      _cancelDebounce(_SetField.weight);
+                      return;
+                    }
+                    final double kg = UnitFormatters.toKg(entered, unit);
+                    if (kg > _maxWeightKg) {
+                      _cancelDebounce(_SetField.weight);
+                      return;
+                    }
+                    _debounce(_SetField.weight, () {
+                      if (!mounted) return;
+                      widget.controller.updateSet(
+                        widget.exerciseId,
+                        widget.set.id,
+                        weightKg: kg,
+                      );
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: widget.isTimeBased
+                    ? _NumberField(
+                        controller: _durationController,
+                        semanticLabel:
+                            context.l10n.draftSetDurationSemantic(index),
+                        onChanged: (String value) {
+                          final int? seconds = parseIntegerInput(value);
+                          if (seconds == null ||
+                              seconds < 0 ||
+                              seconds > _maxDurationSeconds) {
+                            _cancelDebounce(_SetField.duration);
+                            return;
+                          }
+                          _debounce(_SetField.duration, () {
+                            if (!mounted) return;
+                            widget.controller.updateSet(
+                              widget.exerciseId,
+                              widget.set.id,
+                              durationSeconds: seconds,
+                            );
+                          });
+                        },
+                      )
+                    : _NumberField(
+                        controller: _repsController,
+                        semanticLabel: context.l10n.draftSetRepsSemantic(index),
+                        onChanged: (String value) {
+                          final int? reps = parseIntegerInput(value);
+                          if (reps == null || reps < 0 || reps > _maxReps) {
+                            _cancelDebounce(_SetField.reps);
+                            return;
+                          }
+                          _debounce(_SetField.reps, () {
+                            if (!mounted) return;
+                            widget.controller.updateSet(
+                              widget.exerciseId,
+                              widget.set.id,
+                              reps: reps,
+                            );
+                          });
+                        },
+                      ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _SetDoneButton(
+                done: done,
+                index: index,
+                onChanged: (bool value) {
+                  // Logging a set is the most frequent action in the app; give it
+                  // the tick HapticsService.impact() exists for. Same switch as
+                  // the timer's cues, so "Haptics off" means off everywhere.
+                  if (value &&
+                      ref
+                          .read(timerSettingsControllerProvider)
+                          .hapticsEnabled) {
+                    unawaited(ref.read(hapticsServiceProvider).impact());
                   }
-                  final double kg = UnitFormatters.toKg(entered, unit);
-                  if (kg > _maxWeightKg) {
-                    _weightDebounce?.cancel();
-                    return;
-                  }
-                  _weightDebounce?.cancel();
-                  _weightDebounce = Timer(AppDuration.inputDebounce, () {
-                    if (!mounted) return;
-                    widget.controller.updateSet(
-                      widget.exerciseId,
-                      widget.set.id,
-                      weightKg: kg,
-                    );
-                  });
+                  widget.controller.updateSet(
+                    widget.exerciseId,
+                    widget.set.id,
+                    isCompleted: value,
+                  );
                 },
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: widget.isTimeBased
-                  ? _NumberField(
-                      controller: _durationController,
-                      semanticLabel:
-                          context.l10n.draftSetDurationSemantic(index),
-                      onChanged: (String value) {
-                        final int? seconds = int.tryParse(value);
-                        if (seconds == null ||
-                            seconds < 0 ||
-                            seconds > _maxDurationSeconds) {
-                          _durationDebounce?.cancel();
-                          return;
-                        }
-                        _durationDebounce?.cancel();
-                        _durationDebounce =
-                            Timer(AppDuration.inputDebounce, () {
-                          if (!mounted) return;
-                          widget.controller.updateSet(
-                            widget.exerciseId,
-                            widget.set.id,
-                            durationSeconds: seconds,
-                          );
-                        });
-                      },
-                    )
-                  : _NumberField(
-                      controller: _repsController,
-                      semanticLabel: context.l10n.draftSetRepsSemantic(index),
-                      onChanged: (String value) {
-                        final int? reps = int.tryParse(value);
-                        if (reps == null || reps < 0 || reps > _maxReps) {
-                          _repsDebounce?.cancel();
-                          return;
-                        }
-                        _repsDebounce?.cancel();
-                        _repsDebounce = Timer(AppDuration.inputDebounce, () {
-                          if (!mounted) return;
-                          widget.controller.updateSet(
-                            widget.exerciseId,
-                            widget.set.id,
-                            reps: reps,
-                          );
-                        });
-                      },
+              SizedBox(
+                width: _rowMenuWidth,
+                child: PopupMenuButton<_SetAction>(
+                  tooltip: context.l10n.draftSetOptionsSemantic(index),
+                  icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                  padding: EdgeInsets.zero,
+                  onSelected: (_SetAction action) => switch (action) {
+                    _SetAction.details => _showSetDetails(),
+                    _SetAction.duplicate => widget.controller
+                        .duplicateSet(widget.exerciseId, widget.set.id),
+                    _SetAction.remove => widget.controller
+                        .removeSet(widget.exerciseId, widget.set.id),
+                  },
+                  itemBuilder: (_) => <PopupMenuEntry<_SetAction>>[
+                    PopupMenuItem<_SetAction>(
+                      value: _SetAction.details,
+                      child: ListTile(
+                        leading: const Icon(Icons.speed_outlined),
+                        title: Text(context.l10n.draftRpeAndRest),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            _SetDoneButton(
-              done: done,
-              index: index,
-              onChanged: (bool value) {
-                // Logging a set is the most frequent action in the app; give it
-                // the tick HapticsService.impact() exists for. Same switch as
-                // the timer's cues, so "Haptics off" means off everywhere.
-                if (value &&
-                    ref.read(timerSettingsControllerProvider).hapticsEnabled) {
-                  unawaited(ref.read(hapticsServiceProvider).impact());
-                }
-                widget.controller.updateSet(
-                  widget.exerciseId,
-                  widget.set.id,
-                  isCompleted: value,
-                );
-              },
-            ),
-            SizedBox(
-              width: _rowMenuWidth,
-              child: PopupMenuButton<_SetAction>(
-                tooltip: context.l10n.draftSetOptionsSemantic(index),
-                icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
-                padding: EdgeInsets.zero,
-                onSelected: (_SetAction action) => switch (action) {
-                  _SetAction.details => _showSetDetails(),
-                  _SetAction.duplicate => widget.controller
-                      .duplicateSet(widget.exerciseId, widget.set.id),
-                  _SetAction.remove => widget.controller
-                      .removeSet(widget.exerciseId, widget.set.id),
-                },
-                itemBuilder: (_) => <PopupMenuEntry<_SetAction>>[
-                  PopupMenuItem<_SetAction>(
-                    value: _SetAction.details,
-                    child: ListTile(
-                      leading: const Icon(Icons.speed_outlined),
-                      title: Text(context.l10n.draftRpeAndRest),
-                      contentPadding: EdgeInsets.zero,
+                    PopupMenuItem<_SetAction>(
+                      value: _SetAction.duplicate,
+                      child: ListTile(
+                        leading: const Icon(Icons.copy_outlined),
+                        title: Text(context.l10n.draftDuplicateSet),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                  ),
-                  PopupMenuItem<_SetAction>(
-                    value: _SetAction.duplicate,
-                    child: ListTile(
-                      leading: const Icon(Icons.copy_outlined),
-                      title: Text(context.l10n.draftDuplicateSet),
-                      contentPadding: EdgeInsets.zero,
+                    PopupMenuItem<_SetAction>(
+                      value: _SetAction.remove,
+                      child: ListTile(
+                        leading: const Icon(Icons.remove_circle_outline),
+                        title: Text(context.l10n.draftRemoveSet),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                  ),
-                  PopupMenuItem<_SetAction>(
-                    value: _SetAction.remove,
-                    child: ListTile(
-                      leading: const Icon(Icons.remove_circle_outline),
-                      title: Text(context.l10n.draftRemoveSet),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _showSetDetails() async {
-    final rpeController = TextEditingController(
-      text: widget.set.rpeTimes10 == null
-          ? ''
-          : (widget.set.rpeTimes10! / 10).toStringAsFixed(1),
+    final (int?, int?)? result = await showDialog<(int?, int?)>(
+      context: context,
+      builder: (_) => _SetDetailsDialog(
+        index: widget.index,
+        rpeTimes10: widget.set.rpeTimes10,
+        restSeconds: widget.set.restSeconds,
+      ),
     );
-    final restController = TextEditingController(
-      text: widget.set.restSeconds?.toString() ?? '',
+    if (!mounted || result == null) return;
+    // Not `updateSet`: an emptied field has to clear the value, and there a
+    // null means "unchanged".
+    await widget.controller.replaceSetDetails(
+      widget.exerciseId,
+      widget.set.id,
+      rpeTimes10: result.$1,
+      restSeconds: result.$2,
     );
-    try {
-      final result = await showDialog<(int?, int?)>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(context.l10n.draftSetDetailsTitle(widget.index)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: rpeController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration:
-                    InputDecoration(labelText: context.l10n.draftRpeField),
-              ),
-              TextField(
-                controller: restController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                    labelText: context.l10n.draftRestBeforeSetField),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.l10n.actionCancel)),
-            FilledButton(
-              onPressed: () {
-                final rpe = double.tryParse(rpeController.text);
-                final rest = int.tryParse(restController.text);
-                if ((rpe != null && (rpe < 1 || rpe > 10)) ||
-                    (rest != null && (rest < 0 || rest > 3600))) {
-                  return;
-                }
-                Navigator.pop(context, (
-                  rpe == null ? null : (rpe * 10).round(),
-                  rest,
-                ));
-              },
-              child: Text(context.l10n.actionSave),
-            ),
-          ],
-        ),
-      );
-      if (!mounted || result == null) return;
-      await widget.controller.updateSet(
-        widget.exerciseId,
-        widget.set.id,
-        rpeTimes10: result.$1,
-        restSeconds: result.$2,
-      );
-    } finally {
-      rpeController.dispose();
-      restController.dispose();
-    }
   }
 
   void _sync(TextEditingController controller, String value) {
@@ -938,6 +956,134 @@ class _DraftSetRowState extends ConsumerState<DraftSetRow> {
 }
 
 enum _SetAction { details, duplicate, remove }
+
+/// The "RPE and rest time" dialog of a [DraftSetRow]. Pops with
+/// `(rpeTimes10, restSeconds)`, or with nothing when cancelled. An empty
+/// field pops as null, which clears that value on the set.
+///
+/// A widget of its own so that it owns its controllers (ADR-5) and disposes
+/// them when it leaves the tree. They used to be created by the row and
+/// disposed as soon as `showDialog` returned, which is while the dialog is
+/// still animating out with both fields mounted. A rebuild in that window
+/// threw "TextEditingController was used after being disposed", and tearing
+/// the route down afterwards failed Flutter's `_dependents.isEmpty`
+/// assertion, replacing the whole screen with the error view.
+class _SetDetailsDialog extends StatefulWidget {
+  const _SetDetailsDialog({
+    required this.index,
+    required this.rpeTimes10,
+    required this.restSeconds,
+  });
+
+  /// 1-based position of the set, for the title.
+  final int index;
+  final int? rpeTimes10;
+  final int? restSeconds;
+
+  @override
+  State<_SetDetailsDialog> createState() => _SetDetailsDialogState();
+}
+
+class _SetDetailsDialogState extends State<_SetDetailsDialog> {
+  late final TextEditingController _rpeController = TextEditingController(
+    text: widget.rpeTimes10 == null
+        ? ''
+        : (widget.rpeTimes10! / 10).toStringAsFixed(1),
+  );
+  late final TextEditingController _restController = TextEditingController(
+    text: widget.restSeconds?.toString() ?? '',
+  );
+
+  @override
+  void dispose() {
+    _rpeController.dispose();
+    _restController.dispose();
+    super.dispose();
+  }
+
+  /// What the field said was wrong the last time Save was pressed. Cleared
+  /// as soon as that field is edited.
+  String? _rpeError;
+  String? _restError;
+
+  void _save() {
+    final AppLocalizations l10n = context.l10n;
+    final String rpeText = _rpeController.text.trim();
+    final String restText = _restController.text.trim();
+    // Empty is a valid answer ("no RPE"). Anything else has to be a number
+    // in range: text that does not parse must not be read as empty, or a
+    // typo would silently wipe the value.
+    final double? rpe = rpeText.isEmpty ? null : parseDecimalInput(rpeText);
+    final int? rest = restText.isEmpty ? null : parseIntegerInput(restText);
+    final bool rpeInvalid = rpeText.isNotEmpty &&
+        (rpe == null || !rpe.isFinite || rpe < _minRpe || rpe > _maxRpe);
+    final bool restInvalid = restText.isNotEmpty &&
+        (rest == null || rest < 0 || rest > _maxRestSeconds);
+    if (rpeInvalid || restInvalid) {
+      setState(() {
+        _rpeError = rpeInvalid ? l10n.draftRpeInvalid : null;
+        _restError = restInvalid ? l10n.draftRestInvalid : null;
+      });
+      return;
+    }
+    Navigator.pop(context, (rpe == null ? null : (rpe * 10).round(), rest));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(context.l10n.draftSetDetailsTitle(widget.index)),
+      // With an error line under each field and the keyboard up, the
+      // content can be taller than a small phone has room for.
+      scrollable: true,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextField(
+            controller: _rpeController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: <TextInputFormatter>[
+              const NumberInputFormatter.decimal(),
+            ],
+            decoration: InputDecoration(
+              labelText: context.l10n.draftRpeField,
+              errorText: _rpeError,
+              errorMaxLines: 3,
+            ),
+            onChanged: (_) {
+              if (_rpeError != null) setState(() => _rpeError = null);
+            },
+          ),
+          TextField(
+            controller: _restController,
+            keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              const NumberInputFormatter.integer(),
+            ],
+            decoration: InputDecoration(
+              labelText: context.l10n.draftRestBeforeSetField,
+              errorText: _restError,
+              errorMaxLines: 3,
+            ),
+            onChanged: (_) {
+              if (_restError != null) setState(() => _restError = null);
+            },
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: Text(context.l10n.actionSave),
+        ),
+      ],
+    );
+  }
+}
 
 /// Bare numeric field sized for a table cell.
 ///
@@ -974,9 +1120,10 @@ class _NumberField extends StatelessWidget {
           theme.textTheme.titleMedium ?? const TextStyle(),
         ),
         inputFormatters: <TextInputFormatter>[
-          FilteringTextInputFormatter.allow(
-            decimal ? RegExp(r'[0-9.]') : RegExp(r'[0-9]'),
-          ),
+          if (decimal)
+            const NumberInputFormatter.decimal()
+          else
+            const NumberInputFormatter.integer(),
         ],
         decoration: const InputDecoration(
           hintText: '0',

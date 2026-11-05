@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/formatters/date_formatters.dart';
+import '../../../../core/formatters/week_start.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 
@@ -13,6 +14,8 @@ import '../../../../core/theme/app_spacing.dart';
 class HistoryCalendar extends StatelessWidget {
   const HistoryCalendar({
     required this.visibleMonth,
+    required this.today,
+    required this.weekStart,
     required this.markedDates,
     required this.onMonthChanged,
     required this.onDayTap,
@@ -21,6 +24,14 @@ class HistoryCalendar extends StatelessWidget {
 
   /// Any date within the month to display — only year/month are used.
   final DateTime visibleMonth;
+
+  /// The current local date, from `todayProvider`. Passed in rather than
+  /// read from the clock so the "today" ring and the next-month limit move
+  /// when the day does, and so tests can pin the date.
+  final DateTime today;
+
+  /// The day the grid's first column is, from Settings.
+  final WeekStart weekStart;
 
   /// Date-only (`DateTime(y, m, d)`) dates that have at least one workout.
   final Set<DateTime> markedDates;
@@ -36,16 +47,14 @@ class HistoryCalendar extends StatelessWidget {
         () => DateFormat('MMMM yyyy', locale),
       );
 
-  bool get _isCurrentMonth {
-    final DateTime now = DateTime.now();
-    return visibleMonth.year == now.year && visibleMonth.month == now.month;
-  }
+  bool get _isCurrentMonth =>
+      visibleMonth.year == today.year && visibleMonth.month == today.month;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final DateTime today = _dateOnly(DateTime.now());
-    final List<DateTime?> cells = _gridDays(visibleMonth);
+    final DateTime todayDate = _dateOnly(today);
+    final List<DateTime?> cells = _gridDays(visibleMonth, weekStart);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -81,7 +90,7 @@ class HistoryCalendar extends StatelessWidget {
         ),
         Row(
           children: <Widget>[
-            for (final label in _weekdayLabels(context.localeName))
+            for (final label in _weekdayLabels(context.localeName, weekStart))
               Expanded(
                 child: Center(
                   child: Text(
@@ -102,7 +111,7 @@ class HistoryCalendar extends StatelessWidget {
                 Expanded(
                   child: _DayCell(
                     date: cells[week * 7 + weekday],
-                    isToday: cells[week * 7 + weekday] == today,
+                    isToday: cells[week * 7 + weekday] == todayDate,
                     isMarked: cells[week * 7 + weekday] != null &&
                         markedDates.contains(cells[week * 7 + weekday]),
                     onTap: onDayTap,
@@ -114,12 +123,13 @@ class HistoryCalendar extends StatelessWidget {
     );
   }
 
-  /// Monday-first grid cells for [month], padded with `null`s so the total
-  /// count is a multiple of 7. `null` cells render blank and ignore taps.
-  static List<DateTime?> _gridDays(DateTime month) {
+  /// Grid cells for [month] with [weekStart] in the first column, padded
+  /// with `null`s so the total count is a multiple of 7. `null` cells render
+  /// blank and ignore taps.
+  static List<DateTime?> _gridDays(DateTime month, WeekStart weekStart) {
     final DateTime first = DateTime(month.year, month.month, 1);
     final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-    final int leading = (first.weekday - DateTime.monday) % 7;
+    final int leading = weekStart.indexOf(first.weekday);
     final int totalCells = ((leading + daysInMonth + 6) ~/ 7) * 7;
     return [
       for (var i = 0; i < totalCells; i++)
@@ -129,12 +139,13 @@ class HistoryCalendar extends StatelessWidget {
     ];
   }
 
-  /// Locale-aware Mon-Sun labels, anchored to a known Monday (2024-01-01)
-  /// rather than hard-coding English names.
-  static List<String> _weekdayLabels(String locale) {
-    final DateFormat weekday = DateFormat.E(locale);
+  /// Locale-aware day labels in the order the week runs, anchored to a
+  /// known Monday (2024-01-01) rather than hard-coding English names.
+  static List<String> _weekdayLabels(String locale, WeekStart weekStart) {
+    final DateFormat format = DateFormat.E(locale);
     return [
-      for (var i = 0; i < 7; i++) weekday.format(DateTime(2024, 1, 1 + i)),
+      for (final int weekday in weekStart.weekdays)
+        format.format(DateTime(2024, 1, weekday)),
     ];
   }
 

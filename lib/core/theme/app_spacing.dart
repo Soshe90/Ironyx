@@ -48,8 +48,9 @@ abstract final class AppDuration {
   /// Longer than a normal snackbar on purpose. Discarding a workout throws
   /// away logged sets, and five seconds is not enough to notice the bar,
   /// read it, and reach the action — especially mid-session with a phone
-  /// in one hand. The snackbar's visible duration and the timer that
-  /// actually deletes the draft both read this value, so they cannot drift
-  /// apart and offer an Undo that no longer works.
+  /// in one hand. The snackbar's visible duration and the expiry of the
+  /// in-memory copy that Undo restores both read this value, so they cannot
+  /// drift apart and offer an Undo that no longer works. (The draft itself
+  /// is removed at once; see `ActiveWorkoutNotifier.discardWithUndo`.)
   static const Duration undoWindow = Duration(seconds: 12);
 }

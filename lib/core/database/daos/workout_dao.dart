@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../formatters/date_formatters.dart';
+import '../../formatters/week_start.dart';
 import '../app_database.dart';
 import '../tables/exercise_muscles.dart';
 import '../tables/exercises.dart';
@@ -155,14 +156,19 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Weekly volume aggregation — computed in SQL (ADR-1).
   /// Returns (week_start, total_volume_kg) for completed workouts, with
   /// untrained weeks zero-filled — see [_fillWeekGaps].
-  /// `since` is null for all-time (no lower bound).
-  Stream<List<WeeklyVolume>> watchWeeklyVolume({DateTime? since}) {
+  /// `since` is null for all-time (no lower bound). [weekStart] and
+  /// [utcOffset] decide which week a workout belongs to; see [_weekBucket].
+  Stream<List<WeeklyVolume>> watchWeeklyVolume({
+    DateTime? since,
+    WeekStart weekStart = WeekStart.monday,
+    Duration utcOffset = Duration.zero,
+  }) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
 
     return customSelect(
       '''
       SELECT
-        date(started_at, 'unixepoch', 'weekday 0', '-6 days') as week_start,
+        ${_weekBucket('started_at', weekStart, utcOffset)} as week_start,
         SUM(total_volume_kg) as total_volume_kg
       FROM workouts_table
       WHERE ended_at IS NOT NULL
@@ -183,6 +189,8 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
                 )
                 .toList(),
             since: since,
+            weekStart: weekStart,
+            utcOffset: utcOffset,
             weekStartOf: (WeeklyVolume w) => w.weekStart,
             zero: (DateTime week) =>
                 WeeklyVolume(weekStart: week, totalVolumeKg: 0),
@@ -192,14 +200,19 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
 
   /// Workout frequency by week — computed in SQL (ADR-1), with untrained
   /// weeks zero-filled (see [_fillWeekGaps]).
-  /// `since` is null for all-time (no lower bound).
-  Stream<List<WorkoutFrequency>> watchWorkoutFrequency({DateTime? since}) {
+  /// `since` is null for all-time (no lower bound). [weekStart] and
+  /// [utcOffset] decide which week a workout belongs to; see [_weekBucket].
+  Stream<List<WorkoutFrequency>> watchWorkoutFrequency({
+    DateTime? since,
+    WeekStart weekStart = WeekStart.monday,
+    Duration utcOffset = Duration.zero,
+  }) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
 
     return customSelect(
       '''
       SELECT
-        date(started_at, 'unixepoch', 'weekday 0', '-6 days') as week_start,
+        ${_weekBucket('started_at', weekStart, utcOffset)} as week_start,
         COUNT(*) as workout_count
       FROM workouts_table
       WHERE ended_at IS NOT NULL
@@ -220,12 +233,37 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
                 )
                 .toList(),
             since: since,
+            weekStart: weekStart,
+            utcOffset: utcOffset,
             weekStartOf: (WorkoutFrequency f) => f.weekStart,
             zero: (DateTime week) =>
                 WorkoutFrequency(weekStart: week, workoutCount: 0),
           ),
         );
   }
+
+  /// SQL for the first day, as `YYYY-MM-DD`, of the week [column] falls in.
+  ///
+  /// [column] holds epoch seconds. SQLite resolves those in UTC, so the
+  /// device's [utcOffset] is added first: without it a workout logged at
+  /// 00:30 on the first day of a week in UTC+3 is still the previous UTC
+  /// day and was counted in the week before. The offset is one constant for
+  /// the whole query, as in [watchWeekdayDistribution]: a daylight-saving
+  /// change inside the window only matters to a workout within an hour of
+  /// midnight on a week's first day.
+  ///
+  /// `'weekday N'` moves forward to the week's last day and `'-6 days'`
+  /// steps back to its first; see [WeekStart.sqliteLastWeekday].
+  ///
+  /// Both interpolated values are integers computed here, never text from
+  /// outside, so building the expression as a string cannot inject SQL.
+  static String _weekBucket(
+    String column,
+    WeekStart weekStart,
+    Duration utcOffset,
+  ) =>
+      "date($column + ${utcOffset.inSeconds}, 'unixepoch', "
+      "'weekday ${weekStart.sqliteLastWeekday}', '-6 days')";
 
   /// Emits an explicit zero row for every week in the queried window that
   /// contains no workouts.
@@ -250,6 +288,8 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   List<T> _fillWeekGaps<T>(
     List<T> rows, {
     required DateTime? since,
+    required WeekStart weekStart,
+    required Duration utcOffset,
     required DateTime Function(T) weekStartOf,
     required T Function(DateTime) zero,
   }) {
@@ -259,14 +299,20 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       for (final T row in rows) weekStartOf(row): row,
     };
 
-    DateTime cursor = since == null
-        ? weekStartOf(rows.first)
-        : DateFormatters.utcWeekStart(since);
+    // The same bucket the query filed its rows under, or the zero rows
+    // made here would sit between them instead of on them.
+    DateTime bucketOf(DateTime instant) => DateFormatters.weekBucketStart(
+          instant,
+          weekStart: weekStart,
+          utcOffset: utcOffset,
+        );
+
+    DateTime cursor = since == null ? weekStartOf(rows.first) : bucketOf(since);
     // Rows are ordered ascending, so the last one is the newest. Taking the
     // later of it and the current week keeps a future-dated workout (an
     // import artefact, or a device clock skew) inside the series instead of
     // silently truncating it away.
-    final DateTime currentWeek = DateFormatters.utcWeekStart(DateTime.now());
+    final DateTime currentWeek = bucketOf(DateTime.now());
     final DateTime lastWeek = weekStartOf(rows.last);
     final DateTime end = lastWeek.isAfter(currentWeek) ? lastWeek : currentWeek;
 
@@ -563,12 +609,17 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   }
 
   /// Weekly volume attributed to each exercise's primary muscle.
-  Stream<List<WeeklyMuscleGroupVolume>> watchWeeklyMuscleGroupVolume(
-      {DateTime? since}) {
+  /// [weekStart] and [utcOffset] decide which week a workout belongs to;
+  /// see [_weekBucket].
+  Stream<List<WeeklyMuscleGroupVolume>> watchWeeklyMuscleGroupVolume({
+    DateTime? since,
+    WeekStart weekStart = WeekStart.monday,
+    Duration utcOffset = Duration.zero,
+  }) {
     final whereSince = since == null ? '' : 'AND w.started_at >= ?';
     return customSelect(
         '''
-      SELECT date(w.started_at, 'unixepoch', 'weekday 0', '-6 days') AS week_start,
+      SELECT ${_weekBucket('w.started_at', weekStart, utcOffset)} AS week_start,
         m.id AS muscle_id, m.display_name AS muscle_name,
         SUM(ws.weight_kg * ws.reps) AS total_volume_kg
       FROM workout_sets_table ws
@@ -633,7 +684,8 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     });
   }
 
-  /// Monday-first distribution of completed workouts and distinct training days.
+  /// Distribution of completed workouts and distinct training days over the
+  /// seven weekdays, in the order a week beginning on [weekStart] runs.
   ///
   /// Days are resolved in UTC unless [utcOffset] is given: a workout logged
   /// at 00:30 local time in UTC+3 is still the previous UTC day, so a view
@@ -643,6 +695,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// midnight on the transition week.)
   Stream<List<WeekdayDistribution>> watchWeekdayDistribution({
     DateTime? since,
+    WeekStart weekStart = WeekStart.monday,
     Duration utcOffset = Duration.zero,
   }) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
@@ -670,7 +723,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
             trainingDayCount: r.read<int>('training_day_count'),
             workoutCount: r.read<int>('workout_count'));
       }
-      return [for (var day = 1; day <= 7; day++) byDay[day]!];
+      return [for (final int day in weekStart.weekdays) byDay[day]!];
     });
   }
 

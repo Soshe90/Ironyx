@@ -1,5 +1,6 @@
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/formatters/date_formatters.dart';
+import '../../../core/formatters/week_start.dart';
 
 const int defaultWeeklySessionTarget = 3;
 
@@ -19,9 +20,14 @@ class ConsistencySummary {
   final int hitTargetWeeks;
 }
 
+/// [weekStart] and [utcOffset] have to be the ones [weeks] was bucketed
+/// with (see `WorkoutDao.watchWorkoutFrequency`), so that "this week" names
+/// a bucket that exists in the series.
 ConsistencySummary calculateConsistency(
     {required List<WorkoutFrequency> weeks,
     required int targetSessionsPerWeek,
+    WeekStart weekStart = WeekStart.monday,
+    Duration utcOffset = Duration.zero,
     DateTime? now}) {
   if (weeks.isEmpty) {
     return ConsistencySummary(
@@ -44,8 +50,15 @@ ConsistencySummary calculateConsistency(
       run = 0;
     }
   }
-  final currentWeek = DateFormatters.utcWeekStart(now ?? DateTime.now());
-  final lastWeek = currentWeek.subtract(const Duration(days: 7));
+  final currentWeek = DateFormatters.weekBucketStart(
+    now ?? DateTime.now(),
+    weekStart: weekStart,
+    utcOffset: utcOffset,
+  );
+  // By calendar day, not by 168 hours: across a daylight-saving change that
+  // lands on 23:00 the day before, which equals no bucket, so the streak
+  // read as broken for that week.
+  final lastWeek = DateFormatters.previousWeek(currentWeek);
   int count(DateTime start) => ordered
       .where((w) => w.weekStart == start)
       .fold(0, (sum, w) => sum + w.workoutCount);
@@ -53,7 +66,7 @@ ConsistencySummary calculateConsistency(
   var current = 0;
   while (count(cursor) > 0) {
     current++;
-    cursor = cursor.subtract(const Duration(days: 7));
+    cursor = DateFormatters.previousWeek(cursor);
   }
 
   // `weeks` is zero-filled from the selected range's nominal start (see

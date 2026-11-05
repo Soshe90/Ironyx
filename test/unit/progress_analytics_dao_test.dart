@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/formatters/week_start.dart';
 
 void main() {
   late AppDatabase database;
@@ -358,5 +359,52 @@ void main() {
     final result = await dao.watchRestAnalytics().first;
     expect(result.single.averageRestSeconds, 90);
     expect(result.single.recordedSetCount, 1);
+  });
+
+  group('weekly muscle volume, first day of the week', () {
+    test('the week a workout belongs to follows the first day', () async {
+      // Sun 11 Jan 2026, noon UTC.
+      await insertWorkout(
+        id: 'sunday',
+        date: DateTime.utc(2026, 1, 11, 12),
+        exerciseId: 'push',
+        reps: 5,
+      );
+
+      final Map<WeekStart, DateTime> expected = <WeekStart, DateTime>{
+        WeekStart.monday: DateTime(2026, 1, 5),
+        WeekStart.sunday: DateTime(2026, 1, 11),
+        WeekStart.saturday: DateTime(2026, 1, 10),
+      };
+      for (final WeekStart start in WeekStart.values) {
+        final result =
+            await dao.watchWeeklyMuscleGroupVolume(weekStart: start).first;
+        expect(result.single.weekStart, expected[start], reason: '$start');
+        expect(result.single.totalVolumeKg, 100, reason: '$start');
+      }
+    });
+
+    test('and the device time, not UTC', () async {
+      // Sat 10 Jan 21:30 UTC is Sun 11 Jan 00:30 at UTC+3.
+      await insertWorkout(
+        id: 'late',
+        date: DateTime.utc(2026, 1, 10, 21, 30),
+        exerciseId: 'push',
+        reps: 5,
+      );
+
+      final utc = await dao
+          .watchWeeklyMuscleGroupVolume(weekStart: WeekStart.sunday)
+          .first;
+      final local = await dao
+          .watchWeeklyMuscleGroupVolume(
+            weekStart: WeekStart.sunday,
+            utcOffset: const Duration(hours: 3),
+          )
+          .first;
+
+      expect(utc.single.weekStart, DateTime(2026, 1, 4));
+      expect(local.single.weekStart, DateTime(2026, 1, 11));
+    });
   });
 }

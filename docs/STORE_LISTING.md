@@ -231,7 +231,7 @@ questionnaire (same answers as Data Safety above).
 | Claim in the copy | Status |
 |---|---|
 | "No account required. No internet required." | True — auth is optional and everything core is local |
-| "Pick from a library of 300+ exercises" | True — 301, seed v17 (the earlier plan said 150) |
+| "Pick from a library of 300+ exercises" | True — 304, seed v18 (the earlier plan said 150) |
 | "A built-in rest timer **with sound** and haptics" | **True on Android** as of 2026-09-20: three bundled cues (countdown, phase change, completion) play through `just_audio`, ducking other audio — confirmed in logcat on an Android 15 emulator's release build. Not yet heard on a physical device, and not checked on iOS at all. Re-verify both before claiming it for iOS |
 | "Ironyx does not run ads or analytics" | True today (no such SDK in `pubspec.yaml`). **Breaks if D2 adds Sentry** — crash reporting is not "analytics", but the privacy policy currently says "no crash-reporting service" too |
 | "Your local training log stays on your device unless you explicitly enable cloud backup" | True. Nothing uploads without tapping "Back up now" |

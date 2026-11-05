@@ -13,6 +13,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/services/clock.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -24,7 +25,6 @@ import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/sparkline.dart';
-import '../../../core/widgets/stat_strip.dart';
 import '../../../core/widgets/trend_badge.dart';
 import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../../tracker/domain/active_workout_notifier.dart';
@@ -141,17 +141,21 @@ const double _sparklineWidthWide = 200;
 
 /// Time-of-day greeting. Orients the user faster than a static wordmark,
 /// which they already know — they just opened the app.
-class _Greeting extends StatelessWidget {
+///
+/// Watches [localNowProvider] rather than reading the clock in `build()`,
+/// so it changes at noon and 18:00 and after a resume, not only when
+/// something else happens to rebuild the app bar.
+class _Greeting extends ConsumerWidget {
   const _Greeting();
 
   @override
-  Widget build(BuildContext context) {
-    final int hour = DateTime.now().hour;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final DayPart part = ref.watch(localNowProvider.select(DayPart.of));
     final AppLocalizations l10n = context.l10n;
-    final String greeting = switch (hour) {
-      < 12 => l10n.greetingMorning,
-      < 18 => l10n.greetingAfternoon,
-      _ => l10n.greetingEvening,
+    final String greeting = switch (part) {
+      DayPart.morning => l10n.greetingMorning,
+      DayPart.afternoon => l10n.greetingAfternoon,
+      DayPart.evening => l10n.greetingEvening,
     };
     return Text(greeting);
   }
@@ -169,6 +173,10 @@ class _TodayCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final draft = ref.watch(activeWorkoutProvider);
+    final DateTime today = ref.watch(todayProvider);
+    // Loading and failure both read as "no last workout" here; the Recent
+    // row below owns this query's loading and error states.
+    final Workout? lastWorkout = ref.watch(dashboardLastWorkoutProvider).value;
     final ThemeData theme = Theme.of(context);
     final bool inProgress = draft != null;
     final AppLocalizations l10n = context.l10n;
@@ -194,9 +202,7 @@ class _TodayCard extends ConsumerWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  DateFormatters.of(context)
-                      .dayHeadline(DateTime.now())
-                      .toUpperCase(),
+                  DateFormatters.of(context).dayHeadline(today).toUpperCase(),
                   style: AppTypography.eyebrow(
                     theme,
                     color: AppColors.workoutHeroAccent,
@@ -258,7 +264,15 @@ class _TodayCard extends ConsumerWidget {
           Text(
             inProgress
                 ? _draftSummary(l10n, draft.exercises.length, loggedSets)
-                : l10n.dashboardReadyToTrainCaption,
+                // How long since the last session is the one fact that
+                // bears on starting another. The fixed sentence it replaces
+                // was read once and never again.
+                : lastWorkout == null
+                    ? l10n.dashboardReadyToTrainCaption
+                    : l10n.dashboardLastTrained(
+                        DateFormatters.of(context)
+                            .relativeDay(lastWorkout.startedAt, now: today),
+                      ),
             style: AppTypography.caption(theme).copyWith(
               color: AppColors.workoutHeroCaption,
             ),
@@ -270,35 +284,15 @@ class _TodayCard extends ConsumerWidget {
                 Expanded(child: _primaryAction(context, l10n, inProgress)),
                 if (!inProgress) ...<Widget>[
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.workoutHeroCaption,
-                        side: const BorderSide(
-                          color: AppColors.workoutHeroAccent,
-                        ),
-                      ),
-                      onPressed: () => context.goNamed(Routes.trackerName),
-                      icon: const Icon(Icons.event_note_outlined),
-                      label: Text(l10n.dashboardStartFromProgram),
-                    ),
-                  ),
+                  Expanded(child: _secondaryAction(context, l10n)),
                 ],
               ],
             )
           else ...<Widget>[
             _primaryAction(context, l10n, inProgress),
             if (!inProgress) ...<Widget>[
-              const SizedBox(height: AppSpacing.sm),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.workoutHeroCaption,
-                  side: const BorderSide(color: AppColors.workoutHeroAccent),
-                ),
-                onPressed: () => context.goNamed(Routes.trackerName),
-                icon: const Icon(Icons.event_note_outlined),
-                label: Text(l10n.dashboardStartFromProgram),
-              ),
+              const SizedBox(height: AppSpacing.xs),
+              _secondaryAction(context, l10n),
             ],
           ],
         ],
@@ -324,6 +318,20 @@ class _TodayCard extends ConsumerWidget {
     );
   }
 
+  /// The other way to begin. A text button, not a second outlined one in
+  /// the accent colour: two bordered buttons of equal weight made the card
+  /// ask a question before it offered an action.
+  Widget _secondaryAction(BuildContext context, AppLocalizations l10n) =>
+      TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.workoutHeroCaption,
+          minimumSize: const Size.fromHeight(AppSpacing.minTapTarget),
+        ),
+        onPressed: () => context.goNamed(Routes.trackerName),
+        icon: const Icon(Icons.event_note_outlined),
+        label: Text(l10n.dashboardStartFromProgram),
+      );
+
   String _draftSummary(AppLocalizations l10n, int exercises, int sets) {
     if (exercises == 0) return l10n.dashboardNoExercisesYet;
     return l10n.dashboardDraftSummary(
@@ -346,6 +354,7 @@ class _ThisWeekSection extends ConsumerWidget {
     final Profile? profile = ref.watch(dashboardProfileProvider).value;
     final int weeklyTarget = profile?.weeklySessionTarget ?? 3;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final DateTime today = ref.watch(todayProvider);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final AppLocalizations l10n = context.l10n;
@@ -392,6 +401,7 @@ class _ThisWeekSection extends ConsumerWidget {
               snapshot: s,
               weeklyTarget: weeklyTarget,
               weekdayAsync: weekdayAsync,
+              today: today,
               unit: unit,
               scheme: scheme,
             ),
@@ -407,6 +417,7 @@ class _WeekBody extends StatelessWidget {
     required this.snapshot,
     required this.weeklyTarget,
     required this.weekdayAsync,
+    required this.today,
     required this.unit,
     required this.scheme,
   });
@@ -414,6 +425,7 @@ class _WeekBody extends StatelessWidget {
   final WeekSnapshot snapshot;
   final int weeklyTarget;
   final AsyncValue<List<WeekdayDistribution>> weekdayAsync;
+  final DateTime today;
   final WeightUnit unit;
   final ColorScheme scheme;
 
@@ -446,8 +458,8 @@ class _WeekBody extends StatelessWidget {
             completed: snapshot.sessions,
             target: weeklyTarget,
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _WeeklyBreakdown(asyncValue: weekdayAsync),
+          const SizedBox(height: AppSpacing.md),
+          _WeeklyBreakdown(asyncValue: weekdayAsync, today: today),
         ],
       );
     }
@@ -498,6 +510,16 @@ class _WeekBody extends StatelessWidget {
                       ],
                     ],
                   ),
+                  // What the badge's percentage is a percentage of.
+                  if (previous > 0) ...<Widget>[
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      l10n.dashboardLastWeekVolume(
+                        UnitFormatters.volume(previous, unit, context.l10n),
+                      ),
+                      style: AppTypography.caption(theme),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -522,31 +544,13 @@ class _WeekBody extends StatelessWidget {
           completed: snapshot.sessions,
           target: weeklyTarget,
         ),
-        const SizedBox(height: AppSpacing.lg),
-        _WeeklyBreakdown(asyncValue: weekdayAsync),
-        const SizedBox(height: AppSpacing.lg),
-        Divider(height: 1, color: scheme.outlineVariant),
-        const SizedBox(height: AppSpacing.lg),
-        StatStrip(
-          stats: <Stat>[
-            Stat(
-              label: l10n.dashboardStatSessions,
-              value: '${snapshot.sessions}',
-            ),
-            Stat(
-              label: l10n.dashboardStatStreak,
-              value: snapshot.streakWeeks == 0
-                  ? '—'
-                  : l10n.dashboardStreakWeeks(snapshot.streakWeeks),
-            ),
-            Stat(
-              label: l10n.dashboardStatLastWeek,
-              value: previous == 0
-                  ? '—'
-                  : UnitFormatters.volume(previous, unit, context.l10n),
-            ),
-          ],
-        ),
+        // The day strip sits directly under the goal: together they are
+        // one statement, how many sessions and on which days. A row of
+        // three stats used to follow; it repeated the session count a
+        // third time, and its other two figures have better homes (last
+        // week under the volume, the streak as a Progress tile).
+        const SizedBox(height: AppSpacing.md),
+        _WeeklyBreakdown(asyncValue: weekdayAsync, today: today),
       ],
     );
   }
@@ -560,9 +564,12 @@ class _WeekBody extends StatelessWidget {
 }
 
 class _WeeklyBreakdown extends StatelessWidget {
-  const _WeeklyBreakdown({required this.asyncValue});
+  const _WeeklyBreakdown({required this.asyncValue, required this.today});
 
   final AsyncValue<List<WeekdayDistribution>> asyncValue;
+
+  /// Decides which cell is today and which days have not come yet.
+  final DateTime today;
 
   @override
   Widget build(BuildContext context) => asyncValue.when(
@@ -574,38 +581,71 @@ class _WeeklyBreakdown extends StatelessWidget {
           context.l10n.metricCouldNotLoad,
           style: AppTypography.caption(Theme.of(context)),
         ),
-        data: (days) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              context.l10n.progressTrainingDaysTitle,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                for (final WeekdayDistribution day in days)
-                  Expanded(child: _WeekdayCell(day: day)),
-              ],
-            ),
-          ],
-        ),
+        data: (days) {
+          final int todayIndex = days.indexWhere(
+            (WeekdayDistribution d) => d.weekday == today.weekday,
+          );
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              for (int i = 0; i < days.length; i++)
+                Expanded(
+                  child: _WeekdayCell(
+                    day: days[i],
+                    isToday: i == todayIndex,
+                    isFuture: todayIndex >= 0 && i > todayIndex,
+                  ),
+                ),
+            ],
+          );
+        },
       );
 }
 
 const double _dayMarkerSize = 32;
 
+/// One day of the current week.
+///
+/// Four states, so the strip can be read without counting from its edge:
+/// trained (filled, checked), today and not yet trained (a ring in the
+/// brand colour), a past day without training (a grey disc) and a day still
+/// to come (an outline). Before this the last two looked the same, which
+/// made every Monday look like a week of missed sessions.
 class _WeekdayCell extends StatelessWidget {
-  const _WeekdayCell({required this.day});
+  const _WeekdayCell({
+    required this.day,
+    required this.isToday,
+    required this.isFuture,
+  });
 
   final WeekdayDistribution day;
+  final bool isToday;
+  final bool isFuture;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final bool trained = day.trainingDayCount > 0;
+    final BoxDecoration marker = trained
+        ? BoxDecoration(color: scheme.primary, shape: BoxShape.circle)
+        : isToday
+            ? BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: scheme.primary,
+                  width: AppSpacing.xxs,
+                ),
+              )
+            : isFuture
+                ? BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: scheme.outlineVariant),
+                  )
+                : BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                  );
     final String key = switch (day.weekday) {
       DateTime.monday => 'monday',
       DateTime.tuesday => 'tuesday',
@@ -616,12 +656,15 @@ class _WeekdayCell extends StatelessWidget {
       _ => 'sunday',
     };
 
+    final String summary = context.l10n.progressWeekdaySemantic(
+      context.l10n.progressWeekdayFull(key),
+      day.trainingDayCount,
+      day.workoutCount,
+    );
     return Semantics(
-      label: context.l10n.progressWeekdaySemantic(
-        context.l10n.progressWeekdayFull(key),
-        day.trainingDayCount,
-        day.workoutCount,
-      ),
+      // The ring is the only visual sign of today, so it is said as well:
+      // after the day's own summary, which is what the label is found by.
+      label: isToday ? '$summary. ${context.l10n.commonToday}' : summary,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
         child: Column(
@@ -629,13 +672,10 @@ class _WeekdayCell extends StatelessWidget {
             // Not interactive, so no 48dp minimum; seven of them must also
             // fit a 360dp card, where a 48dp marker gets squeezed non-square.
             Container(
+              key: ValueKey<String>('weekday-marker-$key'),
               width: _dayMarkerSize,
               height: _dayMarkerSize,
-              decoration: BoxDecoration(
-                color:
-                    trained ? scheme.primary : scheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
-              ),
+              decoration: marker,
               child: trained
                   ? Icon(Icons.check, size: 18, color: scheme.onPrimary)
                   : null,
@@ -643,7 +683,12 @@ class _WeekdayCell extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               context.l10n.progressWeekdayShort(key),
-              style: theme.textTheme.labelSmall,
+              style: isToday
+                  ? theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w700,
+                    )
+                  : theme.textTheme.labelSmall,
               textAlign: TextAlign.center,
             ),
           ],
@@ -665,7 +710,6 @@ class _SessionGoal extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
     final AppLocalizations l10n = context.l10n;
     final int safeTarget = target.clamp(1, 7);
-    final double progress = (completed / safeTarget).clamp(0.0, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,20 +732,39 @@ class _SessionGoal extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        LinearProgressIndicator(
-          value: progress,
-          // Height comes from `progressIndicatorTheme`; a pill radius gives
-          // the same fully rounded ends at any height.
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          backgroundColor: scheme.surfaceContainerHighest,
-          color: scheme.primary,
+        // One segment per session of the target. Sessions are whole things:
+        // a continuous bar a third full says less than one of three
+        // segments lit. The count beside the label is the text of it.
+        ExcludeSemantics(
+          child: Row(
+            children: <Widget>[
+              for (int i = 0; i < safeTarget; i++) ...<Widget>[
+                if (i > 0) const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: AnimatedContainer(
+                    key: ValueKey<String>('session-goal-segment-$i'),
+                    duration: AppDuration.normal,
+                    height: AppSpacing.sm,
+                    decoration: BoxDecoration(
+                      color: i < completed
+                          ? scheme.primary
+                          : scheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-/// Priority three: the two progress signals worth surfacing off-screen.
+/// Priority three: four progress signals worth surfacing off-screen, as
+/// an even two-by-two. (It was two tiles and a third stretched full width
+/// under them, with its one short figure adrift in the middle.)
 class _ProgressSection extends StatelessWidget {
   const _ProgressSection();
 
@@ -720,7 +783,14 @@ class _ProgressSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        const _AverageDurationCard(),
+        const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: _StreakCard()),
+            SizedBox(width: AppSpacing.md),
+            Expanded(child: _AverageDurationCard()),
+          ],
+        ),
       ],
     );
   }
@@ -893,9 +963,10 @@ class _LastTimerRow extends ConsumerWidget {
                 '${DateFormatters.of(context).relativeDay(sessionAsync.value!.startedAt)}',
         value: sessionAsync.value?.actualDurationSeconds == null
             ? null
-            : UnitFormatters.durationShort(
+            // As a clock, minutes and seconds. In whole minutes a
+            // twenty-second timer read "0m".
+            : UnitFormatters.duration(
                 Duration(seconds: sessionAsync.value!.actualDurationSeconds!),
-                context.l10n,
               ),
       ),
     );
@@ -920,7 +991,10 @@ class _OneRmCard extends ConsumerWidget {
       error: oneRmAsync.error,
       metric: oneRmAsync.value == null
           ? null
-          : UnitFormatters.weight(
+          // Rounded like every other estimate in the app. "96.25 kg"
+          // claimed a precision the Epley formula does not have, and
+          // disagreed with the "96 kg" Progress shows for the same lift.
+          : UnitFormatters.estimate(
               oneRmAsync.value!.currentKg, unit, context.l10n),
       caption: oneRmAsync.value == null
           ? null
@@ -942,6 +1016,28 @@ class _OneRmCard extends ConsumerWidget {
         OneRMTrend.down => TrendDirection.down,
         OneRMTrend.flat => TrendDirection.flat,
       };
+}
+
+/// Consecutive trained weeks, from the same snapshot as the week card.
+class _StreakCard extends ConsumerWidget {
+  const _StreakCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<WeekSnapshot> snapshot =
+        ref.watch(dashboardWeekSnapshotProvider);
+    final int weeks = snapshot.value?.streakWeeks ?? 0;
+
+    return SummaryCard(
+      title: context.l10n.dashboardStatStreak,
+      icon: Icons.local_fire_department_outlined,
+      onTap: () => context.goNamed(Routes.progressName),
+      isLoading: snapshot.isLoading,
+      error: snapshot.error,
+      metric: weeks == 0 ? null : context.l10n.dashboardStreakWeeks(weeks),
+      emptyCaption: context.l10n.dashboardStreakEmpty,
+    );
+  }
 }
 
 class _AverageDurationCard extends ConsumerWidget {
