@@ -30,8 +30,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **764 passed, 1 skipped, 0 failed** (2026-11-05), also
-  under `TZ=PST8PDT` (UTC−8) and `TZ=NZT-12` (UTC+12).
+- `flutter test`: **843 passed, 1 skipped, 0 failed** (2026-11-05), also
+  under `TZ=PST8PDT` (UTC−8), `TZ=NZT-12` (UTC+12) and `TZ=IST-5:30`.
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -63,9 +63,33 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 - Fixed 2026-11-05: Personal details logged the weight under the UTC date,
   so a weight saved between midnight and 03:00 in Baghdad went to
   yesterday. It uses the local day now.
-- CI runs the three calendar-day test files in three more time zones
-  (2026-11-05; the step itself has not run yet). Locally, on Windows, the
-  equivalent is `TZ=PST8PDT flutter test` (three-letter zone names only).
+- CI runs the calendar-day and week test files in three more time zones
+  (2026-11-05; the step passed with the calendar-day files and has not yet
+  run with the week files). Locally, on Windows, the equivalent is
+  `TZ=PST8PDT flutter test` (three-letter zone names only). That gives a
+  fixed offset: Windows cannot simulate a zone that changes its clocks, so
+  the clock-change tests are only meaningful on CI.
+- Added 2026-11-05: **Settings → Week starts on** (Saturday, Sunday or
+  Monday; Monday until chosen, so nothing regroups on update). It feeds the
+  weekly totals and streaks, the dashboard week card and day strip, the
+  history calendar and the Progress weekday chart, through one value
+  (`WeekStart`, `weekStartControllerProvider`). Stored on the device like
+  the weight unit: not in exports or cloud backups, so a restore on a new
+  phone starts at Monday. Nothing is stored by week, so switching only
+  regroups what is shown.
+- Changed 2026-11-05, with it: weekly totals, streaks and the Progress
+  weekday chart were grouped by UTC weeks and days while the dashboard used
+  the phone's time. At UTC+3 a workout between midnight and 03:00 on a
+  week's first day was counted in the week before. They all use the
+  phone's time now, so some past workouts near a week boundary moved to the
+  neighbouring week on the charts. The offset is one constant per query: a
+  workout within an hour of midnight on a week's first day, in a season
+  with the other clock setting, can still land a day off.
+- Fixed 2026-11-05, reasoned and **not yet seen failing or passing in a
+  zone that changes its clocks**: "last week" and the weekly streak stepped
+  back 168 hours, which lands on 23:00 the day before across a clock
+  change, so the streak broke for that week. They step by calendar week
+  now. Iraq has no clock changes, so the owner's phone never showed it.
 - **Open, found 2026-11-05:** number fields read a decimal comma ("82,5")
   as not a number, and the set rows' fields drop the comma as it is typed.
   Not checked what the Arabic keyboard on the owner's phone sends.
