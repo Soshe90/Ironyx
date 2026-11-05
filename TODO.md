@@ -64,8 +64,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   so a weight saved between midnight and 03:00 in Baghdad went to
   yesterday. It uses the local day now.
 - CI runs the calendar-day and week test files in three more time zones
-  (2026-11-05; the step passed with the calendar-day files and has not yet
-  run with the week files). Locally, on Windows, the equivalent is
+  (2026-11-05; the step passes). Locally, on Windows, the equivalent is
   `TZ=PST8PDT flutter test` (three-letter zone names only). That gives a
   fixed offset: Windows cannot simulate a zone that changes its clocks, so
   the clock-change tests are only meaningful on CI.
@@ -85,11 +84,13 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   neighbouring week on the charts. The offset is one constant per query: a
   workout within an hour of midnight on a week's first day, in a season
   with the other clock setting, can still land a day off.
-- Fixed 2026-11-05, reasoned and **not yet seen failing or passing in a
-  zone that changes its clocks**: "last week" and the weekly streak stepped
+- Fixed 2026-11-05: "last week" and the weekly streak stepped
   back 168 hours, which lands on 23:00 the day before across a clock
   change, so the streak broke for that week. They step by calendar week
   now. Iraq has no clock changes, so the owner's phone never showed it.
+  The tests for it pass on CI under America/Los_Angeles and
+  Pacific/Auckland, which change their clocks. The old code was reasoned to
+  fail there, not run there.
 - **Open, found 2026-11-05:** number fields read a decimal comma ("82,5")
   as not a number, and the set rows' fields drop the comma as it is typed.
   Not checked what the Arabic keyboard on the owner's phone sends.
