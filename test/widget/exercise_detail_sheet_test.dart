@@ -47,15 +47,15 @@ void main() {
   testWidgets(
       'an exercise with no picture shows its equipment icon clear of the '
       'YouTube search button', (tester) async {
-    // The exercises written for Ironyx ship no images.
+    // User-created exercises can still have no images.
     final DateTime now = DateTime(2026, 11, 5);
     await pumpTarget(
       tester,
       load: () async => ExerciseDetail(
         exercise: Exercise(
           id: 'bench',
-          slug: 'banded-hip-abduction',
-          name: 'Banded Hip Abduction',
+          slug: 'custom-band-exercise',
+          name: 'Custom Band Exercise',
           description: '',
           category: ExerciseCategory.strength,
           difficulty: Difficulty.beginner,
@@ -63,8 +63,8 @@ void main() {
           isUnilateral: false,
           isBodyweight: false,
           isTimeBased: false,
-          seedVersion: 18,
-          isCustom: false,
+          seedVersion: 0,
+          isCustom: true,
           createdAt: now,
           updatedAt: now,
         ),

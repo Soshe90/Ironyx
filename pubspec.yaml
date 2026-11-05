@@ -85,6 +85,7 @@ flutter:
     # upstream's folder-per-exercise layout. See
     # scripts/build_exercise_seed.py, which writes them.
     - assets/images/exercises/free_exercise_db/
+    - assets/images/exercises/ironyx/
     # Font licence, shown in Settings -> About -> Open-source licenses.
     - assets/fonts/OFL.txt
 
