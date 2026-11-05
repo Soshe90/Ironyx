@@ -3,6 +3,7 @@ import 'package:excel/excel.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
+import '../database/daos/exercise_dao.dart';
 import '../database/daos/workout_dao.dart';
 
 import '../formatters/unit_formatters.dart';
@@ -23,7 +24,10 @@ class WorkoutXlsxImportService {
     required WeightUnit sourceUnit,
   }) async {
     final excel = Excel.decodeBytes(bytes);
-    final exercises = await _exerciseNameToId(db);
+    // Names and aliases: the workbooks use coaching names ("Flat Dumbbell
+    // Press") for catalogue exercises ("Dumbbell Bench Press"). The aliases
+    // live in the seed, where the builder checks no two exercises share one.
+    final exercises = await ExerciseDao(db).exerciseIdsByLookupName();
     final workouts = <ImportedHistoricalWorkout>[];
     final unknown = <String>{};
 
@@ -47,8 +51,7 @@ class WorkoutXlsxImportService {
           final weight = _number(_rowCell(row, groupStart + 1));
 
           if (candidate != null && reps == null && weight == null) {
-            final exerciseId = exercises[_normalize(candidate)] ??
-                exercises[_historicalAliases[_normalize(candidate)]];
+            final exerciseId = exercises[normalizeExerciseName(candidate)];
             if (exerciseId == null) unknown.add(candidate);
             currentExercise = ImportedHistoricalExercise(
               exerciseId: exerciseId,
@@ -169,12 +172,14 @@ class WorkoutXlsxImportService {
             continue;
           }
           final id = _uuid.v4();
-          // `_normalize` strips everything outside `[a-z0-9]`, so a non-Latin
-          // name (e.g. Arabic) normalizes to the empty string — the id
-          // suffix still keeps the slug unique, but `-imported-a1b2c3d4`
-          // with no prefix reads as a display bug rather than a name that
-          // just doesn't romanize.
-          final String normalizedName = _normalize(exercise.name);
+          // Only `[a-z0-9]` survives into the slug, so a non-Latin name
+          // (e.g. Arabic) leaves nothing — the id suffix still keeps the
+          // slug unique, but `-imported-a1b2c3d4` with no prefix reads as a
+          // display bug rather than a name that just doesn't romanize.
+          final String normalizedName = exercise.name
+              .toLowerCase()
+              .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+              .trim();
           final String slugPrefix =
               normalizedName.isEmpty ? 'exercise' : normalizedName;
           await db.into(db.exercisesTable).insert(
@@ -253,18 +258,6 @@ class WorkoutXlsxImportService {
     });
   }
 
-  Future<Map<String, String>> _exerciseNameToId(AppDatabase db) async {
-    final rows = await db
-        .customSelect(
-          'SELECT id, name FROM exercises_table',
-        )
-        .get();
-    return {
-      for (final row in rows)
-        _normalize(row.read<String>('name')): row.read<String>('id'),
-    };
-  }
-
   static const List<int> _workoutGroupColumns = [3, 8, 13, 18, 23, 28, 33, 38];
 
   static Data? _rowCell(List<Data?>? row, int column) {
@@ -318,39 +311,8 @@ class WorkoutXlsxImportService {
     };
   }
 
-  static String _normalize(String value) =>
-      value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
-
   static double _toKg(double value, WeightUnit sourceUnit) =>
       sourceUnit == WeightUnit.lb ? value * 0.45359237 : value;
-
-  /// The workbook uses coaching names while the catalogue uses canonical
-  /// exercise names. These mappings are deliberately explicit rather than
-  /// fuzzy, so an import can never silently choose the wrong movement.
-  static const Map<String, String> _historicalAliases = {
-    'banded push ups': 'push up',
-    'barbell romanian deadlift': 'romanian deadlift',
-    'bird dog': 'bird dog',
-    'bulgarian split squat quad focus': 'bulgarian split squat',
-    'chest supported machine row': 'seated cable row',
-    'cross cable tricep extensions': 'tricep pushdown',
-    'dumbbell lateral raise': 'lateral raise',
-    'dumbbell spider curls': 'dumbbell curl',
-    'flat dumbbell press': 'dumbbell bench press',
-    'hyperextensions back hamstring': 'back extension',
-    'lean in lateral raise': 'lateral raise',
-    'leg press calf raise': 'calf raise',
-    'low incline dumbbell press': 'dumbbell bench press',
-    'lying leg curls': 'leg curl',
-    'quad focused leg press': 'leg press',
-    'rkc plank': 'plank',
-    'seated cable row mid upper back': 'seated cable row',
-    'seated leg extensions': 'leg extension',
-    'seated weighted calf raise': 'seated calf raise',
-    'standing barbell overhead press': 'overhead press',
-    'standing face pulls': 'face pull',
-    'standing mid chest cable fly': 'cable fly',
-  };
 
   static const Set<String> _effortLabels = {
     'Easy - I could have done 3 more reps',

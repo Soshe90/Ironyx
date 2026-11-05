@@ -23,7 +23,7 @@ has been run on a physical device, and nothing has been run on iOS at all.
 |---|---|---|
 | M0 | Repo, tooling, CI, ADRs | done |
 | M1 | Theme, router shell, shared widgets | done (teal brand — decision D3) |
-| M2 | Drift schema + Library (301 exercises, public-domain media) | done |
+| M2 | Drift schema + Library (304 exercises: 301 public-domain, 3 written for the app) | done |
 | M3 | Tracker: workouts, history, calendar, programs, XLSX/CSV import | done in code; real-device validation open |
 | M4 | Timer: wall-clock engine, presets, notifications, haptics, bundled sound cues | core done; cues confirmed on an emulator only; physical-device and iOS validation open |
 | M5 | Progress & analytics: insights, consistency, strength, RPE/rest | done |

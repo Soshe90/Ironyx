@@ -1,5 +1,5 @@
 {
-  "seedVersion": 17,
+  "seedVersion": 18,
   "muscles": [
     {
       "id": "chest",
@@ -400,7 +400,9 @@
         "Then, as you breathe out, use your chest to push the dumbbells up. Lock your arms at the top of the lift and squeeze your chest, hold for a second and then begin coming down slowly. Tip: Ideally, lowering the weight should take about twice as long as raising it.",
         "Repeat the movement for the prescribed amount of repetitions of your training program."
       ],
-      "aliases": [],
+      "aliases": [
+        "Flat Dumbbell Press"
+      ],
       "media": [
         {
           "type": "image",
@@ -478,7 +480,9 @@
         "Repeat the movement for the prescribed amount of repetitions.",
         "When you are done, place the dumbbells back on your thighs and then on the floor. This is the safest manner to release the dumbbells."
       ],
-      "aliases": [],
+      "aliases": [
+        "Low Incline Dumbbell Press"
+      ],
       "media": [
         {
           "type": "image",
@@ -613,7 +617,9 @@
         "Return your arms back to the starting position as you squeeze your chest muscles and breathe out. Tip: Make sure to use the same arc of motion used to lower the weights.",
         "Hold for a second at the contracted position and repeat the movement for the prescribed amount of repetitions."
       ],
-      "aliases": [],
+      "aliases": [
+        "Dumbbell Fly"
+      ],
       "media": [
         {
           "type": "image",
@@ -749,7 +755,10 @@
         "Hold for a second at the starting position and repeat the movement for the prescribed amount of repetitions."
       ],
       "aliases": [
-        "Cable Crossover"
+        "Cable Crossover",
+        "Standing Mid-Chest Cable Fly",
+        "Seated Mid-Chest Cable Fly",
+        "Standing High To Low Cable Fly"
       ],
       "media": [
         {
@@ -1240,7 +1249,8 @@
         "After a brief pause at the top contracted position, you can begin to lower yourself downward again for as many repetitions as needed."
       ],
       "aliases": [
-        "Pushups"
+        "Pushups",
+        "Banded Push-Ups"
       ],
       "media": [
         {
@@ -2613,7 +2623,9 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Bent Over Barbell Row"
+        "Bent Over Barbell Row",
+        "Barbell Row (mid/upper back)",
+        "Barbell Row (lat focus)"
       ],
       "media": [
         {
@@ -3123,7 +3135,9 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Seated Cable Rows"
+        "Seated Cable Rows",
+        "Lat Focused Cable Row",
+        "Seated Cable Row (mid/upper back)"
       ],
       "media": [
         {
@@ -3845,7 +3859,9 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Hyperextensions (Back Extensions)"
+        "Hyperextensions (Back Extensions)",
+        "Hyperextensions (glute focus)",
+        "Hyperextensions (back/hamstring)"
       ],
       "media": [
         {
@@ -4439,7 +4455,9 @@
         "Pull the handles towards your torso, retracting your shoulder blades as you flex the elbow.",
         "Pause at the bottom of the motion, and then slowly return the handles to the starting position. For multiple repetitions, avoid completely returning the weight to the stops to keep tension on the muscles being worked."
       ],
-      "aliases": [],
+      "aliases": [
+        "Chest Supported Machine Row"
+      ],
       "media": [
         {
           "type": "image",
@@ -4704,7 +4722,8 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Standing Military Press"
+        "Standing Military Press",
+        "Standing Barbell Overhead Press"
       ],
       "media": [
         {
@@ -5184,7 +5203,8 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Side Lateral Raise"
+        "Side Lateral Raise",
+        "Dumbbell Lateral Raise"
       ],
       "media": [
         {
@@ -5654,7 +5674,9 @@
       "instructions": [
         "Facing a high pulley with a rope or dual handles attached, pull the weight directly towards your face, separating your hands as you do so. Keep your upper arms parallel to the ground."
       ],
-      "aliases": [],
+      "aliases": [
+        "Standing Face Pulls"
+      ],
       "media": [
         {
           "type": "image",
@@ -6162,7 +6184,9 @@
         "Maintaining strict technique with no leg drive or leaning back, extend through the elbow to raise the weights together directly above your head.",
         "Pause, and slowly return the weight to the starting position."
       ],
-      "aliases": [],
+      "aliases": [
+        "Standing Dumbbell Shoulder Press"
+      ],
       "media": [
         {
           "type": "image",
@@ -6946,7 +6970,8 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Dumbbell Bicep Curl"
+        "Dumbbell Bicep Curl",
+        "Dumbbell Spider Curls"
       ],
       "media": [
         {
@@ -7014,7 +7039,9 @@
         "Slowly begin to bring the dumbbells back to starting position as your breathe in.",
         "Repeat for the recommended amount of repetitions."
       ],
-      "aliases": [],
+      "aliases": [
+        "Incline Dumbbell Curls"
+      ],
       "media": [
         {
           "type": "image",
@@ -8259,7 +8286,9 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Triceps Pushdown - Rope Attachment"
+        "Triceps Pushdown - Rope Attachment",
+        "Cable Pushdowns",
+        "Cross Cable Tricep Extensions"
       ],
       "media": [
         {
@@ -8533,7 +8562,8 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Cable Rope Overhead Triceps Extension"
+        "Cable Rope Overhead Triceps Extension",
+        "Overhead Rope Extensions"
       ],
       "media": [
         {
@@ -9483,7 +9513,8 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Barbell Squat"
+        "Barbell Squat",
+        "Barbell Back Squat"
       ],
       "media": [
         {
@@ -10238,7 +10269,9 @@
         "Pushing mainly with the heels of your feet and using the quadriceps go back to the starting position as you exhale.",
         "Repeat for the recommended amount of repetitions and ensure to lock the safety pins properly once you are done. You do not want that platform falling on you fully loaded."
       ],
-      "aliases": [],
+      "aliases": [
+        "Quad-Focused Leg Press"
+      ],
       "media": [
         {
           "type": "image",
@@ -10306,7 +10339,8 @@
         "Repeat for the recommended amount of times."
       ],
       "aliases": [
-        "Leg Extensions"
+        "Leg Extensions",
+        "Seated Leg Extensions"
       ],
       "media": [
         {
@@ -10588,7 +10622,9 @@
         "Once you are standing completely straight up, lower the bar by pushing the hips back, only slightly bending the knees, unlike when squatting. Tip: Take a deep breath at the start of the movement and keep your chest up. Hold your breath as you lower and exhale as you complete the movement.",
         "Repeat for the recommended amount of repetitions."
       ],
-      "aliases": [],
+      "aliases": [
+        "Barbell Romanian Deadlift"
+      ],
       "media": [
         {
           "type": "image",
@@ -11168,7 +11204,9 @@
         "Switch legs and repeat the movement."
       ],
       "aliases": [
-        "Smith Single-Leg Split Squat"
+        "Smith Single-Leg Split Squat",
+        "Bulgarian Split Squat (quad focus)",
+        "Bulgarian Split Squat (glute focus)"
       ],
       "media": [
         {
@@ -13302,7 +13340,9 @@
         "Get into a prone position on the floor, supporting your weight on your toes and your forearms. Your arms are bent and directly below the shoulder.",
         "Keep your body straight at all times, and hold this position as long as possible. To increase difficulty, an arm or leg can be raised."
       ],
-      "aliases": [],
+      "aliases": [
+        "RKC Plank"
+      ],
       "media": [
         {
           "type": "image",
@@ -15095,7 +15135,8 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Standing Calf Raises"
+        "Standing Calf Raises",
+        "Standing Weighted Calf Raise"
       ],
       "media": [
         {
@@ -15165,7 +15206,9 @@
         "Raise the heels by extending the ankles as high as possible as you contract the calves and breathe out. Hold the top contraction for a second.",
         "Repeat for the recommended amount of repetitions."
       ],
-      "aliases": [],
+      "aliases": [
+        "Seated Weighted Calf Raise"
+      ],
       "media": [
         {
           "type": "image",
@@ -15294,7 +15337,9 @@
         "Go back slowly to the starting position as you breathe in by lowering your heels as you bend the ankles until calves are stretched.",
         "Repeat for the recommended amount of repetitions."
       ],
-      "aliases": [],
+      "aliases": [
+        "Leg Press Calf Raise"
+      ],
       "media": [
         {
           "type": "image",
@@ -18345,7 +18390,8 @@
         "Repeat for the recommended amount of repetitions."
       ],
       "aliases": [
-        "Cable Rope Rear-Delt Rows"
+        "Cable Rope Rear-Delt Rows",
+        "Rear Delt Cable Row"
       ],
       "media": [
         {
@@ -20960,6 +21006,157 @@
           "license": "Public domain (Unlicense)",
           "attribution": "Free Exercise DB (yuhonas)",
           "usedFor": "text+image"
+        }
+      ]
+    },
+    {
+      "id": "ex_312",
+      "slug": "behind-the-body-cable-curl",
+      "name": "Behind-the-Body Cable Curl",
+      "description": "",
+      "category": "strength",
+      "difficulty": "intermediate",
+      "movementPattern": "horizontalPull",
+      "forceType": "pull",
+      "mechanic": "isolation",
+      "isUnilateral": true,
+      "isBodyweight": false,
+      "isTimeBased": false,
+      "muscles": [
+        {
+          "muscleId": "arms",
+          "role": "primary"
+        },
+        {
+          "muscleId": "forearms",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "cable",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Set a cable pulley at its lowest position with a single handle attached. Stand facing away from the machine, take the handle in one hand with the palm facing forward and step forward until the cable pulls your arm slightly behind your body. This is the starting position.",
+        "Keeping your upper arm still and pointing down and slightly back, curl the handle towards your shoulder as you breathe out.",
+        "Squeeze the biceps at the top, then lower the handle slowly until your arm is fully straight and the biceps is stretched.",
+        "Repeat for the prescribed number of repetitions, then switch arms."
+      ],
+      "aliases": [
+        "Behind Body Cable Curls",
+        "Bayesian Cable Curl",
+        "Bayesian Curl"
+      ],
+      "media": [],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "ironyx",
+          "sourceUrl": null,
+          "sourceExerciseId": "behind-the-body-cable-curl",
+          "license": "Original work, written for Ironyx",
+          "attribution": "Ironyx",
+          "usedFor": "text"
+        }
+      ]
+    },
+    {
+      "id": "ex_313",
+      "slug": "lean-in-lateral-raise",
+      "name": "Lean-In Lateral Raise",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "horizontalPush",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": true,
+      "isBodyweight": false,
+      "isTimeBased": false,
+      "muscles": [
+        {
+          "muscleId": "shoulders",
+          "role": "primary"
+        },
+        {
+          "muscleId": "traps",
+          "role": "secondary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "dumbbell",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Hold a dumbbell in one hand and stand side-on to a sturdy post or rack. Hold the post with your free hand and lean your body towards it, so the working arm hangs slightly in front of and across your body. This is the starting position.",
+        "With a slight bend in the elbow, raise the dumbbell out to the side until your arm is about level with your shoulder, leading with the elbow, as you breathe out.",
+        "Pause briefly, then lower the dumbbell slowly back to the starting position.",
+        "Repeat for the prescribed number of repetitions, then switch sides."
+      ],
+      "aliases": [],
+      "media": [],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "ironyx",
+          "sourceUrl": null,
+          "sourceExerciseId": "lean-in-lateral-raise",
+          "license": "Original work, written for Ironyx",
+          "attribution": "Ironyx",
+          "usedFor": "text"
+        }
+      ]
+    },
+    {
+      "id": "ex_314",
+      "slug": "banded-hip-abduction",
+      "name": "Banded Hip Abduction",
+      "description": "",
+      "category": "strength",
+      "difficulty": "beginner",
+      "movementPattern": "other",
+      "forceType": "push",
+      "mechanic": "isolation",
+      "isUnilateral": false,
+      "isBodyweight": false,
+      "isTimeBased": false,
+      "muscles": [
+        {
+          "muscleId": "glutes",
+          "role": "primary"
+        }
+      ],
+      "equipment": [
+        {
+          "equipmentId": "band",
+          "isRequired": true
+        }
+      ],
+      "instructions": [
+        "Place a resistance band just above your knees and sit on the edge of a bench with your feet flat on the floor, about hip width apart. Lean your torso slightly forward. This is the starting position.",
+        "Keeping your feet in place, push your knees out against the band as far as you can as you breathe out.",
+        "Hold the outside position for a moment, then let your knees come back in slowly, keeping tension on the band.",
+        "Repeat for the prescribed number of repetitions."
+      ],
+      "aliases": [
+        "Banded Hip Abductions",
+        "Band Hip Abduction",
+        "Seated Band Abduction"
+      ],
+      "media": [],
+      "tags": [],
+      "sources": [
+        {
+          "sourceName": "ironyx",
+          "sourceUrl": null,
+          "sourceExerciseId": "banded-hip-abduction",
+          "license": "Original work, written for Ironyx",
+          "attribution": "Ironyx",
+          "usedFor": "text"
         }
       ]
     }

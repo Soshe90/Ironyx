@@ -29,8 +29,15 @@ What it guarantees
 
 Usage
 -----
-    python3 scripts/build_exercise_seed.py            # full rebuild
-    python3 scripts/build_exercise_seed.py --dry-run  # report, write nothing
+    python3 scripts/build_exercise_seed.py                 # full rebuild
+    python3 scripts/build_exercise_seed.py --dry-run       # report, write nothing
+    python3 scripts/build_exercise_seed.py --reuse-images  # keep shipped images
+
+`--reuse-images` keeps every image the previous seed already ships instead
+of downloading and re-encoding it. Use it for a change to names, aliases or
+curation: a full re-encode rewrites all ~600 JPEGs (a newer Pillow encodes
+differently), which buries the real change in a binary diff. Only images
+for exercises the previous seed did not have are fetched.
 
 The upstream dump and the original images are cached under
 scripts/.cache/ (gitignored), so re-runs are offline and fast.
@@ -63,6 +70,13 @@ FEDB_HOME = "https://github.com/yuhonas/free-exercise-db"
 
 LICENSE = "Public domain (Unlicense)"
 ATTRIBUTION = "Free Exercise DB (yuhonas)"
+
+# Exercises written for this project (see ORIGINALS below). No images: none
+# exists under a licence we can redistribute, and the app shows the
+# equipment icon instead.
+IRONYX_SOURCE = "ironyx"
+IRONYX_LICENSE = "Original work, written for Ironyx"
+IRONYX_ATTRIBUTION = "Ironyx"
 
 # Images are shipped at this width and quality. Upstream ships ~800px JPEGs
 # at ~70KB; two per exercise across 251 exercises is ~35MB of APK, which is
@@ -171,7 +185,8 @@ class Pick:
 
 
 # --- The catalogue ---------------------------------------------------------
-# 301 entries. Ordered by muscle group so the file reads like the library.
+# 301 entries (plus the ORIGINALS below). Ordered by muscle group so the file
+# reads like the library.
 # Where a `name` override appears, it is usually there to preserve an id
 # from the previous seed; see the module docstring for why that matters.
 
@@ -302,8 +317,8 @@ CURATION: list[Pick] = [
     Pick("Triceps Pushdown - V-Bar Attachment", "horizontalPush"),
     Pick("Close-Grip Barbell Bench Press", "horizontalPush", "Close-Grip Bench Press"),
     Pick("EZ-Bar Skullcrusher", "horizontalPush", "Skull Crusher"),
-    Pick("Cable Rope Overhead Triceps Extension", "verticalPush", "Overhead Tricep Extension"),
-    Pick("Seated Triceps Press", "verticalPush"),
+    Pick("Cable Rope Overhead Triceps Extension", "horizontalPush", "Overhead Tricep Extension"),
+    Pick("Seated Triceps Press", "horizontalPush"),
     Pick("Tricep Dumbbell Kickback", "horizontalPush"),
     Pick("Dips - Triceps Version", "horizontalPush", "Tricep Dip"),
     Pick("Bench Dips", "horizontalPush"),
@@ -504,6 +519,183 @@ CURATION: list[Pick] = [
 ]
 
 
+# --- Extra aliases -----------------------------------------------------------
+# Other names for exercises already in the catalogue, keyed by display name.
+# Aliases are what Library search matches, and what both importers resolve a
+# spreadsheet's exercise names against (after `normalize_name`), so a
+# programme written with coaching names lands on the catalogue movement
+# instead of creating a bare duplicate.
+#
+# From the Intermediate 3-, 4- and 5-day programme workbooks (2026-11-05),
+# and from the workout importer's former private list. A cue in brackets
+# ("quad focus", "lat focus") or a small change of angle names the same
+# exercise for tracking: history, PRs and estimated 1RM stay in one place.
+EXTRA_ALIASES: dict[str, list[str]] = {
+    "Dumbbell Bench Press": ["Flat Dumbbell Press"],
+    "Incline Dumbbell Press": ["Low Incline Dumbbell Press"],
+    "Dumbbell Flyes": ["Dumbbell Fly"],
+    "Cable Fly": [
+        "Standing Mid-Chest Cable Fly",
+        "Seated Mid-Chest Cable Fly",
+        "Standing High To Low Cable Fly",
+    ],
+    "Push-Up": ["Banded Push-Ups"],
+    "Romanian Deadlift": ["Barbell Romanian Deadlift"],
+    "Back Squat": ["Barbell Back Squat"],
+    "Bulgarian Split Squat": [
+        "Bulgarian Split Squat (quad focus)",
+        "Bulgarian Split Squat (glute focus)",
+    ],
+    "Leg Press": ["Quad-Focused Leg Press"],
+    "Leg Extension": ["Seated Leg Extensions"],
+    "Back Extension": [
+        "Hyperextensions (glute focus)",
+        "Hyperextensions (back/hamstring)",
+    ],
+    "Calf Raise": ["Standing Weighted Calf Raise"],
+    "Seated Calf Raise": ["Seated Weighted Calf Raise"],
+    "Calf Press On The Leg Press Machine": ["Leg Press Calf Raise"],
+    "Barbell Row": [
+        "Barbell Row (mid/upper back)",
+        "Barbell Row (lat focus)",
+    ],
+    "Seated Cable Row": [
+        "Lat Focused Cable Row",
+        "Seated Cable Row (mid/upper back)",
+    ],
+    "Leverage Iso Row": ["Chest Supported Machine Row"],
+    "Cable Rear-Delt Row": ["Rear Delt Cable Row"],
+    "Face Pull": ["Standing Face Pulls"],
+    "Overhead Press": ["Standing Barbell Overhead Press"],
+    "Standing Dumbbell Press": ["Standing Dumbbell Shoulder Press"],
+    "Lateral Raise": ["Dumbbell Lateral Raise"],
+    "Tricep Pushdown": ["Cable Pushdowns", "Cross Cable Tricep Extensions"],
+    "Overhead Tricep Extension": ["Overhead Rope Extensions"],
+    "Incline Dumbbell Curl": ["Incline Dumbbell Curls"],
+    "Dumbbell Curl": ["Dumbbell Spider Curls"],
+    "Plank": ["RKC Plank"],
+}
+
+
+@dataclass(frozen=True)
+class Original:
+    """A catalogue entry written for this project, not taken from upstream.
+
+    Only for an exercise that no source we may redistribute covers. The
+    text is our own; there are no images. Arabic names and steps go in
+    `exercise_catalogue_ar.dart` and `exercise_instructions_ar_*.dart` as
+    for every other entry (`exercise_catalogue_ar_test.dart` enforces it).
+    """
+
+    name: str
+    pattern: str
+    category: str
+    difficulty: str
+    force: str | None
+    mechanic: str | None
+    equipment: str
+    primary: tuple[str, ...]
+    secondary: tuple[str, ...]
+    instructions: tuple[str, ...]
+    aliases: tuple[str, ...] = ()
+    is_unilateral: bool = False
+
+
+ORIGINALS: list[Original] = [
+    Original(
+        name="Behind-the-Body Cable Curl",
+        pattern="horizontalPull",
+        category="strength",
+        difficulty="intermediate",
+        force="pull",
+        mechanic="isolation",
+        equipment="cable",
+        primary=("arms",),
+        secondary=("forearms",),
+        aliases=("Behind Body Cable Curls", "Bayesian Cable Curl", "Bayesian Curl"),
+        is_unilateral=True,
+        instructions=(
+            "Set a cable pulley at its lowest position with a single handle "
+            "attached. Stand facing away from the machine, take the handle "
+            "in one hand with the palm facing forward and step forward until "
+            "the cable pulls your arm slightly behind your body. This is the "
+            "starting position.",
+            "Keeping your upper arm still and pointing down and slightly "
+            "back, curl the handle towards your shoulder as you breathe out.",
+            "Squeeze the biceps at the top, then lower the handle slowly "
+            "until your arm is fully straight and the biceps is stretched.",
+            "Repeat for the prescribed number of repetitions, then switch "
+            "arms.",
+        ),
+    ),
+    Original(
+        name="Lean-In Lateral Raise",
+        pattern="horizontalPush",
+        category="strength",
+        difficulty="beginner",
+        force="push",
+        mechanic="isolation",
+        equipment="dumbbell",
+        primary=("shoulders",),
+        secondary=("traps",),
+        is_unilateral=True,
+        instructions=(
+            "Hold a dumbbell in one hand and stand side-on to a sturdy post "
+            "or rack. Hold the post with your free hand and lean your body "
+            "towards it, so the working arm hangs slightly in front of and "
+            "across your body. This is the starting position.",
+            "With a slight bend in the elbow, raise the dumbbell out to the "
+            "side until your arm is about level with your shoulder, leading "
+            "with the elbow, as you breathe out.",
+            "Pause briefly, then lower the dumbbell slowly back to the "
+            "starting position.",
+            "Repeat for the prescribed number of repetitions, then switch "
+            "sides.",
+        ),
+    ),
+    Original(
+        name="Banded Hip Abduction",
+        pattern="other",
+        category="strength",
+        difficulty="beginner",
+        force="push",
+        mechanic="isolation",
+        equipment="band",
+        primary=("glutes",),
+        secondary=(),
+        aliases=("Banded Hip Abductions", "Band Hip Abduction", "Seated Band Abduction"),
+        instructions=(
+            "Place a resistance band just above your knees and sit on the "
+            "edge of a bench with your feet flat on the floor, about hip "
+            "width apart. Lean your torso slightly forward. This is the "
+            "starting position.",
+            "Keeping your feet in place, push your knees out against the "
+            "band as far as you can as you breathe out.",
+            "Hold the outside position for a moment, then let your knees "
+            "come back in slowly, keeping tension on the band.",
+            "Repeat for the prescribed number of repetitions.",
+        ),
+    ),
+]
+
+
+def normalize_name(value: str) -> str:
+    """How the importers compare exercise names: lower case, with every run
+    of characters other than a-z and 0-9 read as one space. Must match
+    `normalizeExerciseName` in lib/core/database/daos/exercise_dao.dart."""
+    out: list[str] = []
+    gap = False
+    for ch in value.lower():
+        if "a" <= ch <= "z" or "0" <= ch <= "9":
+            if gap and out:
+                out.append(" ")
+            out.append(ch)
+            gap = False
+        else:
+            gap = True
+    return "".join(out)
+
+
 def slugify(name: str) -> str:
     out = []
     for ch in name.lower():
@@ -543,8 +735,29 @@ def previous_seed() -> dict:
     return json.loads(SEED.read_text()) if SEED.exists() else {"exercises": []}
 
 
-def build_media(pick: Pick, upstream: dict, dry_run: bool) -> list[dict]:
-    """Download, recompress, and describe this exercise's images."""
+def reusable_images(previous: list[dict]) -> list[dict] | None:
+    """The previous seed's image entries, if every file is still on disk."""
+    images = [dict(m) for m in previous if m.get("type") == "image"]
+    if images and all((REPO / m["localAsset"]).is_file() for m in images):
+        return images
+    return None
+
+
+def build_media(
+    pick: Pick,
+    upstream: dict,
+    dry_run: bool,
+    previous: list[dict] | None = None,
+) -> list[dict]:
+    """Download, recompress, and describe this exercise's images.
+
+    With `previous` (see `--reuse-images`), returns those entries untouched
+    when all of their files exist, and fetches nothing.
+    """
+    if previous is not None:
+        kept = reusable_images(previous)
+        if kept is not None:
+            return kept
     media: list[dict] = []
     for order, remote in enumerate(upstream.get("images", [])):
         cached = fetch(FEDB_IMAGE_URL + remote, CACHE / "images" / remote)
@@ -580,7 +793,7 @@ def build_media(pick: Pick, upstream: dict, dry_run: bool) -> list[dict]:
     return media
 
 
-def build(dry_run: bool) -> tuple[dict, list[str]]:
+def build(dry_run: bool, reuse_images: bool = False) -> tuple[dict, list[str]]:
     upstream_by_name = load_upstream()
     old = previous_seed()
 
@@ -592,6 +805,7 @@ def build(dry_run: bool) -> tuple[dict, list[str]]:
         e["name"]: [m for m in e.get("media", []) if m.get("type") == "video"]
         for e in old["exercises"]
     }
+    old_media = {e["name"]: e.get("media", []) for e in old["exercises"]}
 
     missing = [p.upstream for p in CURATION if p.upstream not in upstream_by_name]
     if missing:
@@ -659,8 +873,14 @@ def build(dry_run: bool) -> tuple[dict, list[str]]:
         # The upstream name is kept as an alias whenever we rename, so
         # searching the library for "Pushups" still finds "Push-Up".
         aliases = [pick.upstream] if pick.name else []
+        aliases += [a for a in EXTRA_ALIASES.get(display, []) if a not in aliases]
 
-        media = build_media(pick, source, dry_run)
+        media = build_media(
+            pick,
+            source,
+            dry_run,
+            old_media.get(display) if reuse_images else None,
+        )
         media.extend(old_videos.get(display, []))
         for order, entry in enumerate(media):
             entry["sortOrder"] = order
@@ -697,6 +917,69 @@ def build(dry_run: bool) -> tuple[dict, list[str]]:
                 ],
             }
         )
+
+    unknown_targets = sorted(set(EXTRA_ALIASES) - {e["name"] for e in exercises})
+    if unknown_targets:
+        raise SystemExit(f"EXTRA_ALIASES names no curated exercise: {unknown_targets}")
+
+    for original in ORIGINALS:
+        if original.name in seen_display:
+            raise SystemExit(f"original {original.name!r} duplicates a curated name")
+        if original.name in old_ids:
+            exercise_id = old_ids[original.name]
+        else:
+            exercise_id = f"ex_{next_id:03d}"
+            next_id += 1
+        muscles = [{"muscleId": m, "role": "primary"} for m in original.primary]
+        muscles += [{"muscleId": m, "role": "secondary"} for m in original.secondary]
+        exercises.append(
+            {
+                "id": exercise_id,
+                "slug": slugify(original.name),
+                "name": original.name,
+                "description": "",
+                "category": original.category,
+                "difficulty": original.difficulty,
+                "movementPattern": original.pattern,
+                "forceType": original.force,
+                "mechanic": original.mechanic,
+                "isUnilateral": original.is_unilateral,
+                "isBodyweight": original.equipment == "bodyweight",
+                "isTimeBased": False,
+                "muscles": muscles,
+                "equipment": [{"equipmentId": original.equipment, "isRequired": True}],
+                "instructions": list(original.instructions),
+                "aliases": list(original.aliases),
+                "media": [
+                    dict(m, sortOrder=i)
+                    for i, m in enumerate(old_videos.get(original.name, []))
+                ],
+                "tags": [],
+                "sources": [
+                    {
+                        "sourceName": IRONYX_SOURCE,
+                        "sourceUrl": None,
+                        "sourceExerciseId": slugify(original.name),
+                        "license": IRONYX_LICENSE,
+                        "attribution": IRONYX_ATTRIBUTION,
+                        "usedFor": "text",
+                    }
+                ],
+            }
+        )
+
+    # Every name and alias has to point at one exercise once normalized,
+    # or an importer could not tell which movement a spreadsheet meant.
+    owner: dict[str, str] = {}
+    for exercise in exercises:
+        for label in [exercise["name"], *exercise["aliases"]]:
+            key = normalize_name(label)
+            other = owner.setdefault(key, exercise["name"])
+            if other != exercise["name"]:
+                raise SystemExit(
+                    f"{label!r} on {exercise['name']!r} reads the same as a "
+                    f"name or alias of {other!r} ({key!r})"
+                )
 
     slugs = [e["slug"] for e in exercises]
     duplicate_slugs = {s for s in slugs if slugs.count(s) > 1}
@@ -754,10 +1037,15 @@ def main() -> int:
         action="store_true",
         help="report what would change without writing anything",
     )
+    parser.add_argument(
+        "--reuse-images",
+        action="store_true",
+        help="keep the images the previous seed ships instead of re-encoding them",
+    )
     args = parser.parse_args()
 
     old = previous_seed()
-    seed, notes = build(args.dry_run)
+    seed, notes = build(args.dry_run, reuse_images=args.reuse_images)
 
     old_names = {e["name"] for e in old["exercises"]}
     new_names = {e["name"] for e in seed["exercises"]}

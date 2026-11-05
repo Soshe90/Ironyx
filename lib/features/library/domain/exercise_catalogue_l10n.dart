@@ -6,6 +6,7 @@ import '../../../core/database/tables/muscles.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import 'exercise_catalogue_ar.dart';
 import 'exercise_instructions_ar_1.dart';
+import 'exercise_instructions_ar_10.dart';
 import 'exercise_instructions_ar_2.dart';
 import 'exercise_instructions_ar_3.dart';
 import 'exercise_instructions_ar_4.dart';
@@ -78,6 +79,7 @@ const Map<String, List<String>> kExerciseInstructionsAr =
   ...kExerciseInstructionsAr7,
   ...kExerciseInstructionsAr8,
   ...kExerciseInstructionsAr9,
+  ...kExerciseInstructionsAr10,
 };
 
 /// Returns translated instruction steps when the active locale is Arabic.

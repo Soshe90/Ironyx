@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
+import '../database/daos/exercise_dao.dart';
 import '../database/daos/program_dao.dart';
 import '../database/tables/templates.dart' show kMaxTargetSets;
 
@@ -47,7 +48,9 @@ class ProgramImportService {
       throw const ProgramImportException();
     }
 
-    final exerciseNameToId = await _exerciseNameToId(db);
+    // Names and aliases, as the workout importer reads them: a programme
+    // written with coaching names still lands on catalogue exercises.
+    final exerciseNameToId = await ExerciseDao(db).exerciseIdsByLookupName();
     final Set<String> takenProgramNames =
         await ProgramDao(db).allProgramNames();
 
@@ -83,7 +86,7 @@ class ProgramImportService {
         continue;
       }
 
-      final exerciseId = exerciseNameToId[exerciseName.toLowerCase()];
+      final exerciseId = exerciseNameToId[normalizeExerciseName(exerciseName)];
       if (exerciseId == null) {
         if (!unknownExercises.contains(exerciseName)) {
           unknownExercises.add(exerciseName);
@@ -204,18 +207,6 @@ class ProgramImportService {
           ),
       ],
     );
-  }
-
-  Future<Map<String, String>> _exerciseNameToId(AppDatabase db) async {
-    final rows = await db
-        .customSelect(
-          'SELECT id, name FROM exercises_table',
-        )
-        .get();
-    return {
-      for (final row in rows)
-        row.read<String>('name').toLowerCase(): row.read<String>('id'),
-    };
   }
 
   /// The trimmed cell, or '' for a short row or an optional column the

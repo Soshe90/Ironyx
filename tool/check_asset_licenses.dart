@@ -20,7 +20,7 @@ const String licenseDoc = 'ASSETS-LICENSE.md';
 /// Source names whose licence terms are recorded in [licenseDoc] and which
 /// are cleared for commercial redistribution. Adding a name here without
 /// adding it to that file is the mistake this list exists to make visible.
-const Set<String> allowedSources = <String>{'free-exercise-db'};
+const Set<String> allowedSources = <String>{'free-exercise-db', 'ironyx'};
 
 void main() {
   final List<String> failures = <String>[];

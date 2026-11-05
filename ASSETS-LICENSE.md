@@ -22,9 +22,9 @@ seed's `/` paths; fixed, and it now passes on both platforms.)
 dedication. No attribution required, no share-alike obligation, cleared
 for commercial redistribution.
 
-**Covers:** all 301 exercises in `assets/data/exercises_seed.json` (seed
-version 17, checked 2026-09-20; every entry carries a
-`Public domain (Unlicense)` source record) — their names, instructions,
+**Covers:** 301 of the 304 exercises in `assets/data/exercises_seed.json`
+(seed version 18, checked 2026-11-05; every one of them carries a
+`Public domain (Unlicense)` source record; the other three are ours, below) — their names, instructions,
 muscle and equipment classifications — and all 602 images in
 `assets/images/exercises/free_exercise_db/` (two per exercise).
 
@@ -37,6 +37,26 @@ We attribute anyway, in this file and in each exercise's `sources` record,
 because "public domain" is a claim worth being able to substantiate later.
 
 **To reproduce:** `python3 scripts/build_exercise_seed.py`
+(`--reuse-images` keeps the shipped images instead of re-encoding them).
+
+---
+
+## Exercises written for Ironyx
+
+**Source:** this project (`sourceName: "ironyx"` in the seed).
+
+**Licence:** ours. Name, muscle and equipment classification, and the
+English and Arabic instructions were written for the app; nothing was
+copied from another catalogue, video or website.
+
+**Covers:** the exercises in `ORIGINALS` in `scripts/build_exercise_seed.py`:
+Behind-the-Body Cable Curl, Lean-In Lateral Raise and Banded Hip Abduction
+(added 2026-11-05, seed version 18). They are movements that appear in
+programmes users import but that free-exercise-db does not have.
+
+**Images:** none. No image of these movements exists under a licence we can
+redistribute, and the app shows the equipment icon in its place. An image
+may only be added with a licence recorded here.
 
 ---
 
