@@ -164,6 +164,21 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     average duration) in place of two tiles and a lone full-width one.
   - No query or provider changed. **Not checked:** tablet width on a
     device; TalkBack.
+- Changed 2026-11-05, Workouts tab:
+  - **Programs are one row of cards** that scrolls sideways (name and
+    number of days), not a column of full-width cards. Three programs, the
+    number the app ships with, took most of the first screen and left
+    History two-thirds of the way down. The heading's explanation shows
+    only while there are no programs. The built-in descriptions, which
+    repeated the name, are no longer on the cards (they are on the
+    program's page).
+  - The Start button carries the same plus icon as the dashboard's.
+  - **Large text:** a month heading's summary ran off the screen when the
+    two halves did not fit on one line; it wraps now. A history title's
+    "+N" pill is dropped when the row is too narrow to hold it. Both found
+    by a test at 1.6x text.
+  - History rows, the calendar and both import menus are unchanged.
+    **Not checked:** many programs on a device; tablet width.
 - **Parked by the owner, 2026-11-05:** "EZ bar wide-grip upright row" is
   not in the catalogue (only the narrow-grip Upright Row). The programme
   workbooks list "Wide Grip BB Upright Row (last resort)" as an

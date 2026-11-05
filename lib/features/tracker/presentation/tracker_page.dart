@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/database/daos/program_dao.dart';
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/workouts.dart';
@@ -19,6 +20,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/pr_badge.dart';
+import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../../programs/domain/program_catalogue_l10n.dart';
@@ -102,7 +104,13 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                     Expanded(
                       child: SectionHeader(
                         title: context.l10n.trackerPrograms,
-                        subtitle: context.l10n.trackerProgramsSubtitle,
+                        // What a program is, for someone who has none. Once
+                        // there are cards under the heading they say it
+                        // themselves, and the sentence only wrapped onto a
+                        // second line with one word on it.
+                        subtitle: (programsAsync.value?.isEmpty ?? true)
+                            ? context.l10n.trackerProgramsSubtitle
+                            : null,
                         actionLabel: context.l10n.trackerNew,
                         onAction: () =>
                             context.pushNamed(Routes.programNewName),
@@ -182,31 +190,13 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                         ),
                       ),
                     )
-                  : SliverPadding(
-                      padding:
-                          context.sliverGutter.copyWith(bottom: AppSpacing.xl),
-                      sliver: SliverList.builder(
-                        itemCount: programs.length,
-                        itemBuilder: (context, index) {
-                          final summary = programs[index];
-                          return Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: _ProgramTile(
-                              name: summary.program.displayName(context),
-                              description: summary.program.localizedDescription(
-                                context,
-                                summary.dayCount,
-                              ),
-                              dayCount: summary.dayCount,
-                              onTap: () => _openProgram(
-                                context,
-                                ref,
-                                summary.program.id,
-                              ),
-                            ),
-                          );
-                        },
+                  : SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                        child: _ProgramStrip(
+                          programs: programs,
+                          onOpen: (String id) => _openProgram(context, ref, id),
+                        ),
                       ),
                     ),
               loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
@@ -387,21 +377,72 @@ class _StartWorkoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FilledButton.icon(
         onPressed: () => context.pushNamed(Routes.activeWorkoutName),
-        icon: const Icon(Icons.play_arrow),
+        // The same plus as the dashboard's start button: one action, one
+        // icon. Play is for resuming a session that already exists.
+        icon: const Icon(Icons.add),
         label: Text(context.l10n.dashboardStartWorkout),
       );
+}
+
+/// Size of one card in [_ProgramStrip], before the text scale is applied.
+const double _programCardWidth = 168;
+const double _programCardHeight = 88;
+
+/// The programs as one row of cards that scrolls sideways.
+///
+/// They were a column of full-width cards. Three of them, the number the
+/// app ships with, took most of the first screen and left the history, the
+/// reason this tab is opened, two-thirds of the way down; every program
+/// added pushed it further. A row has the same height for three programs or
+/// thirty.
+class _ProgramStrip extends StatelessWidget {
+  const _ProgramStrip({required this.programs, required this.onOpen});
+
+  final List<ProgramSummary> programs;
+  final ValueChanged<String> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    // Follows the system text size, so two lines of a name still fit.
+    final double cardHeight =
+        MediaQuery.textScalerOf(context).scale(_programCardHeight);
+    return SizedBox(
+      // Room above and below for the card's shadow, which the list clips.
+      height: cardHeight + AppSpacing.xs * 2,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        // The first card lines up with the page; the rest run to the edge
+        // of the screen, which is what shows there are more.
+        padding: EdgeInsets.symmetric(
+          horizontal: context.pageGutter,
+          vertical: AppSpacing.xs,
+        ),
+        itemCount: programs.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (BuildContext context, int index) {
+          final ProgramSummary summary = programs[index];
+          return SizedBox(
+            width: _programCardWidth,
+            child: _ProgramTile(
+              name: summary.program.displayName(context),
+              dayCount: summary.dayCount,
+              onTap: () => onOpen(summary.program.id),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _ProgramTile extends StatelessWidget {
   const _ProgramTile({
     required this.name,
-    required this.description,
     required this.dayCount,
     required this.onTap,
   });
 
   final String name;
-  final String? description;
   final int dayCount;
   final VoidCallback onTap;
 
@@ -412,35 +453,42 @@ class _ProgramTile extends StatelessWidget {
 
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
       semanticLabel: context.l10n.trackerProgramSemantic(
         name,
         context.l10n.dayCount(dayCount),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.event_note_outlined, color: scheme.onSurfaceVariant),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(name, style: theme.textTheme.titleSmall),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  description ?? context.l10n.dayCount(dayCount),
+      // The name, and how many days it has. The built-in descriptions only
+      // repeated the name ("Full Body" over "Full body · 3 days/week"); a
+      // program's own description is on its page.
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Text(
+            name,
+            style: theme.textTheme.titleSmall,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.event_note_outlined,
+                size: AppSpacing.lg,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  context.l10n.dayCount(dayCount),
                   style: AppTypography.caption(theme),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
         ],
       ),
     );
@@ -615,15 +663,20 @@ class _MonthHeader extends ConsumerWidget {
           top: AppSpacing.lg,
           bottom: AppSpacing.sm,
         ),
-        child: Row(
+        // A Wrap, not a Row: at a large text size, or with a long month
+        // name and a six-figure volume, the two no longer fit on one line.
+        // In a Row the summary could not shrink and ran off the edge; here
+        // it drops to a second line.
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xxs,
           children: <Widget>[
-            Expanded(
-              child: Text(
-                DateFormatters.of(context).monthYear(month).toUpperCase(),
-                style: AppTypography.eyebrow(theme),
-              ),
+            Text(
+              DateFormatters.of(context).monthYear(month).toUpperCase(),
+              style: AppTypography.eyebrow(theme),
             ),
-            const SizedBox(width: AppSpacing.sm),
             Text(
               l10n.trackerMonthSummary(
                 l10n.progressWorkoutCount(workoutCount),
@@ -853,6 +906,12 @@ class _HistoryTitle extends StatelessWidget {
           shown--;
         }
         final int extra = names.length - shown;
+        // At the largest text sizes the volume beside this title leaves it
+        // a sliver, narrower than the pill alone. The pill is dropped then
+        // rather than drawn off the row; the row's spoken label still
+        // names every exercise.
+        final bool pillFits =
+            extra > 0 && pillWidth(extra) <= constraints.maxWidth;
 
         return Row(
           children: [
@@ -864,7 +923,7 @@ class _HistoryTitle extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (extra > 0) ...[
+            if (pillFits) ...[
               const SizedBox(width: AppSpacing.xs),
               _MoreExercisesPill(label: l10n.trackerMoreExercises(extra)),
             ],
