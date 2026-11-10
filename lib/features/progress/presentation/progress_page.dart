@@ -33,6 +33,7 @@ import '../domain/bmi.dart';
 import '../domain/consistency_calculators.dart';
 import '../domain/progress_insights.dart';
 import '../domain/progress_providers.dart';
+import '../domain/progress_summaries.dart';
 import '../domain/strength_analytics.dart';
 import 'progress_explainers.dart';
 import 'widgets/body_metric_widgets.dart';
@@ -1629,17 +1630,11 @@ class _VolumeSection extends ConsumerWidget {
           );
         }
 
-        final double total = points.fold<double>(
-          0,
-          (double sum, WeeklyVolume p) => sum + p.totalVolumeKg,
-        );
-        // The series is zero-filled, so its length is elapsed weeks, not
-        // trained ones — count the trained ones explicitly.
-        final int activeWeeks =
-            points.where((WeeklyVolume p) => p.totalVolumeKg > 0).length;
+        final (:double totalKg, :int activeWeeks) =
+            summarizeWeeklyVolume(points);
 
         return _ChartCard(
-          headline: UnitFormatters.volume(total, unit, context.l10n),
+          headline: UnitFormatters.volume(totalKg, unit, context.l10n),
           caption: context.l10n.progressVolumeActiveWeeks(
             activeWeeks,
             points.length,
@@ -1801,11 +1796,8 @@ class _EffortSectionState extends ConsumerState<_EffortSection> {
                 l10n.progressRpeEmpty,
               );
             }
-            final double average = sessions.fold<double>(
-                  0,
-                  (double sum, SessionRpe s) => sum + s.averageRpe,
-                ) /
-                sessions.length;
+            // Not empty, so there is an average.
+            final double average = averageSessionRpe(sessions)!;
             return _ChartCard(
               header: header,
               headline: l10n.progressAverageRpe(average.toStringAsFixed(1)),
@@ -1850,19 +1842,21 @@ class _EffortSectionState extends ConsumerState<_EffortSection> {
                 l10n.progressRestEmpty,
               );
             }
-            // Weighted by how many rests each session recorded, so a
-            // session with one timed rest does not count as much as one
-            // with twenty.
-            int sets = 0;
-            double seconds = 0;
-            for (final SessionRest s in sessions) {
-              sets += s.recordedSetCount;
-              seconds += s.averageRestSeconds * s.recordedSetCount;
+            // Weighted by the rests each session recorded; see
+            // summarizeRest.
+            final (:double? averageSeconds, restCount: int sets) =
+                summarizeRest(sessions);
+            if (averageSeconds == null) {
+              return _empty(
+                context,
+                header,
+                Icons.timer_outlined,
+                l10n.progressRestEmpty,
+              );
             }
-            final double average = sets == 0 ? 0 : seconds / sets;
             return _ChartCard(
               header: header,
-              headline: l10n.progressAverageRestSeconds(average.round()),
+              headline: l10n.progressAverageRestSeconds(averageSeconds.round()),
               // How many rests the average stands on, as text: in the
               // chart it is only in a tooltip, which a screen reader
               // cannot reach.
@@ -2105,12 +2099,8 @@ class _FrequencySection extends ConsumerWidget {
             message: context.l10n.progressFrequencyEmpty,
           );
         }
-        final int total = points.fold<int>(
-          0,
-          (int sum, WorkoutFrequency p) => sum + p.workoutCount,
-        );
-        final int activeWeeks =
-            points.where((WorkoutFrequency p) => p.workoutCount > 0).length;
+        final (workouts: int total, :int activeWeeks) =
+            summarizeWeeklyFrequency(points);
         // Per elapsed week of the range, not per week that happens to
         // contain a workout (which reports three sessions crammed into one
         // week, then two idle months, as "3.0 / week") and not per bucket
@@ -2354,59 +2344,41 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
         onRetry: () => ref.invalidate(muscleGroupSeriesProvider(range)),
       ),
       data: (all) {
-        // A group linked only through bodyweight sets totals 0 kg; as a
-        // ranked bar it is an empty track that reads like missing data.
-        final List<MuscleGroupVolume> points = <MuscleGroupVolume>[
-          for (final MuscleGroupVolume p in all)
-            if (p.totalVolumeKg > 0) p,
-        ];
-        if (points.isEmpty) {
+        // One group per palette colour, the rest folded into "Other";
+        // see groupMuscleVolume.
+        final (
+          groups: List<MuscleGroupVolume> grouped,
+          :double total,
+          :double largest,
+        ) = groupMuscleVolume(
+          all,
+          slots: AppColors.muscleGroupSlots,
+          otherName: context.l10n.progressOtherMuscles,
+        );
+        if (grouped.isEmpty) {
           return _ChartEmpty(
             icon: Icons.pie_chart_outline,
             message: context.l10n.progressMuscleGroupEmpty,
           );
         }
 
-        final List<MuscleGroupVolume> grouped = <MuscleGroupVolume>[];
-        if (points.length <= AppColors.muscleGroupSlots) {
-          grouped.addAll(points);
-        } else {
-          grouped.addAll(points.take(AppColors.muscleGroupSlots));
-          final double otherTotal = points
-              .skip(AppColors.muscleGroupSlots)
-              .fold<double>(0, (sum, p) => sum + p.totalVolumeKg);
-          grouped.add(
-            MuscleGroupVolume(
-              muscleId: _otherMuscles,
-              muscleName: context.l10n.progressOtherMuscles,
-              totalVolumeKg: otherTotal,
-            ),
-          );
-        }
-
         final List<Color> palette =
             AppColors.muscleGroupPalette(theme.brightness);
-        Color colorFor(int index, String muscleId) => muscleId == _otherMuscles
-            ? AppColors.muscleGroupOther
-            : palette[index % palette.length];
+        Color colorFor(int index, String muscleId) =>
+            muscleId == otherMuscleGroupId
+                ? AppColors.muscleGroupOther
+                : palette[index % palette.length];
         // Stored names are English; "Other" is already localized above.
         String nameOf(MuscleGroupVolume group) => group.muscleId ==
-                _otherMuscles
+                otherMuscleGroupId
             ? group.muscleName
             : localizedMuscleName(context, group.muscleId, group.muscleName);
-
-        final double total =
-            grouped.fold<double>(0, (sum, p) => sum + p.totalVolumeKg);
-        final double largest = grouped.fold<double>(
-          0,
-          (max, p) => p.totalVolumeKg > max ? p.totalVolumeKg : max,
-        );
 
         // A group can leave the range (or fold into "Other") while it is
         // selected; fall back to the largest rather than show nothing.
         final int selectedIndex = grouped.indexWhere(
           (MuscleGroupVolume g) =>
-              g.muscleId == _selectedId && g.muscleId != _otherMuscles,
+              g.muscleId == _selectedId && g.muscleId != otherMuscleGroupId,
         );
         final int shownIndex = selectedIndex < 0 ? 0 : selectedIndex;
         final MuscleGroupVolume shown = grouped[shownIndex];
@@ -2438,7 +2410,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                   color: colorFor(i, grouped[i].muscleId),
                   selected: i == shownIndex,
                   // "Other" is several groups; it has no weeks of its own.
-                  onTap: grouped[i].muscleId == _otherMuscles
+                  onTap: grouped[i].muscleId == otherMuscleGroupId
                       ? null
                       : () => setState(
                             () => _selectedId = grouped[i].muscleId,
@@ -2457,9 +2429,6 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
     );
   }
 }
-
-/// Id of the bucket that folds the smallest muscle groups together.
-const String _otherMuscles = '_other';
 
 /// One muscle group's volume week by week, as the detail of the group
 /// selected in [_MuscleGroupSection].
@@ -2499,21 +2468,9 @@ class _MuscleWeeks extends ConsumerWidget {
                 ref.invalidate(weeklyMuscleGroupVolumeSeriesProvider(range)),
           ),
           data: (List<WeeklyMuscleGroupVolume> all) {
-            final Map<DateTime, double> byWeek = <DateTime, double>{};
-            for (final WeeklyMuscleGroupVolume row in all) {
-              if (row.muscleId != muscleId) continue;
-              byWeek[row.weekStart] =
-                  (byWeek[row.weekStart] ?? 0) + row.totalVolumeKg;
-            }
-            // The weekly-volume series supplies every week of the range.
-            // Should it be unavailable, the group's own weeks still plot.
-            final List<DateTime> weeks = axis.isNotEmpty
-                ? <DateTime>[for (final WeeklyVolume w in axis) w.weekStart]
-                : (byWeek.keys.toList()..sort());
+            final (:List<DateTime> weeks, :List<double> values) =
+                muscleWeeklySeries(muscleId: muscleId, rows: all, axis: axis);
             if (weeks.isEmpty) return const SizedBox.shrink();
-            final List<double> values = <double>[
-              for (final DateTime week in weeks) byWeek[week] ?? 0,
-            ];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[

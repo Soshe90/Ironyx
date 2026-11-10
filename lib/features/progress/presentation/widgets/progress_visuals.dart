@@ -14,6 +14,7 @@ import '../../../../core/widgets/loading_shimmer.dart';
 import '../../../../core/widgets/metric_value.dart';
 import '../../domain/consistency_calculators.dart';
 import '../../domain/progress_providers.dart';
+import '../../domain/progress_summaries.dart';
 
 /// Presentational building blocks for the Progress page.
 ///
@@ -193,17 +194,17 @@ class ProgressOverviewHero extends ConsumerWidget {
     final List<WeeklyVolume>? weeks = volume.value;
     final List<WorkoutFrequency>? sessions = frequency.value;
 
+    // The same sums as the volume and frequency cards, from the same
+    // functions.
     final String? totalVolume = weeks == null
         ? null
         : UnitFormatters.volume(
-            weeks.fold<double>(0, (double sum, w) => sum + w.totalVolumeKg),
+            summarizeWeeklyVolume(weeks).totalKg,
             unit,
             l10n,
           );
-    final int? workoutTotal = sessions?.fold<int>(
-      0,
-      (int sum, WorkoutFrequency f) => sum + f.workoutCount,
-    );
+    final int? workoutTotal =
+        sessions == null ? null : summarizeWeeklyFrequency(sessions).workouts;
     // The same figure as the frequency card's headline, from the same
     // function, so the two cannot disagree.
     final double? average = sessions == null
