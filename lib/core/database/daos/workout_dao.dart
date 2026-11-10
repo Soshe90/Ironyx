@@ -727,37 +727,49 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     });
   }
 
-  /// Best estimated 1RM per exercise's most recent session in the window,
-  /// next to the best estimate from any session before it.
+  /// Best estimated 1RM per exercise inside the window, next to the best
+  /// it had reached before the window began.
   ///
   /// This is the "am I getting stronger" query. Volume answers how much
   /// work was done, which moves when you add a set and barely moves when
   /// you add weight — the opposite of what a progress readout needs.
   ///
-  /// "Previous" originally meant the equal-length window immediately
-  /// before [since] — a comparison that structurally cannot exist unless
-  /// the user's training history is at least *twice* the selected range,
-  /// so a lift trained only within the last 30 days read "new" under every
-  /// range, including the 30-day one. It now means "any earlier qualifying
-  /// session for this lift", which needs only a second session to ever
-  /// have happened — inside the window or out — and agrees with the old
-  /// definition whenever that one already found data. [since] still bounds
-  /// which lifts are current enough to list, and `null` (all-time) lists
-  /// every lift ever trained; a lift can go from "new" to compared the
-  /// moment a second session exists, which — unlike before — now includes
-  /// the all-time range too.
+  /// Two earlier definitions, and why neither is used:
+  ///
+  /// * **The equal-length window before [since].** That comparison cannot
+  ///   exist until the user's history is at least twice the range, so a
+  ///   lift trained only in the last 30 days read "new" under every range.
+  /// * **The latest session against every session before it.** Any
+  ///   session that was not a new best read as a drop, so an ordinary
+  ///   back-off day turned the row (and the insight built on it) red.
+  ///
+  /// So "current" is the window's best, and "previous" is the best from
+  /// *any* time before the window. A lift with nothing before the window
+  /// is compared with its own first session inside it, provided there is
+  /// a later session to compare; with only one it is "new". All-time
+  /// ([since] null) has nothing before it, so it is always that fallback:
+  /// your best ever against your first session.
+  ///
+  /// Sessions are workouts, counted by id. Every qualifying-set filter
+  /// matches [watchOneRMSeries] and [watchPersonalRecordWorkoutIds].
   Stream<List<StrengthChange>> watchStrengthChange({DateTime? since}) {
     // Epley, matching watchOneRMSeries and watchPersonalRecordWorkoutIds.
     // Reps are capped at 12 because the estimate degrades badly above it.
     const String oneRm =
         'ws.weight_kg * CASE WHEN ws.reps = 1 THEN 1 ELSE (1 + ws.reps / 30.0) END';
-    final String sinceClause = since == null ? '' : 'WHERE started_at >= ?';
+    // All-time is a window from the epoch, as in watchOneRMSeries: nothing
+    // falls before it, which is exactly the "compare with your first
+    // session" case.
+    final Variable<DateTime> from = Variable.withDateTime(
+      since ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+    );
 
     return customSelect(
       '''
       WITH qualifying AS (
         SELECT
           we.exercise_id as exercise_id,
+          w.id as workout_id,
           w.started_at as started_at,
           $oneRm as one_rm
         FROM workout_sets_table ws
@@ -769,26 +781,44 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           AND ws.reps BETWEEN 1 AND 12
           AND ws.weight_kg > 0
       ),
-      latest AS (
-        SELECT exercise_id, MAX(started_at) as latest_started_at
+      in_window AS (
+        SELECT
+          exercise_id,
+          MAX(one_rm) as current_best,
+          MIN(started_at) as first_started_at,
+          COUNT(DISTINCT workout_id) as sessions
         FROM qualifying
-        $sinceClause
+        WHERE started_at >= ?1
         GROUP BY exercise_id
+      ),
+      before_window AS (
+        SELECT exercise_id, MAX(one_rm) as before_best
+        FROM qualifying
+        WHERE started_at < ?1
+        GROUP BY exercise_id
+      ),
+      first_session AS (
+        SELECT q.exercise_id as exercise_id, MAX(q.one_rm) as first_best
+        FROM qualifying q
+        JOIN in_window iw ON iw.exercise_id = q.exercise_id
+          AND q.started_at = iw.first_started_at
+        GROUP BY q.exercise_id
       )
       SELECT
-        l.exercise_id as exercise_id,
+        iw.exercise_id as exercise_id,
         ex.name as exercise_name,
-        MAX(CASE WHEN q.started_at = l.latest_started_at
-            THEN q.one_rm END) as current_best,
-        MAX(CASE WHEN q.started_at < l.latest_started_at
-            THEN q.one_rm END) as previous_best
-      FROM latest l
-      JOIN qualifying q ON q.exercise_id = l.exercise_id
-      JOIN exercises_table ex ON ex.id = l.exercise_id
-      GROUP BY l.exercise_id, ex.name
+        iw.current_best as current_best,
+        COALESCE(
+          bw.before_best,
+          CASE WHEN iw.sessions >= 2 THEN fs.first_best END
+        ) as previous_best
+      FROM in_window iw
+      JOIN exercises_table ex ON ex.id = iw.exercise_id
+      LEFT JOIN before_window bw ON bw.exercise_id = iw.exercise_id
+      LEFT JOIN first_session fs ON fs.exercise_id = iw.exercise_id
       ORDER BY current_best DESC
       ''',
-      variables: since == null ? const [] : [Variable.withDateTime(since)],
+      variables: [from],
       readsFrom: {
         workoutSetsTable,
         workoutExercisesTable,
@@ -1213,10 +1243,10 @@ class StrengthChange {
   final String exerciseName;
   final double currentBestKg;
 
-  /// Null when there is no earlier qualifying session for this lift at
-  /// all — it was first trained inside the current window, or has only
-  /// ever been trained once. A new lift is not a regression, so callers
-  /// must not treat null as zero.
+  /// The best before the window, or — for a lift first trained inside
+  /// it — its first session there. Null when that first session is the
+  /// only one: there is nothing to compare. A new lift is not a
+  /// regression, so callers must not treat null as zero.
   final double? previousBestKg;
 
   bool get isNew => previousBestKg == null;

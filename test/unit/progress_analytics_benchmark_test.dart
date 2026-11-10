@@ -80,6 +80,10 @@ void main() {
       dao.watchWeekdayDistribution().first,
       dao.watchRpeAnalytics().first,
       dao.watchRestAnalytics().first,
+      dao.watchStrengthChange().first,
+      dao
+          .watchStrengthChange(since: origin.add(const Duration(days: 2900)))
+          .first,
     ]);
     stopwatch.stop();
     expect(stopwatch.elapsed, lessThan(const Duration(seconds: 10)));
