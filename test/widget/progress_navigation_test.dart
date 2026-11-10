@@ -204,9 +204,11 @@ void main() {
       find.byWidgetPredicate((Widget w) => w is ProgressChapterTabs);
   Finder tab(String label) =>
       find.descendant(of: tabs, matching: find.text(label));
-  Finder heading(String label) => find.descendant(
-        of: find.byType(ProgressChapter),
-        matching: find.text(label),
+
+  /// The start of chapter [label]. It has no visible text (the pinned
+  /// tabs name the chapter), so it is found by its title.
+  Finder heading(String label) => find.byWidgetPredicate(
+        (Widget w) => w is ProgressChapter && w.title == label,
       );
   String? activeChapter(WidgetTester tester) {
     final Object? active =
@@ -364,6 +366,34 @@ void main() {
       await settle(tester);
 
       expect(chosen(), other);
+      await disposeApp(tester);
+    });
+
+    testWidgets(
+        'a chapter is named once, by its tab, and still a heading to a '
+        'screen reader', (tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await pumpProgress(tester);
+
+      for (final String label in <String>[
+        'Strength',
+        'Volume',
+        'Habits',
+        'Body',
+      ]) {
+        expect(heading(label), findsOneWidget, reason: label);
+        expect(
+          find.descendant(of: heading(label), matching: find.byType(Text)),
+          findsNothing,
+          reason: '$label is drawn by its tab, not again on the page',
+        );
+        expect(
+          tester.getSemantics(heading(label)),
+          isSemantics(label: label, isHeader: true),
+          reason: label,
+        );
+      }
+      semantics.dispose();
       await disposeApp(tester);
     });
 

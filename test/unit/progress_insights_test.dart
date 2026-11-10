@@ -41,7 +41,6 @@ void main() {
         MuscleGroupVolume(
             muscleId: 'legs', muscleName: 'Legs', totalVolumeKg: 500),
       ],
-      recentPersonalRecords: 2,
     );
     expect(insights, isNotEmpty);
     expect(insights.first.severity, InsightSeverity.actionable);
@@ -200,6 +199,31 @@ void main() {
         (i) => i.kind == InsightKind.consistencySlipping,
       );
       expect(slipping.averageSessionsPerWeek, closeTo(0.5, 0.0001));
+    });
+  });
+
+  group('strength change threshold', () {
+    Iterable<ProgressInsight> strengthOf(List<StrengthChange> rows) =>
+        buildProgressInsights(
+          strengthChanges: rows,
+          volume: const [],
+          frequency: const [],
+          currentMuscleVolume: const [],
+          previousMuscleVolume: const [],
+        ).where((i) => i.kind == InsightKind.strengthChange);
+
+    test('stays silent when every lift moved less than the threshold', () {
+      expect(
+          strengthOf([strength('Bench', .01), strength('Row', -.02)]), isEmpty);
+    });
+
+    test('speaks once the biggest mover is past it', () {
+      final insight = strengthOf([
+        strength('Bench', .01),
+        strength('Row', -.05),
+      ]).single;
+      expect(insight.subjectId, 'Row');
+      expect(insight.direction, InsightDirection.down);
     });
   });
 }

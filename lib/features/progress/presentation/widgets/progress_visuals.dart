@@ -36,45 +36,57 @@ const double _weekdayPlotHeight = 88;
 /// Diameter of the marker on a [RatioGauge].
 const double _gaugeMarker = 14;
 
-/// Labels a group of sections, so a twelve-section page reads as four
-/// chapters instead of one undifferentiated stack.
+/// Where one chapter of the Progress page begins.
+///
+/// It draws no title. The pinned [ProgressChapterTabs] already name and
+/// mark the chapter being read, so a heading here repeated the tab above it
+/// and stacked a third heading over each section's own ("Strength", then
+/// "Strength", then "Strength change"). What remains is a wider gap and,
+/// between chapters, a hairline.
+///
+/// [title] still reaches screen readers as a header, so moving by headings
+/// lands on each chapter, and the page keys the jump target and the scroll
+/// tracking on this widget.
+///
+/// The rule is its top edge, and the gap before a chapter is the page's
+/// ([ProgressChapter.gapBefore]): a tab jump scrolls this widget's top to
+/// the top of the view, so the rule lands on the pinned controls' own
+/// hairline and the two read as one line. With the gap inside, it stopped
+/// a gap's height below, and two rules stacked under the tabs.
 class ProgressChapter extends StatelessWidget {
-  const ProgressChapter({required this.title, super.key});
+  const ProgressChapter({
+    required this.title,
+    this.first = false,
+    super.key,
+  });
 
   final String title;
 
+  /// The first chapter follows the overview, not another chapter, so it
+  /// draws no rule.
+  final bool first;
+
+  /// Space the page leaves before every chapter but the first.
+  static const double gapBefore = AppSpacing.xxl;
+
   @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Semantics(
-      header: true,
-      child: Padding(
-        padding: const EdgeInsets.only(
-          top: AppSpacing.xxl,
-          bottom: AppSpacing.lg,
+  Widget build(BuildContext context) => Semantics(
+        header: true,
+        label: title,
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: first ? AppSpacing.xl : 0,
+            bottom: AppSpacing.xl,
+          ),
+          child: first
+              ? const SizedBox(width: double.infinity)
+              : Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
         ),
-        child: Row(
-          children: <Widget>[
-            // A short bar in the brand colour, then the name at heading
-            // size. The old small-capitals eyebrow was the quietest text on
-            // the page while marking its biggest division.
-            Container(
-              width: AppSpacing.xs,
-              height: AppSpacing.xl,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Text(title, style: theme.textTheme.headlineSmall),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      );
 }
 
 /// The chapters of the Progress page as a row of tabs: tapping one asks the

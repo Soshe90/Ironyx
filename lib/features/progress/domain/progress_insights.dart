@@ -10,7 +10,6 @@ enum InsightKind {
   strengthChange,
   consistencySlipping,
   volumeTrendingDown,
-  personalRecords,
   neglectedMuscle,
 }
 
@@ -31,7 +30,6 @@ class ProgressInsight {
     this.percentage,
     this.currentBestKg,
     this.averageSessionsPerWeek,
-    this.count,
   });
 
   final InsightSeverity severity;
@@ -47,11 +45,21 @@ class ProgressInsight {
   final int? percentage;
   final double? currentBestKg;
   final double? averageSessionsPerWeek;
-  final int? count;
 }
+
+/// Smallest change in a lift's estimated 1RM that the insights mention.
+///
+/// The estimate is printed to the whole kilogram (about 1% of a 100 kg
+/// lift) and moves a few percent between ordinary sessions, so "Bench is
+/// up 1%" was rounding and day-to-day noise presented as a finding.
+/// Reasoned, not measured: tune it if real data says otherwise.
+const double minInsightStrengthChange = 0.03;
 
 /// Builds a small, ranked set of conclusions from already-loaded analytics.
 /// Every rule has a data threshold so sparse history stays silent.
+///
+/// Personal records are not among them: the hero card states the count
+/// directly above, and an insight repeating it said nothing new.
 ///
 /// [weekStart] and [utcOffset] have to be the ones the weekly series were
 /// bucketed with, so that the week in progress (found from [now]) names a
@@ -64,7 +72,6 @@ List<ProgressInsight> buildProgressInsights({
   required List<WorkoutFrequency> frequency,
   required List<MuscleGroupVolume> currentMuscleVolume,
   required List<MuscleGroupVolume> previousMuscleVolume,
-  int recentPersonalRecords = 0,
   WeekStart weekStart = WeekStart.monday,
   Duration utcOffset = Duration.zero,
   DateTime? now,
@@ -89,19 +96,22 @@ List<ProgressInsight> buildProgressInsights({
     movers.sort((a, b) => b.change!.abs().compareTo(a.change!.abs()));
     final mover = movers.first;
     final change = mover.change!;
-    insights.add(
-      ProgressInsight(
-        severity:
-            change < 0 ? InsightSeverity.negative : InsightSeverity.positive,
-        target: InsightTarget.strength,
-        kind: InsightKind.strengthChange,
-        subjectId: mover.exerciseId,
-        subjectName: mover.exerciseName,
-        direction: change < 0 ? InsightDirection.down : InsightDirection.up,
-        percentage: (change.abs() * 100).round(),
-        currentBestKg: mover.currentBestKg,
-      ),
-    );
+    // The biggest mover is below the threshold, so every lift is.
+    if (change.abs() >= minInsightStrengthChange) {
+      insights.add(
+        ProgressInsight(
+          severity:
+              change < 0 ? InsightSeverity.negative : InsightSeverity.positive,
+          target: InsightTarget.strength,
+          kind: InsightKind.strengthChange,
+          subjectId: mover.exerciseId,
+          subjectName: mover.exerciseName,
+          direction: change < 0 ? InsightDirection.down : InsightDirection.up,
+          percentage: (change.abs() * 100).round(),
+          currentBestKg: mover.currentBestKg,
+        ),
+      );
+    }
   }
 
   // `frequency` is zero-filled from the selected range's nominal start
@@ -153,17 +163,6 @@ List<ProgressInsight> buildProgressInsights({
         ),
       );
     }
-  }
-
-  if (recentPersonalRecords >= 2) {
-    insights.add(
-      ProgressInsight(
-        severity: InsightSeverity.positive,
-        target: InsightTarget.strength,
-        kind: InsightKind.personalRecords,
-        count: recentPersonalRecords,
-      ),
-    );
   }
 
   final neglected =

@@ -270,6 +270,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                       ProgressChapter(
                         key: _chapterKeys[_Chapter.strength],
                         title: l10n.progressChapterStrength,
+                        first: true,
                       ),
                       SectionHeader(
                         title: l10n.progressStrengthChangeTitle,
@@ -287,6 +288,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                       _OneRmSection(range: range),
 
                       // ---- Volume: "how much work, and where did it go?" ----
+                      const SizedBox(height: ProgressChapter.gapBefore),
                       ProgressChapter(
                         key: _chapterKeys[_Chapter.volume],
                         title: l10n.progressChapterVolume,
@@ -315,6 +317,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                       _RepRangeSection(range: range),
 
                       // ---- Habits: "am I showing up, and how hard?" ----
+                      const SizedBox(height: ProgressChapter.gapBefore),
                       ProgressChapter(
                         key: _chapterKeys[_Chapter.habits],
                         title: l10n.progressChapterHabits,
@@ -338,6 +341,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                       _EffortSection(range: range),
 
                       // ---- Body ----
+                      const SizedBox(height: ProgressChapter.gapBefore),
                       ProgressChapter(
                         key: _chapterKeys[_Chapter.body],
                         title: l10n.progressChapterBody,
@@ -649,7 +653,6 @@ class _InsightsSection extends ConsumerWidget {
     final frequency = ref.watch(workoutFrequencySeriesProvider(range));
     final muscles = ref.watch(muscleGroupSeriesProvider(range));
     final previousMuscles = ref.watch(previousMuscleGroupSeriesProvider(range));
-    final personalRecords = ref.watch(recentPersonalRecordsProvider(range));
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
 
@@ -657,8 +660,7 @@ class _InsightsSection extends ConsumerWidget {
         volume.isLoading ||
         frequency.isLoading ||
         muscles.isLoading ||
-        previousMuscles.isLoading ||
-        personalRecords.isLoading) {
+        previousMuscles.isLoading) {
       return const _ChartLoading();
     }
     Object? error;
@@ -668,7 +670,6 @@ class _InsightsSection extends ConsumerWidget {
       frequency,
       muscles,
       previousMuscles,
-      personalRecords,
     ]) {
       if (value.hasError) {
         error = value.error;
@@ -684,7 +685,6 @@ class _InsightsSection extends ConsumerWidget {
           ref.invalidate(workoutFrequencySeriesProvider(range));
           ref.invalidate(muscleGroupSeriesProvider(range));
           ref.invalidate(previousMuscleGroupSeriesProvider(range));
-          ref.invalidate(recentPersonalRecordsProvider(range));
         },
       );
     }
@@ -695,7 +695,6 @@ class _InsightsSection extends ConsumerWidget {
       frequency: frequency.value ?? const [],
       currentMuscleVolume: muscles.value ?? const [],
       previousMuscleVolume: previousMuscles.value ?? const [],
-      recentPersonalRecords: personalRecords.value ?? 0,
       // The same week settings the series were bucketed with.
       weekStart: ref.watch(weekStartControllerProvider),
       utcOffset: ref.watch(todayProvider).timeZoneOffset,
@@ -792,10 +791,6 @@ class _InsightTile extends StatelessWidget {
           headline: l10n.progressInsightVolumeHeadline,
           figure: l10n.progressInsightVolumeFigure(insight.percentage!),
         ),
-      InsightKind.personalRecords => (
-          headline: l10n.progressInsightPersonalRecordsHeadline,
-          figure: l10n.progressInsightPersonalRecordsFigure(insight.count!),
-        ),
       InsightKind.neglectedMuscle => (
           headline: l10n.progressInsightNeglectedHeadline(subjectName!),
           figure: l10n.progressInsightNeglectedFigure,
@@ -803,21 +798,14 @@ class _InsightTile extends StatelessWidget {
     };
     final ThemeData theme = Theme.of(context);
     final bool light = theme.brightness == Brightness.light;
-    // Records read amber everywhere (PrBadge); gains green, slips red, and a
-    // prompt to act in the brand colour rather than a third alarm hue.
-    final (IconData icon, Color color) = switch ((
-      insight.kind,
-      insight.severity,
-    )) {
-      (InsightKind.personalRecords, _) => (
-          Icons.emoji_events_rounded,
-          light ? AppColors.personalRecordInkLight : AppColors.personalRecord,
-        ),
-      (_, InsightSeverity.actionable) => (
+    // Gains green, slips red, and a prompt to act in the brand colour
+    // rather than a third alarm hue.
+    final (IconData icon, Color color) = switch (insight.severity) {
+      InsightSeverity.actionable => (
           Icons.flag_rounded,
           theme.colorScheme.primary,
         ),
-      (_, InsightSeverity.negative) => (
+      InsightSeverity.negative => (
           Icons.trending_down_rounded,
           light ? AppColors.lossInkLight : AppColors.loss,
         ),
