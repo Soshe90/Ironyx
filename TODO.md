@@ -248,6 +248,13 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     by a test at 1.6x text.
   - History rows, the calendar and both import menus are unchanged.
     **Not checked:** many programs on a device; tablet width.
+- **Version 1.0.5 (versionCode 6), 2026-11-10.** Bumped for the next Play
+  upload: the Progress review series and the fixes after it (`a6c7e51`..
+  `21560ad`, listed above), and Home's week badge. Whether 1.0.4+5 was ever
+  uploaded is not recorded here; 6 is higher than either. Merged to `main`
+  with PRs #2 and #3. Build with `scripts/build_android.sh bundle`; keep
+  `build/symbols/1.0.5+6` with it. The same **before a wide rollout**
+  points as 1.0.4 apply (image terms, a Play testing track on a phone).
 - **Version 1.0.4 (versionCode 5), 2026-11-05.** Bumped for the next Play
   upload: exercise pictures and the picture swiper, the Progress, Home and
   Workouts restyles, and the fixes listed above since 1.0.3. Build with
