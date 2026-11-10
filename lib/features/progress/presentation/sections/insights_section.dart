@@ -77,6 +77,8 @@ class InsightsSection extends ConsumerWidget {
       weekStart: ref.watch(weekStartControllerProvider),
       utcOffset: ref.watch(todayProvider).timeZoneOffset,
       now: ref.watch(localNowProvider),
+      rangeStart: ref.watch(progressSinceProvider(range)),
+      firstWorkoutAt: ref.watch(firstWorkoutAtProvider).value,
     );
     return Semantics(
       container: true,

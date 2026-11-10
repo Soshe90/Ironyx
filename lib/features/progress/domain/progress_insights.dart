@@ -1,6 +1,7 @@
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/week_start.dart';
+import 'consistency_calculators.dart';
 
 enum InsightSeverity { actionable, negative, positive }
 
@@ -75,6 +76,8 @@ List<ProgressInsight> buildProgressInsights({
   WeekStart weekStart = WeekStart.monday,
   Duration utcOffset = Duration.zero,
   DateTime? now,
+  DateTime? rangeStart,
+  DateTime? firstWorkoutAt,
 }) {
   final insights = <ProgressInsight>[];
   final DateTime currentWeek = DateFormatters.weekBucketStart(
@@ -123,11 +126,25 @@ List<ProgressInsight> buildProgressInsights({
   // `calculateConsistency`. Assumed ascending by weekStart, matching every
   // DAO stream this function is fed from; not re-sorted here so a caller
   // passing rows in DAO order never risks an unstable sort on tied weeks.
-  final firstActiveWeek =
-      finishedFrequency.indexWhere((week) => week.workoutCount > 0);
-  final eligibleWeeks = firstActiveWeek == -1
-      ? const <WorkoutFrequency>[]
-      : finishedFrequency.sublist(firstActiveWeek);
+  //
+  // Unless training began before the range (see `trainedBeforeRange`):
+  // then the empty weeks are a break, which is exactly what this insight
+  // is for, and every finished week counts except the first, which starts
+  // before the range and so holds only some of its sessions.
+  final List<WorkoutFrequency> eligibleWeeks;
+  if (trainedBeforeRange(
+      rangeStart: rangeStart, firstWorkoutAt: firstWorkoutAt)) {
+    eligibleWeeks = <WorkoutFrequency>[
+      for (final (int i, WorkoutFrequency w) in finishedFrequency.indexed)
+        if (i > 0 || !rangeStart!.isAfter(w.weekStart)) w,
+    ];
+  } else {
+    final firstActiveWeek =
+        finishedFrequency.indexWhere((week) => week.workoutCount > 0);
+    eligibleWeeks = firstActiveWeek == -1
+        ? const <WorkoutFrequency>[]
+        : finishedFrequency.sublist(firstActiveWeek);
+  }
   if (eligibleWeeks.length >= 4) {
     final active = eligibleWeeks.where((week) => week.workoutCount > 0).length;
     final average =

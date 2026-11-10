@@ -186,4 +186,20 @@ void main() {
       expect(await c.read(provider.future), isEmpty);
     });
   });
+
+  test('adherence after a break counts the weeks of the break', () async {
+    // Fake now is Tue 10 Nov 2026. "1M" starts Sun 11 Oct, inside the week
+    // of Mon 5 Oct. Trained in April, then nothing until Sat 7 Nov.
+    await logSquat('april', DateTime(2026, 4, 1, 18), 100);
+    await logSquat('back', DateTime(2026, 11, 7, 10), 100);
+    final ProviderContainer c = await container();
+    final provider = consistencySummaryProvider(ProgressRange.month);
+    c.listen(provider, (_, __) {});
+
+    final summary = await c.read(provider.future);
+    // 12, 19 and 26 Oct and 2 Nov. Left out: the partial week of 5 Oct and
+    // this unfinished week, neither of which met the target of 3.
+    expect(summary.eligibleWeeks, 4);
+    expect(summary.hitTargetWeeks, 0);
+  });
 }

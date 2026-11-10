@@ -331,6 +331,7 @@ class FrequencySection extends ConsumerWidget {
           weeks: points,
           rangeDays: range.days,
           now: ref.watch(localNowProvider),
+          firstWorkoutAt: ref.watch(firstWorkoutAtProvider).value,
         );
 
         return ProgressChartCard(

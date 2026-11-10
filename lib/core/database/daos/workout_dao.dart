@@ -140,6 +140,21 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Incomplete and legacy workouts without a recorded duration are excluded.
   /// The aggregation stays in SQL per ADR-1, and a null result means there is
   /// no duration data to show yet.
+  /// When the first finished workout started; null with none.
+  ///
+  /// Progress asks whether training began before or inside the selected
+  /// range: a weekly series only reaches back to the range's start, so it
+  /// cannot tell a lifter two weeks in from one back from a two-month
+  /// break. A single `MIN` over the indexed `started_at`.
+  Stream<DateTime?> watchFirstWorkoutAt() {
+    final Expression<DateTime> first = workoutsTable.startedAt.min();
+    return (selectOnly(workoutsTable)
+          ..addColumns(<Expression<Object>>[first])
+          ..where(workoutsTable.endedAt.isNotNull()))
+        .map((TypedResult row) => row.read(first))
+        .watchSingle();
+  }
+
   Stream<double?> watchAverageDurationSeconds() => customSelect(
         '''
         SELECT AVG(duration_seconds) AS average_seconds

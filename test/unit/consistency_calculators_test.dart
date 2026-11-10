@@ -311,4 +311,106 @@ void main() {
       );
     });
   });
+
+  group('back from a break inside the range', () {
+    // Mon 5 Jan 2026 is week(0). The range starts mid-week(0); the user
+    // trained long before it, stopped, and came back in week(4).
+    final DateTime rangeStart = DateTime.parse('2026-01-07 09:00:00');
+    final DateTime longAgo = DateTime.parse('2025-03-01 09:00:00');
+    final DateTime now = DateTime.parse('2026-02-11 09:00:00'); // week(5)
+
+    test('trainedBeforeRange', () {
+      expect(
+        trainedBeforeRange(rangeStart: rangeStart, firstWorkoutAt: longAgo),
+        isTrue,
+      );
+      expect(
+        trainedBeforeRange(
+          rangeStart: rangeStart,
+          firstWorkoutAt: DateTime.parse('2026-01-20'),
+        ),
+        isFalse,
+      );
+      expect(trainedBeforeRange(rangeStart: null, firstWorkoutAt: longAgo),
+          isFalse,
+          reason: 'all-time has no before');
+      expect(trainedBeforeRange(rangeStart: rangeStart, firstWorkoutAt: null),
+          isFalse,
+          reason: 'unknown keeps the old rule');
+    });
+
+    test('adherence counts the empty weeks of the break', () {
+      final result = calculateConsistency(
+        weeks: [
+          week(0, 0), // partial, unmet: left out
+          week(1, 0),
+          week(2, 0),
+          week(3, 0),
+          week(4, 3),
+          week(5, 1), // this week, unmet: left out
+        ],
+        targetSessionsPerWeek: 3,
+        now: now,
+        rangeStart: rangeStart,
+        firstWorkoutAt: longAgo,
+      );
+      expect(result.eligibleWeeks, 4);
+      expect(result.hitTargetWeeks, 1);
+      expect(result.adherenceFraction, .25);
+    });
+
+    test('without the first workout, the old rule still applies', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 0), week(1, 0), week(2, 0), week(3, 0), week(4, 3)],
+        targetSessionsPerWeek: 3,
+        now: now,
+      );
+      expect(result.eligibleWeeks, 1);
+      expect(result.adherenceFraction, 1.0);
+    });
+
+    test('a partial first week that met the target still counts', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 3), week(1, 0), week(2, 3)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-28 09:00:00'), // week(3), not listed
+        rangeStart: rangeStart,
+        firstWorkoutAt: longAgo,
+      );
+      expect(result.eligibleWeeks, 3);
+      expect(result.hitTargetWeeks, 2);
+    });
+
+    test('the per-week average divides by the whole range', () {
+      final double? average = averageSessionsPerWeek(
+        weeks: [
+          for (var i = 0; i < 11; i++) week(i, 0),
+          week(11, 3),
+          week(12, 3),
+        ],
+        rangeDays: 90,
+        now: DateTime.parse('2026-04-04 09:00:00'),
+        firstWorkoutAt: longAgo,
+      );
+      // Six sessions over 90 days, not over the two weeks since returning.
+      expect(average, closeTo(6 / (90 / 7), 0.0001));
+    });
+
+    test('a first workout inside the range keeps counting from it', () {
+      final DateTime now2 = DateTime.parse('2026-04-04 09:00:00');
+      final double? average = averageSessionsPerWeek(
+        weeks: [
+          for (var i = 0; i < 11; i++) week(i, 0),
+          week(11, 3),
+          week(12, 3),
+        ],
+        rangeDays: 90,
+        now: now2,
+        firstWorkoutAt: week(11, 0).weekStart.add(const Duration(hours: 9)),
+      );
+      final double elapsed =
+          now2.difference(week(11, 0).weekStart).inMinutes / (60 * 24 * 7);
+      expect(average, closeTo(6 / elapsed, 0.0001));
+    });
+  });
 }

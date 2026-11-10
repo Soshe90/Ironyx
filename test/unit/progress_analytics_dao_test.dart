@@ -407,4 +407,32 @@ void main() {
       expect(local.single.weekStart, DateTime(2026, 1, 11));
     });
   });
+
+  group('watchFirstWorkoutAt', () {
+    Future<void> workout(String id, DateTime startedAt, {bool ended = true}) =>
+        dao.insertWorkout(
+          WorkoutsTableCompanion.insert(
+            id: id,
+            startedAt: startedAt,
+            endedAt: ended
+                ? Value(startedAt.add(const Duration(hours: 1)))
+                : const Value.absent(),
+          ),
+          const [],
+          const [],
+        );
+
+    test('is null with no workouts', () async {
+      expect(await dao.watchFirstWorkoutAt().first, isNull);
+    });
+
+    test('is the earliest finished workout, not one still open', () async {
+      await workout('open', DateTime(2025, 1, 1), ended: false);
+      await workout('later', DateTime(2026, 3, 1));
+      await workout('first', DateTime(2025, 6, 1, 9, 30));
+
+      expect(
+          await dao.watchFirstWorkoutAt().first, DateTime(2025, 6, 1, 9, 30));
+    });
+  });
 }

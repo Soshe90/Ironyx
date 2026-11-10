@@ -23,12 +23,18 @@ class ConsistencySummary {
 /// [weekStart] and [utcOffset] have to be the ones [weeks] was bucketed
 /// with (see `WorkoutDao.watchWorkoutFrequency`), so that "this week" names
 /// a bucket that exists in the series.
+///
+/// [rangeStart] and [firstWorkoutAt] decide where adherence starts counting;
+/// see [trainedBeforeRange]. Without them it starts at the first trained
+/// week of the series.
 ConsistencySummary calculateConsistency(
     {required List<WorkoutFrequency> weeks,
     required int targetSessionsPerWeek,
     WeekStart weekStart = WeekStart.monday,
     Duration utcOffset = Duration.zero,
-    DateTime? now}) {
+    DateTime? now,
+    DateTime? rangeStart,
+    DateTime? firstWorkoutAt}) {
   if (weeks.isEmpty) {
     return ConsistencySummary(
         currentStreakWeeks: 0,
@@ -79,16 +85,32 @@ ConsistencySummary calculateConsistency(
   // they actually managed. The eligible window starts at the first week
   // with any activity; a week with zero sessions *after* training began is
   // still a real miss and stays counted.
-  final firstActiveIndex = ordered.indexWhere((week) => week.workoutCount > 0);
   //
-  // The week in progress is not a miss yet: it counts once it has met the
-  // target, and is left out until then. Counted from its first day, it
-  // dragged adherence down every Monday for a week that had barely begun.
-  final eligible = firstActiveIndex == -1
+  // Unless training began before the range: then every week of the range
+  // counts, the empty ones after a break included. Starting at the first
+  // trained week there hid the break, so a lifter back for two weeks after
+  // two months off read as fully consistent.
+  final bool wholeRange = trainedBeforeRange(
+    rangeStart: rangeStart,
+    firstWorkoutAt: firstWorkoutAt,
+  );
+  final firstIndex =
+      wholeRange ? 0 : ordered.indexWhere((week) => week.workoutCount > 0);
+  //
+  // A week only partly inside the window is not a miss yet: it counts once
+  // it has met the target, and is left out until then. That is the week in
+  // progress (counted from its first day, it dragged adherence down every
+  // Monday) and, counting the whole range, its first week, which starts
+  // before the range does and so holds only some of its sessions.
+  bool partial(int index, WorkoutFrequency w) =>
+      w.weekStart == currentWeek ||
+      (wholeRange && index == 0 && rangeStart!.isAfter(w.weekStart));
+  final eligible = firstIndex == -1
       ? const <WorkoutFrequency>[]
       : <WorkoutFrequency>[
-          for (final w in ordered.sublist(firstActiveIndex))
-            if (w.weekStart != currentWeek ||
+          for (final (int i, WorkoutFrequency w)
+              in ordered.sublist(firstIndex).indexed)
+            if (!partial(firstIndex + i, w) ||
                 w.workoutCount >= targetSessionsPerWeek)
               w,
         ];
@@ -118,18 +140,44 @@ ConsistencySummary calculateConsistency(
 /// eleven weeks before they started. It is never less than one week, or a
 /// first session today would read as seven a week.
 ///
+/// With [firstWorkoutAt] before the range ([trainedBeforeRange]), training
+/// did not begin inside it, so the whole range is the divisor: a break
+/// inside the range lowers the average, as it should.
+///
 /// Null when nothing in the series was trained.
 double? averageSessionsPerWeek({
   required List<WorkoutFrequency> weeks,
   required int? rangeDays,
   required DateTime now,
+  DateTime? firstWorkoutAt,
 }) {
   final int firstActive = weeks.indexWhere((w) => w.workoutCount > 0);
   if (firstActive == -1) return null;
   final int total = weeks.fold(0, (sum, w) => sum + w.workoutCount);
-  final double elapsedWeeks = rangeDays != null && firstActive == 0
+  final bool wholeRange = rangeDays != null &&
+      (firstActive == 0 ||
+          trainedBeforeRange(
+            rangeStart: now.subtract(Duration(days: rangeDays)),
+            firstWorkoutAt: firstWorkoutAt,
+          ));
+  final double elapsedWeeks = wholeRange
       ? rangeDays / DateTime.daysPerWeek
       : now.difference(weeks[firstActive].weekStart).inMinutes /
           (Duration.minutesPerDay * DateTime.daysPerWeek);
   return total / (elapsedWeeks < 1 ? 1 : elapsedWeeks);
 }
+
+/// Whether training began before the range, so the range's weeks with
+/// nothing in them are a break, not time before the user started.
+///
+/// False for all-time ([rangeStart] null), and while the first workout is
+/// unknown ([firstWorkoutAt] null): the figures then count from the first
+/// trained week of the series, which is right for someone who began inside
+/// the range and was the rule for everyone before this was known.
+bool trainedBeforeRange({
+  required DateTime? rangeStart,
+  required DateTime? firstWorkoutAt,
+}) =>
+    rangeStart != null &&
+    firstWorkoutAt != null &&
+    firstWorkoutAt.isBefore(rangeStart);

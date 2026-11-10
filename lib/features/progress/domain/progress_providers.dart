@@ -171,14 +171,20 @@ Future<ConsistencySummary> consistencySummary(
   // adherence measured against the old one until the app restarted.
   final Future<Profile?> profileFuture =
       ref.watch(progressProfileProvider.future);
+  final DateTime? rangeStart = ref.watch(progressSinceProvider(range));
+  final Future<DateTime?> firstFuture =
+      ref.watch(firstWorkoutAtProvider.future);
   final weeks = await weeksFuture;
   final Profile? profile = await profileFuture;
+  final DateTime? firstWorkout = await firstFuture;
   return calculateConsistency(
     weeks: weeks,
     targetSessionsPerWeek:
         profile?.weeklySessionTarget ?? defaultWeeklySessionTarget,
     weekStart: weekStart,
     utcOffset: utcOffset,
+    rangeStart: rangeStart,
+    firstWorkoutAt: firstWorkout,
   );
 }
 
@@ -233,6 +239,12 @@ Stream<BodyMetrics?> progressLatestBodyMetrics(Ref ref) =>
 Stream<List<BodyMetrics>> bodyMetricsSeries(Ref ref, ProgressRange range) => ref
     .watch(bodyMetricsDaoProvider)
     .watchAll(since: ref.watch(progressSinceProvider(range)));
+
+/// When the first finished workout started, whatever the range: whether
+/// training began before the range or inside it (see `trainedBeforeRange`).
+@riverpod
+Stream<DateTime?> firstWorkoutAt(Ref ref) =>
+    ref.watch(workoutDaoProvider).watchFirstWorkoutAt();
 
 /// Exercises with logged sets, most-trained first — the 1RM picker's source.
 @riverpod

@@ -226,4 +226,46 @@ void main() {
       expect(insight.direction, InsightDirection.down);
     });
   });
+
+  group('back from a break inside the range', () {
+    DateTime monday(int offset) =>
+        DateTime.parse('2026-01-05').add(Duration(days: offset * 7));
+    WorkoutFrequency countWeek(int offset, int count) =>
+        WorkoutFrequency(weekStart: monday(offset), workoutCount: count);
+    final List<WorkoutFrequency> weeks = <WorkoutFrequency>[
+      countWeek(0, 0), // partial first week: left out
+      countWeek(1, 0),
+      countWeek(2, 0),
+      countWeek(3, 0),
+      countWeek(4, 0),
+      countWeek(5, 1),
+      countWeek(6, 1),
+      countWeek(7, 2), // this week: left out
+    ];
+    final DateTime now = monday(7).add(const Duration(days: 2));
+    final DateTime rangeStart = monday(0).add(const Duration(days: 2));
+
+    Iterable<ProgressInsight> slipping({DateTime? firstWorkoutAt}) =>
+        buildProgressInsights(
+          strengthChanges: const [],
+          volume: const [],
+          frequency: weeks,
+          currentMuscleVolume: const [],
+          previousMuscleVolume: const [],
+          now: now,
+          rangeStart: rangeStart,
+          firstWorkoutAt: firstWorkoutAt,
+        ).where((i) => i.kind == InsightKind.consistencySlipping);
+
+    test('the break counts, so a slow return is slipping', () {
+      final ProgressInsight insight =
+          slipping(firstWorkoutAt: DateTime.parse('2025-01-01')).single;
+      // Two sessions over six whole weeks.
+      expect(insight.averageSessionsPerWeek, closeTo(2 / 6, 0.0001));
+    });
+
+    test('for someone who started in week 5, it is not', () {
+      expect(slipping(firstWorkoutAt: monday(5)), isEmpty);
+    });
+  });
 }

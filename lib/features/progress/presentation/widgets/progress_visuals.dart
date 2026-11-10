@@ -225,6 +225,7 @@ class ProgressOverviewHero extends ConsumerWidget {
             weeks: sessions,
             rangeDays: range.days,
             now: ref.watch(localNowProvider),
+            firstWorkoutAt: ref.watch(firstWorkoutAtProvider).value,
           );
     final String? perWeek =
         average == null ? null : UnitFormatters.oneDecimal(average);
