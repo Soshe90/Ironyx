@@ -127,6 +127,22 @@ void main() {
     await disposeApp(tester);
   });
 
+  testWidgets('with nothing before the range, the baseline is named',
+      (tester) async {
+    // Both sessions are inside the default range, so each lift is compared
+    // with its first session. "was 100 kg" and "up 4%" alone read as a
+    // strength change against an established best.
+    await pumpProgress(tester);
+
+    expect(find.text('first session: 100 kg'), findsNWidgets(3));
+    expect(find.textContaining(RegExp(r'^was ')), findsNothing);
+    expect(
+      find.text('Back Squat is up 4% since your first session'),
+      findsOneWidget,
+    );
+    await disposeApp(tester);
+  });
+
   testWidgets('relative strength says when it failed, and can retry',
       (tester) async {
     int calls = 0;

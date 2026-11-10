@@ -152,7 +152,9 @@ class _InsightTile extends StatelessWidget {
     };
     final ({String headline, String figure}) text = switch (insight.kind) {
       InsightKind.strengthChange => (
-          headline: l10n.progressInsightStrengthHeadline(
+          headline: (insight.sinceFirstSession
+              ? l10n.progressInsightStrengthSinceFirstHeadline
+              : l10n.progressInsightStrengthHeadline)(
             insight.direction!.name,
             subjectName!,
             insight.percentage!,

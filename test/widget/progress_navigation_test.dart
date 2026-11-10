@@ -405,6 +405,17 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets('a best from before the range is still "was"', (tester) async {
+      // Both lifts were trained 100 and 107 days ago, before the 90-day
+      // range, so this is a real earlier best, not a first session.
+      await pumpProgress(tester);
+
+      expect(find.textContaining(RegExp(r'^was ')), findsNWidgets(2));
+      expect(find.textContaining('first session:'), findsNothing);
+      expect(find.textContaining('since your first session'), findsNothing);
+      await disposeApp(tester);
+    });
+
     testWidgets('a tab says whether it is the chapter being read',
         (tester) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
@@ -499,6 +510,31 @@ void main() {
           .spots;
       expect(spots, hasLength(sessions));
       expect(spots.last.y, moreOrLessEquals(7.1, epsilon: 0.001));
+      await disposeApp(tester);
+    });
+
+    testWidgets('a screen reader gets the weekly bars as a sentence too',
+        (tester) async {
+      // The value axis put its tick labels in the semantics tree as bare
+      // numbers; the bars are summarised the way the line charts are.
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await pumpProgress(tester);
+      await tester.ensureVisible(find.byType(BarChart).at(1));
+      await settle(tester);
+
+      // Workouts per week: twelve weekly sessions, one a week.
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            r'^Chart from .+ to .+\. Latest: 1 workout\. '
+            r'Lowest: (No workouts|1 workout)\. Highest: 1 workout\.$',
+          ),
+        ),
+        findsOneWidget,
+      );
+      // No tick is read out on its own.
+      expect(find.bySemanticsLabel(RegExp(r'^\d+(\.\d+)?$')), findsNothing);
+      semantics.dispose();
       await disposeApp(tester);
     });
 

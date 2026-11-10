@@ -39,16 +39,21 @@ import '../../../core/database/daos/workout_dao.dart';
   return (workouts: total, activeWeeks: active);
 }
 
-/// Mean of the sessions' average effort (RPE); null with no sessions.
+/// Average effort (RPE) across the sessions; null when no set was rated.
 ///
-/// Each session counts once, however many sets it rated.
+/// Weighted by the sets each session rated, like [summarizeRest]: it is
+/// the average over every rated set of the range. Counting each session
+/// once let a session with a single all-out set outweigh one with twenty
+/// rated sets, and made effort and rest follow two different rules on the
+/// same card.
 double? averageSessionRpe(List<SessionRpe> sessions) {
-  if (sessions.isEmpty) return null;
+  int sets = 0;
   double sum = 0;
   for (final SessionRpe s in sessions) {
-    sum += s.averageRpe;
+    sets += s.ratedSetCount;
+    sum += s.averageRpe * s.ratedSetCount;
   }
-  return sum / sessions.length;
+  return sets == 0 ? null : sum / sets;
 }
 
 /// Average rest across the sessions, and how many timed rests it stands on.

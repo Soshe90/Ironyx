@@ -33,6 +33,35 @@ void main() {
     });
   });
 
+  testWidgets('the field is one button a screen reader can press',
+      (tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    int taps = 0;
+    await pumpWidgetUnderTest(
+      tester,
+      LiftPickerField(
+        selectedId: 'bench',
+        label: 'Bench Press · 3 sessions',
+        onTap: () => taps++,
+      ),
+    );
+
+    final Finder field = find.byType(LiftPickerField);
+    expect(
+      tester.getSemantics(field),
+      isSemantics(
+        label: 'Exercise: Bench Press · 3 sessions',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
+    // Pressed the way a screen reader presses it, not by touch.
+    tester.semantics.tap(find.semantics.byLabel(RegExp('^Exercise: ')));
+    await tester.pump();
+    expect(taps, 1);
+    semantics.dispose();
+  });
+
   group('the sheet', () {
     List<LiftOption> lifts(int n) => <LiftOption>[
           for (int i = 0; i < n; i++)

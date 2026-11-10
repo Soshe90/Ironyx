@@ -159,6 +159,8 @@ void main() {
       expect(rows.single.currentBestKg, closeTo(110 * (1 + 5 / 30), 0.001));
       expect(rows.single.previousBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
       expect(rows.single.change, closeTo(0.1, 0.001));
+      // A best from before the range: not a first-session comparison.
+      expect(rows.single.comparedWithFirstSession, isFalse);
     });
 
     test('a lift only trained this window has no comparison', () async {
@@ -172,6 +174,8 @@ void main() {
 
       expect(rows.single.isNew, isTrue);
       expect(rows.single.change, isNull);
+      // Nothing to compare with at all is "new", not "since first session".
+      expect(rows.single.comparedWithFirstSession, isFalse);
     });
 
     test('all-time reports a best with nothing to compare against', () async {
@@ -221,6 +225,10 @@ void main() {
         expect(rows.single.currentBestKg, closeTo(70 * (1 + 5 / 30), 0.001),
             reason: '$window window');
         expect(rows.single.previousBestKg, closeTo(60 * (1 + 5 / 30), 0.001),
+            reason: '$window window');
+        // Nothing before the range, so the 60 is the first session, and
+        // the row has to say so.
+        expect(rows.single.comparedWithFirstSession, isTrue,
             reason: '$window window');
       }
     });
@@ -276,6 +284,7 @@ void main() {
 
       expect(rows.single.currentBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
       expect(rows.single.previousBestKg, closeTo(80 * (1 + 5 / 30), 0.001));
+      expect(rows.single.comparedWithFirstSession, isFalse);
     });
 
     test('below the best from before the window reads as a drop', () async {
@@ -352,6 +361,8 @@ void main() {
       expect(rows.single.currentBestKg, closeTo(130 * (1 + 5 / 30), 0.001));
       expect(rows.single.previousBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
       expect(rows.single.change, closeTo(0.3, 0.001));
+      // All-time always compares with the first session.
+      expect(rows.single.comparedWithFirstSession, isTrue);
     });
   });
 

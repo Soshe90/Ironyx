@@ -286,6 +286,8 @@ void main() {
     final result = await dao.watchRpeAnalytics().first;
     // Averaged over the two sets that carry an RPE...
     expect(result.single.averageRpe, 8);
+    // ...and says so, so an average across sessions can weight by it.
+    expect(result.single.ratedSetCount, 2);
     // ...but the volume is the session's, matching every other volume
     // figure in the app rather than dropping the un-rated set's 200 kg.
     expect(result.single.volumeKg, 600);

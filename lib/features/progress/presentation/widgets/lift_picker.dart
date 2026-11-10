@@ -80,6 +80,11 @@ class LiftPickerField extends StatelessWidget {
     return Semantics(
       button: true,
       label: '$field: $label',
+      // One node, so the field reads as a single sentence. Excluding the
+      // InkWell's own semantics drops its tap with it, so the action is
+      // restated here: without it a screen reader announced a button it
+      // could not press (found in the phone's accessibility tree).
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,

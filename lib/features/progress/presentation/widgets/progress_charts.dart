@@ -597,7 +597,7 @@ class WeeklyBarChart extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
     final Color barColor = color ?? scheme.primary;
 
-    return SizedBox(
+    final Widget chart = SizedBox(
       height: height,
       // Bar width has to follow the bucket count now that untrained weeks
       // are included: a fixed 22dp rod was already tight, and an all-time
@@ -735,6 +735,31 @@ class WeeklyBarChart extends StatelessWidget {
           );
         },
       ),
+    );
+    if (values.isEmpty) return chart;
+
+    // As on the line charts: the bars exist for a finger, so a screen
+    // reader gets one sentence instead of the axis ticks read out as a
+    // string of bare numbers and dates (which is what the value axis
+    // added, seen in the phone's accessibility tree).
+    int lowest = 0;
+    int highest = 0;
+    for (int i = 1; i < values.length; i++) {
+      if (values[i] < values[lowest]) lowest = i;
+      if (values[i] > values[highest]) highest = i;
+    }
+    final DateFormatters dates = DateFormatters.of(context);
+    return Semantics(
+      container: true,
+      image: true,
+      label: context.l10n.progressChartSemantic(
+        dates.full(weekStarts.first),
+        dates.full(weekStarts.last.add(const Duration(days: 6))),
+        tooltipValue(values.length - 1),
+        tooltipValue(lowest),
+        tooltipValue(highest),
+      ),
+      child: ExcludeSemantics(child: chart),
     );
   }
 }

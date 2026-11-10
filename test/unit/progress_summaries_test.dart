@@ -43,22 +43,32 @@ void main() {
   });
 
   group('averageSessionRpe', () {
-    SessionRpe rpe(String id, double value) => SessionRpe(
+    SessionRpe rpe(String id, double value, [int sets = 1]) => SessionRpe(
           workoutId: id,
           date: monday,
           averageRpe: value,
+          ratedSetCount: sets,
           volumeKg: 1000,
         );
 
-    test('is the mean of the sessions, each counted once', () {
+    test('with the same number of rated sets, is the plain mean', () {
       expect(
         averageSessionRpe([rpe('a', 7), rpe('b', 8), rpe('c', 9.5)]),
         closeTo(8.1667, 0.0001),
       );
     });
 
-    test('is null without sessions', () {
+    test('weights each session by the sets it rated', () {
+      // One all-out set against twenty at 7: 7.14, not 8.5.
+      expect(
+        averageSessionRpe([rpe('a', 10, 1), rpe('b', 7, 20)]),
+        closeTo((10 + 7 * 20) / 21, 0.0001),
+      );
+    });
+
+    test('is null without sessions, or with nothing rated', () {
       expect(averageSessionRpe(const []), isNull);
+      expect(averageSessionRpe([rpe('a', 8, 0)]), isNull);
     });
   });
 

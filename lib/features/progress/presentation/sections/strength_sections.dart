@@ -250,7 +250,9 @@ class _StrengthRow extends StatelessWidget {
                     Text(
                       row.isNew
                           ? l10n.progressStrengthNewThisPeriod
-                          : l10n.progressStrengthPreviousBest(
+                          : (row.comparedWithFirstSession
+                              ? l10n.progressStrengthFirstSession
+                              : l10n.progressStrengthPreviousBest)(
                               UnitFormatters.estimate(
                                 row.previousBestKg!,
                                 unit,

@@ -569,6 +569,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     return customSelect('''
       SELECT w.id AS workout_id, w.started_at AS date,
         AVG(ws.rpe_times10) AS average_rpe_times_10,
+        COUNT(ws.rpe_times10) AS rated_set_count,
         SUM(ws.weight_kg * ws.reps) AS volume_kg
       FROM workout_sets_table ws
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
@@ -588,6 +589,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
                   workoutId: row.read<String>('workout_id'),
                   date: row.read<DateTime>('date'),
                   averageRpe: row.read<double>('average_rpe_times_10') / 10,
+                  ratedSetCount: row.read<int>('rated_set_count'),
                   volumeKg: row.read<double>('volume_kg'),
                 ),
             ]);
@@ -852,7 +854,9 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         COALESCE(
           bw.before_best,
           CASE WHEN iw.sessions >= 2 THEN fs.first_best END
-        ) as previous_best
+        ) as previous_best,
+        CASE WHEN bw.before_best IS NULL AND iw.sessions >= 2
+          THEN 1 ELSE 0 END as from_first_session
       FROM in_window iw
       JOIN exercises_table ex ON ex.id = iw.exercise_id
       LEFT JOIN before_window bw ON bw.exercise_id = iw.exercise_id
@@ -874,6 +878,8 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
                   exerciseName: r.read<String>('exercise_name'),
                   currentBestKg: r.read<double>('current_best'),
                   previousBestKg: r.readNullable<double>('previous_best'),
+                  comparedWithFirstSession:
+                      r.read<int>('from_first_session') == 1,
                 ),
               )
               .toList(),
@@ -1304,6 +1310,7 @@ class StrengthChange {
     required this.exerciseName,
     required this.currentBestKg,
     required this.previousBestKg,
+    this.comparedWithFirstSession = false,
   });
 
   final String exerciseId;
@@ -1315,6 +1322,13 @@ class StrengthChange {
   /// only one: there is nothing to compare. A new lift is not a
   /// regression, so callers must not treat null as zero.
   final double? previousBestKg;
+
+  /// True when [previousBestKg] is the lift's first session inside the
+  /// range rather than a best from before it. The page says so: against a
+  /// first session, where people start light, a change is "up 250% since
+  /// your first session", not a strength change of 250% (seen with real
+  /// data: 47 kg against a first session of 13 kg headed the insights).
+  final bool comparedWithFirstSession;
 
   bool get isNew => previousBestKg == null;
 
@@ -1455,10 +1469,15 @@ class SessionRpe {
       {required this.workoutId,
       required this.date,
       required this.averageRpe,
+      required this.ratedSetCount,
       required this.volumeKg});
   final String workoutId;
   final DateTime date;
   final double averageRpe;
+
+  /// How many of the session's sets carry an RPE: what [averageRpe] is an
+  /// average of, and so its weight in an average across sessions.
+  final int ratedSetCount;
   final double volumeKg;
 }
 

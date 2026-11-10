@@ -31,6 +31,7 @@ class ProgressInsight {
     this.percentage,
     this.currentBestKg,
     this.averageSessionsPerWeek,
+    this.sinceFirstSession = false,
   });
 
   final InsightSeverity severity;
@@ -46,15 +47,27 @@ class ProgressInsight {
   final int? percentage;
   final double? currentBestKg;
   final double? averageSessionsPerWeek;
+
+  /// For a strength change: the comparison is with the lift's first
+  /// session (see `StrengthChange.comparedWithFirstSession`).
+  final bool sinceFirstSession;
 }
 
 /// Smallest change in a lift's estimated 1RM that the insights mention.
 ///
-/// The estimate is printed to the whole kilogram (about 1% of a 100 kg
-/// lift) and moves a few percent between ordinary sessions, so "Bench is
-/// up 1%" was rounding and day-to-day noise presented as a finding.
-/// Reasoned, not measured: tune it if real data says otherwise.
-const double minInsightStrengthChange = 0.03;
+/// Set to the smallest real step a lifter takes, worked out from the
+/// estimate's own formula rather than picked by feel. Under Epley, one
+/// more rep at the same weight raises the estimate by 1 / (30 + reps):
+/// 2.9% going from five reps to six, 2.6% from nine to ten. One 2.5 kg
+/// plate jump on a 100 kg lift is the same 2.5%. So anything from 2.5% up
+/// can be a real extra rep or a real heavier bar, and is worth a
+/// sentence; below it is mostly rounding (the estimate is printed to the
+/// whole kilogram, about 1% of a 100 kg lift), which is how "Bench is up
+/// 1%" came to be presented as a finding.
+///
+/// Derived, not measured on logged data: revisit it if real histories
+/// show insights that are noise, or real progress that stays silent.
+const double minInsightStrengthChange = 0.025;
 
 /// Builds a small, ranked set of conclusions from already-loaded analytics.
 /// Every rule has a data threshold so sparse history stays silent.
@@ -112,6 +125,7 @@ List<ProgressInsight> buildProgressInsights({
           direction: change < 0 ? InsightDirection.down : InsightDirection.up,
           percentage: (change.abs() * 100).round(),
           currentBestKg: mover.currentBestKg,
+          sinceFirstSession: mover.comparedWithFirstSession,
         ),
       );
     }
@@ -162,12 +176,31 @@ List<ProgressInsight> buildProgressInsights({
     }
   }
 
-  if (finishedVolume.length >= 4) {
-    final midpoint = finishedVolume.length ~/ 2;
-    final earlier = finishedVolume
+  // The same weeks as the consistency rule above, for the same reason. On
+  // a range longer than the user's history, the weeks before the first
+  // workout filled the earlier half with zeros and silenced this rule:
+  // thirteen workouts read "65% lower" under 3 months and all-time, and
+  // nothing at all under 12 months (seen with real data on the phone).
+  final List<WeeklyVolume> eligibleVolume;
+  if (trainedBeforeRange(
+      rangeStart: rangeStart, firstWorkoutAt: firstWorkoutAt)) {
+    eligibleVolume = <WeeklyVolume>[
+      for (final (int i, WeeklyVolume w) in finishedVolume.indexed)
+        if (i > 0 || !rangeStart!.isAfter(w.weekStart)) w,
+    ];
+  } else {
+    final firstActiveWeek =
+        finishedVolume.indexWhere((week) => week.totalVolumeKg > 0);
+    eligibleVolume = firstActiveWeek == -1
+        ? const <WeeklyVolume>[]
+        : finishedVolume.sublist(firstActiveWeek);
+  }
+  if (eligibleVolume.length >= 4) {
+    final midpoint = eligibleVolume.length ~/ 2;
+    final earlier = eligibleVolume
         .take(midpoint)
         .fold<double>(0, (sum, row) => sum + row.totalVolumeKg);
-    final recent = finishedVolume
+    final recent = eligibleVolume
         .skip(midpoint)
         .fold<double>(0, (sum, row) => sum + row.totalVolumeKg);
     if (earlier > 0 && recent < earlier * .8) {
