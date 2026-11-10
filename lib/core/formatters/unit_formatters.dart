@@ -21,11 +21,24 @@ abstract final class UnitFormatters {
   static final NumberFormat _volume = NumberFormat('#,##0');
   static final NumberFormat _plain = NumberFormat('0.##');
   static final NumberFormat _rate = NumberFormat('#,##0.0');
+  static final NumberFormat _oneDecimal = NumberFormat('#,##0.0');
+  static final NumberFormat _ratio = NumberFormat('0.00');
 
   /// Editable representation of a number: no grouping separators, so the
   /// result can be parsed straight back out of a text field. `_weight`'s
   /// thousands separator would not survive a `double.tryParse` round trip.
   static String plain(double value) => _plain.format(value);
+
+  /// A unitless figure to one decimal: an effort score, sessions a week,
+  /// a body-fat percentage, a BMI.
+  ///
+  /// These were `toStringAsFixed(1)` at each call site. Formatting them
+  /// here gives every number on a screen one source, so a later change
+  /// (local digits, a decimal comma) is made once.
+  static String oneDecimal(double value) => _oneDecimal.format(value);
+
+  /// A ratio to two decimals, such as push:pull or a lift per body weight.
+  static String ratio(double value) => _ratio.format(value);
 
   /// Converts from stored kilograms into the display unit.
   static double fromKg(double kg, WeightUnit unit) => kg * unit.perKilogram;

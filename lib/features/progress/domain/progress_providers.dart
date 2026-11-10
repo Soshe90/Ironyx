@@ -270,41 +270,6 @@ Future<List<RelativeStrength>> relativeStrengths(
   ];
 }
 
-@riverpod
-Future<List<NormalizedLiftSeries>> normalizedLiftSeries(
-  Ref ref,
-  List<String> exerciseIds,
-  ProgressRange range,
-) async {
-  final dao = ref.watch(workoutDaoProvider);
-  final names = {
-    for (final exercise in await dao.watchLoggedExercises().first)
-      exercise.exerciseId: exercise.exerciseName,
-  };
-  final result = <NormalizedLiftSeries>[];
-  for (final id in exerciseIds.take(3)) {
-    final points = await dao
-        .watchOneRMSeries(id, since: ref.watch(progressSinceProvider(range)))
-        .first;
-    if (points.isEmpty) continue;
-    final ordered = [...points]..sort((a, b) => a.date.compareTo(b.date));
-    final start = ordered.first.estimated1RM;
-    if (start <= 0) continue;
-    result.add(NormalizedLiftSeries(
-      exerciseId: id,
-      exerciseName: names[id] ?? id,
-      points: [
-        for (final point in ordered)
-          NormalizedPoint(
-            date: point.date,
-            percentOfStart: point.estimated1RM / start * 100,
-          ),
-      ],
-    ));
-  }
-  return result;
-}
-
 /// Best estimated 1RM per lift in the selected window vs the window before.
 ///
 /// This is the "did I get stronger" series, as opposed to the volume

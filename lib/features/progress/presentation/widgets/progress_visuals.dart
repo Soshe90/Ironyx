@@ -226,7 +226,8 @@ class ProgressOverviewHero extends ConsumerWidget {
             rangeDays: range.days,
             now: ref.watch(localNowProvider),
           );
-    final String? perWeek = average?.toStringAsFixed(1);
+    final String? perWeek =
+        average == null ? null : UnitFormatters.oneDecimal(average);
 
     final bool loading = volume.isLoading && weeks == null;
 

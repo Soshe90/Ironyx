@@ -52,19 +52,3 @@ class RelativeStrength {
   final DateTime measuredAt;
   double get ratio => oneRmKg / bodyWeightKg;
 }
-
-class NormalizedLiftSeries {
-  const NormalizedLiftSeries(
-      {required this.exerciseId,
-      required this.exerciseName,
-      required this.points});
-  final String exerciseId;
-  final String exerciseName;
-  final List<NormalizedPoint> points;
-}
-
-class NormalizedPoint {
-  const NormalizedPoint({required this.date, required this.percentOfStart});
-  final DateTime date;
-  final double percentOfStart;
-}

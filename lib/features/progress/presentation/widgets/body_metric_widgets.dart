@@ -54,7 +54,7 @@ class BodyMetricTile extends ConsumerWidget {
                 ? date
                 : context.l10n.progressBodyMetricDateAndFat(
                     date,
-                    entry.bodyFatPercentage!.toStringAsFixed(1),
+                    UnitFormatters.oneDecimal(entry.bodyFatPercentage!),
                   ),
             style: AppTypography.caption(theme),
           ),

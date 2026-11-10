@@ -58,6 +58,18 @@ enum _Chapter { strength, volume, habits, body }
 
 const double _axisReserved = 28;
 
+/// Width of the shimmer standing in for a card's headline figure.
+const double _headlineShimmerWidth = 160;
+
+/// Stroke of a line chart's line.
+const double _lineWidth = 3;
+
+/// A line chart's point, and a personal record's larger point with the
+/// ring that lifts it off the line.
+const double _dotRadius = 3;
+const double _recordDotRadius = 5;
+const double _recordDotRing = 2;
+
 /// Width kept for value-axis labels ("1,250", "242.5").
 const double _valueAxisReserved = _axisReserved + AppSpacing.lg;
 const double _barWidth = 22;
@@ -550,7 +562,7 @@ class _RelativeStrengthSection extends ConsumerWidget {
                               row.exerciseName,
                             ),
                             value: context.l10n.progressRelativeStrengthRatio(
-                              row.ratio.toStringAsFixed(2),
+                              UnitFormatters.ratio(row.ratio),
                             ),
                           ),
                       ],
@@ -800,7 +812,7 @@ class _InsightTile extends StatelessWidget {
       InsightKind.consistencySlipping => (
           headline: l10n.progressInsightConsistencyHeadline,
           figure: l10n.progressInsightConsistencyFigure(
-            insight.averageSessionsPerWeek!.toStringAsFixed(1),
+            UnitFormatters.oneDecimal(insight.averageSessionsPerWeek!),
           ),
         ),
       InsightKind.volumeTrendingDown => (
@@ -958,16 +970,7 @@ class _ChartLoading extends StatelessWidget {
   const _ChartLoading();
 
   @override
-  Widget build(BuildContext context) => const AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            LoadingShimmer(width: 160, height: AppTypography.metricSizeLg),
-            SizedBox(height: AppSpacing.lg),
-            LoadingShimmer(height: _chartHeight, radius: AppRadius.md),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) => const AppCard(child: _PlotLoading());
 }
 
 /// The plot area of a card whose header (a picker, a metric switch) is
@@ -979,7 +982,10 @@ class _PlotLoading extends StatelessWidget {
   Widget build(BuildContext context) => const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          LoadingShimmer(width: 160, height: AppTypography.metricSizeLg),
+          LoadingShimmer(
+            width: _headlineShimmerWidth,
+            height: AppTypography.metricSizeLg,
+          ),
           SizedBox(height: AppSpacing.lg),
           LoadingShimmer(height: _chartHeight, radius: AppRadius.md),
         ],
@@ -1501,18 +1507,21 @@ class _DatedLineChart extends StatelessWidget {
                   // value no session ever had.
                   preventCurveOverShooting: true,
                   color: scheme.primary,
-                  barWidth: 3,
+                  barWidth: _lineWidth,
                   dotData: FlDotData(
                     show: ordered.length <= _dotThreshold,
                     getDotPainter: (spot, percent, bar, index) =>
                         FlDotCirclePainter(
-                      radius: ordered[index].isPersonalRecord ? 5 : 3,
+                      radius: ordered[index].isPersonalRecord
+                          ? _recordDotRadius
+                          : _dotRadius,
                       // Records are amber everywhere else (PrBadge); a ring in
                       // the card colour separates the dot from the line.
                       color: ordered[index].isPersonalRecord
                           ? AppColors.personalRecord
                           : scheme.primary,
-                      strokeWidth: ordered[index].isPersonalRecord ? 2 : 0,
+                      strokeWidth:
+                          ordered[index].isPersonalRecord ? _recordDotRing : 0,
                       strokeColor: theme.brightness == Brightness.light
                           ? scheme.surfaceContainerLowest
                           : scheme.surfaceContainerLow,
@@ -1827,7 +1836,8 @@ class _EffortSectionState extends ConsumerState<_EffortSection> {
             final double average = averageSessionRpe(sessions)!;
             return _ChartCard(
               header: header,
-              headline: l10n.progressAverageRpe(average.toStringAsFixed(1)),
+              headline:
+                  l10n.progressAverageRpe(UnitFormatters.oneDecimal(average)),
               caption: l10n.sessionCount(sessions.length),
               child: _DatedLineChart(
                 ordered: <_DatedPoint>[
@@ -1838,7 +1848,7 @@ class _EffortSectionState extends ConsumerState<_EffortSection> {
                       // Effort next to the load it was spent on: a hard
                       // session with little volume reads differently.
                       tooltip: l10n.progressSessionRpeValue(
-                        s.averageRpe.toStringAsFixed(1),
+                        UnitFormatters.oneDecimal(s.averageRpe),
                         UnitFormatters.volume(s.volumeKg, unit, l10n),
                       ),
                     ),
@@ -1915,8 +1925,8 @@ class _EffortSectionState extends ConsumerState<_EffortSection> {
 
 /// A unitless axis tick: whole numbers plain, anything else to one decimal.
 String _plainTick(double value) => value == value.roundToDouble()
-    ? value.toStringAsFixed(0)
-    : value.toStringAsFixed(1);
+    ? UnitFormatters.plain(value)
+    : UnitFormatters.oneDecimal(value);
 
 /// Healthy range for both balance ratios; shaded on each gauge and named in
 /// the card's footnote (`progressReferenceBand`).
@@ -2064,7 +2074,8 @@ class _RatioLine extends StatelessWidget {
         : inBand
             ? l10n.progressRatioBalanced
             : l10n.progressRatioOutsideBand;
-    final String? formattedRatio = value?.toStringAsFixed(2);
+    final String? formattedRatio =
+        value == null ? null : UnitFormatters.ratio(value);
     return Semantics(
       label: formattedRatio == null
           ? l10n.progressRatioInsufficientSemantic(label)
@@ -2140,7 +2151,7 @@ class _FrequencySection extends ConsumerWidget {
 
         return _ChartCard(
           headline: context.l10n.progressAveragePerWeek(
-            average?.toStringAsFixed(1) ?? '—',
+            average == null ? '—' : UnitFormatters.oneDecimal(average),
           ),
           caption: context.l10n.progressFrequencySummary(
             total,
@@ -2586,23 +2597,17 @@ class _BodyMetricsSection extends ConsumerWidget {
       ),
       data: (entries) {
         if (entries.isEmpty) {
+          // EmptyState's own action, as every other empty card uses, rather
+          // than a second button laid out beside it.
           return AppCard(
-            child: Column(
-              children: <Widget>[
-                EmptyState(
-                  icon: Icons.monitor_weight_outlined,
-                  title: context.l10n.progressNoMeasurementsTitle,
-                  message: range == ProgressRange.all
-                      ? context.l10n.progressNoMeasurementsMessage
-                      : context.l10n.progressNoMeasurementsInRange(range.name),
-                ),
-                FilledButton.icon(
-                  onPressed: () =>
-                      showBodyMetricEditor(context, ref, unit: unit),
-                  icon: const Icon(Icons.add),
-                  label: Text(context.l10n.progressLogMeasurement),
-                ),
-              ],
+            child: EmptyState(
+              icon: Icons.monitor_weight_outlined,
+              title: context.l10n.progressNoMeasurementsTitle,
+              message: range == ProgressRange.all
+                  ? context.l10n.progressNoMeasurementsMessage
+                  : context.l10n.progressNoMeasurementsInRange(range.name),
+              actionLabel: context.l10n.progressLogMeasurement,
+              onAction: () => showBodyMetricEditor(context, ref, unit: unit),
             ),
           );
         }
@@ -2626,11 +2631,11 @@ class _BodyMetricsSection extends ConsumerWidget {
                 DateFormatters.of(context).relativeDay(latest.date),
                 if (latest.bodyFatPercentage != null)
                   context.l10n.progressBodyFatValue(
-                    latest.bodyFatPercentage!.toStringAsFixed(1),
+                    UnitFormatters.oneDecimal(latest.bodyFatPercentage!),
                   ),
                 if (bmi != null)
                   context.l10n.progressBmiSummary(
-                    bmi.value.toStringAsFixed(1),
+                    UnitFormatters.oneDecimal(bmi.value),
                     switch (bmi.category) {
                       BmiCategory.underweight =>
                         context.l10n.progressBmiUnderweight,
