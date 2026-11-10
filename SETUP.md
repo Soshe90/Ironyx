@@ -15,6 +15,9 @@ clean; `dart format` clean on `lib/` and `test/`; `flutter test` 423 passed, 1 s
   you build).
 - Android: a JDK 17 and the Android SDK. Gradle installs the NDK, build
   tools and platform it needs on the first build.
+- Python 3 for release builds: `scripts/build_android.sh` runs
+  `scripts/check_release_stripped.py` on every release APK/AAB (standard
+  library only, nothing to install from pip).
 - iOS needs a Mac. **Nothing in `ios/` has ever been built or run on one** —
   see `TODO.md` Roadmap Phase 4 and the iOS notes at the end.
 
@@ -140,7 +143,16 @@ scripts/build_android.sh bundle -P kotlin.incremental=false
 - Shrinking can break a plugin in ways only the release variant shows
   (`android/app/proguard-rules.pro`, `res/raw/keep.xml`). Run the release
   build on a real device before every store upload.
-- Bump `version:` in `pubspec.yaml` (`1.0.0+N`); `kAppVersion` must match.
+- Bump `version:` in `pubspec.yaml` (`1.0.1+N`); Play rejects any upload
+  whose `+N` (versionCode) is not higher than every build already uploaded.
+  `kAppVersion` must match the part before `+`; `test/unit/app_version_test.dart`
+  fails CI if it does not.
+- Every obfuscated release prints "The generated ELF library contains
+  unobfuscated DWARF debugging information" once per ABI. That is expected:
+  on Android, Flutter leaves stripping to the Gradle plugin, so the warning
+  is about the intermediate `libapp.so`. The script then checks the packaged
+  libraries and **fails the build** if any still has debug info, which would
+  ship the original Dart names and undo the obfuscation.
 
 ## 6. Windows notes
 

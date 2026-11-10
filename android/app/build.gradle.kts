@@ -55,6 +55,19 @@ android {
     }
 
     buildTypes {
+        // Every debug build (flutter run, flutter test, the IDE) installs as
+        // a separate app, com.soshe90.ironyx.debug, next to the real one.
+        // With the same id, a debug-signed APK cannot update a release-signed
+        // install, so Flutter uninstalls the real app first, and Android
+        // deletes its data with it. That happened on 2026-09-29.
+        //
+        // Keyed on the build type because nothing else is reliable: an
+        // environment variable did not reach Gradle, and `flutter test`
+        // builds from a generated entry file, so -Ptarget does not name
+        // integration_test/ either. Release and profile keep the real id.
+        debug {
+            applicationIdSuffix = ".debug"
+        }
         release {
             // Real signing when key.properties is present (see above);
             // otherwise the debug key, so `flutter run --release` and an

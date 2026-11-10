@@ -44,6 +44,29 @@ if grep -q 'YOUR-PROJECT-REF\|paste-the-anon' "$DEFINES_FILE"; then
   exit 1
 fi
 
+# Release builds print "The generated ELF library contains unobfuscated DWARF
+# debugging information" once per ABI. That is expected: on Android, Flutter
+# leaves stripping to the Android Gradle Plugin, so the warning is about the
+# intermediate libapp.so, not the packaged one. What is NOT acceptable is a
+# packaged library that still has debug info (it would undo --obfuscate), so
+# every release artifact is checked here and the build fails if one does.
+verify_stripped() {
+  local artifact="$1"
+  if [[ "${SKIP_STRIP_CHECK:-}" == "1" ]]; then
+    echo "warning: SKIP_STRIP_CHECK=1, not verifying $artifact is stripped." >&2
+    return 0
+  fi
+  local py
+  py="$(command -v python3 || command -v python || true)"
+  if [[ -z "$py" ]]; then
+    echo "error: Python is needed to verify $artifact is stripped." >&2
+    echo "       Install it, or rerun with SKIP_STRIP_CHECK=1 to skip knowingly." >&2
+    exit 1
+  fi
+  echo "(The DWARF warning above is expected; checking what actually shipped.)"
+  "$py" "$REPO_ROOT/scripts/check_release_stripped.py" "$artifact"
+}
+
 TARGET="${1:-apk}"
 [[ $# -gt 0 ]] && shift
 
@@ -59,14 +82,17 @@ OBFUSCATE_ARGS=(--obfuscate "--split-debug-info=$SYMBOLS_DIR")
 case "$TARGET" in
   apk)
     flutter build apk --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
+    verify_stripped build/app/outputs/flutter-apk/app-release.apk
     echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;
   bundle | aab | appbundle)
     flutter build appbundle --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
+    verify_stripped build/app/outputs/bundle/release/app-release.aab
     echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;
   install)
     flutter build apk --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
+    verify_stripped build/app/outputs/flutter-apk/app-release.apk
     flutter install --release "$@"
     echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;

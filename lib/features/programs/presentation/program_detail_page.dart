@@ -16,6 +16,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/page_body.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/stat_strip.dart';
+import '../../library/presentation/widgets/exercise_detail_sheet.dart';
 import '../../tracker/domain/active_workout_notifier.dart';
 import '../../tracker/domain/workout_draft.dart';
 import '../domain/program_catalogue_l10n.dart';
@@ -330,6 +331,10 @@ class _DayCard extends StatelessWidget {
 
 /// One exercise line in a read-only program day, with a superset letter and
 /// a "SUPERSET" marker at the start of each contiguous group.
+///
+/// Tapping it opens the exercise's how-to sheet. The row is at least
+/// [AppSpacing.minTapTarget] tall so each line is its own full-size target
+/// rather than a thin strip of text.
 class _DayExerciseLine extends StatelessWidget {
   const _DayExerciseLine({
     required this.exercise,
@@ -345,10 +350,22 @@ class _DayExerciseLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final String name = exercise.displayName(context);
+    return ExerciseInfoTapTarget(
+      exerciseId: exercise.exerciseId,
+      child: _buildLine(context, theme, scheme, name),
+    );
+  }
+
+  Widget _buildLine(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme scheme,
+    String name,
+  ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (label != null)
             _DaySupersetChip(label: label!)
@@ -372,10 +389,7 @@ class _DayExerciseLine extends StatelessWidget {
                       color: scheme.primary,
                     ),
                   ),
-                Text(
-                  exercise.displayName(context),
-                  style: theme.textTheme.bodyMedium,
-                ),
+                Text(name, style: theme.textTheme.bodyMedium),
               ],
             ),
           ),
@@ -388,6 +402,8 @@ class _DayExerciseLine extends StatelessWidget {
               theme.textTheme.bodySmall ?? const TextStyle(),
             ).copyWith(color: scheme.onSurfaceVariant),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          ExerciseInfoIcon(exerciseName: name),
         ],
       ),
     );

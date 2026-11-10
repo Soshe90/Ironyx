@@ -56,8 +56,16 @@ Two layers:
 | `ExerciseDraftCard` (`draft_editor_widgets.dart`) | One exercise and its sets within a draft. Shared by the active-session and edit screens, both backed by a `DraftEditorController`. Laid out as a small table so column names appear once and the set rows stay scannable mid-set. |
 | `DraftSetRow` (`draft_editor_widgets.dart`) | A single set row. Owns and disposes its own controllers (ADR-5) and converts the entered weight into kilograms here — ADR-1's boundary, so a pound value never reaches the controller. |
 | `InlineRestTimer` (`draft_editor_widgets.dart`) | A compact rest countdown. Reuses `TimerEngine` but deliberately creates no saved session and uses no notifications, audio or wakelock. Rendered once per exercise rather than between every pair of sets. |
-| `HistoryCalendar` (`history_calendar.dart`) | Month grid marking every day with at least one logged workout, with tap-to-drill-in. A second lens on data the list view already shows — no new query, no new persisted state. |
-| `WorkoutXlsxImportAction` (`workout_xlsx_import_action.dart`) | Preview-first importer for a historical XLSX workout log: parse, show what will land, then write only on confirmation. |
+| `HistoryCalendar` (`history_calendar.dart`) | Month grid marking every day with at least one logged workout, with tap-to-drill-in. A second lens on data the list view already shows — no new query, no new persisted state. Hidden behind a toggle in the History header so the list stays above the fold. |
+| `WorkoutXlsxImportAction` (`workout_xlsx_import_action.dart`) | Preview-first importer for a historical XLSX workout log: parse, show what will land, then write only on confirmation. The Workouts tab reaches it from the History menu through the static `run`, which takes the caller's context because a menu item's own is gone once the menu closes. |
+
+### Library
+
+| Widget | Purpose |
+| --- | --- |
+| `showExerciseDetailSheet`, `ExerciseDetailSheet` (`library/.../exercise_detail_sheet.dart`) | The "how to do it" sheet: media, muscles, equipment, ordered steps and a YouTube search. The one entry point for every screen that names an exercise, so Library, a program day, a saved workout and the live session all show the same thing. An id that no longer resolves gets the not-found state. Lives in Library rather than `core/` because it needs Library's catalogue localisation. |
+| `ExerciseInfoTapTarget`, `ExerciseInfoIcon` (`exercise_detail_sheet.dart`) | Makes an exercise heading open that sheet: ≥48 dp target, ink ripple, merged button semantics. The ⓘ icon is both the visible cue and the screen-reader label ("How to do …"). Used by Programs and Tracker; wrap the heading only, never a whole card with set rows inside. |
+| `ExerciseThumbnail`, `exercisePictureUrl`, `equipmentIcon` (`library/.../exercise_media.dart`) | Exercise picture with loading and fallback states (including YouTube's grey 120×90 "missing" placeholder), shared by the Library grid and the detail sheet. |
 
 ### Dashboard, Progress, Profile
 

@@ -24,6 +24,10 @@ part 'workout_dao.g.dart';
 class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   WorkoutDao(super.db);
 
+  // Keep below SQLite's historical 999-variable limit with room for any
+  // future fixed query parameters.
+  static const _setQueryChunkSize = 500;
+
   /// Watch all workouts, newest first.
   Stream<List<Workout>> watchAll({int? limit}) {
     final query = select(workoutsTable)
@@ -35,51 +39,67 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   }
 
   /// Get a single workout by ID with exercises, sets, and exercise names.
-  Future<WorkoutWithDetails?> getWithDetails(String workoutId) async {
-    final workout = await (select(
-      workoutsTable,
-    )..where((t) => t.id.equals(workoutId)))
-        .getSingleOrNull();
-    if (workout == null) return null;
+  Future<WorkoutWithDetails?> getWithDetails(String workoutId) =>
+      transaction(() async {
+        final workout = await (select(
+          workoutsTable,
+        )..where((t) => t.id.equals(workoutId)))
+            .getSingleOrNull();
+        if (workout == null) return null;
 
-    final exerciseRows = await (select(workoutExercisesTable).join([
-      innerJoin(
-        exercisesTable,
-        exercisesTable.id.equalsExp(workoutExercisesTable.exerciseId),
-      ),
-    ])
-          ..where(workoutExercisesTable.workoutId.equals(workoutId))
-          ..orderBy([OrderingTerm.asc(workoutExercisesTable.orderIndex)]))
-        .get();
+        final exerciseRows = await (select(workoutExercisesTable).join([
+          innerJoin(
+            exercisesTable,
+            exercisesTable.id.equalsExp(workoutExercisesTable.exerciseId),
+          ),
+        ])
+              ..where(workoutExercisesTable.workoutId.equals(workoutId))
+              ..orderBy([OrderingTerm.asc(workoutExercisesTable.orderIndex)]))
+            .get();
 
-    final exercises = <WorkoutExercise>[];
-    final Map<String, String> exerciseNames = {};
-    final Map<String, bool> exerciseIsTimeBased = {};
-    for (final row in exerciseRows) {
-      final we = row.readTable(workoutExercisesTable);
-      exercises.add(WorkoutExercise.fromDrift(we));
-      exerciseNames[we.id] = row.readTable(exercisesTable).name;
-      exerciseIsTimeBased[we.id] = row.readTable(exercisesTable).isTimeBased;
-    }
+        final exercises = <WorkoutExercise>[];
+        final Map<String, String> exerciseNames = {};
+        final Map<String, bool> exerciseIsTimeBased = {};
+        for (final row in exerciseRows) {
+          final we = row.readTable(workoutExercisesTable);
+          exercises.add(WorkoutExercise.fromDrift(we));
+          exerciseNames[we.id] = row.readTable(exercisesTable).name;
+          exerciseIsTimeBased[we.id] =
+              row.readTable(exercisesTable).isTimeBased;
+        }
 
-    final Map<String, List<WorkoutSet>> setsByExercise = {};
-    for (final ex in exercises) {
-      final sets = await (select(workoutSetsTable)
-            ..where((t) => t.workoutExerciseId.equals(ex.id))
-            ..orderBy([(t) => OrderingTerm.asc(t.setIndex)]))
-          .get();
-      setsByExercise[ex.id] =
-          sets.map<WorkoutSet>(WorkoutSet.fromDrift).toList();
-    }
+        final setsByExercise = <String, List<WorkoutSet>>{
+          for (final exercise in exercises) exercise.id: <WorkoutSet>[],
+        };
+        final exerciseIds = exercises.map((exercise) => exercise.id).toList();
+        for (var offset = 0;
+            offset < exerciseIds.length;
+            offset += _setQueryChunkSize) {
+          final end = offset + _setQueryChunkSize < exerciseIds.length
+              ? offset + _setQueryChunkSize
+              : exerciseIds.length;
+          final ids = exerciseIds.sublist(offset, end);
+          final setRows = await (select(workoutSetsTable)
+                ..where((t) => t.workoutExerciseId.isIn(ids))
+                ..orderBy([
+                  (t) => OrderingTerm.asc(t.workoutExerciseId),
+                  (t) => OrderingTerm.asc(t.setIndex),
+                ]))
+              .get();
+          for (final row in setRows) {
+            setsByExercise[row.workoutExerciseId]!
+                .add(WorkoutSet.fromDrift(row));
+          }
+        }
 
-    return WorkoutWithDetails(
-      workout: Workout.fromDrift(workout),
-      exercises: exercises,
-      exerciseNames: exerciseNames,
-      exerciseIsTimeBased: exerciseIsTimeBased,
-      setsByExercise: setsByExercise,
-    );
-  }
+        return WorkoutWithDetails(
+          workout: Workout.fromDrift(workout),
+          exercises: exercises,
+          exerciseNames: exerciseNames,
+          exerciseIsTimeBased: exerciseIsTimeBased,
+          setsByExercise: setsByExercise,
+        );
+      });
 
   /// Delete a workout. Cascades to its exercises and sets (ADR: FK cascade).
   Future<void> deleteWorkout(String workoutId) =>

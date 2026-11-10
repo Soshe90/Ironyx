@@ -36,6 +36,15 @@ void main() {
       expect(find.text('Strength'), findsOneWidget);
       expect(find.text('Custom'), findsOneWidget);
       expect(find.text('Work (s)'), findsOneWidget);
+      final Iterable<TextField> fields =
+          tester.widgetList<TextField>(find.byType(TextField));
+      expect(fields, hasLength(5));
+      for (final TextField field in fields) {
+        expect(field.style?.fontSize, 18);
+        expect(field.decoration?.labelText, isNull);
+        expect(field.decoration?.enabledBorder, isA<OutlineInputBorder>());
+        expect(field.decoration?.focusedBorder, isA<OutlineInputBorder>());
+      }
       expect(find.text('Sound cues'), findsNothing);
       expect(find.text('Haptics'), findsNothing);
       expect(find.text('Saved presets'), findsNothing);

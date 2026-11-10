@@ -377,7 +377,7 @@ class _SessionTotals extends ConsumerWidget {
       stats: <Stat>[
         Stat(
           label: context.l10n.statVolume,
-          value: UnitFormatters.volume(volumeKg, unit),
+          value: UnitFormatters.volume(volumeKg, unit, context.l10n),
           emphasis: true,
         ),
         Stat(label: context.l10n.statSets, value: '$completedSets'),

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844" role="img" aria-labelledby="title desc">
+  <title id="title">Ironyx dashboard visual concept</title>
+  <desc id="desc">A mobile Ironyx dashboard concept with a restrained teal palette, a clear workout call to action, weekly goal progress, two compact progress signals, and the existing five-tab navigation.</desc>
+  <rect width="390" height="844" fill="#F5F7F6"/>
+  <text x="24" y="39" font-family="Arial, sans-serif" font-size="13" fill="#58615F">9:41</text>
+  <text x="24" y="91" font-family="Arial, sans-serif" font-size="27" font-weight="700" fill="#17211F">Good morning</text>
+  <circle cx="346" cy="81" r="20" fill="#E7EFEC"/>
+  <path d="M346 70v4m0 14v2m-8-10h-2m18 0h-2m-11-6-2-2m11 12-2-2m0-8 2-2m-11 12 2-2" stroke="#45534F" stroke-width="2" stroke-linecap="round"/>
+  <text x="24" y="126" font-family="Arial, sans-serif" font-size="12" letter-spacing="1.4" font-weight="700" fill="#68736F">MONDAY, 24 SEPTEMBER</text>
+  <rect x="20" y="148" width="350" height="214" rx="24" fill="#123F3B"/>
+  <circle cx="324" cy="191" r="74" fill="#1A514B" opacity=".7"/>
+  <circle cx="324" cy="191" r="51" fill="none" stroke="#71C7AE" stroke-width="1" opacity=".45"/>
+  <text x="44" y="186" font-family="Arial, sans-serif" font-size="12" letter-spacing="1.5" font-weight="700" fill="#A9DCCF">TODAY'S TRAINING</text>
+  <text x="44" y="224" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#FFFFFF">Ready to train?</text>
+  <text x="44" y="252" font-family="Arial, sans-serif" font-size="14" fill="#D4E7E2">Pick up where your strength</text>
+  <text x="44" y="272" font-family="Arial, sans-serif" font-size="14" fill="#D4E7E2">journey left off.</text>
+  <rect x="44" y="299" width="188" height="44" rx="13" fill="#69C6AA"/>
+  <text x="67" y="327" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#102C28">Start workout</text>
+  <path d="m205 315 7 6-7 6" fill="none" stroke="#102C28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="24" y="408" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#17211F">This week</text>
+  <text x="366" y="408" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#287D69">See tracker</text>
+  <rect x="20" y="427" width="350" height="121" rx="20" fill="#FFFFFF"/>
+  <text x="42" y="461" font-family="Arial, sans-serif" font-size="12" letter-spacing="1.2" font-weight="700" fill="#68736F">WEEKLY SESSION GOAL</text>
+  <text x="42" y="502" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="#17211F">1 <tspan font-size="18" fill="#7B8581">/ 3</tspan></text>
+  <rect x="42" y="520" width="306" height="7" rx="4" fill="#E6ECE9"/>
+  <rect x="42" y="520" width="102" height="7" rx="4" fill="#25876F"/>
+  <text x="24" y="592" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#17211F">Your progress</text>
+  <rect x="20" y="611" width="169" height="111" rx="20" fill="#FFFFFF"/>
+  <rect x="201" y="611" width="169" height="111" rx="20" fill="#FFFFFF"/>
+  <text x="39" y="640" font-family="Arial, sans-serif" font-size="11" letter-spacing="1" font-weight="700" fill="#68736F">WEEKLY VOLUME</text>
+  <text x="39" y="675" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#17211F">1,240 <tspan font-size="13" fill="#58615F">kg</tspan></text>
+  <path d="M41 701c18-13 26 1 43-9s25 8 42-5 24 3 44-10" fill="none" stroke="#25876F" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="220" y="640" font-family="Arial, sans-serif" font-size="11" letter-spacing="1" font-weight="700" fill="#68736F">EST. 1RM</text>
+  <text x="220" y="675" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#17211F">92.5 <tspan font-size="13" fill="#58615F">kg</tspan></text>
+  <text x="220" y="702" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#25876F">↑ Bench Press</text>
+  <text x="24" y="766" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#17211F">Recent activity</text>
+  <text x="366" y="766" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#287D69">View all</text>
+  <rect x="0" y="780" width="390" height="64" fill="#FFFFFF"/>
+  <path d="M0 780h390" stroke="#E5EAE8"/>
+  <g font-family="Arial, sans-serif" font-size="10" text-anchor="middle">
+    <g fill="#287D69"><path d="M39 797h18v13H39zM43 793h10v4H43z"/><text x="48" y="828" font-weight="700">Home</text></g>
+    <g fill="#69736F"><circle cx="122" cy="803" r="9" fill="none" stroke="#69736F" stroke-width="2"/><path d="M122 798v6l4 2" fill="none" stroke="#69736F" stroke-width="1.5"/><text x="122" y="828">Tracker</text></g>
+    <g fill="#69736F"><path d="M198 795h14v17h-14zM202 799h6M202 803h6M202 807h4"/><text x="205" y="828">Library</text></g>
+    <g fill="#69736F"><circle cx="279" cy="803" r="9" fill="none" stroke="#69736F" stroke-width="2"/><path d="m280 797-4 7h4l-1 5 5-8h-4z"/><text x="279" y="828">Timer</text></g>
+    <g fill="#69736F"><path d="M354 811v-8l5-5 5 5v8M357 811v-5h4v5" fill="none" stroke="#69736F" stroke-width="1.6"/><text x="359" y="828">Progress</text></g>
+  </g>
+</svg>

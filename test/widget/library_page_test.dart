@@ -218,6 +218,25 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets('lists join with the English comma in English', (tester) async {
+      // The Arabic comma used to be hardcoded for every language, so an
+      // English card read "Barbell، Bodyweight" (seen on a real device).
+      await ExerciseDao(database).replaceEquipmentLinks('bench_1', [
+        for (final String eq in <String>['barbell', 'bodyweight'])
+          ExerciseEquipmentTableCompanion.insert(
+            id: 'bench_1_$eq',
+            exerciseId: 'bench_1',
+            equipmentId: eq,
+          ),
+      ]);
+      await pumpLibrary(tester);
+
+      expect(find.textContaining('Barbell, Bodyweight'), findsOneWidget);
+      expect(find.textContaining('،'), findsNothing);
+
+      await disposeApp(tester);
+    });
+
     testWidgets('empty state when no results', (tester) async {
       await pumpLibrary(tester);
 

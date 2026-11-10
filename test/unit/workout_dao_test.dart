@@ -165,6 +165,158 @@ void main() {
       expect(details.setsByExercise['w1_ex1']!.single.weightKg, 100);
     });
 
+    test('getWithDetails does not mix concurrent workout updates', () async {
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'racing_workout',
+          startedAt: DateTime.utc(2026, 1, 1),
+        ),
+        const [],
+        const [],
+      );
+
+      Future<void> writeVersion(int version) {
+        final suffix = version.isEven ? 'a' : 'b';
+        final exerciseId = 'racing_exercise_$suffix';
+        return workoutDao.updateWorkout(
+          workoutId: 'racing_workout',
+          totalVolumeKg: version.toDouble(),
+          exercises: [
+            WorkoutExercisesTableCompanion.insert(
+              id: exerciseId,
+              workoutId: 'racing_workout',
+              exerciseId: 'squat',
+              orderIndex: 0,
+            ),
+          ],
+          sets: [
+            WorkoutSetsTableCompanion.insert(
+              id: 'racing_set_$suffix',
+              workoutExerciseId: exerciseId,
+              setIndex: 0,
+              weightKg: version.toDouble(),
+              reps: 1,
+            ),
+          ],
+        );
+      }
+
+      await writeVersion(0);
+
+      Future<void> readRepeatedly() async {
+        for (var read = 0; read < 40; read++) {
+          final details = await workoutDao.getWithDetails('racing_workout');
+          expect(details, isNotNull);
+          expect(details!.exercises, hasLength(1));
+          final exercise = details.exercises.single;
+          final sets = details.setsByExercise[exercise.id]!;
+          expect(sets, hasLength(1));
+          expect(sets.single.workoutExerciseId, exercise.id);
+          expect(details.workout.totalVolumeKg, sets.single.weightKg);
+        }
+      }
+
+      Future<void> writeRepeatedly() async {
+        for (var version = 1; version <= 20; version++) {
+          await writeVersion(version);
+        }
+      }
+
+      await Future.wait([readRepeatedly(), writeRepeatedly()]);
+    });
+
+    test('getWithDetails chunks set queries beyond the bind limit', () async {
+      const exerciseCount = 501;
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'large_workout',
+          startedAt: DateTime.utc(2026, 1, 1),
+        ),
+        [
+          for (var index = 0; index < exerciseCount; index++)
+            WorkoutExercisesTableCompanion.insert(
+              id: 'large_exercise_$index',
+              workoutId: 'large_workout',
+              exerciseId: 'squat',
+              orderIndex: index,
+            ),
+        ],
+        [
+          WorkoutSetsTableCompanion.insert(
+            id: 'first_set',
+            workoutExerciseId: 'large_exercise_0',
+            setIndex: 0,
+            weightKg: 100,
+            reps: 5,
+          ),
+          WorkoutSetsTableCompanion.insert(
+            id: 'last_set',
+            workoutExerciseId: 'large_exercise_500',
+            setIndex: 0,
+            weightKg: 105,
+            reps: 4,
+          ),
+        ],
+      );
+
+      final details = await workoutDao.getWithDetails('large_workout');
+
+      expect(details, isNotNull);
+      expect(details!.exercises, hasLength(exerciseCount));
+      expect(details.setsByExercise['large_exercise_0'], hasLength(1));
+      expect(details.setsByExercise['large_exercise_500'], hasLength(1));
+      expect(details.setsByExercise['large_exercise_1'], isEmpty);
+    });
+
+    test('getWithDetails batches ordered sets and includes empty exercises',
+        () async {
+      await workoutDao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'w1',
+          startedAt: DateTime.utc(2026, 1, 1),
+        ),
+        [
+          WorkoutExercisesTableCompanion.insert(
+            id: 'w1_ex1',
+            workoutId: 'w1',
+            exerciseId: 'squat',
+            orderIndex: 0,
+          ),
+          WorkoutExercisesTableCompanion.insert(
+            id: 'w1_ex2',
+            workoutId: 'w1',
+            exerciseId: 'squat',
+            orderIndex: 1,
+          ),
+        ],
+        [
+          WorkoutSetsTableCompanion.insert(
+            id: 'w1_ex1_set1',
+            workoutExerciseId: 'w1_ex1',
+            setIndex: 1,
+            weightKg: 105,
+            reps: 4,
+          ),
+          WorkoutSetsTableCompanion.insert(
+            id: 'w1_ex1_set0',
+            workoutExerciseId: 'w1_ex1',
+            setIndex: 0,
+            weightKg: 100,
+            reps: 5,
+          ),
+        ],
+      );
+
+      final details = await workoutDao.getWithDetails('w1');
+
+      expect(details, isNotNull);
+      expect(
+        details!.setsByExercise['w1_ex1']!.map((set) => set.setIndex),
+        [0, 1],
+      );
+      expect(details.setsByExercise['w1_ex2'], isEmpty);
+    });
+
     test('deleteWorkout cascades to exercises and sets', () async {
       await insertSampleWorkout('w1');
 

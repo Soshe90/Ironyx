@@ -113,3 +113,7 @@ supabase.json
 # Upstream exercise dump + original images, re-downloaded on demand by
 # scripts/build_exercise_seed.py. Large, and reproducible from the network.
 scripts/.cache/
+
+# Python bytecode from the helper scripts.
+__pycache__/
+*.pyc

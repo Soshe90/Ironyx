@@ -10,9 +10,9 @@ void main() {
   }
 
   group('theme preference', () {
-    testWidgets('defaults to system when nothing is stored', (tester) async {
+    testWidgets('defaults to dark when nothing is stored', (tester) async {
       await pumpApp(tester, initialLocation: '/settings');
-      expect(themeModeOf(tester), ThemeMode.system);
+      expect(themeModeOf(tester), ThemeMode.dark);
     });
 
     testWidgets('restores a stored preference on launch', (tester) async {
@@ -30,25 +30,27 @@ void main() {
       // Settings grew a Language section above Appearance, so the theme
       // control now starts below the fold and the ListView has not built it
       // yet.
-      await tester.scrollUntilVisible(find.text('Dark'), 200);
+      // Light, not Dark: dark is already the default, so tapping it would
+      // pass without anything changing.
+      await tester.scrollUntilVisible(find.text('Light'), 200);
       // scrollUntilVisible stops as soon as any sliver of the label is on
       // screen, which can leave the tap point off it; bring it fully in.
-      await tester.ensureVisible(find.text('Dark'));
+      await tester.ensureVisible(find.text('Light'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Dark'));
+      await tester.tap(find.text('Light'));
       await tester.pumpAndSettle();
 
-      expect(themeModeOf(tester), ThemeMode.dark);
+      expect(themeModeOf(tester), ThemeMode.light);
     });
 
-    testWidgets('an unrecognised stored value falls back to system',
+    testWidgets('an unrecognised stored value falls back to dark',
         (tester) async {
       await pumpApp(
         tester,
         initialLocation: '/settings',
         prefs: <String, Object>{'theme_mode': 'sepia'},
       );
-      expect(themeModeOf(tester), ThemeMode.system);
+      expect(themeModeOf(tester), ThemeMode.dark);
     });
   });
 }

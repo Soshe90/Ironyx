@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/l10n/l10n_extension.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/page_body.dart';
@@ -22,6 +25,10 @@ class ActiveTimerPage extends ConsumerWidget {
     ref.listen<TimerSnapshot?>(timerControllerProvider, (previous, next) {
       // The controller nulls its state once the session finishes or is ended.
       if (next == null && context.mounted) {
+        // An end-confirmation dialog may still be open if the last interval
+        // ran out under it; close it first, or this pop would close the
+        // dialog and leave the page spinning on a null session.
+        Navigator.of(context).popUntil((Route<dynamic> r) => r is! PopupRoute);
         context.pop();
       }
     });
@@ -36,47 +43,103 @@ class ActiveTimerPage extends ConsumerWidget {
     final TimerController controller =
         ref.read(timerControllerProvider.notifier);
     final bool denied = controller.notificationDenied;
+    final Color phaseColor = _phaseColor(
+      Theme.of(context),
+      snapshot.currentPhase?.type,
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(controller.preset.displayName(context.l10n)),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          tooltip: context.l10n.timerEndTooltip,
-          onPressed: controller.stop,
+    // Ending is one tap on a phone held mid-set, and system back used to
+    // pop this screen while the session kept running with no way back to
+    // it. Every exit now goes through the same confirmation. The
+    // controller's own pop on finish uses `Navigator.pop`, which a
+    // PopScope does not block.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? _) {
+        if (!didPop) unawaited(_confirmEnd(context, controller));
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(controller.preset.displayName(context.l10n)),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: context.l10n.timerEndTooltip,
+            onPressed: () => _confirmEnd(context, controller),
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: PageBody(
-          child: Column(
-            children: [
-              if (denied) const _PermissionDeniedBanner(),
-              // The interval counter is context for the countdown, so it
-              // reads above it as an eyebrow rather than as a footnote.
-              const Spacer(),
-              Text(
-                _intervalLabel(context, snapshot, controller.preset)
-                    .toUpperCase(),
-                style: AppTypography.eyebrow(Theme.of(context)),
+        body: SafeArea(
+          child: PageBody(
+            // One tween drives the ring and the label so they change hue
+            // together at a phase boundary.
+            child: TweenAnimationBuilder<Color?>(
+              tween: ColorTween(end: phaseColor),
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : AppDuration.normal,
+              builder: (BuildContext context, Color? color, _) => Column(
+                children: [
+                  if (denied) const _PermissionDeniedBanner(),
+                  // The interval counter is context for the countdown, so it
+                  // reads above it as an eyebrow rather than as a footnote.
+                  const Spacer(),
+                  Text(
+                    _intervalLabel(context, snapshot, controller.preset)
+                        .toUpperCase(),
+                    style: AppTypography.eyebrow(Theme.of(context)),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Flexible(
+                    flex: _ringFlex,
+                    child: _CountdownRing(
+                      snapshot: snapshot,
+                      color: color ?? phaseColor,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  _PhaseLabel(snapshot: snapshot, color: color ?? phaseColor),
+                  const Spacer(),
+                  _Controls(
+                    isRunning: snapshot.isRunning,
+                    onPause: controller.pause,
+                    onResume: controller.resume,
+                    onSkip: controller.skip,
+                    onEnd: () => _confirmEnd(context, controller),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Flexible(child: _CountdownRing(snapshot: snapshot)),
-              const SizedBox(height: AppSpacing.xl),
-              _PhaseLabel(snapshot: snapshot),
-              const Spacer(),
-              _Controls(
-                isRunning: snapshot.isRunning,
-                onPause: controller.pause,
-                onResume: controller.resume,
-                onSkip: controller.skip,
-                onEnd: controller.stop,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-            ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _confirmEnd(
+    BuildContext context,
+    TimerController controller,
+  ) async {
+    final bool? end = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(context.l10n.timerEndConfirmTitle),
+        content: Text(context.l10n.timerEndConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.actionCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.l10n.timerEndConfirmAction),
+          ),
+        ],
+      ),
+    );
+    // Not gated on `context.mounted`: if the session finished on its own
+    // while the dialog was open, `stop` on an idle controller is harmless,
+    // and the user did ask for it to end.
+    if (end == true && controller.isActive) await controller.stop();
   }
 
   String _intervalLabel(
@@ -93,20 +156,42 @@ class ActiveTimerPage extends ConsumerWidget {
   }
 }
 
-/// Bounds for the countdown ring. It scales with the shorter screen axis so
-/// the timer stays glanceable on a phone and does not look lost on a
-/// tablet, but never grows past the point where the digits outrun the ring.
-const double _ringMinDiameter = 200;
+/// Cap for the countdown ring. It fills the shorter side of the space it is
+/// given, so the timer stays glanceable on a phone and does not look lost on
+/// a tablet, but never grows past the point where the digits outrun the
+/// ring. There is deliberately no minimum: a floor larger than the height
+/// available was squashed by the layout into an oval (seen on a real phone).
 const double _ringMaxDiameter = 360;
+
+/// Share of the free vertical space given to the ring, against one share
+/// for each spacer above and below. At an even split the ring, the thing
+/// people glance at mid-set, got only a third of the room.
+const int _ringFlex = 4;
 const double _ringStrokeWidth = 10;
 
 /// Fraction of the ring's diameter given to the countdown digits.
 const double _countdownScale = 0.26;
 
+/// The hue of a phase. Work keeps the brand primary; the rest come from
+/// [AppColors]. A finished session (no phase) falls back to primary.
+Color _phaseColor(ThemeData theme, TimerPhaseType? type) {
+  final bool dark = theme.brightness == Brightness.dark;
+  return switch (type) {
+    TimerPhaseType.rest =>
+      dark ? AppColors.phaseRestDark : AppColors.phaseRestLight,
+    TimerPhaseType.prepare =>
+      dark ? AppColors.phasePrepareDark : AppColors.phasePrepareLight,
+    TimerPhaseType.cooldown =>
+      dark ? AppColors.phaseCooldownDark : AppColors.phaseCooldownLight,
+    TimerPhaseType.work || null => theme.colorScheme.primary,
+  };
+}
+
 class _CountdownRing extends StatelessWidget {
-  const _CountdownRing({required this.snapshot});
+  const _CountdownRing({required this.snapshot, required this.color});
 
   final TimerSnapshot snapshot;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +203,7 @@ class _CountdownRing extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final double available = constraints.biggest.shortestSide;
         final double diameter =
-            available.clamp(_ringMinDiameter, _ringMaxDiameter);
+            available < _ringMaxDiameter ? available : _ringMaxDiameter;
 
         return Center(
           child: SizedBox(
@@ -132,7 +217,13 @@ class _CountdownRing extends StatelessWidget {
                     value: snapshot.progress,
                     strokeWidth: _ringStrokeWidth,
                     strokeCap: StrokeCap.round,
-                    backgroundColor: scheme.surfaceContainerHighest,
+                    color: color,
+                    // A tint of the phase colour, so the whole ring reads
+                    // as the phase even when little time is left.
+                    backgroundColor: Color.alphaBlend(
+                      color.withValues(alpha: 0.16),
+                      scheme.surface,
+                    ),
                   ),
                 ),
                 Text(
@@ -152,9 +243,10 @@ class _CountdownRing extends StatelessWidget {
 }
 
 class _PhaseLabel extends StatelessWidget {
-  const _PhaseLabel({required this.snapshot});
+  const _PhaseLabel({required this.snapshot, required this.color});
 
   final TimerSnapshot snapshot;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +257,7 @@ class _PhaseLabel extends StatelessWidget {
       label,
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w600,
+            color: color,
           ),
     );
   }

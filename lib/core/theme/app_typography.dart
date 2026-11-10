@@ -2,13 +2,22 @@ import 'package:flutter/material.dart';
 
 /// Typography helpers.
 ///
-/// The app ships with the platform default family. If a custom family is
-/// added later, register it here rather than at call sites.
+/// The app bundles Barlow for its interface and Barlow Condensed for metric
+/// numbers (`pubspec.yaml`, licence in `assets/fonts/OFL.txt`), so it looks
+/// the same on every phone. Families are named here, never at call sites.
 ///
 /// ADR cross-cutting rule: anything rendering live-changing digits — the
 /// timer, weights, volume totals — must use tabular figures, otherwise the
-/// layout jitters as digit widths change while counting.
+/// layout jitters as digit widths change while counting. Both families
+/// ship a `tnum` feature, which [numeric] switches on.
 abstract final class AppTypography {
+  /// Interface face, set once on `ThemeData.fontFamily`.
+  static const String fontFamily = 'Barlow';
+
+  /// Metric numbers: condensed and bold, so a headline figure is large
+  /// without being wide, which is the athletic look the app is going for.
+  static const String numericFamily = 'BarlowCondensed';
+
   static const List<FontFeature> _tabular = <FontFeature>[
     FontFeature.tabularFigures(),
   ];
@@ -26,6 +35,11 @@ abstract final class AppTypography {
   static const double metricSizeLg = 32;
   static const double metricSizeXl = 44;
 
+  /// A number typed into a form field (timer builder). Larger than body text
+  /// so the value reads at a glance, below the metric ramp so a field never
+  /// outweighs the numbers it produces.
+  static const double fieldValueSize = 18;
+
   /// Default size of the timer countdown, when the caller does not scale it
   /// to the available space.
   static const double countdownSize = 64;
@@ -35,10 +49,11 @@ abstract final class AppTypography {
   /// [size] lets the active-timer screen scale the digits with its ring
   /// rather than pinning them at a phone-sized 64pt on a tablet.
   static TextStyle countdown(ColorScheme scheme, {double? size}) => TextStyle(
+        fontFamily: numericFamily,
         fontSize: size ?? countdownSize,
-        fontWeight: FontWeight.w300,
+        fontWeight: FontWeight.w600,
         height: 1,
-        letterSpacing: -1,
+        letterSpacing: 0,
         color: scheme.onSurface,
         fontFeatures: _tabular,
       );
@@ -48,10 +63,11 @@ abstract final class AppTypography {
   /// [size] picks a step off the metric ramp; it defaults to the tile-sized
   /// step so existing call sites keep their weight.
   static TextStyle cardMetric(ColorScheme scheme, {double? size}) => TextStyle(
+        fontFamily: numericFamily,
         fontSize: size ?? 28,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
         height: 1.1,
-        letterSpacing: -0.5,
+        letterSpacing: 0,
         color: scheme.onSurface,
         fontFeatures: _tabular,
       );
@@ -63,8 +79,10 @@ abstract final class AppTypography {
   static TextStyle eyebrow(ThemeData theme, {Color? color}) =>
       theme.textTheme.labelSmall!.copyWith(
         color: color ?? theme.colorScheme.onSurfaceVariant,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
+        fontWeight: FontWeight.w700,
+        // Wider tracking than body text: the eyebrow is set in capitals,
+        // and tight capitals read as a smudge at this size.
+        letterSpacing: 0.8,
       );
 
   /// Secondary text under a metric or list row.
@@ -74,18 +92,21 @@ abstract final class AppTypography {
   static TextTheme apply(TextTheme base) => base.copyWith(
         displayLarge: numeric(
           (base.displayLarge ?? const TextStyle()).copyWith(
+            fontFamily: numericFamily,
             fontWeight: FontWeight.w700,
             letterSpacing: -1.2,
           ),
         ),
         displayMedium: numeric(
           (base.displayMedium ?? const TextStyle()).copyWith(
+            fontFamily: numericFamily,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.8,
           ),
         ),
         displaySmall: numeric(
           (base.displaySmall ?? const TextStyle()).copyWith(
+            fontFamily: numericFamily,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.5,
           ),
@@ -112,9 +133,30 @@ abstract final class AppTypography {
         ),
         titleMedium: (base.titleMedium ?? const TextStyle()).copyWith(
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
+        ),
+        titleSmall: (base.titleSmall ?? const TextStyle()).copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
+        bodyLarge: (base.bodyLarge ?? const TextStyle()).copyWith(
+          letterSpacing: 0,
+        ),
+        bodyMedium: (base.bodyMedium ?? const TextStyle()).copyWith(
+          letterSpacing: 0,
+        ),
+        bodySmall: (base.bodySmall ?? const TextStyle()).copyWith(
+          letterSpacing: 0,
         ),
         labelLarge: (base.labelLarge ?? const TextStyle()).copyWith(
           fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
+        labelMedium: (base.labelMedium ?? const TextStyle()).copyWith(
+          letterSpacing: 0,
+        ),
+        labelSmall: (base.labelSmall ?? const TextStyle()).copyWith(
+          letterSpacing: 0,
         ),
       );
 }

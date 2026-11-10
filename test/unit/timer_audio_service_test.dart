@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -178,6 +179,41 @@ void main() {
 
       await expectLater(service.cue(TimerCue.complete), completes);
     });
+
+    // Regression, found on a real phone: just_audio's play() never completes
+    // at the end of a clip, and the timer awaits the completion cue before
+    // saving the session, so the session was never saved.
+    test('a player that never reports finishing cannot hold up a cue',
+        () async {
+      final PlatformTimerAudioService service = PlatformTimerAudioService(
+        playerFactory: _NeverFinishingPlayer.new,
+        systemAlert: () async => alerts++,
+        cueTimeout: const Duration(milliseconds: 50),
+      );
+
+      await expectLater(
+        service.cue(TimerCue.complete).timeout(const Duration(seconds: 2)),
+        completes,
+      );
+      // And the next cue still plays rather than being stuck behind it.
+      await expectLater(
+        service.cue(TimerCue.countdown).timeout(const Duration(seconds: 2)),
+        completes,
+      );
+    });
+
+    test('a system alert that never returns cannot hold up a cue', () async {
+      final PlatformTimerAudioService service = PlatformTimerAudioService(
+        playerFactory: () => throw StateError('no audio plugin'),
+        systemAlert: () => Completer<void>().future,
+        cueTimeout: const Duration(milliseconds: 50),
+      );
+
+      await expectLater(
+        service.cue(TimerCue.complete).timeout(const Duration(seconds: 2)),
+        completes,
+      );
+    });
   });
 
   group('dispose', () {
@@ -214,6 +250,18 @@ void main() {
       await expectLater(service.dispose(), completes);
     });
   });
+}
+
+/// Loads fine; `play()` never completes, like just_audio at a clip's end.
+class _NeverFinishingPlayer implements TimerCuePlayer {
+  @override
+  Future<void> load(String assetPath) async {}
+
+  @override
+  Future<void> play() => Completer<void>().future;
+
+  @override
+  Future<void> dispose() async {}
 }
 
 class _ThrowingDisposePlayer implements TimerCuePlayer {

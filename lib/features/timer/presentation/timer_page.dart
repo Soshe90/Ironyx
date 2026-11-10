@@ -176,6 +176,19 @@ class _PresetCard extends StatelessWidget {
         ),
         child: Row(
           children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Icon(
+                Icons.timer_outlined,
+                color: scheme.onPrimaryContainer,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +197,7 @@ class _PresetCard extends StatelessWidget {
                   Text(
                     preset.displayName(context.l10n),
                     style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
@@ -194,7 +207,7 @@ class _PresetCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
+            const SizedBox(width: AppSpacing.sm),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
@@ -204,16 +217,19 @@ class _PresetCard extends StatelessWidget {
                   style: AppTypography.cardMetric(
                     scheme,
                     size: AppTypography.metricSizeSm,
+                  ).copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   context.l10n.intervalCount(preset.totalIntervals),
-                  style: AppTypography.eyebrow(theme),
+                  style: AppTypography.caption(theme),
                 ),
               ],
             ),
-            const SizedBox(width: AppSpacing.md),
-            Icon(Icons.play_circle_outline, color: scheme.primary),
+            const SizedBox(width: AppSpacing.xs),
+            Icon(Icons.play_circle_rounded, color: scheme.primary, size: 28),
           ],
         ),
       ),
@@ -353,14 +369,50 @@ class _NumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      style: AppTypography.numeric(
-        Theme.of(context).textTheme.bodyLarge ?? const TextStyle(),
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final OutlineInputBorder border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: scheme.outlineVariant),
+    );
+
+    return Semantics(
+      label: label,
+      textField: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: AppTypography.numeric(
+              theme.textTheme.titleMedium?.copyWith(
+                    fontSize: AppTypography.fieldValueSize,
+                    color: scheme.onSurface,
+                  ) ??
+                  const TextStyle(),
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: scheme.surfaceContainerHigh,
+              enabledBorder: border,
+              border: border,
+              focusedBorder: border.copyWith(
+                borderSide: BorderSide(color: scheme.primary, width: 1.5),
+              ),
+            ),
+          ),
+        ],
       ),
-      decoration: InputDecoration(labelText: label),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/theme/app_colors.dart';
 import 'package:ironyx/core/theme/app_spacing.dart';
 import 'package:ironyx/core/theme/app_theme.dart';
+import 'package:ironyx/core/theme/app_typography.dart';
 
 void main() {
   for (final (String name, ThemeData theme) in <(String, ThemeData)>[
@@ -38,11 +39,121 @@ void main() {
         }
       });
 
+      test('body and navigation text use restrained tracking', () {
+        for (final TextStyle? style in <TextStyle?>[
+          theme.textTheme.bodyLarge,
+          theme.textTheme.bodyMedium,
+          theme.textTheme.bodySmall,
+          theme.textTheme.labelLarge,
+          theme.textTheme.labelMedium,
+          theme.textTheme.labelSmall,
+        ]) {
+          expect(style?.letterSpacing, 0);
+        }
+      });
+
       test('page titles align with the content gutter', () {
         expect(theme.appBarTheme.titleSpacing, AppSpacing.lg);
       });
     });
   }
+
+  test('workout hero foregrounds meet WCAG AA contrast', () {
+    for (final Color heroSurface in <Color>[
+      AppColors.workoutHero,
+      AppColors.workoutHeroEnd,
+    ]) {
+      expect(
+        _contrast(AppColors.workoutHeroForeground, heroSurface),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(AppColors.workoutHeroCaption, heroSurface),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(AppColors.workoutHeroAccent, heroSurface),
+        greaterThanOrEqualTo(4.5),
+      );
+    }
+    expect(
+      _contrast(AppColors.workoutHero, AppColors.workoutHeroAccent),
+      greaterThanOrEqualTo(4.5),
+    );
+  });
+
+  group('athletic dark restyle', () {
+    test('both themes use the bundled interface font', () {
+      for (final ThemeData theme in <ThemeData>[
+        AppTheme.light(),
+        AppTheme.dark(),
+      ]) {
+        expect(
+            theme.textTheme.bodyMedium?.fontFamily, AppTypography.fontFamily);
+        expect(
+          theme.appBarTheme.titleTextStyle?.fontFamily,
+          AppTypography.fontFamily,
+        );
+      }
+    });
+
+    test('metric numbers use the condensed face with tabular figures', () {
+      final ColorScheme scheme = AppTheme.dark().colorScheme;
+      for (final TextStyle style in <TextStyle>[
+        AppTypography.cardMetric(scheme),
+        AppTypography.countdown(scheme),
+      ]) {
+        expect(style.fontFamily, AppTypography.numericFamily);
+        expect(
+            style.fontFeatures, contains(const FontFeature.tabularFigures()));
+      }
+    });
+
+    test('dark primary is the vivid accent, readable both ways', () {
+      final ColorScheme scheme = AppTheme.dark().colorScheme;
+      expect(scheme.primary, AppColors.darkAccent);
+      expect(scheme.onPrimary, AppColors.onDarkAccent);
+      expect(
+        _contrast(AppColors.onDarkAccent, AppColors.darkAccent),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(AppColors.darkAccent, AppColors.darkSurface),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+  });
+
+  test('timer phase colours meet WCAG AA as text on their surface', () {
+    for (final (Color phase, Color surface) in <(Color, Color)>[
+      (AppColors.phaseRestLight, AppColors.lightSurface),
+      (AppColors.phasePrepareLight, AppColors.lightSurface),
+      (AppColors.phaseCooldownLight, AppColors.lightSurface),
+      (AppColors.phaseRestDark, AppColors.darkSurface),
+      (AppColors.phasePrepareDark, AppColors.darkSurface),
+      (AppColors.phaseCooldownDark, AppColors.darkSurface),
+    ]) {
+      expect(
+        _contrast(phase, surface),
+        greaterThanOrEqualTo(4.5),
+        reason: '$phase on $surface',
+      );
+    }
+  });
+
+  test('light theme uses the neutral canvas and card surface palette', () {
+    final ColorScheme scheme = AppTheme.light().colorScheme;
+    expect(scheme.surface, AppColors.lightSurface);
+    expect(
+      scheme.surfaceContainerLowest,
+      AppColors.lightSurfaceContainerLowest,
+    );
+    expect(
+      scheme.surfaceContainerHigh,
+      AppColors.lightSurfaceContainerHigh,
+    );
+    expect(scheme.outlineVariant, AppColors.lightOutlineVariant);
+  });
 
   group('badge text contrast meets WCAG AA (4.5:1)', () {
     for (final (String name, ThemeData theme, Color gain, Color loss, Color pr)

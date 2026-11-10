@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -86,6 +87,14 @@ void _installErrorHandlers() {
 /// the one credit not owed automatically by a package dependency, since the
 /// catalogue is bundled data, not a package.
 void _registerAssetLicenses() {
+  // The bundled Barlow fonts are OFL-licensed, which requires the licence
+  // text to travel with the app.
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(
+      <String>['Barlow', 'Barlow Condensed'],
+      await rootBundle.loadString('assets/fonts/OFL.txt'),
+    );
+  });
   LicenseRegistry.addLicense(() {
     return Stream<LicenseEntry>.value(
       const LicenseEntryWithLineBreaks(

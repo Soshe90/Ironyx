@@ -41,7 +41,7 @@ class BodyMetricTile extends ConsumerWidget {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(
-            UnitFormatters.weight(entry.weightKg, unit),
+            UnitFormatters.weight(entry.weightKg, unit, context.l10n),
             style: AppTypography.numeric(
               theme.textTheme.titleSmall ?? const TextStyle(),
             ),

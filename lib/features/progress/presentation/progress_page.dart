@@ -123,6 +123,13 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
               _InsightsSection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(
+                title: l10n.progressWeeklyVolumeTitle,
+                subtitle: l10n.progressWeeklyVolumeSubtitle(range.name),
+                explainer: ProgressExplainers.volume(l10n),
+              ),
+              _VolumeSection(range: range),
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
                 title: l10n.progressStrengthChangeTitle,
                 subtitle: l10n.progressStrengthSubtitle(range.name),
                 explainer: ProgressExplainers.strengthChange(l10n),
@@ -142,13 +149,6 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                     setState(() => _exerciseId = id),
               ),
               _SessionVolumeSection(range: range, exerciseId: _exerciseId),
-              const SizedBox(height: AppSpacing.xl),
-              SectionHeader(
-                title: l10n.progressWeeklyVolumeTitle,
-                subtitle: l10n.progressWeeklyVolumeSubtitle(range.name),
-                explainer: ProgressExplainers.volume(l10n),
-              ),
-              _VolumeSection(range: range),
               const SizedBox(height: AppSpacing.xl),
               SectionHeader(
                 title: l10n.progressConsistencyTitle,
@@ -330,7 +330,7 @@ class _StrengthRow extends StatelessWidget {
     final AppLocalizations l10n = context.l10n;
     final double? change = row.change;
     final String currentEstimate =
-        UnitFormatters.estimate(row.currentBestKg, unit);
+        UnitFormatters.estimate(row.currentBestKg, unit, context.l10n);
 
     final TrendDirection? trend = change == null
         ? null
@@ -376,6 +376,7 @@ class _StrengthRow extends StatelessWidget {
                               UnitFormatters.estimate(
                                 row.previousBestKg!,
                                 unit,
+                                context.l10n,
                               ),
                             ),
                       style: AppTypography.caption(theme),
@@ -514,7 +515,7 @@ class _InsightTile extends StatelessWidget {
             insight.percentage!,
           ),
           figure: l10n.progressInsightStrengthFigure(
-            UnitFormatters.estimate(insight.currentBestKg!, unit),
+            UnitFormatters.estimate(insight.currentBestKg!, unit, context.l10n),
           ),
         ),
       InsightKind.consistencySlipping => (
@@ -805,18 +806,18 @@ class _OneRmSection extends ConsumerWidget {
             final LinearTrend? regression = linearTrend(ordered);
             final String trendCaption = regression == null
                 ? context.l10n.progressOneRmFromSessions(
-                    UnitFormatters.estimate(first, unit),
+                    UnitFormatters.estimate(first, unit, context.l10n),
                     ordered.length,
                   )
                 : context.l10n.progressOneRmMonthlyTrend(
                     '${regression.slopeKgPerMonth >= 0 ? '+' : ''}'
-                    '${UnitFormatters.weightRate(regression.slopeKgPerMonth, unit)}',
+                    '${UnitFormatters.weightRate(regression.slopeKgPerMonth, unit, context.l10n)}',
                     ordered.length,
                   );
 
             return _ChartCard(
               header: picker,
-              headline: UnitFormatters.estimate(current, unit),
+              headline: UnitFormatters.estimate(current, unit, context.l10n),
               caption: ordered.length == 1
                   ? context.l10n.progressOneDataPoint
                   : trendCaption,
@@ -873,7 +874,8 @@ class _SessionVolumeSection extends ConsumerWidget {
                           ValueRow(
                             label:
                                 DateFormatters.of(context).axisLabel(row.date),
-                            value: UnitFormatters.volume(row.volumeKg, unit),
+                            value: UnitFormatters.volume(
+                                row.volumeKg, unit, context.l10n),
                           ),
                       ],
                     ),
@@ -1002,7 +1004,7 @@ class _DatedLineChart extends StatelessWidget {
               getTooltipItems: (spots) => [
                 for (final spot in spots)
                   LineTooltipItem(
-                    '${UnitFormatters.weight(spot.y, unit)}\n',
+                    '${UnitFormatters.weight(spot.y, unit, context.l10n)}\n',
                     theme.textTheme.labelMedium!.copyWith(
                       color: scheme.onInverseSurface,
                       fontWeight: FontWeight.w600,
@@ -1118,17 +1120,26 @@ Widget _valueAxisTick(
     return const SizedBox.shrink();
   }
   return Text(
-    UnitFormatters.weight(value, unit, withUnit: false),
+    UnitFormatters.weight(value, unit, context.l10n, withUnit: false),
     style: AppTypography.eyebrow(Theme.of(context)),
   );
 }
 
 /// Keeps x-axis labels from colliding by showing at most a handful.
-double _labelInterval(int count) {
-  const int maxLabels = 4;
+double _labelInterval(int count, {int maxLabels = 4}) {
   if (count <= maxLabels) return 1;
   return (count / maxLabels).ceilToDouble();
 }
+
+/// Horizontal room one week-range label ("24 Aug–30 Aug") needs, gap
+/// included. A fixed four labels fitted on a tablet but ran two ranges
+/// together on a phone once the edge labels were kept inside the card.
+const double _weekLabelSlot = 120;
+
+/// How many week-range labels fit across [available] width, never fewer
+/// than two so the first and a later week are always anchored.
+int _weekLabelsThatFit(double available) =>
+    (available ~/ _weekLabelSlot).clamp(2, 4);
 
 class _VolumeSection extends ConsumerWidget {
   const _VolumeSection({required this.range});
@@ -1165,7 +1176,7 @@ class _VolumeSection extends ConsumerWidget {
             points.where((WeeklyVolume p) => p.totalVolumeKg > 0).length;
 
         return _ChartCard(
-          headline: UnitFormatters.volume(total, unit),
+          headline: UnitFormatters.volume(total, unit, context.l10n),
           caption: context.l10n.progressVolumeActiveWeeks(
             activeWeeks,
             points.length,
@@ -1177,8 +1188,8 @@ class _VolumeSection extends ConsumerWidget {
             values: <double>[
               for (final WeeklyVolume p in points) p.totalVolumeKg,
             ],
-            tooltipValue: (int i) =>
-                UnitFormatters.volume(points[i].totalVolumeKg, unit),
+            tooltipValue: (int i) => UnitFormatters.volume(
+                points[i].totalVolumeKg, unit, context.l10n),
           ),
         );
       },
@@ -1257,6 +1268,7 @@ class _RpeSection extends ConsumerWidget {
                               UnitFormatters.volume(
                                 row.volumeKg,
                                 ref.watch(weightUnitControllerProvider),
+                                context.l10n,
                               ),
                             ),
                           ),
@@ -1365,6 +1377,7 @@ class _WeeklyMuscleSection extends ConsumerWidget {
                         value: UnitFormatters.volume(
                           row.totalVolumeKg,
                           ref.watch(weightUnitControllerProvider),
+                          context.l10n,
                         ),
                       )
                   ])),
@@ -1608,7 +1621,10 @@ class _WeeklyBarChart extends StatelessWidget {
             constraints.maxWidth,
             weekStarts.length,
           );
-          final int labelStep = _labelInterval(weekStarts.length).round();
+          final int labelStep = _labelInterval(
+            weekStarts.length,
+            maxLabels: _weekLabelsThatFit(constraints.maxWidth),
+          ).round();
           return BarChart(
             BarChartData(
               gridData: FlGridData(
@@ -1642,10 +1658,23 @@ class _WeeklyBarChart extends StatelessWidget {
                       // gets a label regardless of `interval`, and on a
                       // range with more than a handful of weeks they
                       // overlap into an unreadable smear.
-                      if (i % labelStep != 0) {
+                      //
+                      // Counted back from the newest week so the most recent
+                      // bars, the ones people look at, always carry a date.
+                      if ((weekStarts.length - 1 - i) % labelStep != 0) {
                         return const SizedBox.shrink();
                       }
-                      return _weeklyAxisDate(context, theme, weekStarts[i]);
+                      // A week range is wider than one bar, so the first
+                      // and last labels hung off the card and were clipped
+                      // ("2 Jun–28 Jun" lost its first digit).
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        fitInside: SideTitleFitInsideData.fromTitleMeta(
+                          meta,
+                          distanceFromEdge: 0,
+                        ),
+                        child: _weeklyAxisDate(context, theme, weekStarts[i]),
+                      );
                     },
                   ),
                 ),
@@ -1774,7 +1803,8 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
         return _ChartCard(
           headline: grouped.first.muscleName,
           caption: context.l10n.progressMostTrained(
-            UnitFormatters.volume(grouped.first.totalVolumeKg, unit),
+            UnitFormatters.volume(
+                grouped.first.totalVolumeKg, unit, context.l10n),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1791,6 +1821,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                         UnitFormatters.volume(
                           grouped[touched].totalVolumeKg,
                           unit,
+                          context.l10n,
                         ),
                       ),
                 style: AppTypography.caption(theme),
@@ -1882,6 +1913,7 @@ class _MuscleGroupSectionState extends ConsumerState<_MuscleGroupSection> {
                                     text: UnitFormatters.volume(
                                       muscle.totalVolumeKg,
                                       unit,
+                                      context.l10n,
                                     ),
                                     style:
                                         theme.textTheme.labelMedium?.copyWith(
@@ -1981,7 +2013,8 @@ class _BodyMetricsSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             _ChartCard(
-              headline: UnitFormatters.weight(latest.weightKg, unit),
+              headline:
+                  UnitFormatters.weight(latest.weightKg, unit, context.l10n),
               caption: [
                 DateFormatters.of(context).relativeDay(latest.date),
                 if (latest.bodyFatPercentage != null)

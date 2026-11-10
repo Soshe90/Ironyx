@@ -9,6 +9,9 @@ import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/services/workout_xlsx_import_service.dart';
 
 /// Preview-first importer for the user's historical XLSX workout log.
+///
+/// Usable as a button, or through [run] from a menu item. A menu item's own
+/// context is gone once the menu closes, so [run] takes the caller's.
 class WorkoutXlsxImportAction extends ConsumerWidget {
   const WorkoutXlsxImportAction({super.key});
 
@@ -17,11 +20,12 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     return TextButton.icon(
       icon: const Icon(Icons.table_view_outlined),
       label: Text(context.l10n.importXlsxAction),
-      onPressed: () => _run(context, ref),
+      onPressed: () => run(context, ref),
     );
   }
 
-  Future<void> _run(BuildContext context, WidgetRef ref) async {
+  /// Runs the whole pick → preview → confirm → import flow.
+  static Future<void> run(BuildContext context, WidgetRef ref) async {
     final picked = await FilePicker.pickFile(
       dialogTitle: context.l10n.importXlsxPickerTitle,
       type: FileType.any,
@@ -100,7 +104,7 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     );
   }
 
-  Future<WeightUnit?> _chooseUnit(BuildContext context) {
+  static Future<WeightUnit?> _chooseUnit(BuildContext context) {
     return showDialog<WeightUnit>(
       context: context,
       builder: (context) => AlertDialog(
@@ -120,7 +124,7 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     );
   }
 
-  Future<bool?> _confirm(
+  static Future<bool?> _confirm(
     BuildContext context,
     WorkoutXlsxImportResult result,
     WeightUnit sourceUnit,

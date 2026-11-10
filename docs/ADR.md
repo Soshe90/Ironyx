@@ -43,6 +43,12 @@
 - A **focused task** is a root-level route pushed over the shell (`parentNavigatorKey: _rootNavigatorKey`), full-screen, bottom bar hidden. This covers: active workout session, workout history detail, exercise detail page, running timer, settings.
 - **Browsing within a tab's subject matter** stays inside the branch navigator. In v1 this is essentially empty, which is the correct and simpler outcome.
 
+> **Amended 2026-10-04 — exercise detail is a modal bottom sheet, not a route.** "Exercise detail page" is removed from the focused-task list above. It shipped as a modal bottom sheet and stays one: it is a short reference read ("how do I do this?") that the user dismisses back to where they were, not a mode they work in. It is now opened from four places: Library, a program day, a saved workout and the live session. A route would mean four push/pop flows and a new path constant to show the same content. A sheet also keeps the caller's state as it was: the live session's draft and rest timer, the program page's scroll position.
+>
+> The one entry point is `showExerciseDetailSheet(context, exerciseId)` (`features/library/presentation/widgets/exercise_detail_sheet.dart`). Screens wrap an exercise heading in `ExerciseInfoTapTarget` and do not call `showModalBottomSheet` for exercise detail themselves. It opens on the nearest navigator, so the rationale below still holds: over the live session (a root route) there is no bottom bar to hit. In the Library tab the bar stays visible beneath the sheet, which is fine because browsing the catalogue is not a focused task.
+>
+> Revisit this if exercise detail ever gets its own navigation (related exercises, history per exercise) or needs to be deep-linkable. Either is a page, and then it becomes a root-level focused route as originally written.
+
 Rationale: the bottom bar must not be visible during an active set — a mistaken tap on "Library" mid-working-set is a serious UX failure. Hiding chrome also signals a mode the user must deliberately exit.
 
 Accepted consequence: the Library tab does not remember its depth when you switch away. That is correct behaviour here.

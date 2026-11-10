@@ -24,63 +24,72 @@ Ironyx: Offline Workout Log
 
 ## Short description (80 char max)
 
+**English**
+
 ```
-Log workouts, build programs, track progress. Fully offline. No account needed.
+Log every set, follow your training plan, and see your progress — offline.
 ```
-(79 characters)
+(74 characters)
+
+**Arabic**
+
+```
+سجّل تمارينك، تابع خطتك، واكتشف تقدمك — حتى دون اتصال بالإنترنت.
+```
 
 ## Full description (4000 char max)
 
+### English
+
 ```
-Ironyx is a workout tracker built for the gym, not for the cloud.
+Make every workout count with Ironyx, a workout tracker that keeps your training log on your device and works offline.
 
-No account required. No internet required. No subscription to see your
-own numbers. Everything you log stays on your phone unless you
-explicitly choose to back it up.
+LOG YOUR WORKOUTS
+Record exercises, sets, reps, and weights as you train. Check your workout history whenever you need it, and use the built-in rest timer to stay focused between sets.
 
-TRACK EVERY SET
-Log exercises, sets, reps, and weight in seconds between sets. A built-in
-rest timer with sound and haptics keeps you on pace without checking a
-separate app.
+PLAN YOUR TRAINING
+Create multi-day programs, reuse your routines, or start with a built-in template. Explore a library of more than 300 exercises with instructions to help you get started.
 
-BUILD REAL PROGRAMS
-Create multi-day training programs and reuse them week after week, or
-start from one of the built-in templates. Pick from a library of 300+
-exercises, each with clear instructions.
+SEE HOW YOU’RE PROGRESSING
+Follow your training over time with charts for workout volume, estimated one-rep max, and consistency. Your history helps you see the work behind your progress.
 
-SEE YOUR PROGRESS
-Charts show volume, estimated one-rep max, and consistency over time —
-not vanity stats, the numbers that tell you whether the program is
-working.
+YOUR TRAINING, YOUR CHOICE
+No account is needed to use the core workout tracker. Your workouts are stored on your device, and Ironyx does not show ads or use analytics. If you choose to create an account, you can manually back up your data to the cloud. Nothing is backed up until you choose “Back up now.”
 
-PRIVATE BY DEFAULT
-Your training log is not a product. Ironyx does not run ads or analytics,
-and your local training log stays on your device unless you explicitly
-enable cloud backup. Ironyx does not sell your data.
-
-CLOUD BACKUP, ON YOUR TERMS
-Create a free account only if you want an optional, one-tap backup —
-useful before switching phones or reinstalling. It's off by default and
-never uploads anything without you tapping "Back up now." You can delete
-your account and cloud backup from inside the app.
-
-WORKS OFFLINE, ALWAYS
-No signal at your gym? No problem. Every core feature — logging, timer,
-programs, progress — works with zero connectivity, permanently, not just
-when the servers are down.
+TRAIN OFFLINE
+No internet at the gym? Keep logging workouts, using your programs and timer, and viewing your progress offline.
 
 Available in English and Arabic.
 
 Questions or feedback: mustafa.salih15@gmail.com
 ```
-(1,568 characters — well under the 4000 limit; room to add screenshots'
-worth of detail later, e.g. specific program templates, once you have
-user feedback on what to highlight)
 
-The last sentence of the cloud-backup paragraph ("You can delete your account
-and cloud backup from inside the app.") was added 2026-09-21; both stores look
-for it. It is only true if `delete_my_account()` works on the real Supabase
-project, so it is gated on `TODO.md` C4 — cut it if C4 does not pass.
+### Arabic
+
+```
+اجعل لكل تمرين قيمة مع Ironyx، تطبيق يساعدك على تسجيل تدريباتك ومتابعة تقدمك، مع حفظ سجلّك على جهازك وإمكانية استخدام الميزات الأساسية دون إنترنت.
+
+سجّل تمارينك
+دوّن التمارين والمجموعات والتكرارات والأوزان أثناء التدريب، وارجع إلى سجل تمارينك متى احتجت. استخدم مؤقّت الراحة المدمج لتنظيم فترات الراحة بين المجموعات.
+
+خطّط لتدريبك
+أنشئ برامج تدريبية متعددة الأيام وأعد استخدام خططك، أو ابدأ بأحد القوالب الجاهزة. استكشف مكتبة تضم أكثر من 300 تمرين مع إرشادات تساعدك على البدء.
+
+تابع تقدمك
+استخدم الرسوم البيانية لمتابعة حجم التدريب، والقوة التقديرية لتكرار واحد، وانتظامك في التمرين بمرور الوقت. راجع سجلّك لترى كيف يتراكم جهدك.
+
+تدريبك وبياناتك تحت اختيارك
+لا تحتاج إلى حساب لاستخدام الميزات الأساسية. تُحفظ تمارينك على جهازك، ولا يعرض Ironyx إعلانات ولا يستخدم أدوات التحليلات. إذا رغبت، يمكنك إنشاء حساب وعمل نسخة احتياطية من بياناتك على السحابة يدويًا. لا تُرفع بياناتك حتى تختار «النسخ الاحتياطي الآن».
+
+تدرّب دون إنترنت
+لا يوجد اتصال بالإنترنت في النادي؟ واصل تسجيل تمارينك واستخدام برامجك والمؤقّت والاطلاع على تقدمك دون اتصال.
+
+متوفر باللغتين العربية والإنجليزية.
+
+للاستفسارات أو الملاحظات: mustafa.salih15@gmail.com
+```
+
+The descriptions intentionally do not promise in-app account deletion. Add that claim only after the real Supabase account-deletion flow has been verified end to end (`TODO.md` C4).
 
 ## ASO keywords to weave into the description / consider for the title
 

@@ -15,6 +15,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../library/domain/exercise_catalogue_l10n.dart';
+import '../../../library/presentation/widgets/exercise_detail_sheet.dart';
 import '../../../timer/domain/timer_engine.dart';
 import '../../../timer/domain/timer_preset.dart';
 import '../../../timer/domain/timer_settings_controller.dart';
@@ -116,31 +117,47 @@ class ExerciseDraftCard extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.md),
                 ],
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        displayName,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      if (isInSuperset) ...<Widget>[
-                        const SizedBox(height: AppSpacing.xxs),
-                        _SupersetTag(label: context.l10n.draftSuperset),
-                      ],
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        _summary(
-                          context.l10n,
-                          completed,
-                          exercise.sets.length,
-                          volumeKg,
-                          unit,
+                  // Mid-session is exactly when someone wants a form
+                  // reminder, so the heading opens the how-to sheet. A
+                  // modal sheet over the session leaves the draft and any
+                  // running rest timer untouched.
+                  child: ExerciseInfoTapTarget(
+                    exerciseId: exercise.exerciseId,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Flexible(
+                              child: Text(
+                                displayName,
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            ExerciseInfoIcon(exerciseName: displayName),
+                          ],
                         ),
-                        style: AppTypography.caption(theme),
-                      ),
-                    ],
+                        if (isInSuperset) ...<Widget>[
+                          const SizedBox(height: AppSpacing.xxs),
+                          _SupersetTag(label: context.l10n.draftSuperset),
+                        ],
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          _summary(
+                            context.l10n,
+                            completed,
+                            exercise.sets.length,
+                            volumeKg,
+                            unit,
+                          ),
+                          style: AppTypography.caption(theme),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 PopupMenuButton<_DraftCardAction>(
@@ -260,7 +277,7 @@ class ExerciseDraftCard extends ConsumerWidget {
     final String sets = l10n.draftSetsProgress(completed, total);
     return completed == 0
         ? sets
-        : '$sets · ${UnitFormatters.volume(volumeKg, unit)}';
+        : '$sets · ${UnitFormatters.volume(volumeKg, unit, l10n)}';
   }
 }
 
@@ -357,13 +374,11 @@ class _PreviousPerformanceLine extends ConsumerWidget {
     // Same set format as the workout detail screen, with non-breaking
     // spaces inside each set so a narrow phone wraps between sets, never
     // through one ("90 kg ×" / "6").
-    const String nbsp = '\u00A0';
     final String sets = previous.sets
         .map(
           (PreviousSet s) => isTimeBased && s.durationSeconds != null
               ? UnitFormatters.duration(Duration(seconds: s.durationSeconds!))
-              : '${UnitFormatters.weight(s.weightKg, unit)} × ${s.reps}'
-                  .replaceAll(' ', nbsp),
+              : UnitFormatters.setLine(s.weightKg, s.reps, unit, context.l10n),
         )
         .join(' · ');
 
@@ -406,10 +421,21 @@ class _SetTableHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
 
-    Widget label(String text, {TextAlign align = TextAlign.start}) => Text(
-          text,
-          textAlign: align,
-          style: AppTypography.eyebrow(theme),
+    // One line, shrunk to fit rather than wrapped: the set column is sized
+    // for digits, and Arabic's "المجموعة" (or any label at a large system
+    // font) would otherwise break mid-word onto a second line.
+    Widget label(String text, {TextAlign align = TextAlign.start}) => FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: align == TextAlign.center
+              ? Alignment.center
+              : AlignmentDirectional.centerStart,
+          child: Text(
+            text,
+            textAlign: align,
+            maxLines: 1,
+            softWrap: false,
+            style: AppTypography.eyebrow(theme),
+          ),
         );
 
     return ExcludeSemantics(
@@ -986,24 +1012,32 @@ class _SetDoneButton extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     // State is carried by the fill, not by hue alone: an unlogged set is a
-    // hollow tonal square, a logged one is a solid primary square.
+    // hollow outlined square, a logged one is a solid primary square. The
+    // hollow state used to be a grey fill with a grey tick, which read as
+    // "already done" at arm's length.
+    final BorderRadius radius = BorderRadius.circular(AppRadius.sm);
     return Semantics(
       label: context.l10n.draftSetCompleteSemantic(index),
       toggled: done,
       container: true,
       child: Material(
-        color: done ? scheme.primary : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        color: done ? scheme.primary : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: done
+              ? BorderSide.none
+              : BorderSide(color: scheme.outline, width: 1.5),
+        ),
         child: InkWell(
           onTap: () => onChanged(!done),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderRadius: radius,
           child: SizedBox(
             width: AppSpacing.minTapTarget,
             height: AppSpacing.minTapTarget,
             child: Icon(
               Icons.check,
               size: 20,
-              color: done ? scheme.onPrimary : scheme.onSurfaceVariant,
+              color: done ? scheme.onPrimary : scheme.outline,
             ),
           ),
         ),

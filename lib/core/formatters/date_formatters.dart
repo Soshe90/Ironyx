@@ -15,6 +15,9 @@ final class DateFormatters {
         _dayMonthYear = DateFormat('d MMM yyyy', _l10n.localeName),
         _weekday = DateFormat('EEEE', _l10n.localeName),
         _weekdayDayMonth = DateFormat('EEEE, d MMM', _l10n.localeName),
+        _weekdayShort = DateFormat('EEE', _l10n.localeName),
+        _dayOfMonth = DateFormat('d', _l10n.localeName),
+        _monthYear = DateFormat('MMMM yyyy', _l10n.localeName),
         _time = DateFormat.jm(_l10n.localeName);
 
   /// Cached per locale: building five [DateFormat]s is not free, and these
@@ -34,6 +37,9 @@ final class DateFormatters {
   final DateFormat _dayMonthYear;
   final DateFormat _weekday;
   final DateFormat _weekdayDayMonth;
+  final DateFormat _weekdayShort;
+  final DateFormat _dayOfMonth;
+  final DateFormat _monthYear;
   final DateFormat _time;
 
   /// `Monday, 21 Aug` — the dateline above the dashboard's primary action.
@@ -62,6 +68,15 @@ final class DateFormatters {
   }
 
   String time(DateTime date) => _format(_time, date);
+
+  /// `Tue` — the weekday on a history row's date tile.
+  String weekdayShort(DateTime date) => _format(_weekdayShort, date);
+
+  /// `15` — the day number on a history row's date tile.
+  String dayOfMonth(DateTime date) => _format(_dayOfMonth, date);
+
+  /// `September 2026` — a month heading in the workout history.
+  String monthYear(DateTime date) => _format(_monthYear, date);
 
   String full(DateTime date) => _format(_dayMonthYear, date);
 

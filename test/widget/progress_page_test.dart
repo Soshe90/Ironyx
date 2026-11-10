@@ -315,6 +315,46 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets(
+        'on a phone the weekly labels fit: the newest week is dated and '
+        'edge labels stay inside the card', (tester) async {
+      await pumpProgress(tester);
+
+      final BarChart volumeChart =
+          tester.widget<BarChart>(find.byType(BarChart).at(0));
+      final int barCount = volumeChart.data.barGroups.length;
+      final SideTitles sideTitles =
+          volumeChart.data.titlesData.bottomTitles.sideTitles;
+      final TitleMeta meta = TitleMeta(
+        min: 0,
+        max: (barCount - 1).toDouble(),
+        parentAxisSize: 300,
+        axisPosition: 0,
+        appliedInterval: 1,
+        sideTitles: sideTitles,
+        formattedValue: '',
+        axisSide: AxisSide.bottom,
+      );
+      final List<int> labelled = <int>[
+        for (var i = 0; i < barCount; i++)
+          if (sideTitles.getTitlesWidget(i.toDouble(), meta) is! SizedBox) i,
+      ];
+
+      // A week range is ~90dp wide; four of them ran together on a 400dp
+      // screen once the edge labels were pulled inside the card.
+      expect(labelled.length, inInclusiveRange(2, 3));
+      expect(labelled.last, barCount - 1,
+          reason: 'the most recent week is the one people look for');
+
+      final Widget newest =
+          sideTitles.getTitlesWidget((barCount - 1).toDouble(), meta);
+      expect(newest, isA<SideTitleWidget>());
+      expect((newest as SideTitleWidget).fitInside.enabled, isTrue,
+          reason: 'an unfitted edge label is clipped by the card');
+
+      await disposeApp(tester);
+    });
+
     // A plain `test`, not `testWidgets` — this only awaits a DAO stream, no
     // widgets involved, and `testWidgets` runs its body inside `FakeAsync`,
     // where a `Future`/`Stream` that resolves via a real `Timer` (as
