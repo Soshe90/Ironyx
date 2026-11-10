@@ -501,8 +501,18 @@ class _RelativeStrengthSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
     return ref.watch(relativeStrengthsProvider(range)).when(
+          // A supplement to the card above: nothing while it loads, rather
+          // than a second shimmer.
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          // But a failure says so. It used to vanish as if there were no
+          // recent weigh-in, which hid the error and offered no retry.
+          error: (Object error, _) => Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: _ChartError(
+              error: error,
+              onRetry: () => ref.invalidate(relativeStrengthsProvider(range)),
+            ),
+          ),
           data: (rows) => rows.isEmpty
               ? const SizedBox.shrink()
               : Padding(
@@ -571,16 +581,21 @@ class _StrengthRow extends StatelessWidget {
     final String currentEstimate =
         UnitFormatters.estimate(row.currentBestKg, unit, context.l10n);
 
+    // Judged on the rounded figure the row prints, so the arrow, the
+    // number and the spoken sentence agree. A change that rounds to 0%
+    // was "up 0%" (or, exactly zero, "down 0 percent" to a screen
+    // reader); it is unchanged.
+    final int percent = change == null ? 0 : (change.abs() * 100).round();
     final TrendDirection? trend = change == null
         ? null
-        : change > 0
-            ? TrendDirection.up
-            : change < 0
-                ? TrendDirection.down
-                : TrendDirection.flat;
+        : percent == 0
+            ? TrendDirection.flat
+            : change > 0
+                ? TrendDirection.up
+                : TrendDirection.down;
 
     return Semantics(
-      label: change == null
+      label: trend == null
           ? l10n.progressStrengthSemanticNoChange(
               displayName,
               currentEstimate,
@@ -588,8 +603,8 @@ class _StrengthRow extends StatelessWidget {
           : l10n.progressStrengthSemantic(
               displayName,
               currentEstimate,
-              change > 0 ? 'up' : 'down',
-              (change.abs() * 100).round(),
+              trend.name,
+              percent,
             ),
       child: ExcludeSemantics(
         child: Padding(
@@ -633,10 +648,7 @@ class _StrengthRow extends StatelessWidget {
               ),
               if (trend != null) ...<Widget>[
                 const SizedBox(width: AppSpacing.sm),
-                TrendBadge(
-                  direction: trend,
-                  label: '${(change!.abs() * 100).round()}%',
-                ),
+                TrendBadge(direction: trend, label: '$percent%'),
               ],
             ],
           ),

@@ -1076,7 +1076,7 @@
   "progressRelativeStrengthSubtitle": "Estimated 1RM ÷ latest body weight",
   "progressRelativeStrengthRatio": "{ratio}×",
   "@progressRelativeStrengthRatio": { "placeholders": { "ratio": { "type": "String" } } },
-  "progressStrengthSemantic": "{exercise}, {estimate}, {direction, select, up{up {percent} percent} down{down {percent} percent} other{changed by {percent} percent}}",
+  "progressStrengthSemantic": "{exercise}, {estimate}, {direction, select, up{up {percent} percent} down{down {percent} percent} flat{unchanged} other{changed by {percent} percent}}",
   "@progressStrengthSemantic": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" }, "direction": { "type": "String" }, "percent": { "type": "int" } } },
   "progressStrengthSemanticNoChange": "{exercise}, {estimate}",
   "@progressStrengthSemanticNoChange": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" } } },

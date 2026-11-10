@@ -1028,7 +1028,7 @@
   "progressRelativeStrengthSubtitle": "الوزن التقديري لأقصى تكرار واحد ÷ أحدث وزن للجسم",
   "progressRelativeStrengthRatio": "{ratio}×",
   "@progressRelativeStrengthRatio": { "placeholders": { "ratio": { "type": "String" } } },
-  "progressStrengthSemantic": "{direction, select, up{{exercise}، {estimate}، تحسّن بنسبة {percent} بالمئة} down{{exercise}، {estimate}، تراجع بنسبة {percent} بالمئة} other{{exercise}، {estimate}، تغيّر بنسبة {percent} بالمئة}}",
+  "progressStrengthSemantic": "{direction, select, up{{exercise}، {estimate}، تحسّن بنسبة {percent} بالمئة} down{{exercise}، {estimate}، تراجع بنسبة {percent} بالمئة} flat{{exercise}، {estimate}، دون تغيير} other{{exercise}، {estimate}، تغيّر بنسبة {percent} بالمئة}}",
   "@progressStrengthSemantic": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" }, "direction": { "type": "String" }, "percent": { "type": "int" } } },
   "progressStrengthSemanticNoChange": "{exercise}، {estimate}",
   "@progressStrengthSemanticNoChange": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" } } },
