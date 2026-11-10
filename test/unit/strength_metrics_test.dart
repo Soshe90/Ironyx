@@ -397,6 +397,72 @@ void main() {
       expect(points, hasLength(1));
       expect(points.single.date, DateTime(2026, 1, 8));
     });
+
+    test('a record is judged against history before the window', () async {
+      // A heavier session long before the window: the window's first
+      // point is lighter, so it is not a record. Marked within the window
+      // alone, the oldest point of every chart read as a PR.
+      await addWorkout('peak', DateTime(2025, 1, 1), [('bench', 120, 5)]);
+      await addWorkout('w1', DateTime(2026, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('w2', DateTime(2026, 2, 1), [('bench', 125, 5)]);
+
+      final points = await dao
+          .watchOneRMSeries('bench', since: DateTime(2025, 12, 1))
+          .first;
+
+      expect(points.map((p) => p.date),
+          [DateTime(2026, 2, 1), DateTime(2026, 1, 1)]);
+      expect(points.map((p) => p.isPersonalRecord), [true, false]);
+    });
+
+    test('the first-ever session is a record, a tie is not', () async {
+      await addWorkout('w1', DateTime(2026, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('w2', DateTime(2026, 1, 8), [('bench', 100, 5)]);
+      await addWorkout('w3', DateTime(2026, 1, 15), [('bench', 90, 5)]);
+
+      final points = await dao.watchOneRMSeries('bench').first;
+
+      // Newest first.
+      expect(points.map((p) => p.isPersonalRecord), [false, false, true]);
+    });
+
+    test('agrees with the PR workout ids', () async {
+      await addWorkout('a', DateTime(2025, 6, 1), [('bench', 110, 5)]);
+      await addWorkout('b', DateTime(2026, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('c', DateTime(2026, 1, 8), [('bench', 115, 5)]);
+      await addWorkout('d', DateTime(2026, 1, 15), [('bench', 112, 5)]);
+      final DateTime since = DateTime(2025, 12, 1);
+
+      final points = await dao.watchOneRMSeries('bench', since: since).first;
+      final Set<String> prIds =
+          await dao.watchPersonalRecordWorkoutIds(since: since).first;
+
+      final Map<DateTime, String> idByDate = <DateTime, String>{
+        DateTime(2026, 1, 1): 'b',
+        DateTime(2026, 1, 8): 'c',
+        DateTime(2026, 1, 15): 'd',
+      };
+      expect(points, hasLength(3));
+      for (final p in points) {
+        expect(p.isPersonalRecord, prIds.contains(idByDate[p.date]),
+            reason: '${p.date}');
+      }
+      expect(prIds, {'c'});
+    });
+
+    test('returns every session in the window by default', () async {
+      // More than the 50 the chart used to keep without saying so.
+      final DateTime start = DateTime(2024, 1, 1);
+      for (int i = 0; i < 60; i++) {
+        await addWorkout(
+            'w$i', start.add(Duration(days: i * 3)), [('bench', 100, 5)]);
+      }
+
+      final points = await dao.watchOneRMSeries('bench').first;
+
+      expect(points, hasLength(60));
+      expect(points.last.date, start);
+    });
   });
 
   group('watchPersonalRecordWorkoutIds', () {

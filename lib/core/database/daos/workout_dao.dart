@@ -973,9 +973,21 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// as a flat zero line and listed them in the strength table at "0 kg".
   /// Bodyweight progress is real but it is not a kilogram figure — every
   /// 1RM-derived query here shares this filter so they cannot disagree.
+  ///
+  /// [OneRMSeriesPoint.isPersonalRecord] is judged against the lift's
+  /// *whole* history, not just the points returned: the running best is
+  /// computed before [since] is applied. Marking within the window made its
+  /// oldest point a "record" under every range, so a lift you had pressed
+  /// heavier a year ago showed an amber PR dot at the start of each chart.
+  /// The rule is [watchPersonalRecordWorkoutIds]'s: strictly better than
+  /// every earlier session, so a lift's first-ever session is a record.
+  ///
+  /// [limit] is unbounded by default. The chart used to take the newest 50
+  /// sessions without saying so, which cut the oldest years off "All" and
+  /// "1Y" while its caption still claimed to cover the range.
   Stream<List<OneRMSeriesPoint>> watchOneRMSeries(
     String exerciseId, {
-    int limit = 50,
+    int? limit,
     DateTime? since,
   }) {
     const String oneRm =
@@ -988,6 +1000,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           w.started_at as date,
           ws.weight_kg as weight_kg,
           ws.reps as reps,
+          $oneRm as one_rm,
           ROW_NUMBER() OVER (
             PARTITION BY w.started_at ORDER BY $oneRm DESC
           ) as rank_in_session
@@ -996,15 +1009,35 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         JOIN workouts_table w ON we.workout_id = w.id
         WHERE we.exercise_id = ?
           AND w.ended_at IS NOT NULL
-          AND w.started_at >= ?
           AND ws.is_completed = 1
           AND ws.is_warmup = 0
           AND ws.reps BETWEEN 1 AND 12
           AND ws.weight_kg > 0
+      ),
+      sessions AS (
+        SELECT
+          date,
+          weight_kg,
+          reps,
+          one_rm,
+          MAX(one_rm) OVER (
+            ORDER BY date
+            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+          ) as prior_best
+        FROM ranked
+        WHERE rank_in_session = 1
       )
-      SELECT date, weight_kg, reps
-      FROM ranked
-      WHERE rank_in_session = 1
+      -- The window filter is applied here, after prior_best has seen every
+      -- session. SQLite does not push a WHERE into a subquery that uses
+      -- window functions, so the running best is never truncated by it.
+      SELECT
+        date,
+        weight_kg,
+        reps,
+        CASE WHEN one_rm > COALESCE(prior_best, 0) THEN 1 ELSE 0 END
+          as is_record
+      FROM sessions
+      WHERE date >= ?
       ORDER BY date DESC
       LIMIT ?
       ''',
@@ -1013,32 +1046,25 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         Variable.withDateTime(
           since ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
         ),
-        Variable.withInt(limit),
+        // SQLite reads a negative LIMIT as "no limit".
+        Variable.withInt(limit ?? -1),
       ],
       readsFrom: {workoutSetsTable, workoutExercisesTable, workoutsTable},
-    ).watch().map((rows) {
-      final points = rows.map((r) {
-        final weightKg = r.read<double>('weight_kg');
-        final reps = r.read<int>('reps');
-        final date = r.read<DateTime>('date');
-        final oneRM = reps == 1 ? weightKg : weightKg * (1 + reps / 30.0);
-        return OneRMSeriesPoint(date: date, estimated1RM: oneRM);
-      }).toList();
-      // The query is newest-first. Mark points against earlier points in the
-      // returned window, then restore newest-first order for existing callers.
-      var best = double.negativeInfinity;
-      for (final point in points.reversed) {
-        final isRecord = point.estimated1RM > best;
-        if (isRecord) best = point.estimated1RM;
-        final index = points.indexOf(point);
-        points[index] = OneRMSeriesPoint(
-          date: point.date,
-          estimated1RM: point.estimated1RM,
-          isPersonalRecord: isRecord,
+    ).watch().map(
+          (rows) => [
+            for (final r in rows)
+              OneRMSeriesPoint(
+                date: r.read<DateTime>('date'),
+                // Recomputed from the set rather than read back from SQL,
+                // as before, so the plotted value is the same double.
+                estimated1RM: r.read<int>('reps') == 1
+                    ? r.read<double>('weight_kg')
+                    : r.read<double>('weight_kg') *
+                        (1 + r.read<int>('reps') / 30.0),
+                isPersonalRecord: r.read<int>('is_record') == 1,
+              ),
+          ],
         );
-      }
-      return points;
-    });
   }
 
   /// IDs of workouts that set at least one personal record — i.e. contain a

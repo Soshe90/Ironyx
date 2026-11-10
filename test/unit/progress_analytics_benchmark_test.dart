@@ -81,6 +81,7 @@ void main() {
       dao.watchRpeAnalytics().first,
       dao.watchRestAnalytics().first,
       dao.watchStrengthChange().first,
+      dao.watchOneRMSeries('bench').first,
       dao
           .watchStrengthChange(since: origin.add(const Duration(days: 2900)))
           .first,
