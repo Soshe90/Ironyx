@@ -37,6 +37,7 @@ import '../domain/progress_summaries.dart';
 import '../domain/strength_analytics.dart';
 import 'progress_explainers.dart';
 import 'widgets/body_metric_widgets.dart';
+import 'widgets/chart_axis.dart';
 import 'widgets/progress_visuals.dart';
 
 /// Height of a full chart. One value for all of them, so the page has a
@@ -56,6 +57,9 @@ const double _chapterReadLine = AppSpacing.xxxl;
 enum _Chapter { strength, volume, habits, body }
 
 const double _axisReserved = 28;
+
+/// Width kept for value-axis labels ("1,250", "242.5").
+const double _valueAxisReserved = _axisReserved + AppSpacing.lg;
 const double _barWidth = 22;
 
 /// Dash pattern for chart gridlines: present enough to read values against,
@@ -1180,6 +1184,7 @@ class _OneRmSectionState extends ConsumerState<_OneRmSection> {
                   : trendCaption,
               trend: ordered.length == 1 ? null : _trendOf(first, current),
               child: _DatedLineChart(
+                displayScale: unit.perKilogram,
                 ordered: <_DatedPoint>[
                   for (final OneRMSeriesPoint p in ordered)
                     _DatedPoint(
@@ -1229,6 +1234,7 @@ class _OneRmSectionState extends ConsumerState<_OneRmSection> {
                   : l10n.progressSessionVolumeSubtitle,
               trend: sessions.length == 1 ? null : _trendOf(first, latest),
               child: _DatedLineChart(
+                displayScale: unit.perKilogram,
                 ordered: <_DatedPoint>[
                   for (final SessionVolumeLoad session in sessions)
                     _DatedPoint(
@@ -1285,13 +1291,22 @@ class _DatedPoint {
 /// answer. X is now elapsed days from the first point, so a training gap
 /// reads as a gap.
 class _DatedLineChart extends StatelessWidget {
-  const _DatedLineChart({required this.ordered, required this.axisLabel});
+  const _DatedLineChart({
+    required this.ordered,
+    required this.axisLabel,
+    this.displayScale = 1,
+  });
 
   /// Oldest first.
   final List<_DatedPoint> ordered;
 
   /// Formats a value-axis tick, without a unit.
   final String Function(double value) axisLabel;
+
+  /// Display units per plotted unit: the weight unit's per-kilogram factor
+  /// for a weight, 1 for a count or a score. The axis step is chosen round
+  /// in display units (see [niceAxisStep]).
+  final double displayScale;
 
   static const double _minutesPerDay = 60 * 24;
 
@@ -1325,6 +1340,9 @@ class _DatedLineChart extends StatelessWidget {
     // negative axis for a small value.
     final double minY = low - pad < 0 && low >= 0 ? 0 : low - pad;
     final double maxY = high + pad;
+    // Round in what the reader sees, converted back to what is plotted.
+    final double valueStep =
+        niceAxisStep((maxY - minY) * displayScale) / displayScale;
 
     final DateTime first = ordered.first.date;
     double xOf(DateTime date) =>
@@ -1364,6 +1382,7 @@ class _DatedLineChart extends StatelessWidget {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
+                horizontalInterval: valueStep,
                 getDrawingHorizontalLine: (_) => FlLine(
                   color: scheme.outlineVariant,
                   strokeWidth: 1,
@@ -1377,7 +1396,8 @@ class _DatedLineChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: _axisReserved + AppSpacing.lg,
+                    reservedSize: _valueAxisReserved,
+                    interval: valueStep,
                     getTitlesWidget: (double value, TitleMeta meta) =>
                         _valueAxisTick(context, value, meta, axisLabel),
                   ),
@@ -1628,6 +1648,13 @@ class _VolumeSection extends ConsumerWidget {
             points.length,
           ),
           child: _WeeklyBarChart(
+            axisLabel: (double kg) => UnitFormatters.volume(
+              kg,
+              unit,
+              context.l10n,
+              withUnit: false,
+            ),
+            displayScale: unit.perKilogram,
             weekStarts: <DateTime>[
               for (final WeeklyVolume p in points) p.weekStart,
             ],
@@ -2109,6 +2136,8 @@ class _FrequencySection extends ConsumerWidget {
             activeWeeks,
           ),
           child: _WeeklyBarChart(
+            axisLabel: _plainTick,
+            wholeNumbers: true,
             weekStarts: <DateTime>[
               for (final WorkoutFrequency p in points) p.weekStart,
             ],
@@ -2136,6 +2165,9 @@ class _WeeklyBarChart extends StatelessWidget {
     required this.weekStarts,
     required this.values,
     required this.tooltipValue,
+    required this.axisLabel,
+    this.displayScale = 1,
+    this.wholeNumbers = false,
     this.height = _chartHeight,
     this.color,
   });
@@ -2143,6 +2175,17 @@ class _WeeklyBarChart extends StatelessWidget {
   final List<DateTime> weekStarts;
   final List<double> values;
   final double height;
+
+  /// Formats a value-axis tick, without a unit. The bars used to have
+  /// gridlines and no values, so a bar's height could only be read by
+  /// touching it.
+  final String Function(double value) axisLabel;
+
+  /// As [_DatedLineChart.displayScale].
+  final double displayScale;
+
+  /// Steps of whole numbers only, for counts such as workouts.
+  final bool wholeNumbers;
 
   /// Bar colour; the brand colour unless the chart belongs to one series
   /// that already has a colour on the card (a muscle group).
@@ -2165,19 +2208,28 @@ class _WeeklyBarChart extends StatelessWidget {
       // into a solid block.
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          final double width = _barWidthFor(
-            constraints.maxWidth,
-            weekStarts.length,
-          );
+          // The value axis takes its width from the plot.
+          final double plotWidth = constraints.maxWidth - _valueAxisReserved;
+          final double width = _barWidthFor(plotWidth, weekStarts.length);
           final int labelStep = _labelInterval(
             weekStarts.length,
-            maxLabels: _weekLabelsThatFit(constraints.maxWidth),
+            maxLabels: _weekLabelsThatFit(plotWidth),
           ).round();
+          final double highest = values.fold<double>(
+            0,
+            (double max, double v) => v > max ? v : max,
+          );
+          final double valueStep = niceAxisStep(
+                highest * displayScale,
+                wholeNumbers: wholeNumbers,
+              ) /
+              displayScale;
           return BarChart(
             BarChartData(
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
+                horizontalInterval: valueStep,
                 getDrawingHorizontalLine: (_) => FlLine(
                   color: scheme.outlineVariant,
                   strokeWidth: 1,
@@ -2186,7 +2238,15 @@ class _WeeklyBarChart extends StatelessWidget {
               ),
               borderData: FlBorderData(show: false),
               titlesData: FlTitlesData(
-                leftTitles: const AxisTitles(),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: _valueAxisReserved,
+                    interval: valueStep,
+                    getTitlesWidget: (double value, TitleMeta meta) =>
+                        _valueAxisTick(context, value, meta, axisLabel),
+                  ),
+                ),
                 rightTitles: const AxisTitles(),
                 topTitles: const AxisTitles(),
                 bottomTitles: AxisTitles(
@@ -2468,6 +2528,13 @@ class _MuscleWeeks extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _WeeklyBarChart(
+                  axisLabel: (double kg) => UnitFormatters.volume(
+                    kg,
+                    unit,
+                    context.l10n,
+                    withUnit: false,
+                  ),
+                  displayScale: unit.perKilogram,
                   height: _detailChartHeight,
                   color: color,
                   weekStarts: weeks,
@@ -2564,6 +2631,7 @@ class _BodyMetricsSection extends ConsumerWidget {
               ].join(' · '),
               child: entries.length >= 2
                   ? _DatedLineChart(
+                      displayScale: unit.perKilogram,
                       // Stored newest-first; charts read left to right.
                       ordered: <_DatedPoint>[
                         for (final BodyMetrics e in entries.reversed)

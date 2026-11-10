@@ -9,6 +9,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/muscle_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/formatters/unit_formatters.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/core/widgets/segmented_pills.dart';
 import 'package:ironyx/features/progress/domain/progress_providers.dart';
@@ -641,6 +642,68 @@ void main() {
       expect(bars.reduce((a, b) => a + b), 3060);
       // The newest week is the last bar, and it is the heaviest.
       expect(bars.last, 310);
+      await disposeApp(tester);
+    });
+  });
+
+  group('value axes', () {
+    /// True when [step] is 1, 2, 2.5 or 5 times a power of ten.
+    bool isRound(double step) {
+      double m = step;
+      while (m >= 10) {
+        m /= 10;
+      }
+      while (m < 1) {
+        m *= 10;
+      }
+      return <double>[1, 2, 2.5, 5]
+          .any((double r) => (m - r).abs() < 1e-6 || (m - 10).abs() < 1e-6);
+    }
+
+    double leftStep(FlTitlesData titles) =>
+        titles.leftTitles.sideTitles.interval!;
+
+    for (final WeightUnit unit in WeightUnit.values) {
+      testWidgets('weights step in round ${unit.name}', (tester) async {
+        await pumpProgress(
+          tester,
+          prefs: <String, Object>{'weight_unit': unit.name},
+        );
+        final LineChart oneRm =
+            tester.widget<LineChart>(find.byType(LineChart).first);
+        final BarChart volume =
+            tester.widget<BarChart>(find.byType(BarChart).at(0));
+
+        for (final (String name, FlTitlesData titles)
+            in <(String, FlTitlesData)>[
+          ('1RM', oneRm.data.titlesData),
+          ('weekly volume', volume.data.titlesData),
+        ]) {
+          final double shown = leftStep(titles) * unit.perKilogram;
+          expect(isRound(shown), isTrue, reason: '$name steps by $shown');
+        }
+        // Gridlines sit on the labelled values.
+        expect(
+          oneRm.data.gridData.horizontalInterval,
+          leftStep(oneRm.data.titlesData),
+        );
+        await disposeApp(tester);
+      });
+    }
+
+    testWidgets('weekly bars have a value axis, workouts in whole numbers',
+        (tester) async {
+      await pumpProgress(tester);
+      final BarChart volume =
+          tester.widget<BarChart>(find.byType(BarChart).at(0));
+      final BarChart frequency =
+          tester.widget<BarChart>(find.byType(BarChart).at(1));
+
+      expect(volume.data.titlesData.leftTitles.sideTitles.showTitles, isTrue);
+      final SideTitles counts = frequency.data.titlesData.leftTitles.sideTitles;
+      expect(counts.showTitles, isTrue);
+      expect(counts.interval, greaterThanOrEqualTo(1));
+      expect(counts.interval! % 1, 0);
       await disposeApp(tester);
     });
   });
