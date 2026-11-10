@@ -250,6 +250,46 @@ void main() {
       expect(await db.select(db.workoutsTable).get(), isEmpty);
     });
 
+    test(
+        'two saves at once write the workout once, and neither reports a '
+        'failure', () async {
+      await insertExercise('bench');
+      final ProviderContainer container = await containerWith({});
+      final ActiveWorkoutNotifier notifier =
+          container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'bench', name: 'Bench');
+
+      // Before, the second call inserted the same workout id again and
+      // threw, so a double-tapped Finish said "couldn't save" for a workout
+      // that had been saved.
+      await Future.wait(<Future<void>>[notifier.save(), notifier.save()]);
+
+      expect(await db.select(db.workoutsTable).get(), hasLength(1));
+      expect(container.read(activeWorkoutProvider), isNull);
+
+      // The in-flight guard resets: a later workout saves normally.
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'bench', name: 'Bench');
+      await notifier.save();
+      expect(await db.select(db.workoutsTable).get(), hasLength(2));
+    });
+
+    test('a failed save releases the in-flight guard for a retry', () async {
+      final ProviderContainer container = await containerWith({});
+      final ActiveWorkoutNotifier notifier =
+          container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      // No such exercise in the catalogue: the foreign key fails the insert.
+      await notifier.addExercise(exerciseId: 'ghost', name: 'Ghost');
+
+      await expectLater(notifier.save(), throwsA(anything));
+
+      await insertExercise('ghost');
+      await notifier.save();
+      expect(await db.select(db.workoutsTable).get(), hasLength(1));
+    });
+
     test('saving with no draft at all is a no-op', () async {
       final ProviderContainer container = await containerWith({});
 

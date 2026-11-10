@@ -72,6 +72,55 @@ void main() {
     });
   });
 
+  group('bodyWeight', () {
+    test('keeps at most one decimal, in either unit', () async {
+      final AppLocalizations en =
+          await AppLocalizations.delegate.load(const Locale('en'));
+      // 94 kg is 207.234 lb: a scale shows 207.2, not 207.23.
+      expect(UnitFormatters.bodyWeight(94, WeightUnit.lb, en), '207.2 lb');
+      expect(UnitFormatters.bodyWeight(94, WeightUnit.kg, en), '94 kg');
+      expect(UnitFormatters.bodyWeight(82.5, WeightUnit.kg, en), '82.5 kg');
+      expect(UnitFormatters.bodyWeight(82.46, WeightUnit.kg, en), '82.5 kg');
+      expect(
+        UnitFormatters.bodyWeight(94, WeightUnit.lb, en, withUnit: false),
+        '207.2',
+      );
+    });
+
+    test('a weight entered in pounds reads back as entered', () async {
+      final AppLocalizations en =
+          await AppLocalizations.delegate.load(const Locale('en'));
+      for (final double lb in <double>[150, 180.4, 207.2, 99.9]) {
+        final double kg = UnitFormatters.toKg(lb, WeightUnit.lb);
+        expect(UnitFormatters.bodyWeight(kg, WeightUnit.lb, en),
+            '${UnitFormatters.oneDecimal(lb).replaceAll(RegExp(r'\.0$'), '')} lb',
+            reason: '$lb lb');
+      }
+    });
+  });
+
+  group('unitless figures', () {
+    test('oneDecimal keeps one decimal, rounds, and groups thousands', () {
+      expect(UnitFormatters.oneDecimal(7), '7.0');
+      expect(UnitFormatters.oneDecimal(7.25), '7.3');
+      expect(UnitFormatters.oneDecimal(0.666), '0.7');
+      expect(UnitFormatters.oneDecimal(1234.5), '1,234.5');
+    });
+
+    test('ratio keeps two decimals', () {
+      expect(UnitFormatters.ratio(1), '1.00');
+      expect(UnitFormatters.ratio(1.333), '1.33');
+      expect(UnitFormatters.ratio(0.755), '0.76');
+    });
+
+    test('match what the page printed before, for ordinary values', () {
+      for (final double v in <double>[0, 0.04, 2.5, 6.66, 9.95, 31.2]) {
+        expect(UnitFormatters.oneDecimal(v), v.toStringAsFixed(1),
+            reason: '$v');
+      }
+    });
+  });
+
   group('UnitFormatters', () {
     group('weight conversion', () {
       test('kg to lb conversion is accurate', () {

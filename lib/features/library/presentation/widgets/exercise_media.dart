@@ -14,6 +14,17 @@ String? exercisePictureUrl(ExerciseMedia? media) {
   return media.url ?? media.localAsset;
 }
 
+/// Every picture of an exercise, in the order given (the DAO sorts by
+/// `sortOrder`): the catalogue ships two, the start and the end position.
+/// Only images count; a video link is a fallback, not a picture of its own.
+List<String> exercisePictures(List<ExerciseMedia> media) => <String>[
+      for (final ExerciseMedia m in media)
+        if (m.type == ExerciseMediaType.image)
+          if (m.url ?? m.localAsset case final String source
+              when source.isNotEmpty)
+            source,
+    ];
+
 IconData equipmentIcon(String equipmentId) => switch (equipmentId) {
       'barbell' => Icons.fitness_center,
       'dumbbell' => Icons.sports_gymnastics,

@@ -350,6 +350,287 @@ void main() {
     expect(find.text('SUPERSET'), findsOneWidget);
     expect(find.text('A'), findsOneWidget);
   });
+
+  // The dialog's text controllers used to be disposed as soon as
+  // `showDialog` returned, while the dialog was still animating out with
+  // both fields mounted. On a phone that showed up, some of the time, as a
+  // full-screen "'_dependents.isEmpty': is not true" after pressing Save.
+  group('RPE and rest time dialog', () {
+    Future<void> openDialog(WidgetTester tester) async {
+      await tester.tap(find.byTooltip('Set 1 options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RPE and rest time'));
+      await tester.pumpAndSettle();
+      expect(find.text('Set 1 details'), findsOneWidget);
+    }
+
+    final Finder rpeField = find.widgetWithText(TextField, 'RPE (1–10)');
+    final Finder restField =
+        find.widgetWithText(TextField, 'Rest before set (seconds)');
+
+    /// Types the way a soft keyboard does, leaving the text underlined as
+    /// still being composed when the next tap lands.
+    Future<void> typeComposing(
+      WidgetTester tester,
+      Finder field,
+      String text,
+    ) async {
+      await tester.showKeyboard(field);
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+          composing: TextRange(start: 0, end: text.length),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('Save stores both values and closes without an error',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '8.5');
+      await typeComposing(tester, restField, '90');
+      await tester.tap(find.text('Save'));
+
+      // Frame by frame through the closing animation: the failure was a
+      // rebuild in the middle of it, which a single settle could step over.
+      for (int frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.takeException(), isNull, reason: 'frame $frame');
+      }
+
+      expect(find.text('Set 1 details'), findsNothing);
+      final DraftSet saved = harnessKey.currentState!.exercise.sets.first;
+      expect(saved.rpeTimes10, 85);
+      expect(saved.restSeconds, 90);
+    });
+
+    testWidgets('Cancel closes without an error and changes nothing',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await typeComposing(tester, rpeField, '8');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Set 1 details'), findsNothing);
+      final DraftSet set = harnessKey.currentState!.exercise.sets.first;
+      expect(set.rpeTimes10, isNull);
+      expect(set.restSeconds, isNull);
+    });
+
+    testWidgets('an out-of-range value keeps the dialog open and says why',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '11');
+      await tester.enterText(restField, '3601');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Set 1 details'), findsOneWidget);
+      expect(
+        find.text('Enter a number from 1 to 10, or leave it empty'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Enter 0 to 3600 seconds, or leave it empty'),
+        findsOneWidget,
+      );
+      final DraftSet set = harnessKey.currentState!.exercise.sets.first;
+      expect(set.rpeTimes10, isNull);
+      expect(set.restSeconds, isNull);
+
+      // Editing a field withdraws its own complaint and leaves the other.
+      await tester.enterText(rpeField, '9');
+      await tester.pump();
+      expect(
+        find.text('Enter a number from 1 to 10, or leave it empty'),
+        findsNothing,
+      );
+      expect(
+        find.text('Enter 0 to 3600 seconds, or leave it empty'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(restField, '3600');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Set 1 details'), findsNothing);
+      final DraftSet saved = harnessKey.currentState!.exercise.sets.first;
+      expect(saved.rpeTimes10, 90);
+      expect(saved.restSeconds, 3600);
+    });
+
+    testWidgets('the edges of each range are accepted', (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '1');
+      await tester.enterText(restField, '0');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final DraftSet saved = harnessKey.currentState!.exercise.sets.first;
+      expect(saved.rpeTimes10, 10);
+      expect(saved.restSeconds, 0);
+
+      await openDialog(tester);
+      await tester.enterText(rpeField, '0.9');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Set 1 details'), findsOneWidget);
+      expect(harnessKey.currentState!.exercise.sets.first.rpeTimes10, 10);
+    });
+
+    testWidgets('text that is not a number is refused, not read as empty',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '8');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      await openDialog(tester);
+      await tester.enterText(rpeField, '8.5.5');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Set 1 details'), findsOneWidget);
+      expect(
+        find.text('Enter a number from 1 to 10, or leave it empty'),
+        findsOneWidget,
+      );
+      expect(harnessKey.currentState!.exercise.sets.first.rpeTimes10, 80);
+    });
+
+    testWidgets('letters and signs cannot be typed into either field',
+        (tester) async {
+      await pumpHarness(tester);
+      await openDialog(tester);
+      // The comma is a decimal mark (see `NumberInputFormatter`); rest is a
+      // whole number of seconds, so it has none.
+      await tester.enterText(rpeField, '-7,5e');
+      await tester.enterText(restField, '1.5m');
+
+      expect(find.widgetWithText(TextField, '7.5'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '15'), findsOneWidget);
+    });
+
+    testWidgets('a decimal comma and Arabic digits are saved as typed',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '٨٫٥');
+      await tester.enterText(restField, '١٢٠');
+
+      expect(find.widgetWithText(TextField, '8.5'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '120'), findsOneWidget);
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final DraftSet saved = harnessKey.currentState!.exercise.sets.first;
+      expect(saved.rpeTimes10, 85);
+      expect(saved.restSeconds, 120);
+    });
+
+    testWidgets('set rows take a decimal comma and Arabic digits',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      final Finder fields = find.byType(TextField);
+      // Set 1: weight, then reps. Before, the comma was dropped as it was
+      // typed and 82,5 was logged as 825 kg.
+      await tester.enterText(fields.at(0), '82,5');
+      await tester.enterText(fields.at(1), '٨');
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.widgetWithText(TextField, '82.5'), findsOneWidget);
+      final DraftSet set = harnessKey.currentState!.exercise.sets.first;
+      expect(set.weightKg, 82.5);
+      expect(set.reps, 8);
+    });
+
+    testWidgets('emptying a field clears that value on the set',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '8');
+      await tester.enterText(restField, '90');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      await openDialog(tester);
+      await tester.enterText(find.widgetWithText(TextField, '8.0'), '');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Set 1 details'), findsNothing);
+      DraftSet set = harnessKey.currentState!.exercise.sets.first;
+      expect(set.rpeTimes10, isNull);
+      expect(set.restSeconds, 90,
+          reason: 'the untouched field keeps its value');
+
+      await openDialog(tester);
+      await tester.enterText(find.widgetWithText(TextField, '90'), '');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      set = harnessKey.currentState!.exercise.sets.first;
+      expect(set.rpeTimes10, isNull);
+      expect(set.restSeconds, isNull);
+    });
+
+    testWidgets('saving details leaves the rest of the set alone',
+        (tester) async {
+      final harnessKey = await pumpHarness(tester);
+      await tester.enterText(find.byType(TextField).at(0), '40');
+      await tester.pump(const Duration(milliseconds: 350));
+      await openDialog(tester);
+      await tester.enterText(rpeField, '8');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final List<DraftSet> sets = harnessKey.currentState!.exercise.sets;
+      expect(sets[0].weightKg, 40);
+      expect(sets[0].rpeTimes10, 80);
+      expect(sets[1].rpeTimes10, isNull);
+    });
+
+    testWidgets('the refusal is translated (Arabic)', (tester) async {
+      await pumpHarness(tester, locale: const Locale('ar'));
+      final AppLocalizations ar = lookupAppLocalizations(const Locale('ar'));
+      await tester.tap(find.byTooltip(ar.draftSetOptionsSemantic(1)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(ar.draftRpeAndRest));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, ar.draftRpeField),
+        '11',
+      );
+      await tester.tap(find.text(ar.actionSave));
+      await tester.pumpAndSettle();
+
+      expect(find.text(ar.draftRpeInvalid), findsOneWidget);
+      expect(ar.draftRpeInvalid, isNot(contains('Enter')));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reopening shows what was saved', (tester) async {
+      await pumpHarness(tester);
+      await openDialog(tester);
+      await tester.enterText(rpeField, '7');
+      await tester.enterText(restField, '120');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      await openDialog(tester);
+      expect(find.widgetWithText(TextField, '7.0'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '120'), findsOneWidget);
+    });
+  });
 }
 
 class _DraftHarness extends StatefulWidget {
@@ -446,6 +727,26 @@ class _FakeController implements DraftEditorController {
               restSeconds: restSeconds ?? set.restSeconds,
               durationSeconds: durationSeconds ?? set.durationSeconds,
             )
+          else
+            set,
+      ],
+    );
+    onChanged(_exercise!);
+  }
+
+  @override
+  Future<void> replaceSetDetails(
+    String exerciseId,
+    String setId, {
+    required int? rpeTimes10,
+    required int? restSeconds,
+  }) async {
+    _ensureExercise(exerciseId);
+    _exercise = _exercise!.copyWith(
+      sets: [
+        for (final set in _exercise!.sets)
+          if (set.id == setId)
+            set.copyWith(rpeTimes10: rpeTimes10, restSeconds: restSeconds)
           else
             set,
       ],

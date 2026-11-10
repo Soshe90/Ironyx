@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/database_providers.dart';
+import '../../../core/formatters/number_input.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
@@ -393,7 +394,9 @@ class _NumberField extends StatelessWidget {
           TextField(
             controller: controller,
             keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            inputFormatters: const <TextInputFormatter>[
+              NumberInputFormatter.integer(),
+            ],
             style: AppTypography.numeric(
               theme.textTheme.titleMedium?.copyWith(
                     fontSize: AppTypography.fieldValueSize,

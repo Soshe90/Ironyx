@@ -6,7 +6,10 @@ import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/formatters/week_start.dart';
 import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/core/services/clock.dart';
+import 'package:ironyx/core/services/program_import_service.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/history_calendar.dart';
 
@@ -92,11 +95,15 @@ void main() {
   Future<void> pumpTracker(
     WidgetTester tester, {
     Size surfaceSize = const Size(400, 2000),
+    DateTime Function()? clock,
   }) async {
     await pumpApp(
       tester,
       initialLocation: Routes.tracker,
-      overrides: [appDatabaseProvider.overrideWithValue(database)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        if (clock != null) clockProvider.overrideWithValue(clock),
+      ],
       prefs: const <String, Object>{
         'exercise_seed_version': 999999,
         'program_seed_version': 999999,
@@ -146,6 +153,139 @@ void main() {
     expect(find.byType(HistoryCalendar), findsNothing);
 
     await disposeTracker(tester);
+  });
+
+  // The tab stays alive in the shell, so the app can outlive the day and
+  // month it was opened in (seen on a phone on 2026-11-03 on the dashboard,
+  // which had the same pattern).
+  group('across a day change', () {
+    Future<void> resume(WidgetTester tester) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+    }
+
+    HistoryCalendar calendar(WidgetTester tester) =>
+        tester.widget<HistoryCalendar>(find.byType(HistoryCalendar));
+
+    testWidgets('the calendar moves on to the new month it was showing',
+        (tester) async {
+      DateTime fakeNow = DateTime(2026, 10, 31, 23);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(1400, 2000),
+        clock: () => fakeNow,
+      );
+      await tester.tap(find.byTooltip('Show calendar'));
+      await tester.pump();
+      expect(calendar(tester).visibleMonth, DateTime(2026, 10));
+      expect(calendar(tester).today, DateTime(2026, 10, 31));
+
+      fakeNow = DateTime(2026, 11, 1, 8);
+      await resume(tester);
+
+      expect(calendar(tester).visibleMonth, DateTime(2026, 11));
+      expect(calendar(tester).today, DateTime(2026, 11, 1));
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a month the user browsed back to stays put', (tester) async {
+      DateTime fakeNow = DateTime(2026, 10, 31, 23);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(1400, 2000),
+        clock: () => fakeNow,
+      );
+      await tester.tap(find.byTooltip('Show calendar'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pump();
+      expect(calendar(tester).visibleMonth, DateTime(2026, 9));
+
+      fakeNow = DateTime(2026, 11, 1, 8);
+      await resume(tester);
+
+      expect(calendar(tester).visibleMonth, DateTime(2026, 9));
+      expect(calendar(tester).today, DateTime(2026, 11, 1));
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('the next-month limit follows the given today, not the clock',
+        (tester) async {
+      Future<IconButton> nextButton(DateTime visibleMonth) async {
+        await pumpWidgetUnderTest(
+          tester,
+          HistoryCalendar(
+            visibleMonth: visibleMonth,
+            today: DateTime(2026, 11, 3),
+            weekStart: WeekStart.monday,
+            markedDates: const <DateTime>{},
+            onMonthChanged: (_) {},
+            onDayTap: (_) {},
+          ),
+        );
+        return tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.chevron_right),
+        );
+      }
+
+      expect((await nextButton(DateTime(2026, 11))).onPressed, isNull);
+      expect((await nextButton(DateTime(2026, 10))).onPressed, isNotNull);
+
+      // This test never boots the app, but setUp opened a database for it;
+      // leaving it open makes Drift warn in every later test.
+      await database.close();
+    });
+
+    testWidgets("yesterday's workout stops being highlighted as today",
+        (tester) async {
+      // A fixed past date, so the real clock can never make it "today".
+      final DateTime start = DateTime(2026, 11, 2, 10);
+      await WorkoutDao(database).insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'w-nov2',
+          startedAt: start,
+          endedAt: Value(start.add(const Duration(minutes: 40))),
+          durationSeconds: const Value(2400),
+          totalVolumeKg: const Value(500),
+        ),
+        [
+          WorkoutExercisesTableCompanion.insert(
+            id: 'w-nov2_a',
+            workoutId: 'w-nov2',
+            exerciseId: 'my-bench',
+            orderIndex: 0,
+          ),
+        ],
+        const [],
+      );
+      DateTime fakeNow = DateTime(2026, 11, 2, 18);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(1400, 2000),
+        clock: () => fakeNow,
+      );
+      final Color primary =
+          Theme.of(tester.element(find.byType(Scaffold).first))
+              .colorScheme
+              .primary;
+      // The date tile's day number is primary-coloured only for today.
+      int highlightedDayTwo() => tester
+          .widgetList<Text>(find.text('2'))
+          .where((Text t) => t.style?.color == primary)
+          .length;
+
+      expect(highlightedDayTwo(), 1);
+
+      fakeNow = DateTime(2026, 11, 3, 7);
+      await resume(tester);
+
+      expect(highlightedDayTwo(), 0);
+
+      await disposeTracker(tester);
+    });
   });
 
   testWidgets('XLSX import moved into the history menu', (tester) async {
@@ -282,6 +422,227 @@ void main() {
     // Entirely on screen and clear of the volume, however long the names.
     expect(pill.left, greaterThan(0));
     expect(pill.right, lessThanOrEqualTo(volume.left));
+
+    await disposeTracker(tester);
+  });
+
+  testWidgets(
+      'CSV program import is reachable when programs already exist, '
+      'not only from the no-programs card', (tester) async {
+    await const ProgramImportService().apply(
+      database,
+      await const ProgramImportService().parse(
+        'program,day,exercise,sets\nStrength Block,Day 1,Incline Press,3\n',
+        database,
+      ),
+    );
+    await pumpTracker(tester);
+
+    expect(find.text('Strength Block'), findsOneWidget);
+    expect(find.text('Import programs from CSV'), findsNothing);
+    await tester.tap(find.byTooltip('Program options'));
+    await tester.pumpAndSettle();
+    expect(find.text('Import programs from CSV'), findsOneWidget);
+
+    await disposeTracker(tester);
+  });
+
+  group('programs row', () {
+    Future<void> importPrograms(int count) async {
+      final StringBuffer csv = StringBuffer('program,day,exercise,sets\n');
+      for (int i = 1; i <= count; i++) {
+        csv.writeln('Block $i,Day 1,Incline Press,3');
+        if (i.isEven) csv.writeln('Block $i,Day 2,Chest-Supported Row,3');
+      }
+      await const ProgramImportService().apply(
+        database,
+        await const ProgramImportService().parse(csv.toString(), database),
+      );
+    }
+
+    testWidgets('programs sit side by side, so history stays near the top',
+        (tester) async {
+      await importPrograms(3);
+      await pumpTracker(tester, surfaceSize: const Size(400, 800));
+
+      final double first = tester.getTopLeft(find.text('Block 1')).dy;
+      expect(tester.getTopLeft(find.text('Block 2')).dy, first);
+      expect(tester.getTopLeft(find.text('Block 3')).dy, first);
+      expect(
+        tester.getTopLeft(find.text('Block 2')).dx,
+        greaterThan(tester.getTopLeft(find.text('Block 1')).dx),
+      );
+      // As a column, three programs put this heading past the middle of a
+      // phone screen; in a row it is in the upper half whatever the count.
+      expect(tester.getTopLeft(find.text('History')).dy, lessThan(400));
+      // The seeded workout's row is on the first screen. (At this width
+      // its title may show one exercise and count the other.)
+      expect(
+        find.textContaining('Incline Press').hitTestable(),
+        findsOneWidget,
+      );
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('more programs than fit are reached by swiping the row',
+        (tester) async {
+      await importPrograms(8);
+      await pumpTracker(tester, surfaceSize: const Size(400, 800));
+      final double historyBefore = tester.getTopLeft(find.text('History')).dy;
+
+      // The row builds its cards as they come into view.
+      expect(find.text('Block 8'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('Block 8'),
+        200,
+        scrollable: find.descendant(
+          of: find.byWidgetPredicate(
+            (Widget w) => w is ListView && w.scrollDirection == Axis.horizontal,
+          ),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Block 8').hitTestable(), findsOneWidget);
+      // Sideways only: the page itself has not moved.
+      expect(tester.getTopLeft(find.text('History')).dy, historyBefore);
+      expect(tester.takeException(), isNull);
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a card names the program and its days, and opens it',
+        (tester) async {
+      await importPrograms(2);
+      await pumpTracker(tester, surfaceSize: const Size(400, 800));
+
+      // What each card is announced as.
+      Finder announced(String label) => find.byWidgetPredicate(
+            (Widget w) => w is Semantics && w.properties.label == label,
+          );
+      expect(announced('Block 1, 1 day'), findsOneWidget);
+      expect(announced('Block 2, 2 days'), findsOneWidget);
+      final Finder card = find.ancestor(
+        of: find.text('Block 2'),
+        matching: find.byType(AppCard),
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('2 days')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Block 2'));
+      await tester.pumpAndSettle();
+      // The program's own page: its two days are listed.
+      expect(find.text('Day 1'), findsOneWidget);
+      expect(find.text('Day 2'), findsOneWidget);
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('the explanation shows only while there are no programs',
+        (tester) async {
+      const String explanation =
+          'Reusable day templates to start a session from';
+      await pumpTracker(tester);
+      expect(find.text(explanation), findsOneWidget);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('with programs the heading has no second line', (tester) async {
+      await importPrograms(1);
+      await pumpTracker(tester);
+
+      expect(
+        find.text('Reusable day templates to start a session from'),
+        findsNothing,
+      );
+      expect(find.text('Programs'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a long name wraps inside its card at a large text size',
+        (tester) async {
+      await const ProgramImportService().apply(
+        database,
+        await const ProgramImportService().parse(
+          'program,day,exercise,sets\n'
+          'Intermediate Upper Lower Hypertrophy Block Phase Two,Day 1,'
+          'Incline Press,3\n',
+          database,
+        ),
+      );
+      tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await pumpTracker(tester, surfaceSize: const Size(400, 800));
+
+      expect(tester.takeException(), isNull);
+      final Finder name = find.textContaining('Intermediate Upper Lower');
+      final Rect card = tester.getRect(
+        find.ancestor(of: name, matching: find.byType(AppCard)),
+      );
+      expect(tester.getRect(name).bottom, lessThan(card.bottom));
+      expect(tester.getRect(find.text('1 day')).bottom, lessThan(card.bottom));
+
+      // The month heading's summary used to run off the screen here; it
+      // stays inside, on a line of its own if it has to.
+      final Rect summary = tester.getRect(find.textContaining('1 workout'));
+      expect(summary.left, greaterThanOrEqualTo(0));
+      expect(summary.right, lessThanOrEqualTo(400));
+
+      await disposeTracker(tester);
+    });
+
+    testWidgets('in Arabic the first program is on the right', (tester) async {
+      await importPrograms(2);
+      await pumpApp(
+        tester,
+        initialLocation: Routes.tracker,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: const <String, Object>{
+          'exercise_seed_version': 999999,
+          'program_seed_version': 999999,
+          'app_locale': 'ar',
+        },
+        surfaceSize: const Size(400, 800),
+        awaitDatabase: true,
+      );
+      await tester.pump();
+
+      expect(
+        tester.getCenter(find.text('Block 1')).dx,
+        greaterThan(tester.getCenter(find.text('Block 2')).dx),
+      );
+      await disposeTracker(tester);
+    });
+  });
+
+  testWidgets('the start button carries the same plus as the dashboard',
+      (tester) async {
+    await pumpTracker(tester);
+
+    final Finder start = find.widgetWithText(FilledButton, 'Start workout');
+    expect(
+      find.descendant(of: start, matching: find.byIcon(Icons.add)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: start, matching: find.byIcon(Icons.play_arrow)),
+      findsNothing,
+    );
+    await disposeTracker(tester);
+  });
+
+  testWidgets('with no programs the empty card keeps its own import button',
+      (tester) async {
+    await pumpTracker(tester);
+
+    expect(find.text('No programs yet'), findsOneWidget);
+    expect(find.byTooltip('Import programs from CSV'), findsOneWidget);
+    expect(find.byTooltip('Program options'), findsOneWidget);
 
     await disposeTracker(tester);
   });

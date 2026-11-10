@@ -75,6 +75,76 @@ void main() {
       expect(restored.read(activeWorkoutProvider)!.exercises.last.id, firstId);
     });
 
+    test('replaceSetDetails sets, replaces and clears RPE and rest time',
+        () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'bench', name: 'Bench Press');
+      await notifier.addSet(
+        container.read(activeWorkoutProvider)!.exercises.single.id,
+      );
+      DraftExercise exercise() =>
+          container.read(activeWorkoutProvider)!.exercises.single;
+      final String exerciseId = exercise().id;
+      final String first = exercise().sets[0].id;
+      final String second = exercise().sets[1].id;
+      await notifier.updateSet(exerciseId, first, weightKg: 100, reps: 5);
+
+      await notifier.replaceSetDetails(
+        exerciseId,
+        first,
+        rpeTimes10: 85,
+        restSeconds: 120,
+      );
+      expect(exercise().sets[0].rpeTimes10, 85);
+      expect(exercise().sets[0].restSeconds, 120);
+
+      // `updateSet` cannot clear: null there means "unchanged".
+      await notifier.updateSet(exerciseId, first, isCompleted: true);
+      expect(exercise().sets[0].rpeTimes10, 85);
+
+      await notifier.replaceSetDetails(
+        exerciseId,
+        first,
+        rpeTimes10: null,
+        restSeconds: 60,
+      );
+      expect(exercise().sets[0].rpeTimes10, isNull);
+      expect(exercise().sets[0].restSeconds, 60);
+      // Nothing else on the set, and no other set, is touched.
+      expect(exercise().sets[0].weightKg, 100);
+      expect(exercise().sets[0].reps, 5);
+      expect(exercise().sets[0].isCompleted, isTrue);
+      expect(exercise().sets[1].id, second);
+      expect(exercise().sets[1].restSeconds, isNull);
+
+      // An id that matches nothing changes nothing.
+      final WorkoutDraft before = container.read(activeWorkoutProvider)!;
+      await notifier.replaceSetDetails(
+        exerciseId,
+        'no-such-set',
+        rpeTimes10: 70,
+        restSeconds: 30,
+      );
+      await notifier.replaceSetDetails(
+        'no-such-exercise',
+        first,
+        rpeTimes10: 70,
+        restSeconds: 30,
+      );
+      expect(container.read(activeWorkoutProvider), before);
+
+      // The cleared value is what a relaunch reads back.
+      final restored = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+        ],
+      );
+      addTearDown(restored.dispose);
+      expect(restored.read(activeWorkoutProvider), before);
+    });
+
     test('deleting a middle set does not corrupt neighbouring sets', () async {
       final notifier = container.read(activeWorkoutProvider.notifier);
       await notifier.start();
@@ -104,44 +174,78 @@ void main() {
       expect(sets.map((s) => s.weightKg), [0.0, 20.0, 30.0]);
     });
 
-    test('scheduleDiscard keeps the draft until the undo window elapses',
+    Future<SharedPreferences> prefs() => SharedPreferences.getInstance();
+
+    test('discardWithUndo clears the draft at once, in memory and on disk',
         () async {
       final notifier = container.read(activeWorkoutProvider.notifier);
       await notifier.start();
       await notifier.addExercise(exerciseId: 'squat', name: 'Squat');
 
-      notifier.scheduleDiscard();
-      expect(container.read(activeWorkoutProvider), isNotNull);
+      await notifier.discardWithUndo();
 
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      expect(
-        container.read(activeWorkoutProvider),
-        isNotNull,
-        reason: 'draft must survive until the undo window elapses',
-      );
+      expect(container.read(activeWorkoutProvider), isNull,
+          reason: 'every screen must stop showing the workout immediately');
+      expect((await prefs()).getString('active_workout_draft'), isNull,
+          reason: 'a kill inside the undo window must not keep the draft');
+    });
 
-      notifier.cancelScheduledDiscard();
-      await Future<void>.delayed(
-        AppDuration.undoWindow + const Duration(seconds: 1),
-      );
-      expect(
-        container.read(activeWorkoutProvider),
-        isNotNull,
-        reason: 'cancelScheduledDiscard must prevent the eventual discard',
-      );
+    test('undoDiscard inside the window restores the same draft', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'squat', name: 'Squat');
+      final before = container.read(activeWorkoutProvider)!;
+
+      await notifier.discardWithUndo();
+      expect(await notifier.undoDiscard(), isTrue);
+
+      final after = container.read(activeWorkoutProvider)!;
+      expect(after.id, before.id);
+      expect(after.exercises.single.id, before.exercises.single.id);
+      expect((await prefs()).getString('active_workout_draft'), isNotNull,
+          reason: 'the restored draft is persisted again');
+
+      expect(await notifier.undoDiscard(), isFalse,
+          reason: 'one discard can be undone once');
+    });
+
+    test('undoDiscard never replaces a workout started since', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.discardWithUndo();
+      await notifier.start();
+      final fresh = container.read(activeWorkoutProvider)!;
+
+      expect(await notifier.undoDiscard(), isFalse);
+      expect(container.read(activeWorkoutProvider)!.id, fresh.id);
+    });
+
+    test('undoDiscard with nothing discarded does nothing', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      expect(await notifier.undoDiscard(), isFalse);
+      expect(container.read(activeWorkoutProvider), isNull);
+    });
+
+    test('a plain discard closes any open undo window', () async {
+      final notifier = container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.discardWithUndo();
+      await notifier.discard();
+      expect(await notifier.undoDiscard(), isFalse);
     });
 
     test(
-      'scheduleDiscard clears the draft once the window elapses',
+      'undoDiscard after the window has closed does nothing',
       () async {
         final notifier = container.read(activeWorkoutProvider.notifier);
         await notifier.start();
-
-        notifier.scheduleDiscard();
+        await notifier.discardWithUndo();
         await Future<void>.delayed(
           AppDuration.undoWindow + const Duration(seconds: 1),
         );
 
+        expect(await notifier.undoDiscard(), isFalse,
+            reason: 'a stale Undo must not resurrect the workout');
         expect(container.read(activeWorkoutProvider), isNull);
       },
       // Must exceed the undo window plus the buffer above.

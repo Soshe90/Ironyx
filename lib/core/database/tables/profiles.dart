@@ -47,7 +47,8 @@ class ProfilesTable extends Table {
   /// conversion is a presentation concern).
   RealColumn get heightCm => real().nullable()();
 
-  /// Desired number of completed sessions per Monday-Sunday week.
+  /// Desired number of completed sessions per week. Which seven days a
+  /// week is follows the first day chosen in Settings.
   /// Null means the user has not configured a target; the domain layer uses 3.
   IntColumn get weeklySessionTarget => integer().nullable()();
 

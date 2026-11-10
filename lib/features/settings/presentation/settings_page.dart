@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters/unit_formatters.dart';
+import '../../../core/formatters/week_start.dart';
+import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/l10n/locale_controller.dart';
@@ -30,6 +32,7 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeMode mode = ref.watch(themeModeControllerProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
+    final WeekStart weekStart = ref.watch(weekStartControllerProvider);
     final TimerSettings feedback = ref.watch(timerSettingsControllerProvider);
     final TimerSettingsController feedbackController =
         ref.read(timerSettingsControllerProvider.notifier);
@@ -113,6 +116,31 @@ class SettingsPage extends ConsumerWidget {
                 onSelectionChanged: (Set<WeightUnit> selection) async {
                   await ref
                       .read(weightUnitControllerProvider.notifier)
+                      .set(selection.first);
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            SectionHeader(
+              title: l10n.settingsWeekStartTitle,
+              subtitle: l10n.settingsWeekStartSubtitle,
+            ),
+            AppCard(
+              child: SegmentedButton<WeekStart>(
+                segments: <ButtonSegment<WeekStart>>[
+                  for (final WeekStart option in WeekStart.values)
+                    ButtonSegment<WeekStart>(
+                      value: option,
+                      // The day names the weekday chart already has, keyed
+                      // by the same lower-case names as the enum's.
+                      label: Text(l10n.progressWeekdayFull(option.name)),
+                    ),
+                ],
+                selected: <WeekStart>{weekStart},
+                showSelectedIcon: false,
+                onSelectionChanged: (Set<WeekStart> selection) async {
+                  await ref
+                      .read(weekStartControllerProvider.notifier)
                       .set(selection.first);
                 },
               ),

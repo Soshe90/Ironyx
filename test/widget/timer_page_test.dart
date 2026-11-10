@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/timer_preset_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/formatters/number_input.dart';
 import 'package:ironyx/features/timer/domain/timer_preset.dart';
 
 import '../helpers/pump_app.dart';
@@ -44,6 +45,12 @@ void main() {
         expect(field.decoration?.labelText, isNull);
         expect(field.decoration?.enabledBorder, isA<OutlineInputBorder>());
         expect(field.decoration?.focusedBorder, isA<OutlineInputBorder>());
+        // Arabic digits typed into a timer field are kept as digits.
+        expect(
+          field.inputFormatters,
+          contains(isA<NumberInputFormatter>()
+              .having((f) => f.decimal, 'decimal', isFalse)),
+        );
       }
       expect(find.text('Sound cues'), findsNothing);
       expect(find.text('Haptics'), findsNothing);

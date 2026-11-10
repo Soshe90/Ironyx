@@ -46,6 +46,9 @@ class BodyMetricsTable extends Table {
 abstract class BodyMetrics with _$BodyMetrics {
   const factory BodyMetrics({
     required String id,
+
+    /// The day measured, as local midnight of that calendar day. Its year,
+    /// month and day are the day's in every time zone; see [fromDrift].
     required DateTime date,
     required double weightKg,
     double? bodyFatPercentage,
@@ -54,13 +57,29 @@ abstract class BodyMetrics with _$BodyMetrics {
     String? note,
   }) = _BodyMetrics;
 
+  /// The row's day is stored as UTC midnight, and drift hands that instant
+  /// back as a local time. East of UTC that is a few hours into the right
+  /// day. West of UTC it is the evening *before*: read as it came, the entry
+  /// showed yesterday's date, and because the DAO finds a row by the year,
+  /// month and day of the date it is given, saving an edit overwrote the
+  /// previous day's entry and deleting removed it.
+  ///
+  /// So the calendar day is taken from the UTC value, where it was put, and
+  /// carried as local midnight, which is what every reader (formatting,
+  /// "today"/"yesterday", chart axes, the DAO's own lookups) expects of a
+  /// local date.
   factory BodyMetrics.fromDrift(BodyMetricsTableData row) => BodyMetrics(
         id: row.id,
-        date: row.date,
+        date: _storedDay(row.date),
         weightKg: row.weightKg,
         bodyFatPercentage: row.bodyFatPercentage,
         leanMassKg: row.leanMassKg,
         waistCm: row.waistCm,
         note: row.note,
       );
+
+  static DateTime _storedDay(DateTime stored) {
+    final DateTime utc = stored.toUtc();
+    return DateTime(utc.year, utc.month, utc.day);
+  }
 }

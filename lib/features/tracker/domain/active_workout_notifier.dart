@@ -22,7 +22,10 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
     implements DraftEditorController {
   static const _prefsKey = 'active_workout_draft';
 
-  Timer? _discardTimer;
+  /// The draft most recently thrown away by [discardWithUndo], held only in
+  /// memory and only until [_discardedExpiry] fires.
+  WorkoutDraft? _discarded;
+  Timer? _discardedExpiry;
 
   /// Every write to [_prefsKey] — including the removes in [discard] and
   /// [save] — is chained onto this so writes always land in the order they
@@ -41,7 +44,9 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
 
   @override
   WorkoutDraft? build() {
-    ref.onDispose(() => _discardTimer?.cancel());
+    // Dropping the copy too, not just the timer: a copy that outlives its
+    // expiry would make a much later Undo resurrect an old workout.
+    ref.onDispose(_forgetDiscarded);
     final encoded = ref.watch(sharedPreferencesProvider).getString(_prefsKey);
     if (encoded == null) return null;
     try {
@@ -90,29 +95,62 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
   }
 
   Future<void> discard() async {
-    _discardTimer?.cancel();
-    _discardTimer = null;
+    _forgetDiscarded();
     state = null;
     await _persist();
   }
 
-  /// Marks the draft for discard after [AppDuration.undoWindow]. The draft
-  /// stays intact (and restorable) until the timer fires — call
-  /// [cancelScheduledDiscard] within that window to undo.
-  void scheduleDiscard() {
-    _discardTimer?.cancel();
-    _discardTimer = Timer(AppDuration.undoWindow, discard);
+  /// Discards the draft now, keeping an in-memory copy that [undoDiscard]
+  /// can restore for [AppDuration.undoWindow].
+  ///
+  /// The discard used to be *deferred* instead: the draft stayed live until
+  /// a timer fired. Every screen kept showing "Workout in progress" for
+  /// that window, opening it silently cancelled the discard, and killing
+  /// the app inside the window kept the draft for good. Discarding at once
+  /// makes what the user sees match what they chose; undo is the exception
+  /// rather than the default.
+  Future<void> discardWithUndo() async {
+    final WorkoutDraft? draft = state;
+    if (draft == null) return;
+    _forgetDiscarded();
+    _discarded = draft;
+    _discardedExpiry = Timer(AppDuration.undoWindow, _forgetDiscarded);
+    state = null;
+    await _persist();
   }
 
-  /// Cancels a pending [scheduleDiscard]. The draft is left untouched.
-  void cancelScheduledDiscard() {
-    _discardTimer?.cancel();
-    _discardTimer = null;
+  /// Restores the draft from the last [discardWithUndo], if the window is
+  /// still open and no other workout has started since. Returns whether it
+  /// restored anything, so a stale Undo button can do nothing at all
+  /// instead of opening (and thereby starting) a new empty workout.
+  Future<bool> undoDiscard() async {
+    final WorkoutDraft? draft = _discarded;
+    if (draft == null || state != null) return false;
+    _forgetDiscarded();
+    state = draft;
+    await _persist();
+    return true;
   }
+
+  void _forgetDiscarded() {
+    _discardedExpiry?.cancel();
+    _discardedExpiry = null;
+    _discarded = null;
+  }
+
+  /// The commit [save] is running, shared with any call made meanwhile.
+  Future<void>? _saveInFlight;
 
   /// Commits the draft and nested rows in one database transaction.
   /// The draft is cleared only after the transaction succeeds.
-  Future<void> save() async {
+  ///
+  /// A call made while a save is running waits for that save rather than
+  /// inserting the same workout id a second time, which would fail and
+  /// report a workout that was in fact saved as "couldn't save".
+  Future<void> save() =>
+      _saveInFlight ??= _save().whenComplete(() => _saveInFlight = null);
+
+  Future<void> _save() async {
     final draft = state;
     if (draft == null || draft.exercises.isEmpty) return;
 
@@ -337,6 +375,30 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
             durationSeconds: durationSeconds ?? set.durationSeconds,
           );
         }).toList(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> replaceSetDetails(
+    String exerciseId,
+    String setId, {
+    required int? rpeTimes10,
+    required int? restSeconds,
+  }) async {
+    await _updateExercise(
+      exerciseId,
+      (exercise) => exercise.copyWith(
+        sets: exercise.sets
+            .map(
+              (set) => set.id == setId
+                  ? set.copyWith(
+                      rpeTimes10: rpeTimes10,
+                      restSeconds: restSeconds,
+                    )
+                  : set,
+            )
+            .toList(),
       ),
     );
   }

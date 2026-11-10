@@ -34,6 +34,7 @@
   "navSettings": "الإعدادات",
 
   "errorTryAgain": "حاول مرة أخرى",
+  "errorUncaught": "حدث خطأ ما. يُرجى إعادة تشغيل التطبيق.",
   "metricNoDataYet": "لا توجد بيانات بعد",
   "metricCouldNotLoad": "تعذّر التحميل",
   "filterAll": "الكل",
@@ -49,6 +50,8 @@
   "settingsUnitsSubtitle": "تُطبَّق في كل موضع تُعرض فيه الأوزان أو تُدخَل",
   "settingsUnitKilograms": "كيلوغرام (kg)",
   "settingsUnitPounds": "رطل (lb)",
+  "settingsWeekStartTitle": "بداية الأسبوع",
+  "settingsWeekStartSubtitle": "تُطبَّق على المجاميع الأسبوعية وسلاسل المواظبة والتقويم",
   "settingsFeedbackTitle": "التنبيهات",
   "settingsFeedbackSubtitle": "تنبيهات عند انتهاء مرحلة المؤقّت",
   "settingsSoundCues": "التنبيهات الصوتية",
@@ -274,12 +277,7 @@
   "workoutAddExercise": "إضافة تمرين",
   "workoutSaveChanges": "حفظ التغييرات",
   "workoutUpdated": "تم تحديث التمرين",
-  "workoutSaveChangesFailed": "تعذّر حفظ التغييرات: {error}",
-  "@workoutSaveChangesFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "workoutSaveChangesFailed": "تعذّر حفظ تغييراتك. ما زالت هنا — حاول مرة أخرى.",
 
   "actionOk": "حسنًا",
 
@@ -342,6 +340,29 @@
     }
   },
   "programImportSkippedUnknown": "\u062a\u064f\u062e\u0637\u0651\u064a\u062a \u062a\u0645\u0627\u0631\u064a\u0646 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629:",
+  "programImportSkippedExisting": "\u062a\u064f\u062e\u0637\u0651\u064a\u062a \u0628\u0631\u0627\u0645\u062c \u0645\u0648\u062c\u0648\u062f\u0629 \u0645\u0633\u0628\u0642\u064b\u0627. \u063a\u064a\u0651\u0631 \u0623\u0633\u0645\u0627\u0621\u0647\u0627 \u0641\u064a \u0627\u0644\u0645\u0644\u0641 \u0644\u0627\u0633\u062a\u064a\u0631\u0627\u062f\u0647\u0627:",
+  "programImportSkippedRows": "\u062a\u064f\u062e\u0637\u0651\u064a\u062a \u0635\u0641\u0648\u0641:",
+  "programImportRowMissingField": "\u0627\u0644\u0635\u0641 {row}: \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c \u0623\u0648 \u0627\u0644\u064a\u0648\u0645 \u0623\u0648 \u0627\u0644\u062a\u0645\u0631\u064a\u0646 \u0641\u0627\u0631\u063a",
+  "@programImportRowMissingField": {
+    "placeholders": {
+      "row": { "type": "int" }
+    }
+  },
+  "programImportRowInvalidSets": "\u0627\u0644\u0635\u0641 {row}: \u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0639\u062f\u062f \u0627\u0644\u0645\u062c\u0645\u0648\u0639\u0627\u062a \u0639\u062f\u062f\u064b\u0627 \u0635\u062d\u064a\u062d\u064b\u0627 \u0645\u0646 1 \u0625\u0644\u0649 {max}",
+  "@programImportRowInvalidSets": {
+    "placeholders": {
+      "row": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "programImportMore": "\u2026\u0648{count} \u063a\u064a\u0631\u0647\u0627",
+  "@programImportMore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "programImportApplyFailed": "\u062a\u0639\u0630\u0651\u0631 \u062d\u0641\u0638 \u0627\u0644\u0628\u0631\u0627\u0645\u062c \u0627\u0644\u0645\u0633\u062a\u0648\u0631\u062f\u0629. \u0644\u0645 \u064a\u064f\u062d\u0641\u0638 \u0623\u064a \u0634\u064a\u0621 \u2014 \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.",
+  "trackerProgramOptions": "\u062e\u064a\u0627\u0631\u0627\u062a \u0627\u0644\u0628\u0631\u0627\u0645\u062c",
   "dataAllDeleted": "تم حذف كل البيانات",
   "dataDeleteAllConfirmTitle": "حذف كل البيانات؟",
   "dataDeleteAllConfirmBody": "سيحذف هذا نهائيًا كل تمرين وجلسة مؤقّت وبرنامج وقالب وقياس جسم (ستُستعاد البرامج المدمجة). تبقى مكتبة التمارين كما هي. لا يمكن التراجع عن هذا.",
@@ -471,6 +492,8 @@
   },
   "draftRpeField": "معدّل الجهد المُدرَك (1–10)",
   "draftRestBeforeSetField": "الراحة قبل المجموعة (ثوانٍ)",
+  "draftRpeInvalid": "أدخل رقمًا من 1 إلى 10، أو اترك الحقل فارغًا",
+  "draftRestInvalid": "أدخل من 0 إلى 3600 ثانية، أو اترك الحقل فارغًا",
 
   "importXlsxAction": "استيراد XLSX",
   "importXlsxPickerTitle": "اختر ملف سجلّ تمارينك بصيغة XLSX",
@@ -665,7 +688,6 @@
   },
   "dashboardNoRecentTrainingCaption": "سجّل تمرينًا وستظهر هنا حصيلتك الأسبوعية وسلسلة مواظبتك واتجاهاتك. السجلّ الأقدم موجود في تبويب التقدّم.",
   "dashboardVolumeEyebrow": "الحجم التدريبي",
-  "dashboardStatSessions": "الجلسات",
   "dashboardSessionGoal": "الهدف الأسبوعي للجلسات",
   "dashboardSessionGoalProgress": "{completed} / {target}",
   "@dashboardSessionGoalProgress": {
@@ -676,7 +698,10 @@
     }
   },
   "dashboardStatStreak": "سلسلة المواظبة",
-  "dashboardStatLastWeek": "الأسبوع الماضي",
+  "dashboardLastWeekVolume": "الأسبوع الماضي {volume}",
+  "dashboardSamePointLastWeekVolume": "في مثل هذا الوقت الأسبوع الماضي: {volume}",
+  "dashboardLastTrained": "آخر تمرين: {when}",
+  "dashboardStreakEmpty": "تمرّن هذا الأسبوع لتبدأ سلسلة",
   "dashboardStreakWeeks": "{count, plural, zero{لا أسابيع متتالية} one{أسبوع واحد متواصل} two{أسبوعان متواصلان} few{{count} أسابيع متتالية} many{{count} أسبوعًا متتاليًا} other{{count} أسبوع متتالٍ}}",
   "@dashboardStreakWeeks": {
     "placeholders": {
@@ -972,6 +997,9 @@
   "libraryVideoDemo": "عرض فيديو",
   "librarySearchOnYoutube": "البحث على YouTube",
   "libraryYoutubeOpenFailed": "تعذّر فتح YouTube",
+  "libraryPictureStart": "وضعية البداية",
+  "libraryPictureEnd": "وضعية النهاية",
+  "libraryPictureOf": "الصورة {index} من {count}",
   "libraryHowToPerform": "طريقة أداء {name}",
   "@libraryHowToPerform": {
     "placeholders": { "name": { "type": "String" } }
@@ -980,7 +1008,7 @@
   "progressRangeLabel": "{range, select, twoWeeks{أسبوعان} month{شهر} quarter{3 أشهر} year{سنة} all{الكل} other{الكل}}",
   "@progressRangeLabel": { "placeholders": { "range": { "type": "String" } } },
   "progressStrengthChangeTitle": "تغيّر القوة",
-  "progressStrengthSubtitle": "{range, select, twoWeeks{أعلى وزن تقديري سجلته خلال آخر 14 يومًا مقارنةً بالأيام الأربعة عشر السابقة} month{أعلى وزن تقديري سجلته خلال آخر 30 يومًا مقارنةً بالأيام الثلاثين السابقة} quarter{أعلى وزن تقديري سجلته خلال آخر 90 يومًا مقارنةً بالأيام التسعين السابقة} year{أعلى وزن تقديري سجلته خلال آخر 12 شهرًا مقارنةً بالأشهر الاثني عشر السابقة} all{أعلى وزن تقديري سجلته لكل تمرين} other{أعلى وزن تقديري سجلته لكل تمرين}}",
+  "progressStrengthSubtitle": "{range, select, twoWeeks{أعلى وزن تقديري سجلته خلال آخر 14 يومًا مقارنةً بأعلى وزن قبلها} month{أعلى وزن تقديري سجلته خلال آخر 30 يومًا مقارنةً بأعلى وزن قبلها} quarter{أعلى وزن تقديري سجلته خلال آخر 90 يومًا مقارنةً بأعلى وزن قبلها} year{أعلى وزن تقديري سجلته خلال آخر 12 شهرًا مقارنةً بأعلى وزن قبلها} all{أعلى وزن تقديري سجلته على الإطلاق مقارنةً بأول جلسة} other{أعلى وزن تقديري سجلته على الإطلاق مقارنةً بأول جلسة}}",
   "@progressStrengthSubtitle": { "placeholders": { "range": { "type": "String" } } },
   "progressEstimatedOneRmTitle": "الوزن التقديري لأقصى تكرار واحد",
   "progressEstimatedOneRmSubtitle": "تقدير بمعادلة إبلي اعتمادًا على أثقل مجموعاتك المسجّلة",
@@ -991,7 +1019,6 @@
   "progressEffortRecoveryTitle": "الجهد والاستشفاء",
   "progressTrainingBalanceTitle": "توازن التدريب",
   "progressWorkoutFrequencyTitle": "وتيرة التمرين",
-  "progressWeeklyVolumeByMuscleTitle": "الحجم الأسبوعي حسب العضلة",
   "progressRepRangeDistributionTitle": "توزيع نطاقات التكرار",
   "progressTrainingDaysTitle": "أيام التدريب",
   "progressVolumeByMuscleGroupTitle": "الحجم حسب المجموعة العضلية",
@@ -1002,13 +1029,15 @@
   "progressRelativeStrengthSubtitle": "الوزن التقديري لأقصى تكرار واحد ÷ أحدث وزن للجسم",
   "progressRelativeStrengthRatio": "{ratio}×",
   "@progressRelativeStrengthRatio": { "placeholders": { "ratio": { "type": "String" } } },
-  "progressStrengthSemantic": "{direction, select, up{{exercise}، {estimate}، تحسّن بنسبة {percent} بالمئة} down{{exercise}، {estimate}، تراجع بنسبة {percent} بالمئة} other{{exercise}، {estimate}، تغيّر بنسبة {percent} بالمئة}}",
+  "progressStrengthSemantic": "{direction, select, up{{exercise}، {estimate}، تحسّن بنسبة {percent} بالمئة} down{{exercise}، {estimate}، تراجع بنسبة {percent} بالمئة} flat{{exercise}، {estimate}، دون تغيير} other{{exercise}، {estimate}، تغيّر بنسبة {percent} بالمئة}}",
   "@progressStrengthSemantic": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" }, "direction": { "type": "String" }, "percent": { "type": "int" } } },
   "progressStrengthSemanticNoChange": "{exercise}، {estimate}",
   "@progressStrengthSemanticNoChange": { "placeholders": { "exercise": { "type": "String" }, "estimate": { "type": "String" } } },
   "progressStrengthNewThisPeriod": "جديد خلال هذه الفترة",
   "progressStrengthPreviousBest": "كان {estimate}",
   "@progressStrengthPreviousBest": { "placeholders": { "estimate": { "type": "String" } } },
+  "progressStrengthFirstSession": "أول جلسة: {estimate}",
+  "@progressStrengthFirstSession": { "placeholders": { "estimate": { "type": "String" } } },
   "progressInsightsSemantic": "استنتاجات التقدّم",
   "progressInsightsTitle": "استنتاجات",
   "progressInsightsEmpty": "واصل تسجيل التمارين للحصول على استنتاجات مخصّصة عن تقدّمك.",
@@ -1018,6 +1047,8 @@
   "progressInsightTargetBalance": "التوازن",
   "progressInsightStrengthHeadline": "{direction, select, up{تحسّن أداء {exercise} بنسبة {percent}%} down{تراجع أداء {exercise} بنسبة {percent}%} other{تغيّر أداء {exercise} بنسبة {percent}%}}",
   "@progressInsightStrengthHeadline": { "placeholders": { "direction": { "type": "String" }, "exercise": { "type": "String" }, "percent": { "type": "int" } } },
+  "progressInsightStrengthSinceFirstHeadline": "{direction, select, up{تحسّن أداء {exercise} بنسبة {percent}% منذ أول جلسة} down{تراجع أداء {exercise} بنسبة {percent}% منذ أول جلسة} other{تغيّر أداء {exercise} بنسبة {percent}% منذ أول جلسة}}",
+  "@progressInsightStrengthSinceFirstHeadline": { "placeholders": { "direction": { "type": "String" }, "exercise": { "type": "String" }, "percent": { "type": "int" } } },
   "progressInsightStrengthFigure": "الوزن التقديري لأقصى تكرار واحد: {estimate}",
   "@progressInsightStrengthFigure": { "placeholders": { "estimate": { "type": "String" } } },
   "progressInsightConsistencyHeadline": "المواظبة على التدريب آخذة في التراجع",
@@ -1026,9 +1057,6 @@
   "progressInsightVolumeHeadline": "الحجم التدريبي الأسبوعي آخذ في الانخفاض",
   "progressInsightVolumeFigure": "أقل بنسبة {percent}% من الأسابيع السابقة",
   "@progressInsightVolumeFigure": { "placeholders": { "percent": { "type": "int" } } },
-  "progressInsightPersonalRecordsHeadline": "أرقامك القياسية الشخصية الجديدة تتوالى",
-  "progressInsightPersonalRecordsFigure": "{count, plural, zero{لا أرقام قياسية حديثة} one{رقم قياسي شخصي حديث واحد} two{رقمان قياسيان شخصيان حديثان} few{{count} أرقام قياسية شخصية حديثة} many{{count} رقمًا قياسيًا شخصيًا حديثًا} other{{count} رقم قياسي شخصي حديث}}",
-  "@progressInsightPersonalRecordsFigure": { "placeholders": { "count": { "type": "int" } } },
   "progressInsightNeglectedHeadline": "لم تحظَ عضلة {muscle} بالاهتمام الكافي",
   "@progressInsightNeglectedHeadline": { "placeholders": { "muscle": { "type": "String" } } },
   "progressInsightNeglectedFigure": "أقل من 10% من الحجم السابق",
@@ -1039,6 +1067,10 @@
   "progressChartLoadFailed": "تعذّر تحميل هذا المخطط",
   "progressOneRmEmpty": "أكمل مجموعات موزونة لعرض اتجاهات القوة.",
   "progressExerciseField": "التمرين",
+  "progressChooseLift": "اختر تمرينًا",
+  "progressSearchLifts": "ابحث في تمارينك",
+  "progressNoLiftMatches": "لا يوجد تمرين مطابق",
+  "progressNoLiftMatchesMessage": "تظهر هنا التمارين التي سجّلتها فقط.",
   "progressExerciseWithSessions": "{exercise} · {sessions}",
   "@progressExerciseWithSessions": { "placeholders": { "exercise": { "type": "String" }, "sessions": { "type": "String" } } },
   "progressExerciseRangeEmpty": "لا توجد مجموعات مكتملة لهذا التمرين ضمن الفترة المحدّدة.",
@@ -1049,7 +1081,6 @@
   "progressOneRmMonthlyTrend": "{change} شهريًا · {count, plural, zero{لا جلسات} one{جلسة واحدة} two{جلستان} few{{count} جلسات} many{{count} جلسةً} other{{count} جلسة}} في هذه الفترة",
   "@progressOneRmMonthlyTrend": { "placeholders": { "change": { "type": "String" }, "count": { "type": "int" } } },
   "progressOneDataPoint": "نقطة بيانات واحدة ضمن هذه الفترة",
-  "progressSessionVolumeTitle": "حجم الجلسة التدريبي",
   "progressSessionVolumeSubtitle": "حجم مجموعات العمل للرفعة المحدّدة",
   "progressVolumeEmpty": "أكمل تمرينًا لعرض الحجم التدريبي.",
   "progressVolumeActiveWeeks": "خلال {activeWeeks, plural, zero{لا أسابيع نشطة} one{أسبوع نشط واحد} two{أسبوعين نشطين} few{{activeWeeks} أسابيع نشطة} many{{activeWeeks} أسبوعًا نشطًا} other{{activeWeeks} أسبوع نشط}} من أصل {totalWeeks, plural, one{أسبوع واحد} two{أسبوعين} few{{totalWeeks} أسابيع} many{{totalWeeks} أسبوعًا} other{{totalWeeks} أسبوع}}",
@@ -1059,11 +1090,9 @@
   "progressAdherenceTarget": "الالتزام · {target}/أسبوع",
   "@progressAdherenceTarget": { "placeholders": { "target": { "type": "int" } } },
   "progressRpeEmpty": "سجّل معدل الجهد المدرك للمجموعات المكتملة لعرض الجهد والحمل معًا.",
-  "progressSessionRpeTitle": "جهد الجلسة مقارنةً بالحجم",
   "progressSessionRpeValue": "معدل الجهد المدرك {rpe} · {volume}",
   "@progressSessionRpeValue": { "placeholders": { "rpe": { "type": "String" }, "volume": { "type": "String" } } },
   "progressRestEmpty": "سجّل الراحة قبل المجموعات لعرض نمط استشفائك.",
-  "progressRestTimeTitle": "مدة الراحة",
   "progressAverageRestSeconds": "{seconds, plural, zero{متوسط الراحة صفر ثانية} one{متوسط الراحة ثانية واحدة} two{متوسط الراحة ثانيتان} few{متوسط الراحة {seconds} ثوانٍ} many{متوسط الراحة {seconds} ثانيةً} other{متوسط الراحة {seconds} ثانية}}",
   "@progressAverageRestSeconds": { "placeholders": { "seconds": { "type": "int" } } },
   "progressRestFromSets": "{sets, plural, zero{من صفر مجموعة} one{من مجموعة واحدة} two{من مجموعتين} few{من {sets} مجموعات} many{من {sets} مجموعة} other{من {sets} مجموعة}}",
@@ -1080,7 +1109,6 @@
   "@progressRatioSemantic": { "placeholders": { "label": { "type": "String" }, "ratio": { "type": "String" }, "status": { "type": "String" } } },
   "progressRatioInsufficientSemantic": "{label}: البيانات غير كافية",
   "@progressRatioInsufficientSemantic": { "placeholders": { "label": { "type": "String" } } },
-  "progressWeeklyMuscleEmpty": "أكمل مجموعات عمل لمقارنة حجم العضلات مع مرور الوقت.",
   "progressRepRangeOneToFive": "1–5 تكرارات",
   "progressRepRangeSixToTwelve": "6–12 تكرارًا",
   "progressRepRangeThirteenPlus": "13 تكرارًا فأكثر",
@@ -1093,7 +1121,7 @@
   "progressFrequencyEmpty": "أكمل تمارين لعرض وتيرتك الأسبوعية.",
   "progressAveragePerWeek": "{average} أسبوعيًا",
   "@progressAveragePerWeek": { "placeholders": { "average": { "type": "String" } } },
-  "progressFrequencySummary": "{workouts, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{workouts} تمارين} many{{workouts} تمرينًا} other{{workouts} تمرين}} خلال {weeks, plural, one{أسبوع واحد} two{أسبوعين} few{{weeks} أسابيع} many{{weeks} أسبوعًا} other{{weeks} أسبوع}} · تدربت في {activeWeeks, plural, zero{صفر أسبوع} one{أسبوع واحد} two{أسبوعين} few{{activeWeeks} أسابيع} many{{activeWeeks} أسبوعًا} other{{activeWeeks} أسبوع}}",
+  "progressFrequencySummary": "{workouts, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{workouts} تمارين} many{{workouts} تمرينًا} other{{workouts} تمرين}} · تدربت في {activeWeeks} من أصل {weeks, plural, one{أسبوع واحد} two{أسبوعين} few{{weeks} أسابيع} many{{weeks} أسبوعًا} other{{weeks} أسبوع}}",
   "@progressFrequencySummary": { "placeholders": { "workouts": { "type": "int" }, "weeks": { "type": "int" }, "activeWeeks": { "type": "int" } } },
   "progressWorkoutCount": "{count, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{count} تمارين} many{{count} تمرينًا} other{{count} تمرين}}",
   "@progressWorkoutCount": { "placeholders": { "count": { "type": "int" } } },
@@ -1103,9 +1131,6 @@
   "progressOtherMuscles": "أخرى",
   "progressMostTrained": "الأكثر تدريبًا · {volume}",
   "@progressMostTrained": { "placeholders": { "volume": { "type": "String" } } },
-  "progressChartInteractionHelp": "اضغط على أحد الأعمدة أو مرّر المؤشر فوقه لعرض التفاصيل.",
-  "progressMuscleVolumeDetail": "{muscle}: {volume}",
-  "@progressMuscleVolumeDetail": { "placeholders": { "muscle": { "type": "String" }, "volume": { "type": "String" } } },
   "progressNoMeasurementsTitle": "لا توجد قياسات بعد",
   "progressNoMeasurementsMessage": "تتبّع الوزن ونسبة الدهون مع مرور الوقت.",
   "progressNoMeasurementsInRange": "{range, select, twoWeeks{لم يُسجَّل أي قياس خلال آخر 14 يومًا.} month{لم يُسجَّل أي قياس خلال آخر 30 يومًا.} quarter{لم يُسجَّل أي قياس خلال آخر 90 يومًا.} year{لم يُسجَّل أي قياس خلال آخر 12 شهرًا.} all{لم يُسجَّل أي قياس بعد.} other{لم يُسجَّل أي قياس بعد.}}",
@@ -1185,8 +1210,30 @@
   "explainerConsistencyPoint2": "أطول سلسلة هي رقمك القياسي عبر تاريخك كله، لا ضمن النطاق المحدّد أعلاه فقط.",
   "explainerConsistencyCaveat": "على مدى سنة، انتظام الحضور يتنبأ بالتقدّم أفضل من أي جلسة منفردة.",
 
-  "explainerStrengthChangeSummary": "أفضل وزن تقديري لأقصى تكرار واحد لكل تمرين ضمن النطاق المحدّد، مقارنةً بالنطاق السابق مباشرةً.",
-  "explainerStrengthChangePoint1": "الأخضر يعني أن أفضل رفعة تحسّنت عن الفترة السابقة، والأحمر يعني أنها تراجعت.",
-  "explainerStrengthChangePoint2": "عند اختيار «كل الوقت» لا توجد فترة سابقة للمقارنة، فيُعرض ببساطة أفضل رقم لك في كل تمرين.",
-  "explainerStrengthChangeCaveat": "التراجع غالبًا يعني أنك دربت تلك الرفعة بأوزان أخف هذه الفترة، لا أنك فقدت قوتك."
+  "explainerStrengthChangeSummary": "أعلى وزن تقديري لأقصى تكرار واحد لكل تمرين ضمن النطاق المحدّد، مقارنةً بأعلى وزن سجّلته في أي وقت قبله. والتمرين الذي بدأته داخل النطاق يُقارَن بأول جلسة له فيه.",
+  "explainerStrengthChangePoint1": "الأخضر يعني أن أفضل رفعة لك في هذه الفترة تجاوزت أفضل رفعة سابقة، والأحمر يعني أنك لم تبلغها بعد.",
+  "explainerStrengthChangePoint2": "عند اختيار «الكل» لا يوجد ما قبل النطاق، فتُقارَن أفضل رفعة لك على الإطلاق بأول جلسة لك.",
+  "explainerStrengthChangeCaveat": "جلسة واحدة أخف لا تُحتسب تراجعًا، فالمقارنة بأفضل رفعة في الفترة فقط. والأحمر غالبًا يعني أنك تدرّب تلك الرفعة بأوزان أخف حاليًا، لا أنك فقدت قوتك.",
+  "progressOverviewRange": "{range, select, twoWeeks{آخر 14 يومًا} month{آخر 30 يومًا} quarter{آخر 90 يومًا} year{آخر 12 شهرًا} all{كل الوقت} other{كل الوقت}}",
+  "progressOverviewTotalVolume": "إجمالي الحجم التدريبي",
+  "progressOverviewWorkouts": "التمارين",
+  "progressOverviewPerWeek": "أسبوعيًا",
+  "progressOverviewRecords": "أرقام قياسية",
+  "progressChapterStrength": "القوة",
+  "progressChapterVolume": "الحجم التدريبي",
+  "progressChapterHabits": "العادات",
+  "progressChapterBody": "الجسم",
+  "progressShowAllLifts": "{count, plural, zero{لا رفعات أخرى} one{عرض رفعة أخرى} two{عرض رفعتين أخريين} few{عرض {count} رفعات أخرى} many{عرض {count} رفعة أخرى} other{عرض {count} رفعة أخرى}}",
+  "progressShowFewerLifts": "عرض أقل",
+  "progressShareOfTotal": "{percent}%",
+  "progressShareSemantic": "{label}: {value}، {percent}% من الإجمالي",
+  "progressRangeSemantic": "النطاق الزمني",
+  "progressChartMetricSemantic": "المخطط يعرض",
+  "progressMetricOneRm": "أقصى تكرار",
+  "progressMetricVolume": "الحجم",
+  "progressMetricEffort": "الجهد",
+  "progressMetricRest": "الراحة",
+  "progressAverageRpe": "متوسط الجهد المدرك {rpe}",
+  "progressMuscleShare": "{volume} · {percent}% من الحجم",
+  "progressChartSemantic": "مخطط من {from} إلى {to}. الأحدث: {latest}. الأدنى: {lowest}. الأعلى: {highest}."
 }

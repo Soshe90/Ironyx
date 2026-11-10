@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/body_limits.dart';
+import '../../../core/formatters/number_input.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
@@ -42,8 +45,6 @@ String _sexLabel(String option, AppLocalizations l10n) => switch (option) {
 /// anyone real, narrow enough to catch a cm/kg mix-up.
 const double _minHeightCm = 90;
 const double _maxHeightCm = 250;
-const double _minWeightKg = 25;
-const double _maxWeightKg = 350;
 
 /// Name, date of birth, sex, height and current weight.
 class PersonalDetailsPage extends ConsumerWidget {
@@ -148,7 +149,7 @@ class _BodyState extends ConsumerState<_Body> {
                   label: l10n.profileWeight,
                   value: draft.weightKg == null
                       ? l10n.profileNotSet
-                      : UnitFormatters.weight(
+                      : UnitFormatters.bodyWeight(
                           draft.weightKg!, unit, context.l10n),
                   onPressed: () => _pickWeight(unit),
                 ),
@@ -233,8 +234,8 @@ class _BodyState extends ConsumerState<_Body> {
       initial: widget.draft.weightKg == null
           ? null
           : UnitFormatters.fromKg(widget.draft.weightKg!, unit),
-      min: UnitFormatters.fromKg(_minWeightKg, unit),
-      max: UnitFormatters.fromKg(_maxWeightKg, unit),
+      min: UnitFormatters.fromKg(kMinBodyWeightKg, unit),
+      max: UnitFormatters.fromKg(kMaxBodyWeightKg, unit),
     );
     if (entered != null) {
       _notifier.setWeightKg(UnitFormatters.toKg(entered, unit));
@@ -344,6 +345,9 @@ class _NumberInputDialogState extends State<_NumberInputDialog> {
           controller: _controller,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: const <TextInputFormatter>[
+            NumberInputFormatter.decimal(),
+          ],
           decoration: InputDecoration(suffixText: widget.suffix),
           validator: _validate,
           onFieldSubmitted: (_) => _submit(),
@@ -364,7 +368,7 @@ class _NumberInputDialogState extends State<_NumberInputDialog> {
 
   String? _validate(String? value) {
     final AppLocalizations l10n = context.l10n;
-    final double? parsed = double.tryParse((value ?? '').trim());
+    final double? parsed = parseDecimalInput(value ?? '');
     if (parsed == null) return l10n.profileEnterANumber;
     if (parsed < widget.min || parsed > widget.max) {
       return l10n.profileEnterValueBetween(
@@ -377,6 +381,7 @@ class _NumberInputDialogState extends State<_NumberInputDialog> {
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.pop(context, double.parse(_controller.text.trim()));
+    // Validated just above, so it parses.
+    Navigator.pop(context, parseDecimalInput(_controller.text)!);
   }
 }

@@ -266,6 +266,30 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
     );
   }
 
+  @override
+  Future<void> replaceSetDetails(
+    String exerciseId,
+    String setId, {
+    required int? rpeTimes10,
+    required int? restSeconds,
+  }) async {
+    _updateExercise(
+      exerciseId,
+      (exercise) => exercise.copyWith(
+        sets: exercise.sets
+            .map(
+              (set) => set.id == setId
+                  ? set.copyWith(
+                      rpeTimes10: rpeTimes10,
+                      restSeconds: restSeconds,
+                    )
+                  : set,
+            )
+            .toList(),
+      ),
+    );
+  }
+
   void _updateExercise(
     String exerciseId,
     DraftExercise Function(DraftExercise) update,

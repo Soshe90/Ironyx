@@ -14,6 +14,22 @@ import '../tables/muscles.dart';
 
 part 'exercise_dao.g.dart';
 
+/// How an imported spreadsheet's exercise name is compared with the
+/// catalogue: lower case, with every run of characters other than a-z and
+/// 0-9 read as one space, so "Push-Ups", "push ups" and "PUSH UPS*" agree.
+///
+/// Text with no such characters at all (an exercise named in Arabic) would
+/// normalize to nothing and match every other such name, so it is compared
+/// as it is instead, trimmed and in lower case.
+///
+/// Must match `normalize_name` in scripts/build_exercise_seed.py, which
+/// refuses a catalogue where two exercises would read the same.
+String normalizeExerciseName(String value) {
+  final String key =
+      value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+  return key.isEmpty ? value.trim().toLowerCase() : key;
+}
+
 @DriftAccessor(
   tables: [
     ExercisesTable,
@@ -54,6 +70,49 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     return _watchSummaries(
       exercisesTable.name.lower().like('%$normalized%') | aliasMatch,
     );
+  }
+
+  /// Every exercise's id by its normalized name and by each normalized
+  /// alias (see [normalizeExerciseName]): what an importer looks a
+  /// spreadsheet's exercise names up in.
+  ///
+  /// When one key would fit two exercises, a catalogue name wins over a
+  /// catalogue alias, and both win over a user-created exercise. That last
+  /// case is a custom exercise an earlier import created under a name the
+  /// catalogue has since learnt, such as "Hammer Curls": new imports go to
+  /// the catalogue exercise, whose muscles and equipment are known.
+  Future<Map<String, String>> exerciseIdsByLookupName() async {
+    final List<QueryRow> names = await customSelect(
+      'SELECT id, name, is_custom FROM exercises_table',
+      readsFrom: {exercisesTable},
+    ).get();
+    final List<QueryRow> aliases = await customSelect(
+      'SELECT a.exercise_id AS id, a.alias AS alias '
+      'FROM exercise_aliases_table a '
+      'JOIN exercises_table e ON e.id = a.exercise_id '
+      'WHERE e.is_custom = 0',
+      readsFrom: {exerciseAliasesTable, exercisesTable},
+    ).get();
+
+    final Map<String, String> byKey = <String, String>{};
+    // Lowest priority first, so each later pass overwrites.
+    for (final QueryRow row in names) {
+      if (row.read<bool>('is_custom')) {
+        byKey[normalizeExerciseName(row.read<String>('name'))] =
+            row.read<String>('id');
+      }
+    }
+    for (final QueryRow row in aliases) {
+      byKey[normalizeExerciseName(row.read<String>('alias'))] =
+          row.read<String>('id');
+    }
+    for (final QueryRow row in names) {
+      if (!row.read<bool>('is_custom')) {
+        byKey[normalizeExerciseName(row.read<String>('name'))] =
+            row.read<String>('id');
+      }
+    }
+    return byKey;
   }
 
   /// Filter exercises by muscle, equipment, and/or movement pattern.

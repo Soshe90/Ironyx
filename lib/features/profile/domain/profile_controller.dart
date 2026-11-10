@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/profiles.dart';
+import '../../../core/services/clock.dart';
 
 part 'profile_controller.g.dart';
 
@@ -107,9 +108,14 @@ class ProfileController extends _$ProfileController {
 
     final double? weightKg = draft.weightKg;
     if (weightKg != null && weightKg > 0) {
-      final DateTime today = DateTime.now().toUtc();
-      // `upsert` normalizes to UTC midnight and replaces any entry already
-      // logged today, so confirming twice doesn't create a duplicate.
+      // The local time, not UTC: `upsert` files the entry under the year,
+      // month and day of the date it is given, and the day a measurement
+      // belongs to is the user's. Converted to UTC first, a weight saved
+      // at 01:00 in Baghdad was logged for yesterday, and one saved in the
+      // evening in New York for tomorrow.
+      final DateTime today = ref.read(clockProvider)();
+      // `upsert` replaces any entry already logged today, so confirming
+      // twice doesn't create a duplicate.
       await ref.read(bodyMetricsDaoProvider).upsert(
             BodyMetricsTableCompanion.insert(
               id: _uuid.v4(),

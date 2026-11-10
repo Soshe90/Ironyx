@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/tables/exercises.dart';
+import '../../../core/error_reporting.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -43,14 +44,25 @@ class WorkoutEditPage extends ConsumerWidget {
   }
 }
 
-class _EditWorkoutBody extends StatelessWidget {
+class _EditWorkoutBody extends StatefulWidget {
   const _EditWorkoutBody({required this.draft, required this.notifier});
 
   final WorkoutDraft draft;
   final EditWorkoutNotifier notifier;
 
   @override
+  State<_EditWorkoutBody> createState() => _EditWorkoutBodyState();
+}
+
+class _EditWorkoutBodyState extends State<_EditWorkoutBody> {
+  /// True while "Save changes" is committing; the button is disabled so a
+  /// second tap cannot pop a second route (same as the live session).
+  bool _saving = false;
+
+  @override
   Widget build(BuildContext context) {
+    final WorkoutDraft draft = widget.draft;
+    final EditWorkoutNotifier notifier = widget.notifier;
     final AppLocalizations l10n = context.l10n;
     final bool hasExercises = draft.exercises.isNotEmpty;
     final List<String?> supersetLabelsForDraft = supersetLabels(
@@ -125,7 +137,9 @@ class _EditWorkoutBody extends StatelessWidget {
         ),
         StickyActionBar(
           child: FilledButton.icon(
-            onPressed: hasExercises ? () => _save(context, notifier) : null,
+            onPressed: hasExercises && !_saving
+                ? () => _save(context, notifier)
+                : null,
             icon: const Icon(Icons.check),
             label: Text(l10n.workoutSaveChanges),
           ),
@@ -154,19 +168,27 @@ class _EditWorkoutBody extends StatelessWidget {
   }
 
   Future<void> _save(BuildContext context, EditWorkoutNotifier notifier) async {
+    if (_saving) return;
     final AppLocalizations l10n = context.l10n;
+    setState(() => _saving = true);
     try {
+      await commitPendingSetEdits();
       await notifier.save();
       if (!context.mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       context.pop();
       messenger.showSnackBar(SnackBar(content: Text(l10n.workoutUpdated)));
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      // Reported, not shown: a raw SQLite message means nothing to the user
+      // and can echo back data they typed (same rule as the live session).
+      reportError(error, stackTrace, context: 'WorkoutEditPage.save');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.workoutSaveChangesFailed('$error'))),
+          SnackBar(content: Text(l10n.workoutSaveChangesFailed)),
         );
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 }

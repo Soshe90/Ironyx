@@ -1,10 +1,16 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/formatters/date_formatters.dart';
+import 'package:ironyx/core/formatters/week_start.dart';
+import 'package:ironyx/core/formatters/week_start_controller.dart';
+import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Covers the two new dashboard-card queries added in M6:
 /// `ExerciseDao.watchLibrarySummary` and
@@ -12,6 +18,9 @@ import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
 /// providers are thin pass-throughs over these — this is where the actual
 /// logic (and the empty-state case) lives.
 void main() {
+  // LocalNow observes the app lifecycle through WidgetsBinding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase database;
   late ExerciseDao exerciseDao;
   late WorkoutDao workoutDao;
@@ -77,6 +86,7 @@ void main() {
   group('WeekSnapshot.from', () {
     test('empty series produces a zeroed no-history snapshot', () {
       final snapshot = WeekSnapshot.from(
+        weekStart: WeekStart.monday,
         volume: const <WeeklyVolume>[],
         frequency: const <WorkoutFrequency>[],
       );
@@ -90,12 +100,14 @@ void main() {
     });
 
     test('selects current and previous weeks and preserves series length', () {
-      final DateTime currentWeek = DateFormatters.startOfWeek(DateTime.now());
+      final DateTime currentWeek =
+          DateFormatters.startOfWeek(DateTime.now(), WeekStart.monday);
       final DateTime previousWeek =
           currentWeek.subtract(const Duration(days: 7));
       final DateTime olderWeek = previousWeek.subtract(const Duration(days: 7));
 
       final snapshot = WeekSnapshot.from(
+        weekStart: WeekStart.monday,
         volume: <WeeklyVolume>[
           WeeklyVolume(weekStart: olderWeek, totalVolumeKg: 50),
           WeeklyVolume(weekStart: previousWeek, totalVolumeKg: 100),
@@ -118,13 +130,15 @@ void main() {
 
     test('a rest week continues the previous streak until the current week',
         () {
-      final DateTime currentWeek = DateFormatters.startOfWeek(DateTime.now());
+      final DateTime currentWeek =
+          DateFormatters.startOfWeek(DateTime.now(), WeekStart.monday);
       final DateTime previousWeek =
           currentWeek.subtract(const Duration(days: 7));
       final DateTime twoWeeksAgo =
           previousWeek.subtract(const Duration(days: 7));
 
       final snapshot = WeekSnapshot.from(
+        weekStart: WeekStart.monday,
         volume: <WeeklyVolume>[
           WeeklyVolume(weekStart: twoWeeksAgo, totalVolumeKg: 50),
           WeeklyVolume(weekStart: previousWeek, totalVolumeKg: 100),
@@ -277,6 +291,398 @@ void main() {
 
       final result = await workoutDao.watchMostLoggedExerciseOneRM().first;
       expect(result!.trend, OneRMTrend.flat);
+    });
+  });
+
+  group('WeekSnapshot.from with an explicit today', () {
+    test('"this week" follows the given day, not the device clock', () {
+      final DateTime weekOfOct26 = DateTime(2026, 10, 26);
+      final DateTime weekOfNov2 = DateTime(2026, 11, 2);
+      final List<WeeklyVolume> volume = <WeeklyVolume>[
+        WeeklyVolume(weekStart: weekOfOct26, totalVolumeKg: 100),
+        WeeklyVolume(weekStart: weekOfNov2, totalVolumeKg: 250),
+      ];
+      final List<WorkoutFrequency> frequency = <WorkoutFrequency>[
+        WorkoutFrequency(weekStart: weekOfOct26, workoutCount: 1),
+        WorkoutFrequency(weekStart: weekOfNov2, workoutCount: 2),
+      ];
+
+      final WeekSnapshot friday = WeekSnapshot.from(
+        weekStart: WeekStart.monday,
+        volume: volume,
+        frequency: frequency,
+        today: DateTime(2026, 10, 30),
+      );
+      final WeekSnapshot tuesday = WeekSnapshot.from(
+        weekStart: WeekStart.monday,
+        volume: volume,
+        frequency: frequency,
+        today: DateTime(2026, 11, 3),
+      );
+
+      expect(friday.volumeKg, 100);
+      expect(friday.sessions, 1);
+      expect(tuesday.volumeKg, 250);
+      expect(tuesday.previousVolumeKg, 100);
+      expect(tuesday.sessions, 2);
+    });
+  });
+
+  group('dashboardWeekSnapshot across a day change', () {
+    // The dashboard tab stays alive in the shell. Before LocalNow, its week
+    // window was captured once at first build, so an app left in memory
+    // from Friday to Tuesday kept reporting the previous week.
+    test('a workout from the new week appears once the day rolls over',
+        () async {
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'monday',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 2, 12),
+        weightKg: 100,
+        reps: 5,
+      );
+
+      DateTime fakeNow = DateTime(2026, 10, 30, 19, 50);
+      // The week windows read the first day of the week from preferences.
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Keep the auto-dispose chain alive between reads, as the mounted
+      // dashboard does.
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+
+      final WeekSnapshot before =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(before.sessions, 0, reason: 'Monday 2 Nov is next week on Fri');
+
+      fakeNow = DateTime(2026, 11, 3, 11, 37);
+      container.read(localNowProvider.notifier).refresh();
+
+      final WeekSnapshot after =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(after.sessions, 1);
+      expect(after.volumeKg, 500);
+    });
+  });
+
+  group('the week card and the first day of the week', () {
+    Future<ProviderContainer> containerAt(
+      DateTime Function() now, {
+      Map<String, Object> prefs = const <String, Object>{},
+    }) async {
+      SharedPreferences.setMockInitialValues(prefs);
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(now),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Keep the auto-dispose chains alive between reads, as the mounted
+      // dashboard does.
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+      container.listen(dashboardWeekdayDistributionProvider, (_, __) {});
+      return container;
+    }
+
+    /// Fri 30 Oct and Sat 31 Oct 2026 at local noon; "now" is Sun 1 Nov.
+    Future<void> logFridayAndSaturday() async {
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'friday',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 10, 30, 12),
+        weightKg: 100,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'saturday',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 10, 31, 12),
+        weightKg: 100,
+        reps: 2,
+      );
+    }
+
+    test('sessions, last week and the streak regroup when the day changes',
+        () async {
+      await logFridayAndSaturday();
+      final container = await containerAt(() => DateTime(2026, 11, 1, 12));
+      final setting = container.read(weekStartControllerProvider.notifier);
+
+      // Monday (nothing chosen): Mon 26 Oct to Sun 1 Nov holds both.
+      WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.sessions, 2);
+      expect(week.volumeKg, 300);
+      expect(week.previousVolumeKg, 0);
+      expect(week.streakWeeks, 1);
+
+      // Saturday: this week began yesterday; Friday is last week.
+      await setting.set(WeekStart.saturday);
+      week = await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.sessions, 1);
+      expect(week.volumeKg, 200);
+      expect(week.previousVolumeKg, 100);
+      expect(week.streakWeeks, 2);
+
+      // Sunday: this week began today, with nothing in it yet; both are
+      // last week, and the streak counts from there.
+      await setting.set(WeekStart.sunday);
+      week = await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.sessions, 0);
+      expect(week.volumeKg, 0);
+      expect(week.previousVolumeKg, 300);
+      expect(week.streakWeeks, 1);
+
+      // And back: nothing was stored by week, so nothing is lost.
+      await setting.set(WeekStart.monday);
+      week = await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.sessions, 2);
+      expect(week.volumeKg, 300);
+    });
+
+    test('a saved choice is used from the first read', () async {
+      await logFridayAndSaturday();
+      final container = await containerAt(
+        () => DateTime(2026, 11, 1, 12),
+        prefs: <String, Object>{'week_start': 'saturday'},
+      );
+
+      final WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.sessions, 1);
+    });
+
+    test('the day strip starts on the chosen day and covers only this week',
+        () async {
+      await logFridayAndSaturday();
+      final container = await containerAt(
+        () => DateTime(2026, 11, 1, 12),
+        prefs: <String, Object>{'week_start': 'saturday'},
+      );
+
+      final List<WeekdayDistribution> days =
+          await container.read(dashboardWeekdayDistributionProvider.future);
+
+      expect(days.map((d) => d.weekday), WeekStart.saturday.weekdays);
+      expect(days.first.weekday, DateTime.saturday);
+      expect(days.first.trainingDayCount, 1);
+      // Friday is the strip's last cell, and this week's Friday has not
+      // happened yet: last Friday's workout is not shown on it.
+      expect(days.last.weekday, DateTime.friday);
+      expect(days.last.trainingDayCount, 0);
+    });
+
+    test('the strip and the week card agree on which days are this week',
+        () async {
+      await logFridayAndSaturday();
+      for (final WeekStart start in WeekStart.values) {
+        final container = await containerAt(
+          () => DateTime(2026, 11, 1, 12),
+          prefs: <String, Object>{'week_start': start.name},
+        );
+
+        final WeekSnapshot week =
+            await container.read(dashboardWeekSnapshotProvider.future);
+        final List<WeekdayDistribution> days =
+            await container.read(dashboardWeekdayDistributionProvider.future);
+
+        expect(
+          days.fold<int>(0, (sum, d) => sum + d.workoutCount),
+          week.sessions,
+          reason: '$start',
+        );
+        container.dispose();
+      }
+    });
+
+    test('a workout just inside either end of the week, in device time',
+        () async {
+      // Mon 2 Nov 00:30 and Sun 8 Nov 23:30, local. In UTC one of them is
+      // in a neighbouring week wherever this runs except in UTC itself:
+      // the first east of it, the second west of it.
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'first-minutes',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 2, 0, 30),
+        weightKg: 100,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'last-minutes',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 8, 23, 30),
+        weightKg: 100,
+        reps: 2,
+      );
+      final container = await containerAt(() => DateTime(2026, 11, 8, 23, 45));
+
+      final WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      final List<WeekdayDistribution> days =
+          await container.read(dashboardWeekdayDistributionProvider.future);
+
+      expect(week.sessions, 2);
+      expect(week.volumeKg, 300);
+      expect(week.previousVolumeKg, 0);
+      expect(days.first.weekday, DateTime.monday);
+      expect(days.first.workoutCount, 1);
+      expect(days.last.weekday, DateTime.sunday);
+      expect(days.last.workoutCount, 1);
+    });
+  });
+
+  group('WeekSnapshot.from', () {
+    test('finds this week only with the first day the series uses', () {
+      // Buckets for a week starting on Saturday: Sat 24 and Sat 31 Oct.
+      final List<WeeklyVolume> volume = <WeeklyVolume>[
+        WeeklyVolume(weekStart: DateTime(2026, 10, 24), totalVolumeKg: 100),
+        WeeklyVolume(weekStart: DateTime(2026, 10, 31), totalVolumeKg: 250),
+      ];
+      final List<WorkoutFrequency> frequency = <WorkoutFrequency>[
+        WorkoutFrequency(weekStart: DateTime(2026, 10, 24), workoutCount: 1),
+        WorkoutFrequency(weekStart: DateTime(2026, 10, 31), workoutCount: 2),
+      ];
+
+      final WeekSnapshot saturday = WeekSnapshot.from(
+        volume: volume,
+        frequency: frequency,
+        weekStart: WeekStart.saturday,
+        today: DateTime(2026, 11, 3),
+      );
+      expect(saturday.sessions, 2);
+      expect(saturday.volumeKg, 250);
+      expect(saturday.previousVolumeKg, 100);
+      expect(saturday.streakWeeks, 2);
+
+      // Asked with Monday, "this week" is Mon 2 Nov: no bucket is that day.
+      final WeekSnapshot monday = WeekSnapshot.from(
+        volume: volume,
+        frequency: frequency,
+        weekStart: WeekStart.monday,
+        today: DateTime(2026, 11, 3),
+      );
+      expect(monday.sessions, 0);
+      expect(monday.streakWeeks, 0);
+    });
+
+    test('last week and the streak survive a week in which the clocks change',
+        () {
+      // See the matching test in consistency_calculators_test.dart. Only a
+      // zone that changes its clocks can tell: run with TZ=PST8PDT.
+      for (final List<DateTime> mondays in <List<DateTime>>[
+        <DateTime>[DateTime(2026, 3, 2), DateTime(2026, 3, 9)],
+        <DateTime>[DateTime(2026, 3, 23), DateTime(2026, 3, 30)],
+        <DateTime>[DateTime(2026, 10, 19), DateTime(2026, 10, 26)],
+        <DateTime>[DateTime(2026, 10, 26), DateTime(2026, 11, 2)],
+      ]) {
+        final WeekSnapshot snapshot = WeekSnapshot.from(
+          volume: <WeeklyVolume>[
+            WeeklyVolume(weekStart: mondays[0], totalVolumeKg: 100),
+            WeeklyVolume(weekStart: mondays[1], totalVolumeKg: 250),
+          ],
+          frequency: <WorkoutFrequency>[
+            WorkoutFrequency(weekStart: mondays[0], workoutCount: 1),
+            WorkoutFrequency(weekStart: mondays[1], workoutCount: 2),
+          ],
+          weekStart: WeekStart.monday,
+          today:
+              DateTime(mondays[1].year, mondays[1].month, mondays[1].day + 2),
+        );
+
+        expect(snapshot.volumeKg, 250, reason: 'weeks $mondays');
+        expect(snapshot.previousVolumeKg, 100, reason: 'weeks $mondays');
+        expect(snapshot.streakWeeks, 2, reason: 'weeks $mondays');
+      }
+    });
+  });
+
+  group('last week up to the same point', () {
+    test('watchVolumeBetween counts [from, until) and finished workouts only',
+        () async {
+      await seedExercise('bench', 'Bench Press');
+      final WorkoutDao dao = WorkoutDao(database);
+      Future<void> workout(String id, DateTime at, double kg,
+              {bool ended = true}) =>
+          dao.insertWorkout(
+            WorkoutsTableCompanion.insert(
+              id: id,
+              startedAt: at,
+              endedAt: ended
+                  ? Value(at.add(const Duration(minutes: 30)))
+                  : const Value.absent(),
+              totalVolumeKg: Value(kg),
+            ),
+            const [],
+            const [],
+          );
+      final DateTime from = DateTime(2026, 11, 2);
+      final DateTime until = DateTime(2026, 11, 4, 12);
+      await workout('before', from.subtract(const Duration(minutes: 1)), 1);
+      await workout('atFrom', from, 10);
+      await workout('inside', DateTime(2026, 11, 3, 18), 100);
+      await workout('open', DateTime(2026, 11, 3, 19), 1000, ended: false);
+      await workout('atUntil', until, 10000);
+
+      expect(await dao.watchVolumeBetween(from, until).first, 110);
+      expect(
+        await dao
+            .watchVolumeBetween(DateTime(2020, 1, 1), DateTime(2020, 1, 2))
+            .first,
+        0,
+      );
+    });
+
+    test('this week so far is compared with last week to the same moment',
+        () async {
+      await seedExercise('bench', 'Bench Press');
+      // Fake now: Tue 10 Nov 2026, 11:00. Weeks start on Monday.
+      final DateTime fakeNow = DateTime(2026, 11, 10, 11);
+      await insertWorkoutWithSet(
+        workoutId: 'lastMon',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 2, 18),
+        weightKg: 100,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'lastThu',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 5, 18),
+        weightKg: 200,
+        reps: 1,
+      );
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+
+      final WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.volumeKg, 0);
+      // All of last week is Monday and Thursday...
+      expect(week.previousVolumeKg, 300);
+      // ...but by Tuesday 11:00 last week only Monday had happened.
+      expect(week.previousToDateVolumeKg, 100);
     });
   });
 }

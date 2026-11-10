@@ -37,6 +37,17 @@ class ActiveWorkoutPage extends ConsumerStatefulWidget {
 }
 
 class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
+  /// Set once a discard is confirmed. The draft is cleared while this page
+  /// is still animating out; drawing the last draft until it is gone avoids
+  /// flashing the loading spinner on the way out.
+  bool _closing = false;
+  WorkoutDraft? _lastDraft;
+
+  /// True while Finish is committing. The button is disabled meanwhile: a
+  /// second tap would otherwise run the success path twice and pop a second
+  /// route, taking the user off the screen they came from.
+  bool _saving = false;
+
   @override
   void initState() {
     super.initState();
@@ -44,13 +55,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     // so the first mutation is deferred to right after this frame.
     Future.microtask(() {
       if (!mounted) return;
-      final notifier = ref.read(activeWorkoutProvider.notifier);
       if (ref.read(activeWorkoutProvider) == null) {
         // Reached directly (e.g. from the Dashboard banner) without a draft.
-        unawaited(notifier.start());
-      } else {
-        // Resumed while a discard-undo window was still open.
-        notifier.cancelScheduledDiscard();
+        unawaited(ref.read(activeWorkoutProvider.notifier).start());
       }
     });
   }
@@ -58,7 +65,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = context.l10n;
-    final WorkoutDraft? draft = ref.watch(activeWorkoutProvider);
+    final WorkoutDraft? live = ref.watch(activeWorkoutProvider);
+    if (live != null) _lastDraft = live;
+    final WorkoutDraft? draft = live ?? (_closing ? _lastDraft : null);
     final ActiveWorkoutNotifier notifier =
         ref.read(activeWorkoutProvider.notifier);
 
@@ -190,7 +199,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       ),
       bottomNavigationBar: StickyActionBar(
         child: FilledButton.icon(
-          onPressed: hasExercises ? () => _save(context, notifier) : null,
+          onPressed:
+              hasExercises && !_saving ? () => _save(context, notifier) : null,
           icon: const Icon(Icons.check),
           label: Text(l10n.activeWorkoutFinish),
         ),
@@ -221,8 +231,11 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     BuildContext context,
     ActiveWorkoutNotifier notifier,
   ) async {
+    if (_saving) return;
     final AppLocalizations l10n = context.l10n;
+    setState(() => _saving = true);
     try {
+      await commitPendingSetEdits();
       await notifier.save();
       if (!context.mounted) return;
       final messenger = ScaffoldMessenger.of(context);
@@ -238,6 +251,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
           SnackBar(content: Text(l10n.activeWorkoutSaveFailed)),
         );
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -265,19 +280,29 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     );
     if (discard != true || !context.mounted) return;
 
-    notifier.scheduleDiscard();
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+    setState(() => _closing = true);
     context.pop();
+    await notifier.discardWithUndo();
     messenger.showSnackBar(
       SnackBar(
         content: Text(l10n.activeWorkoutDiscarded),
         duration: AppDuration.undoWindow,
+        // Flutter now defaults a snackbar with an action to persisting
+        // until dismissed (`persist ?? action != null`, checked on 3.47),
+        // which left this one and its Undo on screen indefinitely. It must
+        // go when the undo window closes.
+        persist: false,
         action: SnackBarAction(
           label: l10n.actionUndo,
-          onPressed: () {
-            notifier.cancelScheduledDiscard();
-            router.pushNamed(Routes.activeWorkoutName);
+          onPressed: () async {
+            // Only reopen what was actually restored. Opening the screen
+            // with no draft starts a new one, which is how a late Undo
+            // used to bring back a workout the user had discarded.
+            if (await notifier.undoDiscard()) {
+              unawaited(router.pushNamed(Routes.activeWorkoutName));
+            }
           },
         ),
       ),

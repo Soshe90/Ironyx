@@ -142,7 +142,7 @@ void main() {
   });
 
   group('watchStrengthChange', () {
-    test('compares a window against the one immediately before it', () async {
+    test("compares the window's best against the best before it", () async {
       final DateTime now = DateTime.now();
       // 40 days ago falls in the previous 30-day window; 10 days ago in
       // the current one.
@@ -159,6 +159,8 @@ void main() {
       expect(rows.single.currentBestKg, closeTo(110 * (1 + 5 / 30), 0.001));
       expect(rows.single.previousBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
       expect(rows.single.change, closeTo(0.1, 0.001));
+      // A best from before the range: not a first-session comparison.
+      expect(rows.single.comparedWithFirstSession, isFalse);
     });
 
     test('a lift only trained this window has no comparison', () async {
@@ -172,6 +174,8 @@ void main() {
 
       expect(rows.single.isNew, isTrue);
       expect(rows.single.change, isNull);
+      // Nothing to compare with at all is "new", not "since first session".
+      expect(rows.single.comparedWithFirstSession, isFalse);
     });
 
     test('all-time reports a best with nothing to compare against', () async {
@@ -222,6 +226,10 @@ void main() {
             reason: '$window window');
         expect(rows.single.previousBestKg, closeTo(60 * (1 + 5 / 30), 0.001),
             reason: '$window window');
+        // Nothing before the range, so the 60 is the first session, and
+        // the row has to say so.
+        expect(rows.single.comparedWithFirstSession, isTrue,
+            reason: '$window window');
       }
     });
 
@@ -236,12 +244,14 @@ void main() {
       expect(rows.single.change, closeTo(0.1, 0.001));
     });
 
+    // Replaces "the comparison point is the latest qualifying session",
+    // which pinned the old rule: a back-off session after a heavier one
+    // read as a drop. The rule is now the window's best (owner's decision,
+    // 2026-11-10), so the same data reads flat, not down.
     test(
-        'the comparison point is the latest qualifying session, not the '
-        'window\'s single heaviest set', () async {
+        "current is the window's best, so a lighter latest session is "
+        'not a drop', () async {
       final DateTime now = DateTime.now();
-      // A heavier one-off two weeks ago must not outrank last night's
-      // session as "current" — current means most recent, not heaviest.
       await addWorkout('heavier_earlier',
           now.subtract(const Duration(days: 14)), [('bench', 120, 5)]);
       await addWorkout('lighter_latest', now.subtract(const Duration(days: 1)),
@@ -251,9 +261,108 @@ void main() {
           .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
           .first;
 
-      expect(rows.single.currentBestKg, closeTo(90 * (1 + 5 / 30), 0.001));
+      expect(rows.single.currentBestKg, closeTo(120 * (1 + 5 / 30), 0.001));
+      // Nothing before the window: compared with its first session there.
+      expect(rows.single.previousBestKg, closeTo(120 * (1 + 5 / 30), 0.001));
+      expect(rows.single.change, closeTo(0, 0.0001));
+    });
+
+    test("a best from before the window wins over the window's first session",
+        () async {
+      final DateTime now = DateTime.now();
+      // Long ago, months outside any equal-length "previous" window.
+      await addWorkout('long_ago', now.subtract(const Duration(days: 300)),
+          [('bench', 80, 5)]);
+      await addWorkout('first_in', now.subtract(const Duration(days: 20)),
+          [('bench', 90, 5)]);
+      await addWorkout('second_in', now.subtract(const Duration(days: 2)),
+          [('bench', 100, 5)]);
+
+      final rows = await dao
+          .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
+          .first;
+
+      expect(rows.single.currentBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
+      expect(rows.single.previousBestKg, closeTo(80 * (1 + 5 / 30), 0.001));
+      expect(rows.single.comparedWithFirstSession, isFalse);
+    });
+
+    test('below the best from before the window reads as a drop', () async {
+      final DateTime now = DateTime.now();
+      await addWorkout(
+          'peak', now.subtract(const Duration(days: 60)), [('bench', 120, 5)]);
+      await addWorkout(
+          'now', now.subtract(const Duration(days: 3)), [('bench', 100, 5)]);
+
+      final rows = await dao
+          .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
+          .first;
+
       expect(rows.single.previousBestKg, closeTo(120 * (1 + 5 / 30), 0.001));
       expect(rows.single.change, lessThan(0));
+    });
+
+    test('several sets in one workout are one session, so still new', () async {
+      final DateTime now = DateTime.now();
+      await addWorkout('only', now.subtract(const Duration(days: 3)), [
+        ('bench', 80, 5),
+        ('bench', 100, 5),
+      ]);
+
+      final rows = await dao
+          .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
+          .first;
+
+      expect(rows.single.currentBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
+      expect(rows.single.isNew, isTrue);
+    });
+
+    test('a warm-up before the window is not the previous best', () async {
+      final DateTime now = DateTime.now();
+      // The heavy first set is flagged as a warm-up and must be ignored.
+      await addWorkout(
+        'old',
+        now.subtract(const Duration(days: 60)),
+        [('bench', 200, 5), ('bench', 90, 5)],
+        warmupFirst: true,
+      );
+      await addWorkout(
+          'recent', now.subtract(const Duration(days: 3)), [('bench', 100, 5)]);
+
+      final rows = await dao
+          .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
+          .first;
+
+      expect(rows.single.previousBestKg, closeTo(90 * (1 + 5 / 30), 0.001));
+      expect(rows.single.change, greaterThan(0));
+    });
+
+    test('a lift trained only before the window is not listed', () async {
+      final DateTime now = DateTime.now();
+      await addWorkout(
+          'old', now.subtract(const Duration(days: 60)), [('squat', 140, 5)]);
+      await addWorkout(
+          'recent', now.subtract(const Duration(days: 3)), [('bench', 100, 5)]);
+
+      final rows = await dao
+          .watchStrengthChange(since: now.subtract(const Duration(days: 30)))
+          .first;
+
+      expect(rows.map((r) => r.exerciseId), ['bench']);
+    });
+
+    test('all-time is the best ever against the first session', () async {
+      await addWorkout('first', DateTime(2020, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('peak', DateTime(2020, 6, 1), [('bench', 130, 5)]);
+      await addWorkout('latest', DateTime(2021, 1, 1), [('bench', 110, 5)]);
+
+      final rows = await dao.watchStrengthChange().first;
+
+      expect(rows.single.currentBestKg, closeTo(130 * (1 + 5 / 30), 0.001));
+      expect(rows.single.previousBestKg, closeTo(100 * (1 + 5 / 30), 0.001));
+      expect(rows.single.change, closeTo(0.3, 0.001));
+      // All-time always compares with the first session.
+      expect(rows.single.comparedWithFirstSession, isTrue);
     });
   });
 
@@ -298,6 +407,72 @@ void main() {
       // session, limiting to 1 must still return the most recent session.
       expect(points, hasLength(1));
       expect(points.single.date, DateTime(2026, 1, 8));
+    });
+
+    test('a record is judged against history before the window', () async {
+      // A heavier session long before the window: the window's first
+      // point is lighter, so it is not a record. Marked within the window
+      // alone, the oldest point of every chart read as a PR.
+      await addWorkout('peak', DateTime(2025, 1, 1), [('bench', 120, 5)]);
+      await addWorkout('w1', DateTime(2026, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('w2', DateTime(2026, 2, 1), [('bench', 125, 5)]);
+
+      final points = await dao
+          .watchOneRMSeries('bench', since: DateTime(2025, 12, 1))
+          .first;
+
+      expect(points.map((p) => p.date),
+          [DateTime(2026, 2, 1), DateTime(2026, 1, 1)]);
+      expect(points.map((p) => p.isPersonalRecord), [true, false]);
+    });
+
+    test('the first-ever session is a record, a tie is not', () async {
+      await addWorkout('w1', DateTime(2026, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('w2', DateTime(2026, 1, 8), [('bench', 100, 5)]);
+      await addWorkout('w3', DateTime(2026, 1, 15), [('bench', 90, 5)]);
+
+      final points = await dao.watchOneRMSeries('bench').first;
+
+      // Newest first.
+      expect(points.map((p) => p.isPersonalRecord), [false, false, true]);
+    });
+
+    test('agrees with the PR workout ids', () async {
+      await addWorkout('a', DateTime(2025, 6, 1), [('bench', 110, 5)]);
+      await addWorkout('b', DateTime(2026, 1, 1), [('bench', 100, 5)]);
+      await addWorkout('c', DateTime(2026, 1, 8), [('bench', 115, 5)]);
+      await addWorkout('d', DateTime(2026, 1, 15), [('bench', 112, 5)]);
+      final DateTime since = DateTime(2025, 12, 1);
+
+      final points = await dao.watchOneRMSeries('bench', since: since).first;
+      final Set<String> prIds =
+          await dao.watchPersonalRecordWorkoutIds(since: since).first;
+
+      final Map<DateTime, String> idByDate = <DateTime, String>{
+        DateTime(2026, 1, 1): 'b',
+        DateTime(2026, 1, 8): 'c',
+        DateTime(2026, 1, 15): 'd',
+      };
+      expect(points, hasLength(3));
+      for (final p in points) {
+        expect(p.isPersonalRecord, prIds.contains(idByDate[p.date]),
+            reason: '${p.date}');
+      }
+      expect(prIds, {'c'});
+    });
+
+    test('returns every session in the window by default', () async {
+      // More than the 50 the chart used to keep without saying so.
+      final DateTime start = DateTime(2024, 1, 1);
+      for (int i = 0; i < 60; i++) {
+        await addWorkout(
+            'w$i', start.add(Duration(days: i * 3)), [('bench', 100, 5)]);
+      }
+
+      final points = await dao.watchOneRMSeries('bench').first;
+
+      expect(points, hasLength(60));
+      expect(points.last.date, start);
     });
   });
 

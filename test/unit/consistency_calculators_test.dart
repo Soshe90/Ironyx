@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/formatters/week_start.dart';
 import 'package:ironyx/features/progress/domain/consistency_calculators.dart';
 
 void main() {
@@ -84,5 +85,379 @@ void main() {
     expect(result.eligibleWeeks, 3);
     expect(result.hitTargetWeeks, 2);
     expect(result.adherenceFraction, closeTo(2 / 3, 0.001));
+  });
+
+  group('first day of the week', () {
+    // Buckets as the query emits them for a week starting on Saturday:
+    // Sat 3, Sat 10 and Sat 17 Jan 2026, local midnight.
+    WorkoutFrequency saturdayWeek(int offset, int count) => WorkoutFrequency(
+          weekStart: DateTime(2026, 1, 3 + offset * DateTime.daysPerWeek),
+          workoutCount: count,
+        );
+
+    test('the current streak is found with the first day the series uses', () {
+      // Mon 19 Jan: in the week of Sat 17 Jan.
+      final DateTime now = DateTime(2026, 1, 19, 9);
+      final result = calculateConsistency(
+        weeks: [saturdayWeek(0, 1), saturdayWeek(1, 2), saturdayWeek(2, 1)],
+        targetSessionsPerWeek: 3,
+        weekStart: WeekStart.saturday,
+        utcOffset: now.timeZoneOffset,
+        now: now,
+      );
+
+      expect(result.currentStreakWeeks, 3);
+      expect(result.longestStreakWeeks, 3);
+    });
+
+    test('a rest week now still counts the weeks before it', () {
+      final DateTime now = DateTime(2026, 1, 19, 9);
+      final result = calculateConsistency(
+        weeks: [saturdayWeek(0, 1), saturdayWeek(1, 2), saturdayWeek(2, 0)],
+        targetSessionsPerWeek: 3,
+        weekStart: WeekStart.saturday,
+        utcOffset: now.timeZoneOffset,
+        now: now,
+      );
+
+      expect(result.currentStreakWeeks, 2);
+    });
+
+    test('asked with a different first day, no bucket matches', () {
+      // What a caller that forgot to pass the setting would get: "this
+      // week" is then Mon 19 Jan, and no Saturday bucket is that day.
+      final DateTime now = DateTime(2026, 1, 19, 9);
+      final result = calculateConsistency(
+        weeks: [saturdayWeek(0, 1), saturdayWeek(1, 2), saturdayWeek(2, 1)],
+        targetSessionsPerWeek: 3,
+        utcOffset: now.timeZoneOffset,
+        now: now,
+      );
+
+      expect(result.currentStreakWeeks, 0);
+      // The longest run does not depend on which week is the current one.
+      expect(result.longestStreakWeeks, 3);
+    });
+
+    test('the first minutes of a week count for that week, in device time', () {
+      // Sat 17 Jan 00:20 local. With no offset this would be read in UTC,
+      // which east of UTC is still Friday, the week before.
+      final DateTime now = DateTime(2026, 1, 17, 0, 20);
+      final result = calculateConsistency(
+        weeks: [saturdayWeek(1, 2), saturdayWeek(2, 1)],
+        targetSessionsPerWeek: 3,
+        weekStart: WeekStart.saturday,
+        utcOffset: now.timeZoneOffset,
+        now: now,
+      );
+
+      expect(result.currentStreakWeeks, 2);
+    });
+  });
+
+  test('a streak is not broken by a week in which the clocks change', () {
+    // Weeks of Mon 2, 9 and 16 March and Mon 26 Oct, 2 and 9 Nov 2026: the
+    // United States changes its clocks on 8 March and 1 November, Europe on
+    // 29 March and 25 October. Stepping back 168 hours from a Monday
+    // midnight across one of those lands on Sunday 23:00, which is no
+    // bucket, and the streak stopped there. (Only a zone that changes its
+    // clocks can tell: run with TZ=PST8PDT.)
+    for (final List<DateTime> mondays in <List<DateTime>>[
+      <DateTime>[
+        DateTime(2026, 3, 2),
+        DateTime(2026, 3, 9),
+        DateTime(2026, 3, 16)
+      ],
+      <DateTime>[
+        DateTime(2026, 3, 16),
+        DateTime(2026, 3, 23),
+        DateTime(2026, 3, 30)
+      ],
+      <DateTime>[
+        DateTime(2026, 10, 19),
+        DateTime(2026, 10, 26),
+        DateTime(2026, 11, 2)
+      ],
+      <DateTime>[
+        DateTime(2026, 10, 26),
+        DateTime(2026, 11, 2),
+        DateTime(2026, 11, 9)
+      ],
+    ]) {
+      final DateTime now = DateTime(
+        mondays.last.year,
+        mondays.last.month,
+        mondays.last.day + 1,
+        9,
+      );
+      final result = calculateConsistency(
+        weeks: [
+          for (final DateTime monday in mondays)
+            WorkoutFrequency(weekStart: monday, workoutCount: 1),
+        ],
+        targetSessionsPerWeek: 1,
+        utcOffset: now.timeZoneOffset,
+        now: now,
+      );
+
+      expect(result.currentStreakWeeks, 3, reason: 'weeks $mondays');
+    }
+  });
+
+  group('the week in progress', () {
+    test('is left out of adherence until it meets the target', () {
+      // Tuesday of the third week, one session in: not a miss yet.
+      final result = calculateConsistency(
+        weeks: [week(0, 3), week(1, 3), week(2, 1)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-20 09:00:00'),
+      );
+      expect(result.eligibleWeeks, 2);
+      expect(result.hitTargetWeeks, 2);
+      expect(result.adherenceFraction, 1.0);
+    });
+
+    test('counts once it has met the target', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 3), week(1, 0), week(2, 3)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-20 09:00:00'),
+      );
+      expect(result.eligibleWeeks, 3);
+      expect(result.hitTargetWeeks, 2);
+    });
+
+    test('alone and unmet, leaves adherence unknown rather than 0%', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 1)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-06 09:00:00'),
+      );
+      expect(result.eligibleWeeks, 0);
+      expect(result.adherenceFraction, isNull);
+      // The streak still sees this week's session.
+      expect(result.currentStreakWeeks, 1);
+    });
+  });
+
+  group('averageSessionsPerWeek', () {
+    test('divides by the range, not by the week buckets it touches', () {
+      // A 14-day range spans three calendar weeks; six sessions in it are
+      // three a week, not two.
+      final double? average = averageSessionsPerWeek(
+        weeks: [week(0, 2), week(1, 2), week(2, 2)],
+        rangeDays: 14,
+        now: DateTime.parse('2026-01-21 09:00:00'),
+      );
+      expect(average, closeTo(3.0, 0.0001));
+    });
+
+    test('counts from the first trained week when training began inside', () {
+      // Two weeks in, inside a 90-day range: not averaged over the eleven
+      // empty weeks before the first session.
+      final DateTime now = DateTime.parse('2026-04-04 09:00:00');
+      final double? average = averageSessionsPerWeek(
+        weeks: [
+          for (var i = 0; i < 11; i++) week(i, 0),
+          week(11, 3),
+          week(12, 3),
+        ],
+        rangeDays: 90,
+        now: now,
+      );
+      final double elapsed =
+          now.difference(week(11, 0).weekStart).inMinutes / (60 * 24 * 7);
+      expect(average, closeTo(6 / elapsed, 0.0001));
+      expect(average, greaterThan(3));
+    });
+
+    test('all-time runs from the first trained week to now', () {
+      final DateTime now = DateTime.parse('2026-02-01 09:00:00');
+      final double? average = averageSessionsPerWeek(
+        weeks: [week(0, 2), week(1, 2), week(2, 2), week(3, 2)],
+        rangeDays: null,
+        now: now,
+      );
+      final double elapsed =
+          now.difference(week(0, 0).weekStart).inMinutes / (60 * 24 * 7);
+      expect(average, closeTo(8 / elapsed, 0.0001));
+    });
+
+    test('never divides by less than a week', () {
+      final double? average = averageSessionsPerWeek(
+        weeks: [week(0, 1)],
+        rangeDays: null,
+        now: DateTime.parse('2026-01-06 09:00:00'),
+      );
+      expect(average, 1.0);
+    });
+
+    test('is null with nothing trained', () {
+      expect(
+        averageSessionsPerWeek(
+          weeks: const [],
+          rangeDays: 30,
+          now: DateTime.parse('2026-01-06 09:00:00'),
+        ),
+        isNull,
+      );
+      expect(
+        averageSessionsPerWeek(
+          weeks: [week(0, 0), week(1, 0)],
+          rangeDays: 30,
+          now: DateTime.parse('2026-01-13 09:00:00'),
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('back from a break inside the range', () {
+    // Mon 5 Jan 2026 is week(0). The range starts mid-week(0); the user
+    // trained long before it, stopped, and came back in week(4).
+    final DateTime rangeStart = DateTime.parse('2026-01-07 09:00:00');
+    final DateTime longAgo = DateTime.parse('2025-03-01 09:00:00');
+    final DateTime now = DateTime.parse('2026-02-11 09:00:00'); // week(5)
+
+    test('trainedBeforeRange', () {
+      expect(
+        trainedBeforeRange(rangeStart: rangeStart, firstWorkoutAt: longAgo),
+        isTrue,
+      );
+      expect(
+        trainedBeforeRange(
+          rangeStart: rangeStart,
+          firstWorkoutAt: DateTime.parse('2026-01-20'),
+        ),
+        isFalse,
+      );
+      expect(trainedBeforeRange(rangeStart: null, firstWorkoutAt: longAgo),
+          isFalse,
+          reason: 'all-time has no before');
+      expect(trainedBeforeRange(rangeStart: rangeStart, firstWorkoutAt: null),
+          isFalse,
+          reason: 'unknown keeps the old rule');
+    });
+
+    test('adherence counts the empty weeks of the break', () {
+      final result = calculateConsistency(
+        weeks: [
+          week(0, 0), // partial, unmet: left out
+          week(1, 0),
+          week(2, 0),
+          week(3, 0),
+          week(4, 3),
+          week(5, 1), // this week, unmet: left out
+        ],
+        targetSessionsPerWeek: 3,
+        now: now,
+        rangeStart: rangeStart,
+        firstWorkoutAt: longAgo,
+      );
+      expect(result.eligibleWeeks, 4);
+      expect(result.hitTargetWeeks, 1);
+      expect(result.adherenceFraction, .25);
+    });
+
+    test('without the first workout, the old rule still applies', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 0), week(1, 0), week(2, 0), week(3, 0), week(4, 3)],
+        targetSessionsPerWeek: 3,
+        now: now,
+      );
+      expect(result.eligibleWeeks, 1);
+      expect(result.adherenceFraction, 1.0);
+    });
+
+    test('a partial first week that met the target still counts', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 3), week(1, 0), week(2, 3)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-28 09:00:00'), // week(3), not listed
+        rangeStart: rangeStart,
+        firstWorkoutAt: longAgo,
+      );
+      expect(result.eligibleWeeks, 3);
+      expect(result.hitTargetWeeks, 2);
+    });
+
+    test('the per-week average divides by the whole range', () {
+      final double? average = averageSessionsPerWeek(
+        weeks: [
+          for (var i = 0; i < 11; i++) week(i, 0),
+          week(11, 3),
+          week(12, 3),
+        ],
+        rangeDays: 90,
+        now: DateTime.parse('2026-04-04 09:00:00'),
+        firstWorkoutAt: longAgo,
+      );
+      // Six sessions over 90 days, not over the two weeks since returning.
+      expect(average, closeTo(6 / (90 / 7), 0.0001));
+    });
+
+    test('a first workout inside the range keeps counting from it', () {
+      final DateTime now2 = DateTime.parse('2026-04-04 09:00:00');
+      final double? average = averageSessionsPerWeek(
+        weeks: [
+          for (var i = 0; i < 11; i++) week(i, 0),
+          week(11, 3),
+          week(12, 3),
+        ],
+        rangeDays: 90,
+        now: now2,
+        firstWorkoutAt: week(11, 0).weekStart.add(const Duration(hours: 9)),
+      );
+      final double elapsed =
+          now2.difference(week(11, 0).weekStart).inMinutes / (60 * 24 * 7);
+      expect(average, closeTo(6 / elapsed, 0.0001));
+    });
+  });
+
+  group('a range with nothing in it', () {
+    final List<WorkoutFrequency> zeros = <WorkoutFrequency>[
+      for (var i = 0; i < 5; i++) week(i, 0),
+    ];
+    final DateTime now = DateTime.parse('2026-02-06 09:00:00');
+
+    test('averages 0 a week after a break', () {
+      expect(
+        averageSessionsPerWeek(
+          weeks: zeros,
+          rangeDays: 30,
+          now: now,
+          firstWorkoutAt: DateTime.parse('2025-06-01'),
+        ),
+        0,
+      );
+    });
+
+    test('has no average without history before it', () {
+      expect(
+        averageSessionsPerWeek(weeks: zeros, rangeDays: 30, now: now),
+        isNull,
+      );
+      expect(
+        averageSessionsPerWeek(
+          weeks: const [],
+          rangeDays: 30,
+          now: now,
+        ),
+        isNull,
+      );
+    });
+
+    test('adherence is 0% after a break, not unknown', () {
+      final result = calculateConsistency(
+        weeks: zeros,
+        targetSessionsPerWeek: 3,
+        now: now,
+        rangeStart: DateTime.parse('2026-01-07 09:00:00'),
+        firstWorkoutAt: DateTime.parse('2025-06-01'),
+      );
+      // Weeks 1-3; week 0 is partial and week 4 is this week, both unmet.
+      expect(result.eligibleWeeks, 3);
+      expect(result.adherenceFraction, 0);
+    });
   });
 }

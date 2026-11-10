@@ -1,7 +1,7 @@
 name: ironyx
 description: "Offline-first workout tracker."
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.5+6
 
 environment:
   sdk: '>=3.6.0 <4.0.0'
@@ -85,6 +85,7 @@ flutter:
     # upstream's folder-per-exercise layout. See
     # scripts/build_exercise_seed.py, which writes them.
     - assets/images/exercises/free_exercise_db/
+    - assets/images/exercises/ironyx/
     # Font licence, shown in Settings -> About -> Open-source licenses.
     - assets/fonts/OFL.txt
 

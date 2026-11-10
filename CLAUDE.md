@@ -76,6 +76,15 @@ Act as a senior engineering team, not a code generator.
 12. **Final review.** End each piece of work with: changes made, tests
     performed, bugs found, security issues, performance concerns,
     architectural concerns, remaining risks, recommended next steps.
+13. **Keep the docs current, in the same commit as the code.** Add a dated
+    entry to `TODO.md` ("Where the app really stands": what changed, the
+    commits, what was checked and what was not) and correct older lines it
+    makes stale, keeping their history. Update `docs/widgets.md` for any
+    widget added, renamed or changed, and the "latest check" lines in
+    `README.md` and `SETUP.md` when the gates are run. Say whether the work
+    is in the last release bundle. Leave `docs/ADR.md` alone unless a
+    decision conflicts with or amends an ADR, and do not rewrite
+    `docs/build-plan.md` or `docs/archive/`, which are historical plans.
 
 Optimise for correct, secure, maintainable, testable, observable, reliable
 and scalable software, not for producing code quickly.
