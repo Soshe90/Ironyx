@@ -7,6 +7,8 @@ import 'package:ironyx/core/database/daos/timer_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/services/clock.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
+import 'package:ironyx/core/widgets/trend_badge.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
 
@@ -546,16 +548,48 @@ void main() {
 
       testWidgets('last week sits under the volume it is compared with',
           (tester) async {
+        // An hour before the same point last week, so it is what this
+        // week so far is compared with.
         await addWorkout(
           'lastWeek',
-          DateTime.now().subtract(const Duration(days: 7)),
+          DateTime.now().subtract(const Duration(days: 7, hours: 1)),
+          weightKg: 40,
+          volumeKg: 200,
+        );
+        await open(tester);
+
+        expect(find.text('Same point last week: 200 kg'), findsOneWidget);
+        expect(find.byType(TrendBadge), findsWidgets);
+        expect(find.text('LAST WEEK'), findsNothing);
+        await disposeApp(tester);
+      });
+
+      testWidgets(
+          'with nothing by the same point last week, no badge, and last '
+          "week's total as context", (tester) async {
+        // Later in last week than now is in this one: it was not yet done
+        // at the same point, so a badge would compare unequal stretches.
+        await addWorkout(
+          'laterLastWeek',
+          DateTime.now().subtract(const Duration(days: 6, hours: 23)),
           weightKg: 40,
           volumeKg: 200,
         );
         await open(tester);
 
         expect(find.text('Last week 200 kg'), findsOneWidget);
-        expect(find.text('LAST WEEK'), findsNothing);
+        expect(find.textContaining('Same point'), findsNothing);
+        expect(
+          find.descendant(
+            // The week card: the one holding the caption.
+            of: find.ancestor(
+              of: find.text('Last week 200 kg'),
+              matching: find.byType(AppCard),
+            ),
+            matching: find.byType(TrendBadge),
+          ),
+          findsNothing,
+        );
         await disposeApp(tester);
       });
 

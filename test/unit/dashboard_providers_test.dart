@@ -608,4 +608,81 @@ void main() {
       }
     });
   });
+
+  group('last week up to the same point', () {
+    test('watchVolumeBetween counts [from, until) and finished workouts only',
+        () async {
+      await seedExercise('bench', 'Bench Press');
+      final WorkoutDao dao = WorkoutDao(database);
+      Future<void> workout(String id, DateTime at, double kg,
+              {bool ended = true}) =>
+          dao.insertWorkout(
+            WorkoutsTableCompanion.insert(
+              id: id,
+              startedAt: at,
+              endedAt: ended
+                  ? Value(at.add(const Duration(minutes: 30)))
+                  : const Value.absent(),
+              totalVolumeKg: Value(kg),
+            ),
+            const [],
+            const [],
+          );
+      final DateTime from = DateTime(2026, 11, 2);
+      final DateTime until = DateTime(2026, 11, 4, 12);
+      await workout('before', from.subtract(const Duration(minutes: 1)), 1);
+      await workout('atFrom', from, 10);
+      await workout('inside', DateTime(2026, 11, 3, 18), 100);
+      await workout('open', DateTime(2026, 11, 3, 19), 1000, ended: false);
+      await workout('atUntil', until, 10000);
+
+      expect(await dao.watchVolumeBetween(from, until).first, 110);
+      expect(
+        await dao
+            .watchVolumeBetween(DateTime(2020, 1, 1), DateTime(2020, 1, 2))
+            .first,
+        0,
+      );
+    });
+
+    test('this week so far is compared with last week to the same moment',
+        () async {
+      await seedExercise('bench', 'Bench Press');
+      // Fake now: Tue 10 Nov 2026, 11:00. Weeks start on Monday.
+      final DateTime fakeNow = DateTime(2026, 11, 10, 11);
+      await insertWorkoutWithSet(
+        workoutId: 'lastMon',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 2, 18),
+        weightKg: 100,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'lastThu',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 5, 18),
+        weightKg: 200,
+        reps: 1,
+      );
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+
+      final WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.volumeKg, 0);
+      // All of last week is Monday and Thursday...
+      expect(week.previousVolumeKg, 300);
+      // ...but by Tuesday 11:00 last week only Monday had happened.
+      expect(week.previousToDateVolumeKg, 100);
+    });
+  });
 }

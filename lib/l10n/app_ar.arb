@@ -699,6 +699,7 @@
   },
   "dashboardStatStreak": "سلسلة المواظبة",
   "dashboardLastWeekVolume": "الأسبوع الماضي {volume}",
+  "dashboardSamePointLastWeekVolume": "في مثل هذا الوقت الأسبوع الماضي: {volume}",
   "dashboardLastTrained": "آخر تمرين: {when}",
   "dashboardStreakEmpty": "تمرّن هذا الأسبوع لتبدأ سلسلة",
   "dashboardStreakWeeks": "{count, plural, zero{لا أسابيع متتالية} one{أسبوع واحد متواصل} two{أسبوعان متواصلان} few{{count} أسابيع متتالية} many{{count} أسبوعًا متتاليًا} other{{count} أسبوع متتالٍ}}",

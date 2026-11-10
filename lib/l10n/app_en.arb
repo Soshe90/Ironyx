@@ -727,6 +727,8 @@
   "dashboardStatStreak": "Streak",
   "dashboardLastWeekVolume": "Last week {volume}",
   "@dashboardLastWeekVolume": {"description": "Caption under this week's volume on the dashboard: last week's total, already formatted with its unit.", "placeholders": {"volume": {"type": "String"}}},
+  "dashboardSamePointLastWeekVolume": "Same point last week: {volume}",
+  "@dashboardSamePointLastWeekVolume": {"description": "Caption under this week's volume on the dashboard: last week's volume up to the same day and time, which the trend badge compares with. Already formatted with its unit.", "placeholders": {"volume": {"type": "String"}}},
   "dashboardLastTrained": "Last workout: {when}",
   "@dashboardLastTrained": {"description": "Caption of the dashboard's start card. {when} is a relative day already in the user's language: Today, Yesterday, Monday, 3 Nov.", "placeholders": {"when": {"type": "String"}}},
   "dashboardStreakEmpty": "Train this week to start one",

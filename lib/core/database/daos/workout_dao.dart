@@ -155,6 +155,23 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         .watchSingle();
   }
 
+  /// Total volume of the finished workouts that started in [from, until):
+  /// [from] included, [until] not. Zero with none.
+  ///
+  /// Home compares this week so far with last week up to the same moment,
+  /// which a weekly series cannot answer: it only has whole weeks. One
+  /// `SUM` over the indexed `started_at`.
+  Stream<double> watchVolumeBetween(DateTime from, DateTime until) {
+    final Expression<double> total = workoutsTable.totalVolumeKg.sum();
+    return (selectOnly(workoutsTable)
+          ..addColumns(<Expression<Object>>[total])
+          ..where(workoutsTable.endedAt.isNotNull() &
+              workoutsTable.startedAt.isBiggerOrEqualValue(from) &
+              workoutsTable.startedAt.isSmallerThanValue(until)))
+        .map((TypedResult row) => row.read(total) ?? 0)
+        .watchSingle();
+  }
+
   /// When the latest finished workout started; null with none. The other
   /// end of [watchFirstWorkoutAt], for "Last workout: …" when a range holds
   /// nothing.

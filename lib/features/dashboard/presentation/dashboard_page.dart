@@ -464,12 +464,19 @@ class _WeekBody extends StatelessWidget {
       );
     }
 
+    // Compared like for like: this week so far against last week up to the
+    // same moment. Against all of last week the badge was red from every
+    // Monday. Without a same-moment figure (or with nothing by then last
+    // week) there is no badge, and last week's total is context only.
+    final double? samePoint = snapshot.previousToDateVolumeKg;
     final double previous = snapshot.previousVolumeKg;
-    final TrendDirection? trend = previous == 0
+    final double? comparedWith =
+        samePoint != null && samePoint > 0 ? samePoint : null;
+    final TrendDirection? trend = comparedWith == null
         ? null
-        : snapshot.volumeKg > previous
+        : snapshot.volumeKg > comparedWith
             ? TrendDirection.up
-            : snapshot.volumeKg < previous
+            : snapshot.volumeKg < comparedWith
                 ? TrendDirection.down
                 : TrendDirection.flat;
 
@@ -505,18 +512,25 @@ class _WeekBody extends StatelessWidget {
                         const SizedBox(width: AppSpacing.sm),
                         TrendBadge(
                           direction: trend,
-                          label: _deltaLabel(snapshot.volumeKg, previous),
+                          label: _deltaLabel(snapshot.volumeKg, comparedWith!),
                         ),
                       ],
                     ],
                   ),
-                  // What the badge's percentage is a percentage of.
-                  if (previous > 0) ...<Widget>[
+                  // What the badge's percentage is a percentage of, or, with
+                  // no badge, last week's total as context.
+                  if (comparedWith != null || previous > 0) ...<Widget>[
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      l10n.dashboardLastWeekVolume(
-                        UnitFormatters.volume(previous, unit, context.l10n),
-                      ),
+                      comparedWith != null
+                          ? l10n.dashboardSamePointLastWeekVolume(
+                              UnitFormatters.volume(
+                                  comparedWith, unit, context.l10n),
+                            )
+                          : l10n.dashboardLastWeekVolume(
+                              UnitFormatters.volume(
+                                  previous, unit, context.l10n),
+                            ),
                       style: AppTypography.caption(theme),
                     ),
                   ],

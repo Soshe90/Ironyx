@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,038 passed, 2 skipped, 0 failed** (2026-11-10; was
+- `flutter test`: **1,041 passed, 2 skipped, 0 failed** (2026-11-10; was
   876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -183,10 +183,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     is rounded like the headline now.
   - **Not checked:** TalkBack gestures and reading order (only the labels
     it would read).
-  - **Open, found on Home with the same data:** on a Tuesday with no
-    workout yet, this week's volume reads "0 lb ↓100%" against last week.
-    It is the unfinished-week problem Progress had; not changed, since it
-    is the Home tab.
+  - **Found on Home with the same data, then fixed (owner's choice):** on
+    a Tuesday with no workout yet, this week's volume read "0 lb ↓100%",
+    because the badge compared this week so far with all of last week and
+    was red from every Monday. It now compares with last week up to the
+    same moment (`watchVolumeBetween`, `dashboardLastWeekToDateVolume`),
+    and the caption says "Same point last week: X" ("في مثل هذا الوقت
+    الأسبوع الماضي"). With nothing by that point last week there is no
+    badge and the caption is last week's total. Seen on the phone: the
+    caption reads 3,075 kg, last Tuesday's volume by the same hour, where
+    the badge was measured against the whole week's ~9,800 kg. The
+    "same moment" follows `localNowProvider`, so it can lag by a few
+    hours.
 - Changed 2026-11-05, Progress tab:
   - **Wrong data fixed.** Effort, rest, session volume and weekly-by-muscle
     were tables that printed the first 8 or 12 rows of an oldest-first

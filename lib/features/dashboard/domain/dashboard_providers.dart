@@ -106,6 +106,25 @@ Stream<List<WorkoutFrequency>> dashboardWeeklyFrequency(Ref ref) {
       );
 }
 
+/// Last week's volume from its first day up to the same moment as now,
+/// seven days ago: what this week so far is compared with.
+///
+/// Comparing this week so far with all of last week made the badge red
+/// from every Monday ("0 kg, down 100%" on a Tuesday, seen on the phone).
+/// [localNowProvider] is coarse (it changes at each part of the day and on
+/// resume), so "the same moment" can lag by a few hours, never by a day.
+@riverpod
+Stream<double> dashboardLastWeekToDateVolume(Ref ref) {
+  final DateTime now = ref.watch(localNowProvider);
+  final DateTime lastWeek = DateFormatters.previousWeek(
+    DateFormatters.startOfWeek(now, ref.watch(weekStartControllerProvider)),
+  );
+  return ref.watch(workoutDaoProvider).watchVolumeBetween(
+        lastWeek,
+        now.subtract(const Duration(days: DateTime.daysPerWeek)),
+      );
+}
+
 /// Window backing the dashboard's "this week" card and its sparkline.
 const int _heroWeeks = 8;
 
@@ -123,15 +142,18 @@ Future<WeekSnapshot> dashboardWeekSnapshot(Ref ref) async {
   // are easy to lose if the provider rebuilds while it is suspended.
   final DateTime today = ref.watch(todayProvider);
   final WeekStart weekStart = ref.watch(weekStartControllerProvider);
-  final List<WeeklyVolume> volume =
-      await ref.watch(dashboardWeeklyVolumeProvider.future);
-  final List<WorkoutFrequency> frequency =
-      await ref.watch(dashboardWeeklyFrequencyProvider.future);
+  final Future<List<WeeklyVolume>> volumeFuture =
+      ref.watch(dashboardWeeklyVolumeProvider.future);
+  final Future<List<WorkoutFrequency>> frequencyFuture =
+      ref.watch(dashboardWeeklyFrequencyProvider.future);
+  final Future<double> toDateFuture =
+      ref.watch(dashboardLastWeekToDateVolumeProvider.future);
   return WeekSnapshot.from(
-    volume: volume,
-    frequency: frequency,
+    volume: await volumeFuture,
+    frequency: await frequencyFuture,
     weekStart: weekStart,
     today: today,
+    previousToDateVolumeKg: await toDateFuture,
   );
 }
 
@@ -144,6 +166,7 @@ class WeekSnapshot {
     required this.streakWeeks,
     required this.volumeSeries,
     required this.hasHistory,
+    this.previousToDateVolumeKg,
   });
 
   /// Builds the snapshot from the two weekly series.
@@ -162,6 +185,7 @@ class WeekSnapshot {
     required List<WorkoutFrequency> frequency,
     required WeekStart weekStart,
     DateTime? today,
+    double? previousToDateVolumeKg,
   }) {
     final DateTime thisWeek =
         DateFormatters.startOfWeek(today ?? DateTime.now(), weekStart);
@@ -203,11 +227,20 @@ class WeekSnapshot {
         for (final WeeklyVolume w in volume) w.totalVolumeKg
       ],
       hasHistory: volume.isNotEmpty,
+      previousToDateVolumeKg: previousToDateVolumeKg,
     );
   }
 
   final double volumeKg;
+
+  /// All of last week.
   final double previousVolumeKg;
+
+  /// Last week up to the same moment as now (see
+  /// `dashboardLastWeekToDateVolume`): the figure this week so far is
+  /// compared with. Null when not known, and then the card falls back to
+  /// [previousVolumeKg].
+  final double? previousToDateVolumeKg;
   final int sessions;
 
   /// Consecutive weeks with at least one completed workout.
