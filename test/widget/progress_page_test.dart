@@ -7,6 +7,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/muscle_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/features/progress/presentation/widgets/lift_picker.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -182,7 +183,7 @@ void main() {
       // session count. Both seeded lifts appear in 13 sessions each, so the
       // tie breaks alphabetically on "Barbell Row" — assert on the label
       // rather than on which one wins the tie.
-      expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+      expect(find.byType(LiftPickerField), findsOneWidget);
       expect(find.textContaining('· 13 sessions'), findsWidgets);
       // The seeded-but-never-performed exercise is not offered at all.
       expect(find.textContaining('Never Performed'), findsNothing);

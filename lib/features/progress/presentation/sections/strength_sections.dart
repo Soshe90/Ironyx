@@ -22,6 +22,7 @@ import '../../../library/domain/exercise_catalogue_l10n.dart';
 import '../../domain/progress_providers.dart';
 import '../../domain/strength_analytics.dart';
 import '../progress_explainers.dart';
+import '../widgets/lift_picker.dart';
 import '../widgets/progress_charts.dart';
 
 /// Per-lift strength comparison: the question "am I improving" answered
@@ -344,39 +345,39 @@ class _LiftChartSectionState extends ConsumerState<LiftChartSection> {
         }
         final String selected = _exerciseId!;
 
+        final LoggedExercise chosen = items.firstWhere(
+          (LoggedExercise i) => i.exerciseId == selected,
+        );
+        String nameOf(LoggedExercise item) => localizedExerciseName(
+              context,
+              slugsById,
+              item.exerciseId,
+              item.exerciseName,
+            );
         final Widget header = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            DropdownButtonFormField<String>(
-              // initialValue is read once; keyed so a fallback to another
-              // lift resets the field instead of leaving it on an id that
-              // is no longer one of its items (an assertion failure).
-              key: ValueKey<String>(selected),
-              initialValue: selected,
-              decoration: InputDecoration(
-                labelText: l10n.progressExerciseField,
+            LiftPickerField(
+              selectedId: selected,
+              label: l10n.progressExerciseWithSessions(
+                nameOf(chosen),
+                l10n.sessionCount(chosen.sessionCount),
               ),
-              isExpanded: true,
-              items: [
-                for (final LoggedExercise item in items)
-                  DropdownMenuItem<String>(
-                    value: item.exerciseId,
-                    child: Text(
-                      l10n.progressExerciseWithSessions(
-                        localizedExerciseName(
-                          context,
-                          slugsById,
-                          item.exerciseId,
-                          item.exerciseName,
-                        ),
-                        l10n.sessionCount(item.sessionCount),
+              onTap: () async {
+                final String? id = await showLiftPicker(
+                  context,
+                  selectedId: selected,
+                  options: <LiftOption>[
+                    for (final LoggedExercise item in items)
+                      LiftOption(
+                        id: item.exerciseId,
+                        name: nameOf(item),
+                        storedName: item.exerciseName,
+                        sessions: l10n.sessionCount(item.sessionCount),
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: (String? id) {
-                if (id != null) setState(() => _exerciseId = id);
+                  ],
+                );
+                if (id != null && mounted) setState(() => _exerciseId = id);
               },
             ),
             const SizedBox(height: AppSpacing.sm),

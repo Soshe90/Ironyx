@@ -13,6 +13,7 @@ import 'package:ironyx/core/formatters/unit_formatters.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/core/widgets/segmented_pills.dart';
 import 'package:ironyx/features/progress/domain/progress_providers.dart';
+import 'package:ironyx/features/progress/presentation/widgets/lift_picker.dart';
 import 'package:ironyx/features/progress/presentation/widgets/progress_visuals.dart';
 
 import '../helpers/pump_app.dart';
@@ -343,17 +344,23 @@ void main() {
     testWidgets('the chosen lift stays chosen when the range changes',
         (tester) async {
       await pumpProgress(tester);
-      final Finder picker = find.byType(DropdownButtonFormField<String>);
-      String? chosen() =>
-          tester.widget<DropdownButtonFormField<String>>(picker).initialValue;
+      final Finder picker = find.byType(LiftPickerField);
+      String chosen() => tester.widget<LiftPickerField>(picker).selectedId;
 
       // Both lifts are logged equally often; take whichever is not shown.
       final String other = chosen() == 'bench' ? 'row' : 'bench';
       final String otherName =
           other == 'bench' ? 'Barbell Bench Press' : 'Seated Cable Row';
       await tapInPage(tester, picker);
-      await tester.tap(find.textContaining(otherName).last);
-      await settle(tester);
+      await tester.pumpAndSettle();
+      // In the sheet, which lists both lifts with their session counts.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(LiftPickerSheet),
+          matching: find.text(otherName),
+        ),
+      );
+      await tester.pumpAndSettle();
       expect(chosen(), other);
 
       controllerOf(tester).jumpTo(0);
