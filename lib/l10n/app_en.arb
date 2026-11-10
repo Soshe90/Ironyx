@@ -1163,7 +1163,7 @@
   "progressFrequencyEmpty": "Complete workouts to see your weekly frequency.",
   "progressAveragePerWeek": "{average} / week",
   "@progressAveragePerWeek": { "placeholders": { "average": { "type": "String" } } },
-  "progressFrequencySummary": "{workouts, plural, =0{No workouts} =1{1 workout} other{{workouts} workouts}} across {weeks, plural, =1{1 week} other{{weeks} weeks}} · trained in {activeWeeks, plural, =0{no weeks} =1{1 week} other{{activeWeeks} weeks}}",
+  "progressFrequencySummary": "{workouts, plural, =0{No workouts} =1{1 workout} other{{workouts} workouts}} · trained in {activeWeeks} of {weeks, plural, =1{1 week} other{{weeks} weeks}}",
   "@progressFrequencySummary": { "placeholders": { "workouts": { "type": "int" }, "weeks": { "type": "int" }, "activeWeeks": { "type": "int" } } },
   "progressWorkoutCount": "{count, plural, =0{No workouts} =1{1 workout} other{{count} workouts}}",
   "@progressWorkoutCount": { "placeholders": { "count": { "type": "int" } } },

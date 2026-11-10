@@ -1115,7 +1115,7 @@
   "progressFrequencyEmpty": "أكمل تمارين لعرض وتيرتك الأسبوعية.",
   "progressAveragePerWeek": "{average} أسبوعيًا",
   "@progressAveragePerWeek": { "placeholders": { "average": { "type": "String" } } },
-  "progressFrequencySummary": "{workouts, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{workouts} تمارين} many{{workouts} تمرينًا} other{{workouts} تمرين}} خلال {weeks, plural, one{أسبوع واحد} two{أسبوعين} few{{weeks} أسابيع} many{{weeks} أسبوعًا} other{{weeks} أسبوع}} · تدربت في {activeWeeks, plural, zero{صفر أسبوع} one{أسبوع واحد} two{أسبوعين} few{{activeWeeks} أسابيع} many{{activeWeeks} أسبوعًا} other{{activeWeeks} أسبوع}}",
+  "progressFrequencySummary": "{workouts, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{workouts} تمارين} many{{workouts} تمرينًا} other{{workouts} تمرين}} · تدربت في {activeWeeks} من أصل {weeks, plural, one{أسبوع واحد} two{أسبوعين} few{{weeks} أسابيع} many{{weeks} أسبوعًا} other{{weeks} أسبوع}}",
   "@progressFrequencySummary": { "placeholders": { "workouts": { "type": "int" }, "weeks": { "type": "int" }, "activeWeeks": { "type": "int" } } },
   "progressWorkoutCount": "{count, plural, zero{لا تمارين} one{تمرين واحد} two{تمرينان} few{{count} تمارين} many{{count} تمرينًا} other{{count} تمرين}}",
   "@progressWorkoutCount": { "placeholders": { "count": { "type": "int" } } },

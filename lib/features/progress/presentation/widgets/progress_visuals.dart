@@ -5,12 +5,14 @@ import '../../../../core/database/daos/workout_dao.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
+import '../../../../core/services/clock.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/loading_shimmer.dart';
 import '../../../../core/widgets/metric_value.dart';
+import '../../domain/consistency_calculators.dart';
 import '../../domain/progress_providers.dart';
 
 /// Presentational building blocks for the Progress page.
@@ -202,10 +204,16 @@ class ProgressOverviewHero extends ConsumerWidget {
       0,
       (int sum, WorkoutFrequency f) => sum + f.workoutCount,
     );
-    // Per elapsed week, matching the frequency card's own headline.
-    final String? perWeek = workoutTotal == null || sessions!.isEmpty
+    // The same figure as the frequency card's headline, from the same
+    // function, so the two cannot disagree.
+    final double? average = sessions == null
         ? null
-        : (workoutTotal / sessions.length).toStringAsFixed(1);
+        : averageSessionsPerWeek(
+            weeks: sessions,
+            rangeDays: range.days,
+            now: ref.watch(localNowProvider),
+          );
+    final String? perWeek = average?.toStringAsFixed(1);
 
     final bool loading = volume.isLoading && weeks == null;
 

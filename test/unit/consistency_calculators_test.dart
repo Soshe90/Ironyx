@@ -203,4 +203,112 @@ void main() {
       expect(result.currentStreakWeeks, 3, reason: 'weeks $mondays');
     }
   });
+
+  group('the week in progress', () {
+    test('is left out of adherence until it meets the target', () {
+      // Tuesday of the third week, one session in: not a miss yet.
+      final result = calculateConsistency(
+        weeks: [week(0, 3), week(1, 3), week(2, 1)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-20 09:00:00'),
+      );
+      expect(result.eligibleWeeks, 2);
+      expect(result.hitTargetWeeks, 2);
+      expect(result.adherenceFraction, 1.0);
+    });
+
+    test('counts once it has met the target', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 3), week(1, 0), week(2, 3)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-20 09:00:00'),
+      );
+      expect(result.eligibleWeeks, 3);
+      expect(result.hitTargetWeeks, 2);
+    });
+
+    test('alone and unmet, leaves adherence unknown rather than 0%', () {
+      final result = calculateConsistency(
+        weeks: [week(0, 1)],
+        targetSessionsPerWeek: 3,
+        now: DateTime.parse('2026-01-06 09:00:00'),
+      );
+      expect(result.eligibleWeeks, 0);
+      expect(result.adherenceFraction, isNull);
+      // The streak still sees this week's session.
+      expect(result.currentStreakWeeks, 1);
+    });
+  });
+
+  group('averageSessionsPerWeek', () {
+    test('divides by the range, not by the week buckets it touches', () {
+      // A 14-day range spans three calendar weeks; six sessions in it are
+      // three a week, not two.
+      final double? average = averageSessionsPerWeek(
+        weeks: [week(0, 2), week(1, 2), week(2, 2)],
+        rangeDays: 14,
+        now: DateTime.parse('2026-01-21 09:00:00'),
+      );
+      expect(average, closeTo(3.0, 0.0001));
+    });
+
+    test('counts from the first trained week when training began inside', () {
+      // Two weeks in, inside a 90-day range: not averaged over the eleven
+      // empty weeks before the first session.
+      final DateTime now = DateTime.parse('2026-04-04 09:00:00');
+      final double? average = averageSessionsPerWeek(
+        weeks: [
+          for (var i = 0; i < 11; i++) week(i, 0),
+          week(11, 3),
+          week(12, 3),
+        ],
+        rangeDays: 90,
+        now: now,
+      );
+      final double elapsed =
+          now.difference(week(11, 0).weekStart).inMinutes / (60 * 24 * 7);
+      expect(average, closeTo(6 / elapsed, 0.0001));
+      expect(average, greaterThan(3));
+    });
+
+    test('all-time runs from the first trained week to now', () {
+      final DateTime now = DateTime.parse('2026-02-01 09:00:00');
+      final double? average = averageSessionsPerWeek(
+        weeks: [week(0, 2), week(1, 2), week(2, 2), week(3, 2)],
+        rangeDays: null,
+        now: now,
+      );
+      final double elapsed =
+          now.difference(week(0, 0).weekStart).inMinutes / (60 * 24 * 7);
+      expect(average, closeTo(8 / elapsed, 0.0001));
+    });
+
+    test('never divides by less than a week', () {
+      final double? average = averageSessionsPerWeek(
+        weeks: [week(0, 1)],
+        rangeDays: null,
+        now: DateTime.parse('2026-01-06 09:00:00'),
+      );
+      expect(average, 1.0);
+    });
+
+    test('is null with nothing trained', () {
+      expect(
+        averageSessionsPerWeek(
+          weeks: const [],
+          rangeDays: 30,
+          now: DateTime.parse('2026-01-06 09:00:00'),
+        ),
+        isNull,
+      );
+      expect(
+        averageSessionsPerWeek(
+          weeks: [week(0, 0), week(1, 0)],
+          rangeDays: 30,
+          now: DateTime.parse('2026-01-13 09:00:00'),
+        ),
+        isNull,
+      );
+    });
+  });
 }

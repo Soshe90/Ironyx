@@ -80,9 +80,18 @@ ConsistencySummary calculateConsistency(
   // with any activity; a week with zero sessions *after* training began is
   // still a real miss and stays counted.
   final firstActiveIndex = ordered.indexWhere((week) => week.workoutCount > 0);
+  //
+  // The week in progress is not a miss yet: it counts once it has met the
+  // target, and is left out until then. Counted from its first day, it
+  // dragged adherence down every Monday for a week that had barely begun.
   final eligible = firstActiveIndex == -1
       ? const <WorkoutFrequency>[]
-      : ordered.sublist(firstActiveIndex);
+      : <WorkoutFrequency>[
+          for (final w in ordered.sublist(firstActiveIndex))
+            if (w.weekStart != currentWeek ||
+                w.workoutCount >= targetSessionsPerWeek)
+              w,
+        ];
   final hits =
       eligible.where((w) => w.workoutCount >= targetSessionsPerWeek).length;
   return ConsistencySummary(
@@ -92,4 +101,35 @@ ConsistencySummary calculateConsistency(
       targetSessionsPerWeek: targetSessionsPerWeek,
       eligibleWeeks: eligible.length,
       hitTargetWeeks: hits);
+}
+
+/// Sessions per week over the time the range really covers.
+///
+/// [weeks] is the zero-filled weekly series for the range (see
+/// `WorkoutDao.watchWorkoutFrequency`); [rangeDays] is the range's length,
+/// null for all-time.
+///
+/// Dividing by the number of week buckets, as the page used to, counts
+/// calendar weeks the range only touches: a 14-day range usually spans
+/// three buckets, so six sessions read "2.0 / week" instead of 3.0. The
+/// divisor is the range's own length instead, except where training began
+/// inside it. Then it runs from the first trained week, as adherence and
+/// the insights do, so a lifter two weeks in is not averaged over the
+/// eleven weeks before they started. It is never less than one week, or a
+/// first session today would read as seven a week.
+///
+/// Null when nothing in the series was trained.
+double? averageSessionsPerWeek({
+  required List<WorkoutFrequency> weeks,
+  required int? rangeDays,
+  required DateTime now,
+}) {
+  final int firstActive = weeks.indexWhere((w) => w.workoutCount > 0);
+  if (firstActive == -1) return null;
+  final int total = weeks.fold(0, (sum, w) => sum + w.workoutCount);
+  final double elapsedWeeks = rangeDays != null && firstActive == 0
+      ? rangeDays / DateTime.daysPerWeek
+      : now.difference(weeks[firstActive].weekStart).inMinutes /
+          (Duration.minutesPerDay * DateTime.daysPerWeek);
+  return total / (elapsedWeeks < 1 ? 1 : elapsedWeeks);
 }

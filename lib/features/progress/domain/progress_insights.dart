@@ -1,4 +1,6 @@
 import '../../../core/database/daos/workout_dao.dart';
+import '../../../core/formatters/date_formatters.dart';
+import '../../../core/formatters/week_start.dart';
 
 enum InsightSeverity { actionable, negative, positive }
 
@@ -50,6 +52,12 @@ class ProgressInsight {
 
 /// Builds a small, ranked set of conclusions from already-loaded analytics.
 /// Every rule has a data threshold so sparse history stays silent.
+///
+/// [weekStart] and [utcOffset] have to be the ones the weekly series were
+/// bucketed with, so that the week in progress (found from [now]) names a
+/// bucket that exists in them. The weekly rules leave that week out: it
+/// is unfinished, so on a Monday it held almost nothing and every series
+/// looked as if it had just fallen off.
 List<ProgressInsight> buildProgressInsights({
   required List<StrengthChange> strengthChanges,
   required List<WeeklyVolume> volume,
@@ -57,8 +65,24 @@ List<ProgressInsight> buildProgressInsights({
   required List<MuscleGroupVolume> currentMuscleVolume,
   required List<MuscleGroupVolume> previousMuscleVolume,
   int recentPersonalRecords = 0,
+  WeekStart weekStart = WeekStart.monday,
+  Duration utcOffset = Duration.zero,
+  DateTime? now,
 }) {
   final insights = <ProgressInsight>[];
+  final DateTime currentWeek = DateFormatters.weekBucketStart(
+    now ?? DateTime.now(),
+    weekStart: weekStart,
+    utcOffset: utcOffset,
+  );
+  final List<WeeklyVolume> finishedVolume = <WeeklyVolume>[
+    for (final w in volume)
+      if (w.weekStart != currentWeek) w,
+  ];
+  final List<WorkoutFrequency> finishedFrequency = <WorkoutFrequency>[
+    for (final w in frequency)
+      if (w.weekStart != currentWeek) w,
+  ];
 
   final movers = strengthChanges.where((row) => row.change != null).toList();
   if (movers.length >= 2) {
@@ -89,10 +113,11 @@ List<ProgressInsight> buildProgressInsights({
   // `calculateConsistency`. Assumed ascending by weekStart, matching every
   // DAO stream this function is fed from; not re-sorted here so a caller
   // passing rows in DAO order never risks an unstable sort on tied weeks.
-  final firstActiveWeek = frequency.indexWhere((week) => week.workoutCount > 0);
+  final firstActiveWeek =
+      finishedFrequency.indexWhere((week) => week.workoutCount > 0);
   final eligibleWeeks = firstActiveWeek == -1
       ? const <WorkoutFrequency>[]
-      : frequency.sublist(firstActiveWeek);
+      : finishedFrequency.sublist(firstActiveWeek);
   if (eligibleWeeks.length >= 4) {
     final active = eligibleWeeks.where((week) => week.workoutCount > 0).length;
     final average =
@@ -110,12 +135,12 @@ List<ProgressInsight> buildProgressInsights({
     }
   }
 
-  if (volume.length >= 4) {
-    final midpoint = volume.length ~/ 2;
-    final earlier = volume
+  if (finishedVolume.length >= 4) {
+    final midpoint = finishedVolume.length ~/ 2;
+    final earlier = finishedVolume
         .take(midpoint)
         .fold<double>(0, (sum, row) => sum + row.totalVolumeKg);
-    final recent = volume
+    final recent = finishedVolume
         .skip(midpoint)
         .fold<double>(0, (sum, row) => sum + row.totalVolumeKg);
     if (earlier > 0 && recent < earlier * .8) {

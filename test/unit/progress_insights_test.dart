@@ -132,4 +132,74 @@ void main() {
       isNotEmpty,
     );
   });
+
+  group('the week in progress', () {
+    // Local midnight, as the DAO emits buckets, so they can match the
+    // current week the function works out from `now`.
+    DateTime monday(int offset) =>
+        DateTime.parse('2026-01-05').add(Duration(days: offset * 7));
+    WeeklyVolume volumeWeek(int offset, double kg) =>
+        WeeklyVolume(weekStart: monday(offset), totalVolumeKg: kg);
+    WorkoutFrequency countWeek(int offset, int count) =>
+        WorkoutFrequency(weekStart: monday(offset), workoutCount: count);
+
+    test('an empty Monday is not a volume drop', () {
+      // Five steady weeks, then a week that has only just begun. With it,
+      // the recent half read 33% down.
+      final insights = buildProgressInsights(
+        strengthChanges: const [],
+        volume: [
+          for (var i = 0; i < 5; i++) volumeWeek(i, 100),
+          volumeWeek(5, 0),
+        ],
+        frequency: const [],
+        currentMuscleVolume: const [],
+        previousMuscleVolume: const [],
+        now: monday(5).add(const Duration(hours: 9)),
+      );
+      expect(
+        insights.where((i) => i.kind == InsightKind.volumeTrendingDown),
+        isEmpty,
+      );
+    });
+
+    test('an empty Monday is not consistency slipping', () {
+      final insights = buildProgressInsights(
+        strengthChanges: const [],
+        volume: const [],
+        frequency: [
+          for (var i = 0; i < 4; i++) countWeek(i, 1),
+          countWeek(4, 0),
+        ],
+        currentMuscleVolume: const [],
+        previousMuscleVolume: const [],
+        now: monday(4).add(const Duration(hours: 9)),
+      );
+      expect(
+        insights.where((i) => i.kind == InsightKind.consistencySlipping),
+        isEmpty,
+      );
+    });
+
+    test('finished weeks still count, however busy this one is', () {
+      final insights = buildProgressInsights(
+        strengthChanges: const [],
+        volume: const [],
+        frequency: [
+          countWeek(0, 1),
+          countWeek(1, 0),
+          countWeek(2, 1),
+          countWeek(3, 0),
+          countWeek(4, 3),
+        ],
+        currentMuscleVolume: const [],
+        previousMuscleVolume: const [],
+        now: monday(4).add(const Duration(days: 4)),
+      );
+      final ProgressInsight slipping = insights.singleWhere(
+        (i) => i.kind == InsightKind.consistencySlipping,
+      );
+      expect(slipping.averageSessionsPerWeek, closeTo(0.5, 0.0001));
+    });
+  });
 }

@@ -9,9 +9,11 @@ import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/database/tables/profiles.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/unit_formatters.dart';
+import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/services/clock.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -28,6 +30,7 @@ import '../../../core/widgets/trend_badge.dart';
 import '../../../core/widgets/value_row.dart';
 import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../domain/bmi.dart';
+import '../domain/consistency_calculators.dart';
 import '../domain/progress_insights.dart';
 import '../domain/progress_providers.dart';
 import '../domain/strength_analytics.dart';
@@ -663,6 +666,10 @@ class _InsightsSection extends ConsumerWidget {
       currentMuscleVolume: muscles.value ?? const [],
       previousMuscleVolume: previousMuscles.value ?? const [],
       recentPersonalRecords: personalRecords.value ?? 0,
+      // The same week settings the series were bucketed with.
+      weekStart: ref.watch(weekStartControllerProvider),
+      utcOffset: ref.watch(todayProvider).timeZoneOffset,
+      now: ref.watch(localNowProvider),
     );
     return Semantics(
       container: true,
@@ -2068,14 +2075,19 @@ class _FrequencySection extends ConsumerWidget {
         );
         final int activeWeeks =
             points.where((WorkoutFrequency p) => p.workoutCount > 0).length;
-        // Per *elapsed* week. Dividing by the number of weeks that happen to
-        // contain a workout reports three sessions crammed into one week —
-        // and nothing for the two months after it — as "3.0 / week".
-        final double average = total / points.length;
+        // Per elapsed week of the range, not per week that happens to
+        // contain a workout (which reports three sessions crammed into one
+        // week, then two idle months, as "3.0 / week") and not per bucket
+        // (see averageSessionsPerWeek).
+        final double? average = averageSessionsPerWeek(
+          weeks: points,
+          rangeDays: range.days,
+          now: ref.watch(localNowProvider),
+        );
 
         return _ChartCard(
           headline: context.l10n.progressAveragePerWeek(
-            average.toStringAsFixed(1),
+            average?.toStringAsFixed(1) ?? '—',
           ),
           caption: context.l10n.progressFrequencySummary(
             total,
