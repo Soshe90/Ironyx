@@ -30,7 +30,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **876 passed, 1 skipped, 0 failed** (2026-11-05).
+- `flutter test`: **1,036 passed, 2 skipped, 0 failed** (2026-11-10; was
+  876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -127,6 +128,54 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
+  time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
+  1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
+  next upload needs versionCode 6.
+  - **Wrong figures fixed.**
+    - Strength change compared the latest session with every earlier one,
+      so any session that was not a new best read red. It is now the
+      range's best against the best from any time before the range. A lift
+      with nothing before the range is compared with its first session in
+      it, and the row says "first session: X" and the insight "… since
+      your first session" (owner's decision). Copy in both languages.
+    - 1RM record dots were judged inside the visible range, so every
+      chart's oldest point was a "record"; they are judged against all
+      history now. The chart also silently kept only the newest 50
+      sessions; it keeps all of them.
+    - "Per week" divided by the calendar weeks a range touches (a 14-day
+      range is usually three); it divides by the range's length. The week
+      in progress no longer counts as a missed target from its Monday, and
+      the insights ignore it.
+    - A break inside the range now counts: someone who trained before the
+      range is averaged over all of it, and a range with nothing in it
+      after a break shows zero weeks and "Last workout: …" instead of the
+      new-user empty states (`watchFirstWorkoutAt`, `watchLastWorkoutAt`,
+      `fillEmptyRange`).
+    - Range windows, body weight and the weekly target went stale while
+      the tab stayed open; they follow `localNowProvider` and the data.
+    - Effort is averaged per rated set, like rest.
+  - **Clearer page.**
+    - One heading per section: the large chapter headings are gone (the
+      pinned tabs name the chapter; screen readers still get a header).
+    - The personal-records insight is removed (it repeated the hero), and
+      the strength insight needs a 2.5% change, worked out from Epley (one
+      more rep is 1/(30+reps)).
+    - Value axes are round in the reader's unit (pounds included), and the
+      weekly bar charts have one.
+    - A 0% change reads "unchanged".
+    - The lift picker is a searchable sheet of logged lifts.
+  - **Code.** Scrolling and logging no longer rebuild the whole page;
+    calculations live in `domain/` with tests; the 2,690-line page is split
+    into chapter libraries (docs/widgets.md).
+  - **Checked on the SM N970F (debug copy)**, Arabic: light and dark,
+    kilograms and pounds, and with the owner's real data imported. That
+    check found two bugs, both fixed: the volume-trend insight went silent
+    on "Year" because empty weeks before the first workout filled its
+    earlier half, and two screen-reader faults (the lift picker could not
+    be pressed, axis ticks were read as bare numbers).
+  - **Not checked:** TalkBack gestures and reading order (only the labels
+    it would read); the real data in dark mode and pounds.
 - Changed 2026-11-05, Progress tab:
   - **Wrong data fixed.** Effort, rest, session volume and weekly-by-muscle
     were tables that printed the first 8 or 12 rows of an oldest-first
@@ -147,7 +196,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     --update-goldens --run-skipped`, output in `build/progress_review/`.
   - **Not done:** a per-session value is now reachable by touch (tooltip)
     and summarised for screen readers (latest, lowest, highest), but is no
-    longer listed row by row. Weekly bar charts still have no value axis.
+    longer listed row by row. Weekly bar charts still have no value axis
+    (done 2026-11-10, with the same screen-reader summary).
 - Changed 2026-11-05, Home tab:
   - **Figures.** The Est. 1RM tile printed two decimals ("96.25 kg") where
     Progress shows the same estimate as "96 kg"; it is rounded the same way
@@ -201,7 +251,10 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   `todayProvider` in `core/services/clock.dart`. The Tracker calendar's
   visible month, "today" ring and history-row highlight had the same
   pattern and use the same providers now. **Not audited:** other
-  `DateTime.now()` reads in Progress and body-metric widgets.
+  `DateTime.now()` reads in Progress and body-metric widgets. (Progress's
+  were fixed 2026-11-10: every range query takes its window from
+  `progressSinceProvider`. The body-metric editor's default date is still
+  read when it opens, which is what it should be.)
 
 Checked 2026-09-20, not copied from old notes:
 
