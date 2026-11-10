@@ -413,4 +413,51 @@ void main() {
       expect(average, closeTo(6 / elapsed, 0.0001));
     });
   });
+
+  group('a range with nothing in it', () {
+    final List<WorkoutFrequency> zeros = <WorkoutFrequency>[
+      for (var i = 0; i < 5; i++) week(i, 0),
+    ];
+    final DateTime now = DateTime.parse('2026-02-06 09:00:00');
+
+    test('averages 0 a week after a break', () {
+      expect(
+        averageSessionsPerWeek(
+          weeks: zeros,
+          rangeDays: 30,
+          now: now,
+          firstWorkoutAt: DateTime.parse('2025-06-01'),
+        ),
+        0,
+      );
+    });
+
+    test('has no average without history before it', () {
+      expect(
+        averageSessionsPerWeek(weeks: zeros, rangeDays: 30, now: now),
+        isNull,
+      );
+      expect(
+        averageSessionsPerWeek(
+          weeks: const [],
+          rangeDays: 30,
+          now: now,
+        ),
+        isNull,
+      );
+    });
+
+    test('adherence is 0% after a break, not unknown', () {
+      final result = calculateConsistency(
+        weeks: zeros,
+        targetSessionsPerWeek: 3,
+        now: now,
+        rangeStart: DateTime.parse('2026-01-07 09:00:00'),
+        firstWorkoutAt: DateTime.parse('2025-06-01'),
+      );
+      // Weeks 1-3; week 0 is partial and week 4 is this week, both unmet.
+      expect(result.eligibleWeeks, 3);
+      expect(result.adherenceFraction, 0);
+    });
+  });
 }

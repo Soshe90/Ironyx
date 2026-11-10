@@ -623,6 +623,9 @@ class WeeklyBarChart extends StatelessWidget {
               displayScale;
           return BarChart(
             BarChartData(
+              // All zero (a range with nothing in it after a break): one
+              // step of headroom, or the axis would span nothing.
+              maxY: highest > 0 ? null : valueStep,
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,

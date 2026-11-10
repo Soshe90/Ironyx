@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/daos/workout_dao.dart';
+import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
@@ -230,6 +231,21 @@ class ProgressOverviewHero extends ConsumerWidget {
     final String? perWeek =
         average == null ? null : UnitFormatters.oneDecimal(average);
 
+    // A range with nothing in it after a break: say when the last workout
+    // was, so a page of zeros explains itself. The same caption as Home's.
+    final DateTime? lastWorkout = ref.watch(lastWorkoutAtProvider).value;
+    final String? lastTrained = workoutTotal == 0 &&
+            lastWorkout != null &&
+            trainedBeforeRange(
+              rangeStart: ref.watch(progressSinceProvider(range)),
+              firstWorkoutAt: ref.watch(firstWorkoutAtProvider).value,
+            )
+        ? l10n.dashboardLastTrained(
+            DateFormatters.of(context)
+                .relativeDay(lastWorkout, now: ref.watch(todayProvider)),
+          )
+        : null;
+
     final bool loading = volume.isLoading && weeks == null;
 
     return AppCard(
@@ -297,6 +313,15 @@ class ProgressOverviewHero extends ConsumerWidget {
                       color: AppColors.workoutHeroCaption,
                     ),
                   ),
+                  if (lastTrained != null) ...<Widget>[
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      lastTrained,
+                      style: AppTypography.caption(theme).copyWith(
+                        color: AppColors.workoutHeroAccent,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

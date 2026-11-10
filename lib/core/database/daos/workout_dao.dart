@@ -155,6 +155,18 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         .watchSingle();
   }
 
+  /// When the latest finished workout started; null with none. The other
+  /// end of [watchFirstWorkoutAt], for "Last workout: …" when a range holds
+  /// nothing.
+  Stream<DateTime?> watchLastWorkoutAt() {
+    final Expression<DateTime> last = workoutsTable.startedAt.max();
+    return (selectOnly(workoutsTable)
+          ..addColumns(<Expression<Object>>[last])
+          ..where(workoutsTable.endedAt.isNotNull()))
+        .map((TypedResult row) => row.read(last))
+        .watchSingle();
+  }
+
   Stream<double?> watchAverageDurationSeconds() => customSelect(
         '''
         SELECT AVG(duration_seconds) AS average_seconds
@@ -177,6 +189,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     DateTime? since,
     WeekStart weekStart = WeekStart.monday,
     Duration utcOffset = Duration.zero,
+    bool fillEmptyRange = false,
   }) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
 
@@ -206,6 +219,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
             since: since,
             weekStart: weekStart,
             utcOffset: utcOffset,
+            fillEmpty: fillEmptyRange,
             weekStartOf: (WeeklyVolume w) => w.weekStart,
             zero: (DateTime week) =>
                 WeeklyVolume(weekStart: week, totalVolumeKg: 0),
@@ -221,6 +235,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     DateTime? since,
     WeekStart weekStart = WeekStart.monday,
     Duration utcOffset = Duration.zero,
+    bool fillEmptyRange = false,
   }) {
     final whereSince = since == null ? '' : 'AND started_at >= ?';
 
@@ -250,6 +265,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
             since: since,
             weekStart: weekStart,
             utcOffset: utcOffset,
+            fillEmpty: fillEmptyRange,
             weekStartOf: (WorkoutFrequency f) => f.weekStart,
             zero: (DateTime week) =>
                 WorkoutFrequency(weekStart: week, workoutCount: 0),
@@ -298,8 +314,11 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// The window runs from the first bucket — `since`'s week, or the earliest
   /// row's week for an all-time query — through the current week, so a
   /// window that ends in a layoff shows the layoff. An empty result stays
-  /// empty: callers distinguish "never trained" from "trained, then
+  /// empty: on its own it cannot say "never trained" from "trained, then
   /// stopped", and fabricating a run of zeroes would erase that difference.
+  /// A caller that knows training began before [since] says so with
+  /// [fillEmpty], and gets every week of the window as zero: a month off
+  /// is then "0 of 5 weeks", not the invitation a new user sees.
   List<T> _fillWeekGaps<T>(
     List<T> rows, {
     required DateTime? since,
@@ -307,8 +326,9 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     required Duration utcOffset,
     required DateTime Function(T) weekStartOf,
     required T Function(DateTime) zero,
+    bool fillEmpty = false,
   }) {
-    if (rows.isEmpty) return rows;
+    if (rows.isEmpty && (!fillEmpty || since == null)) return rows;
 
     final Map<DateTime, T> byWeek = <DateTime, T>{
       for (final T row in rows) weekStartOf(row): row,
@@ -322,14 +342,20 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           utcOffset: utcOffset,
         );
 
+    // `since` is non-null whenever rows is empty here (see above).
     DateTime cursor = since == null ? weekStartOf(rows.first) : bucketOf(since);
     // Rows are ordered ascending, so the last one is the newest. Taking the
     // later of it and the current week keeps a future-dated workout (an
     // import artefact, or a device clock skew) inside the series instead of
     // silently truncating it away.
     final DateTime currentWeek = bucketOf(DateTime.now());
-    final DateTime lastWeek = weekStartOf(rows.last);
-    final DateTime end = lastWeek.isAfter(currentWeek) ? lastWeek : currentWeek;
+    final DateTime end;
+    if (rows.isEmpty) {
+      end = currentWeek;
+    } else {
+      final DateTime lastWeek = weekStartOf(rows.last);
+      end = lastWeek.isAfter(currentWeek) ? lastWeek : currentWeek;
+    }
 
     final List<T> filled = <T>[];
     while (!cursor.isAfter(end)) {

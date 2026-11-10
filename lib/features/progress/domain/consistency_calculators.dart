@@ -144,7 +144,8 @@ ConsistencySummary calculateConsistency(
 /// did not begin inside it, so the whole range is the divisor: a break
 /// inside the range lowers the average, as it should.
 ///
-/// Null when nothing in the series was trained.
+/// Null when nothing in the series was trained, unless training began
+/// before the range: then nothing in it is a break, and the average is 0.
 double? averageSessionsPerWeek({
   required List<WorkoutFrequency> weeks,
   required int? rangeDays,
@@ -152,7 +153,14 @@ double? averageSessionsPerWeek({
   DateTime? firstWorkoutAt,
 }) {
   final int firstActive = weeks.indexWhere((w) => w.workoutCount > 0);
-  if (firstActive == -1) return null;
+  if (firstActive == -1) {
+    final bool aBreak = rangeDays != null &&
+        trainedBeforeRange(
+          rangeStart: now.subtract(Duration(days: rangeDays)),
+          firstWorkoutAt: firstWorkoutAt,
+        );
+    return aBreak ? 0 : null;
+  }
   final int total = weeks.fold(0, (sum, w) => sum + w.workoutCount);
   final bool wholeRange = rangeDays != null &&
       (firstActive == 0 ||

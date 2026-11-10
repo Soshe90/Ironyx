@@ -98,12 +98,21 @@ Stream<List<SessionVolumeLoad>> sessionVolumeLoad(
 // the user's own time. The offset is read off [todayProvider], which also
 // re-runs these when the day changes.
 
+/// Whether training began before [range] (see `trainedBeforeRange`), so
+/// a range with nothing in it is a break, drawn as zero weeks, rather than
+/// a new user's empty page.
+bool _trainedBefore(Ref ref, ProgressRange range) => trainedBeforeRange(
+      rangeStart: ref.watch(progressSinceProvider(range)),
+      firstWorkoutAt: ref.watch(firstWorkoutAtProvider).value,
+    );
+
 @riverpod
 Stream<List<WeeklyVolume>> weeklyVolumeSeries(Ref ref, ProgressRange range) =>
     ref.watch(workoutDaoProvider).watchWeeklyVolume(
           since: ref.watch(progressSinceProvider(range)),
           weekStart: ref.watch(weekStartControllerProvider),
           utcOffset: ref.watch(todayProvider).timeZoneOffset,
+          fillEmptyRange: _trainedBefore(ref, range),
         );
 
 @riverpod
@@ -115,6 +124,7 @@ Stream<List<WorkoutFrequency>> workoutFrequencySeries(
           since: ref.watch(progressSinceProvider(range)),
           weekStart: ref.watch(weekStartControllerProvider),
           utcOffset: ref.watch(todayProvider).timeZoneOffset,
+          fillEmptyRange: _trainedBefore(ref, range),
         );
 
 @riverpod
@@ -245,6 +255,11 @@ Stream<List<BodyMetrics>> bodyMetricsSeries(Ref ref, ProgressRange range) => ref
 @riverpod
 Stream<DateTime?> firstWorkoutAt(Ref ref) =>
     ref.watch(workoutDaoProvider).watchFirstWorkoutAt();
+
+/// When the latest finished workout started, whatever the range.
+@riverpod
+Stream<DateTime?> lastWorkoutAt(Ref ref) =>
+    ref.watch(workoutDaoProvider).watchLastWorkoutAt();
 
 /// Exercises with logged sets, most-trained first — the 1RM picker's source.
 @riverpod

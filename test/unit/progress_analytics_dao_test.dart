@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
+import 'package:ironyx/core/formatters/date_formatters.dart';
 import 'package:ironyx/core/formatters/week_start.dart';
 
 void main() {
@@ -433,6 +434,93 @@ void main() {
 
       expect(
           await dao.watchFirstWorkoutAt().first, DateTime(2025, 6, 1, 9, 30));
+    });
+  });
+
+  group('a range with nothing in it', () {
+    Future<void> finished(String id, DateTime startedAt) => dao.insertWorkout(
+          WorkoutsTableCompanion.insert(
+            id: id,
+            startedAt: startedAt,
+            endedAt: Value(startedAt.add(const Duration(hours: 1))),
+            totalVolumeKg: const Value(1000),
+          ),
+          const [],
+          const [],
+        );
+
+    /// Every week bucket from the one holding [since] to the current one.
+    List<DateTime> weeksFrom(DateTime since) {
+      DateTime bucket(DateTime t) => DateFormatters.weekBucketStart(t,
+          weekStart: WeekStart.monday, utcOffset: Duration.zero);
+      final List<DateTime> weeks = <DateTime>[];
+      for (DateTime w = bucket(since);
+          !w.isAfter(bucket(DateTime.now()));
+          w = DateFormatters.nextWeek(w)) {
+        weeks.add(w);
+      }
+      return weeks;
+    }
+
+    test('stays empty unless the caller says training began before it',
+        () async {
+      final DateTime since = DateTime.now().subtract(const Duration(days: 30));
+      await finished('old', since.subtract(const Duration(days: 100)));
+
+      expect(await dao.watchWeeklyVolume(since: since).first, isEmpty);
+      expect(await dao.watchWorkoutFrequency(since: since).first, isEmpty);
+    });
+
+    test('is every week of the range at zero after a break', () async {
+      final DateTime since = DateTime.now().subtract(const Duration(days: 30));
+      await finished('old', since.subtract(const Duration(days: 100)));
+
+      final volume =
+          await dao.watchWeeklyVolume(since: since, fillEmptyRange: true).first;
+      final frequency = await dao
+          .watchWorkoutFrequency(since: since, fillEmptyRange: true)
+          .first;
+
+      expect(volume.map((w) => w.weekStart), weeksFrom(since));
+      expect(volume.every((w) => w.totalVolumeKg == 0), isTrue);
+      expect(frequency.map((w) => w.weekStart), weeksFrom(since));
+      expect(frequency.every((w) => w.workoutCount == 0), isTrue);
+    });
+
+    test('all-time has no range to fill', () async {
+      expect(
+        await dao.watchWorkoutFrequency(fillEmptyRange: true).first,
+        isEmpty,
+      );
+    });
+
+    test('a range with workouts is filled as before', () async {
+      final DateTime since = DateTime.now().subtract(const Duration(days: 30));
+      await finished(
+          'recent', DateTime.now().subtract(const Duration(days: 3)));
+
+      final List<WorkoutFrequency> plain =
+          await dao.watchWorkoutFrequency(since: since).first;
+      final List<WorkoutFrequency> flagged = await dao
+          .watchWorkoutFrequency(since: since, fillEmptyRange: true)
+          .first;
+      expect(flagged.map((w) => (w.weekStart, w.workoutCount)),
+          plain.map((w) => (w.weekStart, w.workoutCount)));
+    });
+
+    test('watchLastWorkoutAt is the latest finished workout', () async {
+      expect(await dao.watchLastWorkoutAt().first, isNull);
+      await finished('a', DateTime(2026, 4, 1, 18));
+      await finished('b', DateTime(2026, 9, 2, 7, 15));
+      await dao.insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'open',
+          startedAt: DateTime(2026, 10, 1),
+        ),
+        const [],
+        const [],
+      );
+      expect(await dao.watchLastWorkoutAt().first, DateTime(2026, 9, 2, 7, 15));
     });
   });
 }
