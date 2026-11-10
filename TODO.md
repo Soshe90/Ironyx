@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,036 passed, 2 skipped, 0 failed** (2026-11-10; was
+- `flutter test`: **1,038 passed, 2 skipped, 0 failed** (2026-11-10; was
   876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -174,8 +174,19 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     on "Year" because empty weeks before the first workout filled its
     earlier half, and two screen-reader faults (the lift picker could not
     be pressed, axis ticks were read as bare numbers).
+  - **Real data in dark mode and pounds, checked the same day:** every
+    chapter reads correctly. It found body weight shown as "207.23 lb"
+    (94 kg converted, a precision no scale has): body weight now shows at
+    most one decimal in either unit (`UnitFormatters.bodyWeight`) on
+    Progress, the Home tile, the measurement rows and Personal details.
+    The 1RM chart's tooltip said "96.25 kg" under a "96 kg" headline; it
+    is rounded like the headline now.
   - **Not checked:** TalkBack gestures and reading order (only the labels
-    it would read); the real data in dark mode and pounds.
+    it would read).
+  - **Open, found on Home with the same data:** on a Tuesday with no
+    workout yet, this week's volume reads "0 lb ↓100%" against last week.
+    It is the unfinished-week problem Progress had; not changed, since it
+    is the Home tab.
 - Changed 2026-11-05, Progress tab:
   - **Wrong data fixed.** Effort, rest, session volume and weekly-by-muscle
     were tables that printed the first 8 or 12 rows of an oldest-first

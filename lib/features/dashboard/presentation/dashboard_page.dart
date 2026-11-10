@@ -1083,7 +1083,7 @@ class _BodyWeightCard extends ConsumerWidget {
       error: metricsAsync.error,
       metric: metricsAsync.value == null
           ? null
-          : UnitFormatters.weight(
+          : UnitFormatters.bodyWeight(
               metricsAsync.value!.weightKg, unit, context.l10n),
       caption: metricsAsync.value == null
           ? null

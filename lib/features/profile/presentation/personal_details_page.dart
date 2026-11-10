@@ -149,7 +149,7 @@ class _BodyState extends ConsumerState<_Body> {
                   label: l10n.profileWeight,
                   value: draft.weightKg == null
                       ? l10n.profileNotSet
-                      : UnitFormatters.weight(
+                      : UnitFormatters.bodyWeight(
                           draft.weightKg!, unit, context.l10n),
                   onPressed: () => _pickWeight(unit),
                 ),

@@ -72,6 +72,33 @@ void main() {
     });
   });
 
+  group('bodyWeight', () {
+    test('keeps at most one decimal, in either unit', () async {
+      final AppLocalizations en =
+          await AppLocalizations.delegate.load(const Locale('en'));
+      // 94 kg is 207.234 lb: a scale shows 207.2, not 207.23.
+      expect(UnitFormatters.bodyWeight(94, WeightUnit.lb, en), '207.2 lb');
+      expect(UnitFormatters.bodyWeight(94, WeightUnit.kg, en), '94 kg');
+      expect(UnitFormatters.bodyWeight(82.5, WeightUnit.kg, en), '82.5 kg');
+      expect(UnitFormatters.bodyWeight(82.46, WeightUnit.kg, en), '82.5 kg');
+      expect(
+        UnitFormatters.bodyWeight(94, WeightUnit.lb, en, withUnit: false),
+        '207.2',
+      );
+    });
+
+    test('a weight entered in pounds reads back as entered', () async {
+      final AppLocalizations en =
+          await AppLocalizations.delegate.load(const Locale('en'));
+      for (final double lb in <double>[150, 180.4, 207.2, 99.9]) {
+        final double kg = UnitFormatters.toKg(lb, WeightUnit.lb);
+        expect(UnitFormatters.bodyWeight(kg, WeightUnit.lb, en),
+            '${UnitFormatters.oneDecimal(lb).replaceAll(RegExp(r'\.0$'), '')} lb',
+            reason: '$lb lb');
+      }
+    });
+  });
+
   group('unitless figures', () {
     test('oneDecimal keeps one decimal, rounds, and groups thousands', () {
       expect(UnitFormatters.oneDecimal(7), '7.0');

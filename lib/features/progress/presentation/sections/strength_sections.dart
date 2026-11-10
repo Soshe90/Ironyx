@@ -467,8 +467,10 @@ class _LiftChartSectionState extends ConsumerState<LiftChartSection> {
                     DatedPoint(
                       date: p.date,
                       value: p.estimated1RM,
+                      // Rounded like the headline above it: an Epley
+                      // estimate is not good to the 10 g.
                       tooltip:
-                          UnitFormatters.weight(p.estimated1RM, unit, l10n),
+                          UnitFormatters.estimate(p.estimated1RM, unit, l10n),
                       isPersonalRecord: p.isPersonalRecord,
                     ),
                 ],

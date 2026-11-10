@@ -109,8 +109,8 @@ class BodyMetricsSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             ProgressChartCard(
-              headline:
-                  UnitFormatters.weight(latest.weightKg, unit, context.l10n),
+              headline: UnitFormatters.bodyWeight(
+                  latest.weightKg, unit, context.l10n),
               caption: [
                 DateFormatters.of(context).relativeDay(latest.date),
                 if (latest.bodyFatPercentage != null)
@@ -139,14 +139,14 @@ class BodyMetricsSection extends ConsumerWidget {
                           DatedPoint(
                             date: e.date,
                             value: e.weightKg,
-                            tooltip: UnitFormatters.weight(
+                            tooltip: UnitFormatters.bodyWeight(
                               e.weightKg,
                               unit,
                               context.l10n,
                             ),
                           ),
                       ],
-                      axisLabel: (double kg) => UnitFormatters.weight(
+                      axisLabel: (double kg) => UnitFormatters.bodyWeight(
                         kg,
                         unit,
                         context.l10n,
