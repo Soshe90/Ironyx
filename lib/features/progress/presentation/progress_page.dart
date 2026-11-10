@@ -76,18 +76,22 @@ class ProgressPage extends ConsumerStatefulWidget {
 }
 
 class _ProgressPageState extends ConsumerState<ProgressPage> {
-  String? _exerciseId;
-
   final GlobalKey _viewportKey = GlobalKey();
   final Map<_Chapter, GlobalKey> _chapterKeys = <_Chapter, GlobalKey>{
     for (final _Chapter chapter in _Chapter.values) chapter: GlobalKey(),
   };
 
   /// The chapter being read, or null above the first one.
-  _Chapter? _active;
+  ///
+  /// This and [_scrolled] are notifiers rather than `setState` fields: they
+  /// change while the reader scrolls, and only the pinned tab row and its
+  /// hairline show them. As page state, every chapter boundary crossed
+  /// rebuilt all thirty sections and every chart, mid-fling.
+  final ValueNotifier<_Chapter?> _active = ValueNotifier<_Chapter?>(null);
 
   /// True while a tab tap is scrolling to its chapter, so the chapters
-  /// passed on the way do not each light up in turn.
+  /// passed on the way do not each light up in turn. Read only by
+  /// [_onScroll], never by `build`, so changing it needs no rebuild.
   bool _jumping = false;
 
   /// Counts tab taps, so a jump that a later tap has overtaken does not
@@ -95,7 +99,14 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
   int _jump = 0;
 
   /// Whether anything has scrolled under the pinned controls.
-  bool _scrolled = false;
+  final ValueNotifier<bool> _scrolled = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _active.dispose();
+    _scrolled.dispose();
+    super.dispose();
+  }
 
   /// The last chapter whose heading has reached the top of the scroll view.
   _Chapter? _chapterAtTop() {
@@ -118,8 +129,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     // Depth 0 is the page itself; anything deeper is a scrollable inside it.
     if (notification.depth != 0) return false;
     final ScrollMetrics metrics = notification.metrics;
-    final bool scrolled = metrics.pixels > 0;
-    _Chapter? chapter = _active;
+    _Chapter? chapter = _active.value;
     if (!_jumping) {
       chapter = _chapterAtTop();
       // The last chapter can be too short for its heading ever to reach
@@ -129,12 +139,9 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
         chapter = _Chapter.values.last;
       }
     }
-    if (chapter != _active || scrolled != _scrolled) {
-      setState(() {
-        _active = chapter;
-        _scrolled = scrolled;
-      });
-    }
+    // A notifier only notifies when its value really changes.
+    _active.value = chapter;
+    _scrolled.value = metrics.pixels > 0;
     return false;
   }
 
@@ -143,36 +150,14 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     if (heading == null) return;
     final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     final int jump = ++_jump;
-    setState(() {
-      _active = chapter;
-      _jumping = true;
-    });
+    _active.value = chapter;
+    _jumping = true;
     await Scrollable.ensureVisible(
       heading,
       duration: reduceMotion ? Duration.zero : AppDuration.slow,
       curve: Curves.easeOutCubic,
     );
-    if (mounted && jump == _jump) setState(() => _jumping = false);
-  }
-
-  /// The Body chapter's heading. Logging is offered here, as a quiet
-  /// action, once there is something logged; with nothing logged the empty
-  /// card below carries the button instead, so it is never shown twice.
-  Widget _bodyHeader(AppLocalizations l10n, ProgressRange range) {
-    final bool hasEntries =
-        ref.watch(bodyMetricsSeriesProvider(range)).value?.isNotEmpty ?? false;
-    return SectionHeader(
-      title: l10n.progressBodyMetricsTitle,
-      subtitle: l10n.progressBodyMetricsSubtitle,
-      actionLabel: hasEntries ? l10n.progressLogMeasurement : null,
-      onAction: hasEntries
-          ? () => showBodyMetricEditor(
-                context,
-                ref,
-                unit: ref.read(weightUnitControllerProvider),
-              )
-          : null,
-    );
+    if (mounted && jump == _jump) _jumping = false;
   }
 
   @override
@@ -184,9 +169,16 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
     // Nothing logged yet: one screen-level invitation instead of a dozen
     // identical "No data yet" cards. Body measurements stay, because they
     // can be recorded before any workout exists.
-    final AsyncValue<List<LoggedExercise>> logged =
-        ref.watch(loggedExercisesProvider);
-    if (logged.hasValue && logged.value!.isEmpty) {
+    //
+    // Selected down to the one fact the page needs: the list itself changes
+    // with every set logged, and the whole page rebuilt with it.
+    final bool nothingLogged = ref.watch(
+      loggedExercisesProvider.select(
+        (AsyncValue<List<LoggedExercise>> logged) =>
+            logged.value?.isEmpty ?? false,
+      ),
+    );
+    if (nothingLogged) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.navProgress)),
         body: PageBody(
@@ -203,7 +195,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                   onAction: () => context.pushNamed(Routes.activeWorkoutName),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                _bodyHeader(l10n, range),
+                _BodyHeader(range: range),
                 _BodyMetricsSection(range: range),
               ],
             ),
@@ -232,24 +224,31 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
         child: Column(
           children: <Widget>[
             _RangeSelector(range: range),
-            ProgressChapterTabs<_Chapter>(
-              chapters: <(_Chapter, String)>[
-                (_Chapter.strength, l10n.progressChapterStrength),
-                (_Chapter.volume, l10n.progressChapterVolume),
-                (_Chapter.habits, l10n.progressChapterHabits),
-                (_Chapter.body, l10n.progressChapterBody),
-              ],
-              active: _active,
-              onSelected: _jumpTo,
+            ValueListenableBuilder<_Chapter?>(
+              valueListenable: _active,
+              builder: (BuildContext context, _Chapter? active, _) =>
+                  ProgressChapterTabs<_Chapter>(
+                chapters: <(_Chapter, String)>[
+                  (_Chapter.strength, l10n.progressChapterStrength),
+                  (_Chapter.volume, l10n.progressChapterVolume),
+                  (_Chapter.habits, l10n.progressChapterHabits),
+                  (_Chapter.body, l10n.progressChapterBody),
+                ],
+                active: active,
+                onSelected: _jumpTo,
+              ),
             ),
             // A hairline once content slides under the pinned controls, so
             // they read as a layer above it rather than part of it.
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: _scrolled
-                  ? Theme.of(context).colorScheme.outlineVariant
-                  : Colors.transparent,
+            ValueListenableBuilder<bool>(
+              valueListenable: _scrolled,
+              builder: (BuildContext context, bool scrolled, _) => Divider(
+                height: 1,
+                thickness: 1,
+                color: scrolled
+                    ? Theme.of(context).colorScheme.outlineVariant
+                    : Colors.transparent,
+              ),
             ),
             Expanded(
               child: NotificationListener<ScrollNotification>(
@@ -284,12 +283,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                         subtitle: l10n.progressEstimatedOneRmSubtitle,
                         explainer: ProgressExplainers.oneRm(l10n),
                       ),
-                      _OneRmSection(
-                        range: range,
-                        exerciseId: _exerciseId,
-                        onExerciseChanged: (String? id) =>
-                            setState(() => _exerciseId = id),
-                      ),
+                      _OneRmSection(range: range),
 
                       // ---- Volume: "how much work, and where did it go?" ----
                       ProgressChapter(
@@ -347,7 +341,7 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
                         key: _chapterKeys[_Chapter.body],
                         title: l10n.progressChapterBody,
                       ),
-                      _bodyHeader(l10n, range),
+                      _BodyHeader(range: range),
                       _BodyMetricsSection(range: range),
                       const SizedBox(height: AppSpacing.xl),
                     ],
@@ -358,6 +352,41 @@ class _ProgressPageState extends ConsumerState<ProgressPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The Body chapter's heading. Logging is offered here, as a quiet action,
+/// once there is something logged; with nothing logged the empty card below
+/// carries the button instead, so it is never shown twice.
+///
+/// Its own widget so that a new measurement rebuilds this heading, not the
+/// page around it.
+class _BodyHeader extends ConsumerWidget {
+  const _BodyHeader({required this.range});
+
+  final ProgressRange range;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = context.l10n;
+    final bool hasEntries = ref.watch(
+      bodyMetricsSeriesProvider(range).select(
+        (AsyncValue<List<BodyMetrics>> entries) =>
+            entries.value?.isNotEmpty ?? false,
+      ),
+    );
+    return SectionHeader(
+      title: l10n.progressBodyMetricsTitle,
+      subtitle: l10n.progressBodyMetricsSubtitle,
+      actionLabel: hasEntries ? l10n.progressLogMeasurement : null,
+      onAction: hasEntries
+          ? () => showBodyMetricEditor(
+                context,
+                ref,
+                unit: ref.read(weightUnitControllerProvider),
+              )
+          : null,
     );
   }
 }
@@ -994,16 +1023,13 @@ enum _LiftMetric { oneRm, volume }
 /// and a switch. The volume used to be a separate table of dates under the
 /// chart, which listed the oldest eight sessions of the range and so never
 /// reached the current week.
+///
+/// The chosen lift is this card's own state. It used to live on the page,
+/// which only this card read, and choosing a lift rebuilt every section.
 class _OneRmSection extends ConsumerStatefulWidget {
-  const _OneRmSection({
-    required this.range,
-    required this.exerciseId,
-    required this.onExerciseChanged,
-  });
+  const _OneRmSection({required this.range});
 
   final ProgressRange range;
-  final String? exerciseId;
-  final ValueChanged<String?> onExerciseChanged;
 
   @override
   ConsumerState<_OneRmSection> createState() => _OneRmSectionState();
@@ -1011,6 +1037,11 @@ class _OneRmSection extends ConsumerStatefulWidget {
 
 class _OneRmSectionState extends ConsumerState<_OneRmSection> {
   _LiftMetric _metric = _LiftMetric.oneRm;
+
+  /// The lift being shown. Pinned to the most-trained lift on first build,
+  /// so a change in which lift is trained most does not swap the chart
+  /// under the reader.
+  String? _exerciseId;
 
   @override
   Widget build(BuildContext context) {
@@ -1037,20 +1068,23 @@ class _OneRmSectionState extends ConsumerState<_OneRmSection> {
           );
         }
 
-        final String selected =
-            items.any((LoggedExercise i) => i.exerciseId == widget.exerciseId)
-                ? widget.exerciseId!
-                : items.first.exerciseId;
-        if (widget.exerciseId == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) widget.onExerciseChanged(selected);
-          });
+        // A lift can stop being listed (its workouts deleted); fall back to
+        // the most-trained one rather than show nothing. Assigned without
+        // setState: this build already shows it, and the field only
+        // remembers the choice for the next one.
+        if (!items.any((LoggedExercise i) => i.exerciseId == _exerciseId)) {
+          _exerciseId = items.first.exerciseId;
         }
+        final String selected = _exerciseId!;
 
         final Widget header = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             DropdownButtonFormField<String>(
+              // initialValue is read once; keyed so a fallback to another
+              // lift resets the field instead of leaving it on an id that
+              // is no longer one of its items (an assertion failure).
+              key: ValueKey<String>(selected),
               initialValue: selected,
               decoration: InputDecoration(
                 labelText: l10n.progressExerciseField,
@@ -1074,7 +1108,9 @@ class _OneRmSectionState extends ConsumerState<_OneRmSection> {
                     ),
                   ),
               ],
-              onChanged: widget.onExerciseChanged,
+              onChanged: (String? id) {
+                if (id != null) setState(() => _exerciseId = id);
+              },
             ),
             const SizedBox(height: AppSpacing.sm),
             SegmentedPills<_LiftMetric>(

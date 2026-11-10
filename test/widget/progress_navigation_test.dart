@@ -305,6 +305,68 @@ void main() {
       await disposeApp(tester);
     });
 
+    // The hero takes a parameter, so it cannot be const: the page builds a
+    // new instance every time the page itself rebuilds. Seeing the same
+    // instance after scrolling means the sections were left alone.
+    testWidgets('following the reader does not rebuild the sections',
+        (tester) async {
+      await pumpProgress(tester);
+      final Widget hero = tester.widget(find.byType(ProgressOverviewHero));
+      final ScrollController controller = controllerOf(tester);
+
+      final double viewportTop = tester.getBottomLeft(tabs).dy;
+      controller.jumpTo(
+        tester.getTopLeft(heading('Volume')).dy - viewportTop,
+      );
+      await tester.pump();
+      expect(activeChapter(tester), 'volume');
+
+      await tester.tap(tab('Body'));
+      await tester.pumpAndSettle();
+      expect(activeChapter(tester), 'body');
+
+      controller.jumpTo(0);
+      await tester.pump();
+      expect(activeChapter(tester), isNull);
+
+      expect(
+        identical(tester.widget(find.byType(ProgressOverviewHero)), hero),
+        isTrue,
+        reason: 'the page rebuilt while only the pinned tabs changed',
+      );
+      await disposeApp(tester);
+    });
+
+    testWidgets('the chosen lift stays chosen when the range changes',
+        (tester) async {
+      await pumpProgress(tester);
+      final Finder picker = find.byType(DropdownButtonFormField<String>);
+      String? chosen() =>
+          tester.widget<DropdownButtonFormField<String>>(picker).initialValue;
+
+      // Both lifts are logged equally often; take whichever is not shown.
+      final String other = chosen() == 'bench' ? 'row' : 'bench';
+      final String otherName =
+          other == 'bench' ? 'Barbell Bench Press' : 'Seated Cable Row';
+      await tapInPage(tester, picker);
+      await tester.tap(find.textContaining(otherName).last);
+      await settle(tester);
+      expect(chosen(), other);
+
+      controllerOf(tester).jumpTo(0);
+      await tester.pump();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedPills<ProgressRange>),
+          matching: find.text('1Y'),
+        ),
+      );
+      await settle(tester);
+
+      expect(chosen(), other);
+      await disposeApp(tester);
+    });
+
     testWidgets('a tab says whether it is the chapter being read',
         (tester) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
