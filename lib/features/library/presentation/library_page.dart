@@ -9,7 +9,6 @@ import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/equipment.dart' as db;
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/muscles.dart';
-import '../../../core/formatters/search_fold.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -19,6 +18,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/responsive.dart';
 import '../domain/exercise_catalogue_l10n.dart';
+import 'exercise_search.dart';
 import 'widgets/exercise_detail_sheet.dart';
 import 'widgets/exercise_media.dart';
 
@@ -30,65 +30,22 @@ class LibraryPage extends ConsumerStatefulWidget {
   ConsumerState<LibraryPage> createState() => _LibraryPageState();
 }
 
-class _LibraryPageState extends ConsumerState<LibraryPage> {
-  final TextEditingController _searchController = TextEditingController();
+class _LibraryPageState extends ConsumerState<LibraryPage>
+    with DebouncedSearch<LibraryPage> {
   String? _selectedMuscleId;
   String? _selectedEquipmentId;
   MovementPattern? _selectedPattern;
 
-  /// Committed search term. Separate from the controller's text so that
-  /// typing does not re-run the query on every keystroke — each one would
-  /// otherwise swap the watched provider and start a new database stream.
-  String _query = '';
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    // Rebuild immediately so the clear affordance tracks the field, but
-    // hold the query itself until typing settles.
-    setState(() {});
-    _debounce?.cancel();
-    _debounce = Timer(AppDuration.inputDebounce, () {
-      if (mounted) setState(() => _query = value.trim());
-    });
-  }
-
-  void _commitSearch(String value) {
-    _debounce?.cancel();
-    setState(() => _query = value.trim());
-  }
-
   @override
   Widget build(BuildContext context) {
-    final searchQuery = _query;
-    // Arabic names are translations the database does not hold, so an
-    // Arabic search matched nothing at all: the SQL search sees only the
-    // stored English names and aliases. It is matched in memory instead,
-    // against the names shown, over the same list the filters give.
-    final bool arabicSearch = containsArabic(searchQuery);
-
-    // The search (a Latin one; see above) and the filters narrow one
-    // query together.
-    final String? sqlQuery =
-        searchQuery.isNotEmpty && !arabicSearch ? searchQuery : null;
-    final bool narrowed = sqlQuery != null ||
-        _selectedMuscleId != null ||
-        _selectedEquipmentId != null ||
-        _selectedPattern != null;
-    final source = narrowed
-        ? exercisesFilteredStreamProvider(
-            query: sqlQuery,
-            muscleId: _selectedMuscleId,
-            equipmentId: _selectedEquipmentId,
-            pattern: _selectedPattern,
-          )
-        : allExercisesStreamProvider;
+    // The search and the filters narrow one query together; an Arabic
+    // search is matched in memory (see exerciseSource).
+    final source = exerciseSource(
+      query: query,
+      muscleId: _selectedMuscleId,
+      equipmentId: _selectedEquipmentId,
+      pattern: _selectedPattern,
+    );
     final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(source);
 
     return Scaffold(
@@ -113,23 +70,23 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               AppSpacing.sm,
             ),
             child: TextField(
-              controller: _searchController,
+              controller: searchController,
               decoration: InputDecoration(
                 hintText: context.l10n.librarySearchHint,
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
+                suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         tooltip: context.l10n.libraryClearSearch,
                         onPressed: () {
-                          _searchController.clear();
-                          _commitSearch('');
+                          searchController.clear();
+                          commitSearch('');
                         },
                       )
                     : null,
               ),
-              onChanged: _onSearchChanged,
-              onSubmitted: _commitSearch,
+              onChanged: onSearchChanged,
+              onSubmitted: commitSearch,
             ),
           ),
 
@@ -140,12 +97,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           Expanded(
             child: exercisesAsync.when(
               data: (exercises) => _ExerciseList(
-                exercises: sortedByDisplayedName(
-                  context,
-                  arabicSearch
-                      ? matchingDisplayedName(context, exercises, searchQuery)
-                      : exercises,
-                ),
+                exercises: shownExercises(context, exercises, query),
                 onExerciseTap: _showExerciseDetail,
                 hasActiveFilters: _hasActiveFilters,
                 onClearFilters: _clearFilters,
@@ -169,13 +121,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       _selectedMuscleId != null ||
       _selectedEquipmentId != null ||
       _selectedPattern != null ||
-      _query.isNotEmpty;
+      query.isNotEmpty;
 
   void _clearFilters() {
-    _debounce?.cancel();
     setState(() {
-      _searchController.clear();
-      _query = '';
+      resetSearch();
       _selectedMuscleId = null;
       _selectedEquipmentId = null;
       _selectedPattern = null;
@@ -477,19 +427,12 @@ class _ExerciseRow extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final exercise = summary.exercise;
-    final String equipmentLabel = localizedEquipmentNames(context, summary)
-        .join(context.l10n.listSeparator);
-    final String? muscle = summary.primaryMuscle?.localizedName(context);
     final String? thumbnailUrl = exercisePictureUrl(summary.media);
     final IconData fallbackIcon = summary.equipmentIds.isEmpty
         ? Icons.fitness_center
         : equipmentIcon(summary.equipmentIds.first);
 
-    final String meta = <String>[
-      if (muscle != null) muscle,
-      if (equipmentLabel.isNotEmpty) equipmentLabel,
-      exercise.movementPattern.localizedLabel(context.l10n),
-    ].join(' · ');
+    final String meta = exerciseDetailLine(context, summary);
 
     return AppCard(
       onTap: onTap,
