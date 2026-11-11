@@ -127,6 +127,17 @@ Stream<List<WorkoutFrequency>> workoutFrequencySeries(
           fillEmptyRange: _trainedBefore(ref, range),
         );
 
+/// Every week from the first workout to now, for the streaks on Home and
+/// on Progress, which are not figures about a range (see
+/// [calculateConsistency]). One row per week, about 52 a year, re-read when
+/// workouts change. One provider for both tabs, so one query.
+@riverpod
+Stream<List<WorkoutFrequency>> allTimeWorkoutFrequency(Ref ref) =>
+    ref.watch(workoutDaoProvider).watchWorkoutFrequency(
+          weekStart: ref.watch(weekStartControllerProvider),
+          utcOffset: ref.watch(todayProvider).timeZoneOffset,
+        );
+
 @riverpod
 Stream<List<SessionRpe>> rpeAnalytics(Ref ref, ProgressRange range) => ref
     .watch(workoutDaoProvider)
@@ -175,8 +186,13 @@ Future<ConsistencySummary> consistencySummary(
   // are easy to lose if the provider rebuilds while it is suspended.
   final weekStart = ref.watch(weekStartControllerProvider);
   final Duration utcOffset = ref.watch(todayProvider).timeZoneOffset;
+  // The app's clock, as the range itself uses. Left to default, "this
+  // week" came from the device clock, which tests and the range ignore.
+  final DateTime now = ref.watch(localNowProvider);
   final Future<List<WorkoutFrequency>> weeksFuture =
       ref.watch(workoutFrequencySeriesProvider(range).future);
+  final Future<List<WorkoutFrequency>> historyFuture =
+      ref.watch(allTimeWorkoutFrequencyProvider.future);
   // Watched, not read once: a target changed in Settings used to leave
   // adherence measured against the old one until the app restarted.
   final Future<Profile?> profileFuture =
@@ -187,8 +203,11 @@ Future<ConsistencySummary> consistencySummary(
   final weeks = await weeksFuture;
   final Profile? profile = await profileFuture;
   final DateTime? firstWorkout = await firstFuture;
+  final List<WorkoutFrequency> history = await historyFuture;
   return calculateConsistency(
     weeks: weeks,
+    history: history,
+    now: now,
     targetSessionsPerWeek:
         profile?.weeklySessionTarget ?? defaultWeeklySessionTarget,
     weekStart: weekStart,

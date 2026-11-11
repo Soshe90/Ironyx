@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,050 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,058 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -149,10 +149,24 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     the provider (20 weeks reads 20; a week off ends it; none is 0; it
     regroups when the first day of the week changes). The old figure was
     reproduced first: 20 straight weeks read 8. **Not checked:** on the
-    phone. **Still open:** Progress's own current streak is counted inside
-    the selected range, so it is capped by the range ("1 month" cannot
-    show more than about five weeks). Not changed here, which was Home's
-    review.
+    phone.
+  - **Fixed, at the owner's request: Progress's streaks were capped by the
+    range.** Both were counted inside the selected range, so on "1M"
+    neither could pass about five weeks, and the longest left out any run
+    begun before the range. Its explainer already said "Longest streak is
+    your record across your whole history". Both now count over every week
+    since the first workout (`allTimeWorkoutFrequency`, one provider and
+    one query that Home's tile reads too; `calculateConsistency` takes it
+    as `history`, and a new shared `longestStreakWeeks`). Adherence is
+    still a figure about the range. With it: `consistencySummary` now
+    passes the app's clock, so "this week" no longer comes from the device
+    clock while the range comes from `localNow`. The explainer said a
+    streak counts weeks that met the session *target*; the app (both tabs)
+    has always counted any week with a workout, so the copy was corrected
+    (en, ar), and adherence is named as the figure that uses the target.
+    **Tested:** 20 straight weeks read 20 on "1M" (it read 5); a ten-week
+    run before the range is the longest (it read 1); both old figures
+    reproduced by running the new tests on the old code.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the

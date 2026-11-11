@@ -202,4 +202,36 @@ void main() {
     expect(summary.eligibleWeeks, 4);
     expect(summary.hitTargetWeeks, 0);
   });
+
+  group('the streaks', () {
+    test('are not capped by the range', () async {
+      // Twenty Mondays in a row, the last one yesterday (now is Tue 10 Nov
+      // 2026). "1M" holds five of them.
+      for (int i = 0; i < 20; i++) {
+        await logSquat('w$i', DateTime(2026, 6, 29 + 7 * i, 18), 100);
+      }
+      final ProviderContainer c = await container();
+      final provider = consistencySummaryProvider(ProgressRange.month);
+      c.listen(provider, (_, __) {});
+
+      final summary = await c.read(provider.future);
+      expect(summary.currentStreakWeeks, 20, reason: 'it read 5 on "1M"');
+      expect(summary.longestStreakWeeks, 20);
+    });
+
+    test('the longest can be from before the range', () async {
+      // Ten weeks from 6 Apr, then only this week's Monday.
+      for (int i = 0; i < 10; i++) {
+        await logSquat('old$i', DateTime(2026, 4, 6 + 7 * i, 18), 100);
+      }
+      await logSquat('now', DateTime(2026, 11, 9, 18), 100);
+      final ProviderContainer c = await container();
+      final provider = consistencySummaryProvider(ProgressRange.month);
+      c.listen(provider, (_, __) {});
+
+      final summary = await c.read(provider.future);
+      expect(summary.currentStreakWeeks, 1);
+      expect(summary.longestStreakWeeks, 10);
+    });
+  });
 }

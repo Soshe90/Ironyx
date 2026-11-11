@@ -571,4 +571,95 @@ void main() {
       }
     });
   });
+
+  group('longestStreakWeeks', () {
+    WorkoutFrequency at(DateTime monday, int count) =>
+        WorkoutFrequency(weekStart: monday, workoutCount: count);
+
+    test('nothing logged is no streak', () {
+      expect(longestStreakWeeks(weeks: const <WorkoutFrequency>[]), 0);
+    });
+
+    test('the longest run, broken by a zero week or a missing one', () {
+      expect(
+        longestStreakWeeks(weeks: <WorkoutFrequency>[
+          at(DateTime(2026, 9, 7), 1),
+          at(DateTime(2026, 9, 14), 1),
+          at(DateTime(2026, 9, 21), 1),
+          at(DateTime(2026, 9, 28), 0),
+          at(DateTime(2026, 10, 5), 2),
+          // 12 Oct missing
+          at(DateTime(2026, 10, 19), 1),
+          at(DateTime(2026, 10, 26), 1),
+        ]),
+        3,
+      );
+    });
+
+    test('in any order, and a repeated week is counted once', () {
+      expect(
+        longestStreakWeeks(weeks: <WorkoutFrequency>[
+          at(DateTime(2026, 11, 2), 1),
+          at(DateTime(2026, 10, 19), 1),
+          at(DateTime(2026, 10, 26), 1),
+          at(DateTime(2026, 10, 26), 2),
+        ]),
+        3,
+      );
+    });
+
+    test('survives weeks in which the clocks change', () {
+      // Only a zone that changes its clocks can tell: run with TZ=PST8PDT.
+      expect(
+        longestStreakWeeks(weeks: <WorkoutFrequency>[
+          for (final DateTime d in <DateTime>[
+            DateTime(2026, 3, 2),
+            DateTime(2026, 3, 9),
+            DateTime(2026, 3, 16),
+            DateTime(2026, 3, 23),
+            DateTime(2026, 3, 30),
+          ])
+            at(d, 1),
+        ]),
+        5,
+      );
+    });
+  });
+
+  group('calculateConsistency with the whole history', () {
+    WorkoutFrequency at(DateTime monday, int count) =>
+        WorkoutFrequency(weekStart: monday, workoutCount: count);
+
+    // Twenty trained weeks, the last one this week (Mon 9 Nov 2026).
+    final List<WorkoutFrequency> history = <WorkoutFrequency>[
+      for (int i = 0; i < 20; i++) at(DateTime(2026, 6, 29 + 7 * i), 1),
+    ];
+    final DateTime now = DateTime(2026, 11, 10, 11);
+
+    test('streaks come from the history, adherence from the range', () {
+      final ConsistencySummary summary = calculateConsistency(
+        weeks: history.sublist(15), // a range of five weeks
+        history: history,
+        targetSessionsPerWeek: 1,
+        now: now,
+      );
+      expect(summary.currentStreakWeeks, 20,
+          reason: 'it was 5, the length of the range');
+      expect(summary.longestStreakWeeks, 20);
+      expect(summary.eligibleWeeks, 5);
+      expect(summary.hitTargetWeeks, 5);
+    });
+
+    test('an empty range still shows the longest streak before it', () {
+      final ConsistencySummary summary = calculateConsistency(
+        weeks: const <WorkoutFrequency>[],
+        history: history,
+        targetSessionsPerWeek: 1,
+        now: DateTime(2027, 3, 1),
+      );
+      expect(summary.currentStreakWeeks, 0);
+      expect(summary.longestStreakWeeks, 20);
+      expect(summary.adherenceFraction, isNull);
+    });
+  });
 }

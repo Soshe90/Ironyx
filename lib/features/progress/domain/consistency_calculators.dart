@@ -27,6 +27,12 @@ class ConsistencySummary {
 /// [rangeStart] and [firstWorkoutAt] decide where adherence starts counting;
 /// see [trainedBeforeRange]. Without them it starts at the first trained
 /// week of the series.
+///
+/// The streaks are counted over [history], every week since the first
+/// workout, when it is given, and over [weeks] otherwise. Counted inside
+/// the range they were capped by it: on "1M" neither could pass about five
+/// weeks, and a streak begun before the range was cut at its start. Only
+/// adherence is a figure about the range.
 ConsistencySummary calculateConsistency(
     {required List<WorkoutFrequency> weeks,
     required int targetSessionsPerWeek,
@@ -34,11 +40,23 @@ ConsistencySummary calculateConsistency(
     Duration utcOffset = Duration.zero,
     DateTime? now,
     DateTime? rangeStart,
-    DateTime? firstWorkoutAt}) {
+    DateTime? firstWorkoutAt,
+    List<WorkoutFrequency>? history}) {
+  final currentWeek = DateFormatters.weekBucketStart(
+    now ?? DateTime.now(),
+    weekStart: weekStart,
+    utcOffset: utcOffset,
+  );
+  final List<WorkoutFrequency> streakWeeks = history ?? weeks;
+  final current =
+      currentStreakWeeks(weeks: streakWeeks, currentWeek: currentWeek);
+  final longest = longestStreakWeeks(weeks: streakWeeks);
   if (weeks.isEmpty) {
+    // Nothing in the range, but a streak from the history can still be
+    // the longest one.
     return ConsistencySummary(
-        currentStreakWeeks: 0,
-        longestStreakWeeks: 0,
+        currentStreakWeeks: current,
+        longestStreakWeeks: longest,
         adherenceFraction: null,
         targetSessionsPerWeek: targetSessionsPerWeek,
         eligibleWeeks: 0,
@@ -46,25 +64,6 @@ ConsistencySummary calculateConsistency(
   }
   final ordered = [...weeks]
     ..sort((a, b) => a.weekStart.compareTo(b.weekStart));
-  var longest = 0;
-  var run = 0;
-  for (final week in ordered) {
-    if (week.workoutCount > 0) {
-      run++;
-      if (run > longest) longest = run;
-    } else {
-      run = 0;
-    }
-  }
-  final currentWeek = DateFormatters.weekBucketStart(
-    now ?? DateTime.now(),
-    weekStart: weekStart,
-    utcOffset: utcOffset,
-  );
-  // By calendar day, not by 168 hours: across a daylight-saving change that
-  // lands on 23:00 the day before, which equals no bucket, so the streak
-  // read as broken for that week.
-  final current = currentStreakWeeks(weeks: ordered, currentWeek: currentWeek);
 
   // `weeks` is zero-filled from the selected range's nominal start (see
   // `WorkoutDao._fillWeekGaps`) so charts can show "you started partway
@@ -152,6 +151,32 @@ int currentStreakWeeks({
   }
   return streak;
 }
+
+/// The longest run of consecutive weeks with at least one workout.
+///
+/// Same rule as [currentStreakWeeks]: weeks matched by calendar day, in any
+/// order, and a week missing from [weeks] breaks a run as a zero week does.
+int longestStreakWeeks({required List<WorkoutFrequency> weeks}) {
+  final List<DateTime> trained = <DateTime>[
+    for (final WorkoutFrequency w in weeks)
+      if (w.workoutCount > 0) w.weekStart,
+  ]..sort();
+  int longest = 0;
+  int run = 0;
+  DateTime? previous;
+  for (final DateTime week in trained) {
+    final bool follows =
+        previous != null && _sameDay(DateFormatters.nextWeek(previous), week);
+    if (previous != null && _sameDay(previous, week)) continue;
+    run = follows ? run + 1 : 1;
+    if (run > longest) longest = run;
+    previous = week;
+  }
+  return longest;
+}
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
 
 /// Sessions per week over the time the range really covers.
 ///

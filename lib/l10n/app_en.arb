@@ -1254,9 +1254,9 @@
   "explainerBalancePoint2": "Above 1.33 is push-heavy, below 0.75 is pull-heavy. The upper/lower ratio reads the same way.",
   "explainerBalanceCaveat": "A deliberate imbalance is fine for a training block. It is the one you did not choose that is worth correcting.",
 
-  "explainerConsistencySummary": "Whether you are showing up. A streak counts consecutive weeks in which you logged at least your weekly session target.",
-  "explainerConsistencyPoint1": "The target comes from your profile, so the streak is measured against your plan rather than a fixed number.",
-  "explainerConsistencyPoint2": "Longest streak is your record across your whole history, not only the range selected above.",
+  "explainerConsistencySummary": "Whether you are showing up. A streak counts consecutive weeks with at least one workout.",
+  "explainerConsistencyPoint1": "Adherence is the share of weeks that met your weekly session target. The target comes from your profile, so it is measured against your plan rather than a fixed number.",
+  "explainerConsistencyPoint2": "Both streaks count across your whole history, not only the range selected above. The week in progress does not break a streak before it is over.",
   "explainerConsistencyCaveat": "Over a year, turning up regularly predicts progress better than any single session does.",
 
   "explainerStrengthChangeSummary": "Your best estimated 1RM for each exercise in the selected range, set against your best from any time before it. A lift you started inside the range is compared with its first session there.",

@@ -12,6 +12,7 @@ import '../../../core/formatters/week_start.dart';
 import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/services/clock.dart';
 import '../../progress/domain/consistency_calculators.dart';
+import '../../progress/domain/progress_providers.dart';
 
 part 'dashboard_providers.g.dart';
 
@@ -131,24 +132,18 @@ Stream<double> dashboardLastWeekToDateVolume(Ref ref) {
 /// From the whole history, not the hero's eight-week window: counted from
 /// that window the tile could never read more than "8 wk", however long the
 /// streak really was. Its own provider, so a failure here costs the tile
-/// and not the week card. The query is one row per week since the first
-/// workout (about 52 a year), re-read when workouts change, like the
-/// others here.
+/// and not the week card. The weeks come from [allTimeWorkoutFrequency],
+/// the same series Progress counts its streaks over.
 @riverpod
-Stream<int> dashboardStreakWeeks(Ref ref) {
+Future<int> dashboardStreakWeeks(Ref ref) async {
   final DateTime today = ref.watch(todayProvider);
   final WeekStart weekStart = ref.watch(weekStartControllerProvider);
-  final DateTime thisWeek = DateFormatters.startOfWeek(today, weekStart);
-  return ref
-      .watch(workoutDaoProvider)
-      .watchWorkoutFrequency(
-        weekStart: weekStart,
-        utcOffset: today.timeZoneOffset,
-      )
-      .map(
-        (List<WorkoutFrequency> weeks) =>
-            currentStreakWeeks(weeks: weeks, currentWeek: thisWeek),
-      );
+  final List<WorkoutFrequency> weeks =
+      await ref.watch(allTimeWorkoutFrequencyProvider.future);
+  return currentStreakWeeks(
+    weeks: weeks,
+    currentWeek: DateFormatters.startOfWeek(today, weekStart),
+  );
 }
 
 /// Window backing the dashboard's "this week" card and its sparkline.
