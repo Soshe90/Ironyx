@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,112 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,115 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -239,6 +239,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     removed (`trackerProgramOptions`, `trackerHistoryOptions`). **Tested:**
     one menu with both items and no section menus (fails on the old code);
     the existing import tests now open it.
+  - **Fixed: the XLSX confirm dialog's dates and spacing.** It showed the
+    range as ISO strings ("2026-11-04") in either language; the dates are
+    formatted like every other date in the app ("4 Nov 2026", "4 نوفمبر
+    2026"), keeping the workbook's calendar day (UTC midnight, formatted by
+    its own fields, so no time zone moves it). The gaps use the spacing
+    scale instead of literal 16 and 8. The body is its own widget,
+    `WorkoutXlsxImportPreview`, so it is tested without the file picker.
+    **Tested:** English and Arabic dates, and "No dates" for an empty file.
+    Not run on the old code: the body was not a widget of its own then.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs
