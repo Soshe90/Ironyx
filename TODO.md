@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,115 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,116 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -248,6 +248,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     `WorkoutXlsxImportPreview`, so it is tested without the file picker.
     **Tested:** English and Arabic dates, and "No dates" for an empty file.
     Not run on the old code: the body was not a widget of its own then.
+  - **Fixed: a history row was read twice by a screen reader.** Checked
+    first, by dumping the row's semantics node: its label was followed by
+    every text inside it ("Incline Press, Chest-Supported Row. Workout on
+    11 Nov 2026, 1,200 kg volume", then "Incline Press, +1, 1:46 PM · 45m,
+    1,200 kg"), and the time and duration were only in that second half.
+    The row is now read once: the exercises, the date and volume (or
+    sets), then the time and duration (`excludeSemantics`, with the tap
+    action on the label, since excluding the children drops the
+    InkWell's). The day sheet's rows are the same widget. **Tested:** the
+    label holds everything once, without the "+1" pill, and the semantics
+    tap opens the workout (fails on the old code). **Not checked:** with
+    TalkBack on the phone.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

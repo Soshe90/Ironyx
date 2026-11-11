@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
@@ -336,7 +337,7 @@ void main() {
       find.byWidgetPredicate(
         (Widget w) =>
             w is Semantics &&
-            (w.properties.label?.endsWith(', 3 sets') ?? false),
+            (w.properties.label?.contains(', 3 sets. ') ?? false),
       ),
       findsOneWidget,
     );
@@ -990,6 +991,40 @@ void main() {
     expect(find.byTooltip('Show calendar'), findsNothing);
     expect(find.byTooltip('Import'), findsOneWidget);
 
+    await disposeTracker(tester);
+  });
+
+  testWidgets('a history row is read once, and opens from its label',
+      (tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await pumpTracker(tester);
+
+    final Finder row = find.byWidgetPredicate(
+      (Widget w) =>
+          w is Semantics &&
+          (w.properties.label?.startsWith('Incline Press, ') ?? false),
+    );
+    final SemanticsNode node = tester.getSemantics(row);
+    final String label = node.label;
+
+    // Everything the row shows, once: the exercises, the date and volume,
+    // and the time and duration, which only the visible text carried.
+    expect(
+        label, startsWith('Incline Press, Chest-Supported Row. Workout on '));
+    expect(label, contains('1,200 kg volume'));
+    expect(label, endsWith(', 45m'));
+    expect(label, isNot(contains('+1')), reason: 'the pill is not read');
+    expect('Incline Press'.allMatches(label), hasLength(1));
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+
+    // What TalkBack does on a double tap: the node's tap action.
+    tester.semantics.tap(
+      find.semantics.byLabel(RegExp(r'^Incline Press, Chest-Supported Row\.')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TrackerPage), findsNothing, reason: 'on the workout');
+
+    handle.dispose();
     await disposeTracker(tester);
   });
 }

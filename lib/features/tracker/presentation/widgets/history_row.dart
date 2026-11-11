@@ -95,18 +95,33 @@ class WorkoutHistoryTile extends ConsumerWidget {
         workout.startedAt.month == today.month &&
         workout.startedAt.day == today.day;
 
+    final VoidCallback open = onOpen ??
+        () => context.pushNamed(
+              Routes.workoutDetailName,
+              pathParameters: {'id': workout.id},
+            );
+
+    // The row is read once, as this label. Without excludeSemantics the
+    // reader went on to every text inside it as well, so a row was heard
+    // twice ("Incline Press, Chest-Supported Row. Workout on 11 Nov 2026,
+    // 1,200 kg volume", then "Incline Press, +1, 1:46 PM · 45m, 1,200 kg"),
+    // and the time and duration were only in the second half: they are in
+    // the label now. Excluding the children drops the InkWell's tap action
+    // too, so the label carries its own.
     return Semantics(
-      label: title == null ? summary : '$title. $summary',
+      label: <String>[
+        if (title != null) title,
+        summary,
+        '$time${l10n.listSeparator}$duration',
+      ].join('. '),
       button: true,
+      excludeSemantics: true,
+      onTap: open,
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: onOpen ??
-              () => context.pushNamed(
-                    Routes.workoutDetailName,
-                    pathParameters: {'id': workout.id},
-                  ),
+          onTap: open,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Row(
