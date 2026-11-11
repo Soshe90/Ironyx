@@ -136,14 +136,17 @@ void main() {
       await database.close();
     }
 
-    Future<void> pumpLibrary(WidgetTester tester) => pumpApp(
+    Future<void> pumpLibrary(WidgetTester tester, {String? locale}) => pumpApp(
           tester,
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             ...stubSeeders(),
           ],
           initialLocation: '/library',
-          prefs: seededPrefs,
+          prefs: <String, Object>{
+            ...seededPrefs,
+            if (locale != null) 'app_locale': locale,
+          },
           surfaceSize: surface,
           // This screen is entirely Drift-stream driven.
           awaitDatabase: true,
@@ -157,6 +160,41 @@ void main() {
       expect(find.text('Back Squat'), findsOneWidget);
       expect(find.text('Push-Up'), findsOneWidget);
       expect(find.text('Pull-Up'), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('an Arabic search finds exercises by their Arabic name',
+        (tester) async {
+      // A slug the Arabic catalogue knows: "ضغط بار على مقعد مستوٍ".
+      await ExerciseDao(database).upsertExercises([
+        ExercisesTableCompanion.insert(
+          id: 'barbell-bench-press',
+          slug: 'barbell-bench-press',
+          name: 'Barbell Bench Press (catalogue)',
+          category: 'strength',
+          difficulty: 'intermediate',
+          movementPattern: 'horizontalPush',
+          seedVersion: 1,
+        ),
+      ]);
+      await pumpLibrary(tester, locale: 'ar');
+
+      // Without diacritics, with a plain alef: as a keyboard types it.
+      await tester.enterText(find.byType(TextField), 'ضغط بار مستو');
+      await tester.pump(AppDuration.inputDebounce);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ضغط بار على مقعد مستوٍ'), findsOneWidget);
+      // The others have no Arabic name and do not match.
+      expect(find.text('Back Squat'), findsNothing);
+      expect(find.text('Push-Up'), findsNothing);
+
+      // Something no name holds: nothing, and the empty state.
+      await tester.enterText(find.byType(TextField), 'سباحة');
+      await tester.pump(AppDuration.inputDebounce);
+      await tester.pumpAndSettle();
+      expect(find.text('ضغط بار على مقعد مستوٍ'), findsNothing);
 
       await disposeApp(tester);
     });

@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/tables/equipment.dart';
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/muscles.dart';
+import '../../../core/formatters/search_fold.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import 'exercise_catalogue_ar.dart';
 import 'exercise_instructions_ar_1.dart';
@@ -172,3 +174,21 @@ String? _lookup(BuildContext context, Map<String, String> table, String key) {
   }
   return table[key];
 }
+
+/// The exercises whose shown name, or stored English name, holds every
+/// word of [query] (see `matchesSearch`): the Library's search for a query
+/// in Arabic, which the SQL search cannot answer because the Arabic names
+/// are not in the database.
+List<ExerciseSummary> matchingDisplayedName(
+  BuildContext context,
+  List<ExerciseSummary> exercises,
+  String query,
+) =>
+    <ExerciseSummary>[
+      for (final ExerciseSummary s in exercises)
+        if (matchesSearch(
+          query,
+          <String>[s.exercise.displayName(context), s.exercise.name],
+        ))
+          s,
+    ];

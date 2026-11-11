@@ -9,6 +9,7 @@ import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/equipment.dart' as db;
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/muscles.dart';
+import '../../../core/formatters/search_fold.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -66,9 +67,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   @override
   Widget build(BuildContext context) {
     final searchQuery = _query;
+    // Arabic names are translations the database does not hold, so an
+    // Arabic search matched nothing at all: the SQL search sees only the
+    // stored English names and aliases. It is matched in memory instead,
+    // against the names shown, over the same list the filters give.
+    final bool arabicSearch = containsArabic(searchQuery);
 
     final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      searchQuery.isNotEmpty
+      searchQuery.isNotEmpty && !arabicSearch
           ? exercisesSearchStreamProvider(searchQuery)
           : (_selectedMuscleId != null ||
                   _selectedEquipmentId != null ||
@@ -130,7 +136,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           Expanded(
             child: exercisesAsync.when(
               data: (exercises) => _ExerciseList(
-                exercises: exercises,
+                exercises: arabicSearch
+                    ? matchingDisplayedName(context, exercises, searchQuery)
+                    : exercises,
                 onExerciseTap: _showExerciseDetail,
                 hasActiveFilters: _hasActiveFilters,
                 onClearFilters: _clearFilters,

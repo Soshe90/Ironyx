@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,118 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,121 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -128,6 +128,22 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-11, Library and Timer tabs (reviewed together, then
+  fixed one item at a time, on `library-timer/review-2026-11-11` from
+  `main` after #4 and #5 merged). **Not in the 1.0.5+6 bundle.**
+  - **Fixed: searching in Arabic found nothing.** The search is SQL over the
+    stored English names and aliases; the Arabic names are a Dart table
+    (`exercise_catalogue_ar.dart`) the database does not hold, and the seed
+    has no Arabic aliases. A query with an Arabic letter
+    (`containsArabic`) is now matched in memory against the name shown and
+    the stored name (`matchingDisplayedName`), over the list the filters
+    give; a Latin query stays in SQL, aliases included. Same in the
+    exercise picker sheet. The Progress lift picker's fold moved to
+    `core/formatters/search_fold.dart` (`foldForSearch`, `matchesSearch`,
+    renamed from `liftMatchesQuery`) so both use one. **Tested:** an Arabic
+    query typed without marks finds "ضغط بار على مقعد مستوٍ" (fails on the
+    old code); an unknown word finds nothing; `containsArabic`.
+    **Not checked:** on the phone.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

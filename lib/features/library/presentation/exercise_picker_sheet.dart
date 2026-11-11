@@ -8,6 +8,7 @@ import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/muscles.dart';
+import '../../../core/formatters/search_fold.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -64,9 +65,12 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final searchQuery = _query;
+    // As on the Library page: an Arabic query is matched in memory, against
+    // the names shown, since the database holds only the English ones.
+    final bool arabicSearch = containsArabic(searchQuery);
 
     final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      searchQuery.isNotEmpty
+      searchQuery.isNotEmpty && !arabicSearch
           ? exercisesSearchStreamProvider(searchQuery)
           : _selectedMuscleId != null
               ? exercisesFilteredStreamProvider(muscleId: _selectedMuscleId)
@@ -136,7 +140,10 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
           const SizedBox(height: AppSpacing.sm),
           Expanded(
             child: exercisesAsync.when(
-              data: (exercises) {
+              data: (all) {
+                final List<ExerciseSummary> exercises = arabicSearch
+                    ? matchingDisplayedName(context, all, searchQuery)
+                    : all;
                 if (exercises.isEmpty) {
                   return EmptyState(
                     icon: Icons.search_off,
