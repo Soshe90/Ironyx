@@ -572,6 +572,13 @@ class _ProgramTile extends StatelessWidget {
   }
 }
 
+/// The tab's primary action while a workout is open: the same filled
+/// button as starting one, with play for resume.
+///
+/// It was a plain card, lighter than the "Start workout" button it
+/// replaced, though an open workout is the most pressing thing on the
+/// page. Its words were "Workout in progress" over "3 exercises logged ·
+/// tap to resume"; a button says the action itself.
 class _ResumeWorkoutBanner extends StatelessWidget {
   const _ResumeWorkoutBanner({required this.exerciseCount});
 
@@ -579,39 +586,16 @@ class _ResumeWorkoutBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
-
-    return AppCard(
-      onTap: () => context.pushNamed(Routes.activeWorkoutName),
-      semanticLabel: context.l10n.trackerResumeSemantic,
-      child: Row(
-        children: [
-          Icon(Icons.play_circle_outline, color: scheme.primary),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  context.l10n.dashboardWorkoutInProgress,
-                  style: theme.textTheme.titleSmall,
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  exerciseCount == 0
-                      ? context.l10n.trackerTapToResume
-                      : context.l10n.trackerResumeWithExercises(
-                          context.l10n.exerciseCount(exerciseCount),
-                        ),
-                  style: AppTypography.caption(theme),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-        ],
+    final AppLocalizations l10n = context.l10n;
+    return FilledButton.icon(
+      onPressed: () => context.pushNamed(Routes.activeWorkoutName),
+      icon: const Icon(Icons.play_arrow),
+      label: Text(
+        exerciseCount == 0
+            ? l10n.dashboardResumeWorkout
+            : l10n.trackerResumeWithCount(l10n.exerciseCount(exerciseCount)),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

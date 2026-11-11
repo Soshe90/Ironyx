@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,104 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,105 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -186,6 +186,17 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     reliably. **Tested:** one workout opens directly (unchanged); several
     ask, and the earlier one opens (fails on the old code). Pinned clock,
     so the tests run at any hour.
+  - **Changed: an open workout is resumed from a filled button.** It was a
+    plain card ("Workout in progress" over "3 exercises logged · tap to
+    resume"), lighter than the "Start workout" button it took the place
+    of, though an open workout is the most pressing thing on the tab. It
+    is now the same filled button, with play, reading "Resume workout" or
+    "Resume workout · 3 exercises" (new string `trackerResumeWithCount`,
+    en/ar). The three strings only the card used are removed
+    (`trackerResumeSemantic`, `trackerTapToResume`,
+    `trackerResumeWithExercises`). **Tested:** the button, its icon and
+    that it opens the workout (fails on the old code); the count updates as
+    exercises are added. **Not checked:** on the phone.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

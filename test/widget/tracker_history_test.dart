@@ -791,7 +791,7 @@ void main() {
       await notifier.addExercise(exerciseId: 'my-bench', name: 'Incline Press');
     });
     await tester.pumpAndSettle();
-    expect(find.text('1 exercise logged · tap to resume'), findsOneWidget);
+    expect(find.text('Resume workout · 1 exercise'), findsOneWidget);
 
     final List<String> rebuilt = <String>[];
     debugOnRebuildDirtyWidget = (Element element, bool builtOnce) =>
@@ -817,8 +817,37 @@ void main() {
       () => notifier.addExercise(exerciseId: 'my-row', name: 'Row'),
     );
     await tester.pumpAndSettle();
-    expect(find.text('2 exercises logged · tap to resume'), findsOneWidget);
+    expect(find.text('Resume workout · 2 exercises'), findsOneWidget);
     expect(rebuilt, isNot(contains('TrackerPage')));
+
+    await tester.runAsync(notifier.discard);
+    await disposeTracker(tester);
+  });
+
+  testWidgets('an open workout is resumed from a filled button',
+      (tester) async {
+    await pumpTracker(tester);
+    final ProviderContainer container = ProviderScope.containerOf(
+      tester.element(find.byType(TrackerPage)),
+    );
+    final ActiveWorkoutNotifier notifier =
+        container.read(activeWorkoutProvider.notifier);
+    await tester.runAsync(notifier.start);
+    await tester.pumpAndSettle();
+
+    // No exercises yet: the action alone.
+    final Finder resume = find.widgetWithText(FilledButton, 'Resume workout');
+    expect(resume, findsOneWidget);
+    expect(
+      find.descendant(of: resume, matching: find.byIcon(Icons.play_arrow)),
+      findsOneWidget,
+    );
+    expect(find.text('Start workout'), findsNothing);
+    expect(find.text('Workout in progress'), findsNothing);
+
+    await tester.tap(resume);
+    await tester.pumpAndSettle();
+    expect(find.byType(TrackerPage), findsNothing, reason: 'on the workout');
 
     await tester.runAsync(notifier.discard);
     await disposeTracker(tester);

@@ -181,10 +181,9 @@
       "days": { "type": "String", "example": "4 days" }
     }
   },
-  "trackerResumeSemantic": "Resume in-progress workout",
-  "trackerTapToResume": "Tap to resume",
-  "trackerResumeWithExercises": "{exercises} logged · tap to resume",
-  "@trackerResumeWithExercises": {
+  "trackerResumeWithCount": "Resume workout · {exercises}",
+  "@trackerResumeWithCount": {
+    "description": "The Workouts tab's resume button while a workout is open. {exercises} is already counted, e.g. 3 exercises.",
     "placeholders": {
       "exercises": { "type": "String", "example": "3 exercises" }
     }

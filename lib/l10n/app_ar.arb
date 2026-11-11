@@ -172,10 +172,8 @@
       "days": { "type": "String" }
     }
   },
-  "trackerResumeSemantic": "متابعة التمرين الجاري",
-  "trackerTapToResume": "اضغط للمتابعة",
-  "trackerResumeWithExercises": "{exercises} مسجَّلة · اضغط للمتابعة",
-  "@trackerResumeWithExercises": {
+  "trackerResumeWithCount": "متابعة التمرين · {exercises}",
+  "@trackerResumeWithCount": {
     "placeholders": {
       "exercises": { "type": "String" }
     }
