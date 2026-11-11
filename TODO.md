@@ -193,8 +193,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     reloaded the full list instead, so it could not recover; it reloads the
     query on screen. The picker sheet's error had no Retry; it has one.
     **Tested:** a released search no longer exists; after a failed search,
-    Retry runs that search again (it went from 11 tries, the first plus
-    Riverpod's ten retries, to 11: nothing). Both fail on the old code.
+    Retry runs that search again (on the old code the count stayed at 11,
+    the first try plus Riverpod's ten retries). Both fail on the old code.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
