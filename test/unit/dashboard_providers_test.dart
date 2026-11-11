@@ -131,26 +131,6 @@ void main() {
     // currentStreakWeeks, and the provider's are in "the streak tile".
   });
 
-  group('ExerciseDao.watchLibrarySummary', () {
-    test('empty catalogue reports zero count and no recent name', () async {
-      final summary = await exerciseDao.watchLibrarySummary().first;
-      expect(summary.count, 0);
-      expect(summary.mostRecentName, isNull);
-    });
-
-    test('counts exercises and names the most recently added', () async {
-      await seedExercise('bench', 'Bench Press');
-      await seedExercise('squat', 'Back Squat');
-
-      final summary = await exerciseDao.watchLibrarySummary().first;
-      expect(summary.count, 2);
-      // Both rows share the same default createdAt in this test (inserted
-      // back-to-back), so just assert it resolves to one of the two names
-      // rather than asserting a specific insertion-order tie-break.
-      expect(summary.mostRecentName, anyOf('Bench Press', 'Back Squat'));
-    });
-  });
-
   group('WorkoutDao.watchAverageDurationSeconds', () {
     test('ignores incomplete and legacy workouts without durations', () async {
       await workoutDao.insertWorkout(

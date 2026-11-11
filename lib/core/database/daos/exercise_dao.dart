@@ -310,23 +310,6 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  // ---- Dashboard ----
-
-  /// Total exercise count and the most recently added exercise's name, for
-  /// the Library dashboard card. A single watched query so both numbers
-  /// update together.
-  Stream<LibrarySummary> watchLibrarySummary() {
-    final query = select(exercisesTable)
-      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]);
-    return query.watch().map((rows) {
-      if (rows.isEmpty) {
-        return const LibrarySummary(count: 0, mostRecentName: null);
-      }
-      return LibrarySummary(
-          count: rows.length, mostRecentName: rows.first.name);
-    });
-  }
-
   // ---- Seeding ----
 
   /// Upserts by id — a real `UPDATE` for an exercise a logged workout
@@ -449,14 +432,6 @@ ExerciseMedia? _videoMedia(List<ExerciseMedia> media) {
     if (m.type == ExerciseMediaType.video) return m;
   }
   return null;
-}
-
-/// Exercise counts for the Library dashboard card.
-class LibrarySummary {
-  const LibrarySummary({required this.count, required this.mostRecentName});
-
-  final int count;
-  final String? mostRecentName;
 }
 
 /// Lightweight, display-ready exercise for list/grid views — assembled

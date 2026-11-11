@@ -1,6 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/body_metrics.dart';
@@ -34,11 +33,6 @@ Stream<TimerSession?> dashboardLastTimerSession(Ref ref) =>
     ref.watch(timerDaoProvider).watchAll(limit: 1).map(
           (rows) => rows.isEmpty ? null : rows.first,
         );
-
-/// Exercise count and most recently added exercise, for the "Exercises" card.
-@riverpod
-Stream<LibrarySummary> dashboardLibrarySummary(Ref ref) =>
-    ref.watch(exerciseDaoProvider).watchLibrarySummary();
 
 /// The "Est. 1RM" tile: the main lift's best estimate over the last three
 /// months, and its trend against the best before them (see
