@@ -13,6 +13,7 @@ import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/services/clock.dart';
 import '../../progress/domain/consistency_calculators.dart';
 import '../../progress/domain/progress_providers.dart';
+import '../../tracker/domain/workout_draft.dart';
 import 'strength_headline.dart';
 
 part 'dashboard_providers.g.dart';
@@ -62,6 +63,27 @@ Future<StrengthHeadline?> dashboardStrengthHeadline(Ref ref) async {
 @riverpod
 Stream<BodyMetrics?> dashboardLatestBodyMetrics(Ref ref) =>
     ref.watch(bodyMetricsDaoProvider).watchLatest();
+
+/// The two numbers the start card shows for an open draft.
+typedef DraftCounts = ({int exercises, int completedSets});
+
+/// [draft]'s exercise count and completed-set count; null with no draft.
+///
+/// The start card selects these rather than watching the draft: the draft
+/// changes on every keystroke of a weight and every rep typed, while the
+/// workout page sits on top, and the card rebuilt for each one. A record
+/// compares by value, so the card now rebuilds only when a draft opens or
+/// closes, an exercise is added or removed, or a set is ticked or unticked.
+DraftCounts? draftCounts(WorkoutDraft? draft) => draft == null
+    ? null
+    : (
+        exercises: draft.exercises.length,
+        completedSets: draft.exercises.fold<int>(
+          0,
+          (int total, DraftExercise e) =>
+              total + e.sets.where((DraftSet s) => s.isCompleted).length,
+        ),
+      );
 
 /// Whether it is known that no workout has ever been finished: someone
 /// brand new, or who has deleted every workout.

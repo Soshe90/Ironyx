@@ -29,7 +29,10 @@ class TodayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final draft = ref.watch(activeWorkoutProvider);
+    // Only the counts the card shows (see [draftCounts]), so typing in the
+    // open workout does not rebuild it.
+    final DraftCounts? draft =
+        ref.watch(activeWorkoutProvider.select(draftCounts));
     final DateTime today = ref.watch(todayProvider);
     // Loading and failure both read as "no last workout" here; the Recent
     // row below owns this query's loading and error states.
@@ -37,13 +40,6 @@ class TodayCard extends ConsumerWidget {
     final ThemeData theme = Theme.of(context);
     final bool inProgress = draft != null;
     final AppLocalizations l10n = context.l10n;
-
-    final int loggedSets = draft == null
-        ? 0
-        : draft.exercises.fold<int>(
-            0,
-            (int total, e) => total + e.sets.where((s) => s.isCompleted).length,
-          );
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -104,7 +100,7 @@ class TodayCard extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             inProgress
-                ? _draftSummary(l10n, draft.exercises.length, loggedSets)
+                ? _draftSummary(l10n, draft.exercises, draft.completedSets)
                 // How long since the last session is the one fact that
                 // bears on starting another. The fixed sentence it replaces
                 // was read once and never again. Said as days ago, not as

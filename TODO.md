@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,093 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,095 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -351,6 +351,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     4 Nov (6,755 kg), last week from Saturday to the same moment. Not seen
     on the phone: the break caption, "999%+" and the welcome, which this
     data does not produce.
+  - **Performance: the start card no longer rebuilds while a workout is
+    typed in.** It watched the whole draft, which changes on every weight
+    and rep entered, while the workout page sits on top. It now selects
+    the two numbers it shows (`draftCounts`: exercises and completed
+    sets, a record compared by value), so it rebuilds only when a draft
+    opens or closes, an exercise is added or removed, or a set is ticked.
+    Nothing on screen changes. **Tested:** the selection hears ticking,
+    not typing (`draft_counts_test.dart`). **Reasoned, not tested:** that
+    the card uses it, from the code. This was the last of the twelve Home
+    review items.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
