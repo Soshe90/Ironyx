@@ -267,6 +267,21 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     string, en/ar). **Tested:** no spinner, three placeholders, the spoken
     label. Not run on the old code: the test names the new widget.
     This was the last of the twelve Workouts review items.
+  - **Checked on the phone, 2026-11-11** (debug build of `1491a49`, the
+    owner's data, Arabic): one "⋮" in the app bar holding both imports, in
+    Arabic; the Programs heading has only "New" and History only the
+    calendar; a history row is announced once, from the accessibility
+    dump: all eight exercises, the date, volume and record, then "9:29 ص،
+    58 د". The program order is Full Body, Upper / Lower, then Push / Pull
+    / Legs: the database copy showed the first two with `is_built_in = 0`,
+    which is by design (editing a built-in program makes it the user's, so
+    a re-seed cannot overwrite it), so they sort as the user's. **Found,
+    not changed:** `ProgramL10n.displayName` picks the Arabic name by id
+    alone, so an edited and *renamed* built-in program would still show
+    the built-in's Arabic name, against what `program_catalogue_ar.dart`
+    documents; nothing visible with this data (the names were kept).
+    **Not seen on the phone:** the day sheet, "N sets", the 10 MB message
+    and the history shimmer, which this data or speed does not produce.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs
