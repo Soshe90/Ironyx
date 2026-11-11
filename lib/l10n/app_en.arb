@@ -171,6 +171,8 @@
   "trackerNoWorkoutsMessage": "Finish a workout and it will show up here, with your volume and any personal records.",
   "trackerHistoryLoadFailed": "Failed to load history",
   "trackerProgramsLoadFailed": "Failed to load programs",
+  "trackerDayWorkoutsTitle": "Workouts on {date}",
+  "@trackerDayWorkoutsTitle": {"description": "Title of the sheet listing a calendar day's workouts when the day has more than one. {date} is the full date, already formatted.", "placeholders": {"date": {"type": "String"}}},
   "@trackerProgramsLoadFailed": {"description": "Shown in place of the programs row on the Workouts tab when the programs could not be read, above a Retry button."},
   "trackerProgramSemantic": "{name}, {days}",
   "@trackerProgramSemantic": {

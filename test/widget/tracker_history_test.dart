@@ -295,6 +295,86 @@ void main() {
     });
   });
 
+  group('a calendar day', () {
+    // Pinned to Tue 10 Nov 2026, so the calendar opens on November whatever
+    // the real date; the seeded workout (three hours before the real now)
+    // does not matter to these days.
+    DateTime fakeNow() => DateTime(2026, 11, 10, 12);
+
+    Future<void> add(String id, DateTime at, double kg, String exercise) =>
+        WorkoutDao(database).insertWorkout(
+          WorkoutsTableCompanion.insert(
+            id: id,
+            startedAt: at,
+            endedAt: Value(at.add(const Duration(minutes: 30))),
+            totalVolumeKg: Value(kg),
+          ),
+          [
+            WorkoutExercisesTableCompanion.insert(
+              id: '${id}_a',
+              workoutId: id,
+              exerciseId: exercise,
+              orderIndex: 0,
+            ),
+          ],
+          const [],
+        );
+
+    Future<void> tapDay(WidgetTester tester, int day) async {
+      await tester.tap(find.byTooltip('Show calendar'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(HistoryCalendar),
+          matching: find.text('$day'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('with one workout opens it', (tester) async {
+      await add('nov6', DateTime(2026, 11, 6, 18), 700, 'my-row');
+      await pumpTracker(tester, clock: fakeNow);
+      await tapDay(tester, 6);
+
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(HistoryCalendar), findsNothing,
+          reason: 'on the workout page now');
+      expect(find.text('Chest-Supported Row'), findsWidgets);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('with several asks which, and opens the one chosen',
+        (tester) async {
+      await add('morning', DateTime(2026, 11, 5, 8), 1100, 'my-bench');
+      await add('evening', DateTime(2026, 11, 5, 18), 800, 'my-row');
+      await pumpTracker(tester, clock: fakeNow);
+      await tapDay(tester, 5);
+
+      final Finder sheet = find.byType(BottomSheet);
+      expect(sheet, findsOneWidget);
+      expect(
+        find.descendant(
+            of: sheet, matching: find.textContaining('Workouts on')),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: sheet, matching: find.text('1,100 kg')),
+          findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('800 kg')),
+          findsOneWidget);
+
+      // The morning one, which tapping the day could not reach before.
+      await tester.tap(
+        find.descendant(of: sheet, matching: find.text('1,100 kg')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(HistoryCalendar), findsNothing);
+      expect(find.text('Incline Press'), findsWidgets);
+      await disposeTracker(tester);
+    });
+  });
+
   testWidgets('XLSX import moved into the history menu', (tester) async {
     await pumpTracker(tester);
 

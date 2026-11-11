@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,102 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,104 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -175,6 +175,17 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
       the file is affected, and nothing is written before they confirm.
     - **Unchanged, noted:** re-importing an edited file adds the changed
       session beside the old one rather than replacing it.
+  - **Fixed: the calendar reached one workout per day.** Tapping a day
+    opened the first workout found, the latest, so a morning session on a
+    two-session day was reachable only from the list. A day with one
+    workout still opens it; with several, a sheet lists them ("Workouts on
+    {date}", new string, en/ar), as the same rows as the history list, and
+    opens the one chosen. The owner had first picked "scroll the list to
+    the day"; the sheet was chosen instead because the rows are built
+    lazily and vary in height, so a jump far down the list cannot land
+    reliably. **Tested:** one workout opens directly (unchanged); several
+    ask, and the earlier one opens (fails on the old code). Pinned clock,
+    so the tests run at any hour.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

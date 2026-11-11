@@ -350,20 +350,37 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
     );
   }
 
-  void _openWorkoutForDay(
+  /// Opens the day's workout, or, with several, asks which.
+  ///
+  /// It opened the first it found, the latest that day, so a morning and
+  /// an evening session left the morning reachable only from the list.
+  Future<void> _openWorkoutForDay(
     BuildContext context,
     List<Workout> workouts,
     DateTime date,
-  ) {
-    for (final workout in workouts) {
-      if (_dateOnly(workout.startedAt) != date) continue;
-      if (!context.mounted) return;
-      context.pushNamed(
-        Routes.workoutDetailName,
-        pathParameters: {'id': workout.id},
-      );
-      return;
-    }
+  ) async {
+    final List<Workout> onDay = <Workout>[
+      for (final Workout workout in workouts)
+        if (_dateOnly(workout.startedAt) == date) workout,
+    ];
+    if (onDay.isEmpty) return;
+    final String? id = onDay.length == 1
+        ? onDay.single.id
+        : await showModalBottomSheet<String>(
+            context: context,
+            useSafeArea: true,
+            showDragHandle: true,
+            // Above the shell's navigator, as the app's other sheets are,
+            // so the scrim covers the bottom bar too.
+            useRootNavigator: true,
+            isScrollControlled: true,
+            builder: (_) => _DayWorkoutsSheet(date: date, workouts: onDay),
+          );
+    if (id == null || !context.mounted) return;
+    await context.pushNamed(
+      Routes.workoutDetailName,
+      pathParameters: {'id': id},
+    );
   }
 
   static DateTime _monthOnly(DateTime date) => DateTime(date.year, date.month);
@@ -680,20 +697,83 @@ class _HistorySliverList extends ConsumerWidget {
               _WorkoutHistoryTile(
                 workout: workout,
                 isPersonalRecord: prWorkoutIds.contains(workout.id),
-                exerciseNames: <String>[
-                  for (final WorkoutExerciseName e
-                      in namesByWorkout[workout.id] ?? const [])
-                    localizedExerciseName(
-                      context,
-                      slugsById,
-                      e.exerciseId,
-                      e.exerciseName,
-                    ),
-                ],
+                exerciseNames: _displayedNames(
+                  context,
+                  namesByWorkout[workout.id],
+                  slugsById,
+                ),
               ),
             ],
           ),
       },
+    );
+  }
+}
+
+/// A workout's exercise names as shown: localized, in logged order. Empty
+/// while the names load, and for a workout with no exercises.
+List<String> _displayedNames(
+  BuildContext context,
+  List<WorkoutExerciseName>? names,
+  Map<String, String> slugsById,
+) =>
+    <String>[
+      for (final WorkoutExerciseName e in names ?? const [])
+        localizedExerciseName(context, slugsById, e.exerciseId, e.exerciseName),
+    ];
+
+/// The workouts of one calendar day, for choosing between them: the same
+/// rows as the history list. Closes with the chosen workout's id.
+class _DayWorkoutsSheet extends ConsumerWidget {
+  const _DayWorkoutsSheet({required this.date, required this.workouts});
+
+  final DateTime date;
+  final List<Workout> workouts;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Map<String, List<WorkoutExerciseName>> namesByWorkout =
+        ref.watch(workoutExerciseNamesProvider).value ?? const {};
+    final Set<String> prWorkoutIds =
+        ref.watch(personalRecordWorkoutIdsProvider).value ?? const <String>{};
+    final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        context.pageGutter,
+        0,
+        context.pageGutter,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Semantics(
+            header: true,
+            child: Text(
+              context.l10n.trackerDayWorkoutsTitle(
+                DateFormatters.of(context).full(date),
+              ),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (int i = 0; i < workouts.length; i++) ...<Widget>[
+            if (i > 0) const Divider(indent: _dateTileWidth + AppSpacing.md),
+            _WorkoutHistoryTile(
+              workout: workouts[i],
+              isPersonalRecord: prWorkoutIds.contains(workouts[i].id),
+              exerciseNames: _displayedNames(
+                context,
+                namesByWorkout[workouts[i].id],
+                slugsById,
+              ),
+              onOpen: () => Navigator.pop(context, workouts[i].id),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -763,10 +843,15 @@ class _WorkoutHistoryTile extends ConsumerWidget {
     required this.workout,
     required this.isPersonalRecord,
     required this.exerciseNames,
+    this.onOpen,
   });
 
   final Workout workout;
   final bool isPersonalRecord;
+
+  /// What a tap does; opening the workout's page when null. The day sheet
+  /// passes its own, to close with the choice.
+  final VoidCallback? onOpen;
 
   /// Localized, in logged order. Empty for a workout with no exercises.
   final List<String> exerciseNames;
@@ -815,10 +900,11 @@ class _WorkoutHistoryTile extends ConsumerWidget {
         type: MaterialType.transparency,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: () => context.pushNamed(
-            Routes.workoutDetailName,
-            pathParameters: {'id': workout.id},
-          ),
+          onTap: onOpen ??
+              () => context.pushNamed(
+                    Routes.workoutDetailName,
+                    pathParameters: {'id': workout.id},
+                  ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Row(
