@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,095 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,096 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -128,6 +128,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
+  fixed one item at a time, on `workouts/review-2026-11-11`, branched from
+  `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
+  - **Performance: typing in an open workout no longer rebuilds the tab.**
+    The page watched the whole draft to show the start button or the resume
+    banner, and the draft changes on every weight and rep typed: each
+    keystroke rebuilt the page, regrouping the entire history by month and
+    the calendar's set of days with it. A small `_StartOrResume` widget now
+    reads only the draft's exercise count; the page does not depend on the
+    draft at all. **Tested:** with Flutter's rebuild hook, typing a weight
+    and reps rebuilds neither the page nor the history list (on the old
+    code the page rebuilt), and an added exercise still reaches the banner.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

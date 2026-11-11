@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:ironyx/core/database/app_database.dart';
@@ -11,6 +12,8 @@ import 'package:ironyx/core/router/routes.dart';
 import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/services/program_import_service.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
+import 'package:ironyx/features/tracker/domain/active_workout_notifier.dart';
+import 'package:ironyx/features/tracker/presentation/tracker_page.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/history_calendar.dart';
 
 import '../helpers/pump_app.dart';
@@ -618,6 +621,52 @@ void main() {
       );
       await disposeTracker(tester);
     });
+  });
+
+  testWidgets('typing in an open workout does not rebuild the tab',
+      (tester) async {
+    await pumpTracker(tester);
+    final ProviderContainer container = ProviderScope.containerOf(
+      tester.element(find.byType(TrackerPage)),
+    );
+    final ActiveWorkoutNotifier notifier =
+        container.read(activeWorkoutProvider.notifier);
+    await tester.runAsync(() async {
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'my-bench', name: 'Incline Press');
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('1 exercise logged · tap to resume'), findsOneWidget);
+
+    final List<String> rebuilt = <String>[];
+    debugOnRebuildDirtyWidget = (Element element, bool builtOnce) =>
+        rebuilt.add(element.widget.runtimeType.toString());
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+
+    final draft = container.read(activeWorkoutProvider)!;
+    final String exerciseId = draft.exercises.single.id;
+    final String setId = draft.exercises.single.sets.first.id;
+    await tester.runAsync(() async {
+      await notifier.updateSet(exerciseId, setId, weightKg: 60);
+      await notifier.updateSet(exerciseId, setId, reps: 8);
+    });
+    await tester.pumpAndSettle();
+
+    expect(rebuilt, isNot(contains('TrackerPage')),
+        reason: 'every keystroke rebuilt the page and its history');
+    expect(rebuilt, isNot(contains('_HistorySliverList')));
+
+    // An exercise added does reach the banner.
+    rebuilt.clear();
+    await tester.runAsync(
+      () => notifier.addExercise(exerciseId: 'my-row', name: 'Row'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('2 exercises logged · tap to resume'), findsOneWidget);
+    expect(rebuilt, isNot(contains('TrackerPage')));
+
+    await tester.runAsync(notifier.discard);
+    await disposeTracker(tester);
   });
 
   testWidgets('the start button carries the same plus as the dashboard',

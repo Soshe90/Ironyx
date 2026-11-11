@@ -70,7 +70,6 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
         setState(() => _visibleMonth = _monthOnly(next));
       }
     });
-    final draft = ref.watch(activeWorkoutProvider);
     final programsAsync = ref.watch(programSummariesProvider);
     final historyAsync = ref.watch(workoutHistoryStreamProvider);
     final prWorkoutIds =
@@ -88,13 +87,7 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                 top: AppSpacing.sm,
                 bottom: AppSpacing.xl,
               ),
-              sliver: SliverToBoxAdapter(
-                child: draft == null
-                    ? const _StartWorkoutButton()
-                    : _ResumeWorkoutBanner(
-                        exerciseCount: draft.exercises.length,
-                      ),
-              ),
+              sliver: const SliverToBoxAdapter(child: _StartOrResume()),
             ),
             SliverPadding(
               padding: context.sliverGutter,
@@ -365,6 +358,27 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
       Routes.programDetailName,
       pathParameters: {'id': programId},
     );
+  }
+}
+
+/// Start, or resume the workout that is open.
+///
+/// Its own widget, reading only whether a draft is open and how many
+/// exercises it has. The page used to watch the whole draft for that, and
+/// the draft changes on every weight and rep typed: each keystroke in an
+/// open workout rebuilt this tab, regrouping the entire history by month
+/// and the calendar's set of days with it.
+class _StartOrResume extends ConsumerWidget {
+  const _StartOrResume();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final int? exerciseCount = ref.watch(
+      activeWorkoutProvider.select((draft) => draft?.exercises.length),
+    );
+    return exerciseCount == null
+        ? const _StartWorkoutButton()
+        : _ResumeWorkoutBanner(exerciseCount: exerciseCount);
   }
 }
 
