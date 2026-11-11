@@ -13,8 +13,8 @@ must keep 12 testers opted in for 14 days before it can apply for production,
 so public availability follows the closed test by at least two weeks.
 The earlier 12-week plan is archived in `docs/archive/TODO-full-plan.md`.
 
-Latest check, 2026-11-10: `flutter analyze --fatal-infos --fatal-warnings`
-is clean and `flutter test` reports **1,041 passed, 2 skipped, 0 failed**.
+Latest check, 2026-11-11: `flutter analyze --fatal-infos --fatal-warnings`
+is clean and `flutter test` reports **1,050 passed, 2 skipped, 0 failed**.
 Version 1.0.5+6 is the current release bundle (2026-11-10); 1.0.3 is on a
 Play track and runs on the owner's Samsung (SM N970F), where debug builds
 are checked side by side with it (`TODO.md` has what was checked and what

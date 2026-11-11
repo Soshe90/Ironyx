@@ -94,7 +94,6 @@ void main() {
       expect(snapshot.volumeKg, 0);
       expect(snapshot.previousVolumeKg, 0);
       expect(snapshot.sessions, 0);
-      expect(snapshot.streakWeeks, 0);
       expect(snapshot.volumeSeries, isEmpty);
       expect(snapshot.hasHistory, isFalse);
     });
@@ -123,37 +122,13 @@ void main() {
       expect(snapshot.volumeKg, 150);
       expect(snapshot.previousVolumeKg, 100);
       expect(snapshot.sessions, 3);
-      expect(snapshot.streakWeeks, 3);
       expect(snapshot.volumeSeries, <double>[50, 100, 150]);
       expect(snapshot.hasHistory, isTrue);
     });
 
-    test('a rest week continues the previous streak until the current week',
-        () {
-      final DateTime currentWeek =
-          DateFormatters.startOfWeek(DateTime.now(), WeekStart.monday);
-      final DateTime previousWeek =
-          currentWeek.subtract(const Duration(days: 7));
-      final DateTime twoWeeksAgo =
-          previousWeek.subtract(const Duration(days: 7));
-
-      final snapshot = WeekSnapshot.from(
-        weekStart: WeekStart.monday,
-        volume: <WeeklyVolume>[
-          WeeklyVolume(weekStart: twoWeeksAgo, totalVolumeKg: 50),
-          WeeklyVolume(weekStart: previousWeek, totalVolumeKg: 100),
-          WeeklyVolume(weekStart: currentWeek, totalVolumeKg: 0),
-        ],
-        frequency: <WorkoutFrequency>[
-          WorkoutFrequency(weekStart: twoWeeksAgo, workoutCount: 1),
-          WorkoutFrequency(weekStart: previousWeek, workoutCount: 2),
-          WorkoutFrequency(weekStart: currentWeek, workoutCount: 0),
-        ],
-      );
-
-      expect(snapshot.sessions, 0);
-      expect(snapshot.streakWeeks, 2);
-    });
+    // The streak is no longer part of the snapshot (it saw only eight
+    // weeks). Its cases are in consistency_calculators_test.dart under
+    // currentStreakWeeks, and the provider's are in "the streak tile".
   });
 
   group('ExerciseDao.watchLibrarySummary', () {
@@ -392,6 +367,7 @@ void main() {
       // dashboard does.
       container.listen(dashboardWeekSnapshotProvider, (_, __) {});
       container.listen(dashboardWeekdayDistributionProvider, (_, __) {});
+      container.listen(dashboardStreakWeeksProvider, (_, __) {});
       return container;
     }
 
@@ -426,7 +402,7 @@ void main() {
       expect(week.sessions, 2);
       expect(week.volumeKg, 300);
       expect(week.previousVolumeKg, 0);
-      expect(week.streakWeeks, 1);
+      expect(await container.read(dashboardStreakWeeksProvider.future), 1);
 
       // Saturday: this week began yesterday; Friday is last week.
       await setting.set(WeekStart.saturday);
@@ -434,7 +410,7 @@ void main() {
       expect(week.sessions, 1);
       expect(week.volumeKg, 200);
       expect(week.previousVolumeKg, 100);
-      expect(week.streakWeeks, 2);
+      expect(await container.read(dashboardStreakWeeksProvider.future), 2);
 
       // Sunday: this week began today, with nothing in it yet; both are
       // last week, and the streak counts from there.
@@ -443,7 +419,7 @@ void main() {
       expect(week.sessions, 0);
       expect(week.volumeKg, 0);
       expect(week.previousVolumeKg, 300);
-      expect(week.streakWeeks, 1);
+      expect(await container.read(dashboardStreakWeeksProvider.future), 1);
 
       // And back: nothing was stored by week, so nothing is lost.
       await setting.set(WeekStart.monday);
@@ -565,7 +541,6 @@ void main() {
       expect(saturday.sessions, 2);
       expect(saturday.volumeKg, 250);
       expect(saturday.previousVolumeKg, 100);
-      expect(saturday.streakWeeks, 2);
 
       // Asked with Monday, "this week" is Mon 2 Nov: no bucket is that day.
       final WeekSnapshot monday = WeekSnapshot.from(
@@ -575,11 +550,9 @@ void main() {
         today: DateTime(2026, 11, 3),
       );
       expect(monday.sessions, 0);
-      expect(monday.streakWeeks, 0);
     });
 
-    test('last week and the streak survive a week in which the clocks change',
-        () {
+    test('last week survives a week in which the clocks change', () {
       // See the matching test in consistency_calculators_test.dart. Only a
       // zone that changes its clocks can tell: run with TZ=PST8PDT.
       for (final List<DateTime> mondays in <List<DateTime>>[
@@ -604,7 +577,6 @@ void main() {
 
         expect(snapshot.volumeKg, 250, reason: 'weeks $mondays');
         expect(snapshot.previousVolumeKg, 100, reason: 'weeks $mondays');
-        expect(snapshot.streakWeeks, 2, reason: 'weeks $mondays');
       }
     });
   });
@@ -683,6 +655,64 @@ void main() {
       expect(week.previousVolumeKg, 300);
       // ...but by Tuesday 11:00 last week only Monday had happened.
       expect(week.previousToDateVolumeKg, 100);
+    });
+  });
+
+  group('the streak tile', () {
+    Future<ProviderContainer> containerAt(DateTime now) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => now),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardStreakWeeksProvider, (_, __) {});
+      return container;
+    }
+
+    Future<void> mondays(String prefix, DateTime first, int weeks) async {
+      for (int i = 0; i < weeks; i++) {
+        await insertWorkoutWithSet(
+          workoutId: '$prefix$i',
+          exerciseId: 'bench',
+          startedAt: DateTime(first.year, first.month, first.day + 7 * i, 18),
+          weightKg: 100,
+          reps: 1,
+        );
+      }
+    }
+
+    test('counts past the eight weeks the week card looks at', () async {
+      await seedExercise('bench', 'Bench Press');
+      // Twenty Mondays in a row, the last one yesterday (Tue 10 Nov 2026).
+      await mondays('w', DateTime(2026, 6, 29), 20);
+      final ProviderContainer container =
+          await containerAt(DateTime(2026, 11, 10, 11));
+
+      expect(await container.read(dashboardStreakWeeksProvider.future), 20,
+          reason: 'it read 8 when counted from the hero window');
+    });
+
+    test('a week without training ends it, however long it was', () async {
+      await seedExercise('bench', 'Bench Press');
+      // Twelve weeks (20 Jul to 5 Oct), the week of 12 Oct off, then four.
+      await mondays('old', DateTime(2026, 7, 20), 12);
+      await mondays('new', DateTime(2026, 10, 19), 4);
+      final ProviderContainer container =
+          await containerAt(DateTime(2026, 11, 10, 11));
+
+      expect(await container.read(dashboardStreakWeeksProvider.future), 4);
+    });
+
+    test('nothing logged is no streak', () async {
+      final ProviderContainer container =
+          await containerAt(DateTime(2026, 11, 10, 11));
+
+      expect(await container.read(dashboardStreakWeeksProvider.future), 0);
     });
   });
 }

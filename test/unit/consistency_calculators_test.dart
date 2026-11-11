@@ -460,4 +460,115 @@ void main() {
       expect(result.adherenceFraction, 0);
     });
   });
+
+  // The one streak rule, shared by Home's tile and the consistency card.
+  // Some of these cases were Home's WeekSnapshot tests until the streak
+  // moved out of its eight-week snapshot.
+  group('currentStreakWeeks', () {
+    WorkoutFrequency at(DateTime monday, int count) =>
+        WorkoutFrequency(weekStart: monday, workoutCount: count);
+
+    test('nothing logged is no streak', () {
+      expect(
+        currentStreakWeeks(
+          weeks: const <WorkoutFrequency>[],
+          currentWeek: DateTime(2026, 11, 9),
+        ),
+        0,
+      );
+    });
+
+    test('counts consecutive trained weeks ending this week, in any order', () {
+      expect(
+        currentStreakWeeks(
+          weeks: <WorkoutFrequency>[
+            at(DateTime(2026, 11, 9), 3),
+            at(DateTime(2026, 10, 26), 1),
+            at(DateTime(2026, 11, 2), 2),
+          ],
+          currentWeek: DateTime(2026, 11, 9),
+        ),
+        3,
+      );
+    });
+
+    test('an empty week so far keeps the streak that ended last week', () {
+      expect(
+        currentStreakWeeks(
+          weeks: <WorkoutFrequency>[
+            at(DateTime(2026, 10, 26), 1),
+            at(DateTime(2026, 11, 2), 2),
+            at(DateTime(2026, 11, 9), 0),
+          ],
+          currentWeek: DateTime(2026, 11, 9),
+        ),
+        2,
+      );
+    });
+
+    test('a zero week, or a missing one, ends it', () {
+      for (final List<WorkoutFrequency> weeks in <List<WorkoutFrequency>>[
+        <WorkoutFrequency>[
+          at(DateTime(2026, 10, 19), 4),
+          at(DateTime(2026, 10, 26), 0),
+          at(DateTime(2026, 11, 2), 1),
+        ],
+        <WorkoutFrequency>[
+          at(DateTime(2026, 10, 19), 4),
+          at(DateTime(2026, 11, 2), 1),
+        ],
+      ]) {
+        expect(
+          currentStreakWeeks(weeks: weeks, currentWeek: DateTime(2026, 11, 9)),
+          1,
+        );
+      }
+    });
+
+    test('no limit on its length', () {
+      final List<WorkoutFrequency> weeks = <WorkoutFrequency>[
+        for (int i = 0; i < 60; i++) at(DateTime(2025, 9, 15 + 7 * i), 1),
+      ];
+      expect(
+        currentStreakWeeks(weeks: weeks, currentWeek: weeks.last.weekStart),
+        60,
+      );
+    });
+
+    test('this week has to be named with the first day the buckets use', () {
+      // Buckets for weeks starting on Saturday: Sat 24 and Sat 31 Oct.
+      final List<WorkoutFrequency> weeks = <WorkoutFrequency>[
+        at(DateTime(2026, 10, 24), 1),
+        at(DateTime(2026, 10, 31), 2),
+      ];
+      expect(
+        currentStreakWeeks(weeks: weeks, currentWeek: DateTime(2026, 10, 31)),
+        2,
+      );
+      // Monday 2 Nov is no bucket here, nor is the Monday before it.
+      expect(
+        currentStreakWeeks(weeks: weeks, currentWeek: DateTime(2026, 11, 2)),
+        0,
+      );
+    });
+
+    test('survives a week in which the clocks change', () {
+      // Only a zone that changes its clocks can tell: run with TZ=PST8PDT.
+      for (final List<DateTime> mondays in <List<DateTime>>[
+        <DateTime>[DateTime(2026, 3, 2), DateTime(2026, 3, 9)],
+        <DateTime>[DateTime(2026, 3, 23), DateTime(2026, 3, 30)],
+        <DateTime>[DateTime(2026, 10, 19), DateTime(2026, 10, 26)],
+        <DateTime>[DateTime(2026, 10, 26), DateTime(2026, 11, 2)],
+      ]) {
+        expect(
+          currentStreakWeeks(
+            weeks: <WorkoutFrequency>[at(mondays[0], 1), at(mondays[1], 2)],
+            currentWeek: mondays[1],
+          ),
+          2,
+          reason: 'weeks $mondays',
+        );
+      }
+    });
+  });
 }

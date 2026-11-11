@@ -1032,22 +1032,21 @@ class _OneRmCard extends ConsumerWidget {
       };
 }
 
-/// Consecutive trained weeks, from the same snapshot as the week card.
+/// Consecutive trained weeks, over the whole history.
 class _StreakCard extends ConsumerWidget {
   const _StreakCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<WeekSnapshot> snapshot =
-        ref.watch(dashboardWeekSnapshotProvider);
-    final int weeks = snapshot.value?.streakWeeks ?? 0;
+    final AsyncValue<int> streak = ref.watch(dashboardStreakWeeksProvider);
+    final int weeks = streak.value ?? 0;
 
     return SummaryCard(
       title: context.l10n.dashboardStatStreak,
       icon: Icons.local_fire_department_outlined,
       onTap: () => context.goNamed(Routes.progressName),
-      isLoading: snapshot.isLoading,
-      error: snapshot.error,
+      isLoading: streak.isLoading,
+      error: streak.error,
       metric: weeks == 0 ? null : context.l10n.dashboardStreakWeeks(weeks),
       emptyCaption: context.l10n.dashboardStreakEmpty,
     );

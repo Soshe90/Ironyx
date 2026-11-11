@@ -30,8 +30,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,041 passed, 2 skipped, 0 failed** (2026-11-10; was
-  876 on 2026-11-05).
+- `flutter test`: **1,050 passed, 2 skipped, 0 failed** (2026-11-11; was
+  1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -128,6 +128,31 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
+  item at a time, on `home/review-2026-11-11` from `main`). **Not in the
+  1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs
+  versionCode 7.
+  - **Fixed: the streak tile could not read more than "8 wk".** It was
+    counted from the week card's eight-week window, so twenty straight
+    weeks showed 8. It now has its own provider,
+    `dashboardStreakWeeks`, over the whole history (one row per week since
+    the first workout), so a failure there costs the tile and not the week
+    card. The rule itself is one function, `currentStreakWeeks` in
+    `consistency_calculators.dart`, which Progress's consistency card now
+    calls too: a week counts with any finished workout, and an empty week
+    so far does not break the streak. Progress matched weeks by exact
+    instant, Home by calendar day; the shared rule matches by calendar day,
+    which is what survives a clock change. `WeekSnapshot.streakWeeks` is
+    gone, so nothing can read the capped figure again.
+  - **Tested:** the shared rule (empty, order, an empty week so far, a zero
+    or missing week, 60 weeks, Saturday buckets, clock-change weeks) and
+    the provider (20 weeks reads 20; a week off ends it; none is 0; it
+    regroups when the first day of the week changes). The old figure was
+    reproduced first: 20 straight weeks read 8. **Not checked:** on the
+    phone. **Still open:** Progress's own current streak is counted inside
+    the selected range, so it is capped by the range ("1 month" cannot
+    show more than about five weeks). Not changed here, which was Home's
+    review.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the

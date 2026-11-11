@@ -64,16 +64,7 @@ ConsistencySummary calculateConsistency(
   // By calendar day, not by 168 hours: across a daylight-saving change that
   // lands on 23:00 the day before, which equals no bucket, so the streak
   // read as broken for that week.
-  final lastWeek = DateFormatters.previousWeek(currentWeek);
-  int count(DateTime start) => ordered
-      .where((w) => w.weekStart == start)
-      .fold(0, (sum, w) => sum + w.workoutCount);
-  var cursor = count(currentWeek) > 0 ? currentWeek : lastWeek;
-  var current = 0;
-  while (count(cursor) > 0) {
-    current++;
-    cursor = DateFormatters.previousWeek(cursor);
-  }
+  final current = currentStreakWeeks(weeks: ordered, currentWeek: currentWeek);
 
   // `weeks` is zero-filled from the selected range's nominal start (see
   // `WorkoutDao._fillWeekGaps`) so charts can show "you started partway
@@ -123,6 +114,43 @@ ConsistencySummary calculateConsistency(
       targetSessionsPerWeek: targetSessionsPerWeek,
       eligibleWeeks: eligible.length,
       hitTargetWeeks: hits);
+}
+
+/// Consecutive weeks with at least one workout, ending at [currentWeek].
+///
+/// The one definition of "streak", shared by Home's tile and Progress's
+/// consistency card so the two cannot disagree. A week counts with any
+/// finished workout in it. The week in progress does not break the streak
+/// while it is still empty (the user may train later today), so counting
+/// then starts from the week before.
+///
+/// [weeks] are weekly buckets as `WorkoutDao.watchWorkoutFrequency` emits
+/// them, in any order; [currentWeek] is the bucket "this week" names. They
+/// are matched by calendar day, not by `==`: stepping back a week across a
+/// daylight-saving change lands on the right day but not always the same
+/// instant, and an exact match then read the streak as broken.
+///
+/// The streak is only as long as the history it is given. Home passes the
+/// whole history: counted from its eight-week window, it never showed more
+/// than "8 wk".
+int currentStreakWeeks({
+  required List<WorkoutFrequency> weeks,
+  required DateTime currentWeek,
+}) {
+  int key(DateTime d) => (d.year * 100 + d.month) * 100 + d.day;
+  final Set<int> trained = <int>{
+    for (final WorkoutFrequency w in weeks)
+      if (w.workoutCount > 0) key(w.weekStart),
+  };
+  DateTime cursor = trained.contains(key(currentWeek))
+      ? currentWeek
+      : DateFormatters.previousWeek(currentWeek);
+  int streak = 0;
+  while (trained.contains(key(cursor))) {
+    streak++;
+    cursor = DateFormatters.previousWeek(cursor);
+  }
+  return streak;
 }
 
 /// Sessions per week over the time the range really covers.

@@ -11,6 +11,7 @@ import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/week_start.dart';
 import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/services/clock.dart';
+import '../../progress/domain/consistency_calculators.dart';
 
 part 'dashboard_providers.g.dart';
 
@@ -125,6 +126,31 @@ Stream<double> dashboardLastWeekToDateVolume(Ref ref) {
       );
 }
 
+/// Consecutive trained weeks ending this week, for the "Streak" tile.
+///
+/// From the whole history, not the hero's eight-week window: counted from
+/// that window the tile could never read more than "8 wk", however long the
+/// streak really was. Its own provider, so a failure here costs the tile
+/// and not the week card. The query is one row per week since the first
+/// workout (about 52 a year), re-read when workouts change, like the
+/// others here.
+@riverpod
+Stream<int> dashboardStreakWeeks(Ref ref) {
+  final DateTime today = ref.watch(todayProvider);
+  final WeekStart weekStart = ref.watch(weekStartControllerProvider);
+  final DateTime thisWeek = DateFormatters.startOfWeek(today, weekStart);
+  return ref
+      .watch(workoutDaoProvider)
+      .watchWorkoutFrequency(
+        weekStart: weekStart,
+        utcOffset: today.timeZoneOffset,
+      )
+      .map(
+        (List<WorkoutFrequency> weeks) =>
+            currentStreakWeeks(weeks: weeks, currentWeek: thisWeek),
+      );
+}
+
 /// Window backing the dashboard's "this week" card and its sparkline.
 const int _heroWeeks = 8;
 
@@ -163,7 +189,6 @@ class WeekSnapshot {
     required this.volumeKg,
     required this.previousVolumeKg,
     required this.sessions,
-    required this.streakWeeks,
     required this.volumeSeries,
     required this.hasHistory,
     this.previousToDateVolumeKg,
@@ -208,21 +233,10 @@ class WeekSnapshot {
       return 0;
     }
 
-    // Consecutive trained weeks ending at the current one. A rest week this
-    // week does not immediately break the streak — the user may still train
-    // later today — so counting starts from last week in that case.
-    int streak = 0;
-    DateTime cursor = sessionsFor(thisWeek) > 0 ? thisWeek : lastWeek;
-    while (sessionsFor(cursor) > 0) {
-      streak++;
-      cursor = DateFormatters.previousWeek(cursor);
-    }
-
     return WeekSnapshot(
       volumeKg: volumeFor(thisWeek),
       previousVolumeKg: volumeFor(lastWeek),
       sessions: sessionsFor(thisWeek),
-      streakWeeks: streak,
       volumeSeries: <double>[
         for (final WeeklyVolume w in volume) w.totalVolumeKg
       ],
@@ -243,8 +257,8 @@ class WeekSnapshot {
   final double? previousToDateVolumeKg;
   final int sessions;
 
-  /// Consecutive weeks with at least one completed workout.
-  final int streakWeeks;
+  // No streak here: this snapshot sees only the eight-week window, which
+  // capped it at 8. See [dashboardStreakWeeks].
   final List<double> volumeSeries;
 
   /// Whether anything was logged inside the hero window. False both for a
