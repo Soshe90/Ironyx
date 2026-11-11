@@ -12,11 +12,8 @@ import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Covers the two new dashboard-card queries added in M6:
-/// `ExerciseDao.watchLibrarySummary` and
-/// `WorkoutDao.watchMostLoggedExerciseOneRM`. The dashboard's Riverpod
-/// providers are thin pass-throughs over these — this is where the actual
-/// logic (and the empty-state case) lives.
+/// Home's providers and the queries behind them. The Est. 1RM tile's rule
+/// is in strength_headline_test.dart.
 void main() {
   // LocalNow observes the app lifecycle through WidgetsBinding.
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -204,71 +201,6 @@ void main() {
         await workoutDao.watchAverageDurationSeconds().first,
         closeTo(2400, 0.001),
       );
-    });
-  });
-
-  group('WorkoutDao.watchMostLoggedExerciseOneRM', () {
-    test('no workouts yields null', () async {
-      final result = await workoutDao.watchMostLoggedExerciseOneRM().first;
-      expect(result, isNull);
-    });
-
-    test('picks the exercise with the most sets and reports an up trend',
-        () async {
-      await seedExercise('bench', 'Bench Press');
-      await seedExercise('row', 'Barbell Row');
-
-      // Bench: 3 sets across 3 workouts (most-logged). Row: 1 set.
-      await insertWorkoutWithSet(
-        workoutId: 'w1',
-        exerciseId: 'bench',
-        startedAt: DateTime.utc(2026, 1, 1),
-        weightKg: 60,
-        reps: 5,
-      );
-      await insertWorkoutWithSet(
-        workoutId: 'w2',
-        exerciseId: 'bench',
-        startedAt: DateTime.utc(2026, 1, 8),
-        weightKg: 65,
-        reps: 5,
-      );
-      await insertWorkoutWithSet(
-        workoutId: 'w3',
-        exerciseId: 'bench',
-        startedAt: DateTime.utc(2026, 1, 15),
-        weightKg: 70,
-        reps: 5,
-      );
-      await insertWorkoutWithSet(
-        workoutId: 'w4',
-        exerciseId: 'row',
-        startedAt: DateTime.utc(2026, 1, 16),
-        weightKg: 40,
-        reps: 8,
-      );
-
-      final result = await workoutDao.watchMostLoggedExerciseOneRM().first;
-      expect(result, isNotNull);
-      expect(result!.exerciseName, 'Bench Press');
-      // Epley: 70 * (1 + 5/30) ≈ 81.67, previous workout 65 * (1+5/30) ≈ 75.8
-      expect(result.currentKg, closeTo(81.67, 0.1));
-      expect(result.trend, OneRMTrend.up);
-    });
-
-    test('a single workout reports a flat trend (nothing to compare against)',
-        () async {
-      await seedExercise('bench', 'Bench Press');
-      await insertWorkoutWithSet(
-        workoutId: 'w1',
-        exerciseId: 'bench',
-        startedAt: DateTime.utc(2026, 1, 1),
-        weightKg: 60,
-        reps: 5,
-      );
-
-      final result = await workoutDao.watchMostLoggedExerciseOneRM().first;
-      expect(result!.trend, OneRMTrend.flat);
     });
   });
 

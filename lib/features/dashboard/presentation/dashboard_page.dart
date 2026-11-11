@@ -29,6 +29,7 @@ import '../../../core/widgets/trend_badge.dart';
 import '../../library/domain/exercise_catalogue_l10n.dart';
 import '../../tracker/domain/active_workout_notifier.dart';
 import '../domain/dashboard_providers.dart';
+import '../domain/strength_headline.dart';
 import 'widgets/summary_card.dart';
 
 /// Central hub. Branch index 0 and the app's start destination.
@@ -992,44 +993,41 @@ class _OneRmCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<MostLoggedOneRM?> oneRmAsync =
-        ref.watch(dashboardMostLoggedOneRMProvider);
+    final AsyncValue<StrengthHeadline?> headlineAsync =
+        ref.watch(dashboardStrengthHeadlineProvider);
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
+    final StrengthHeadline? headline = headlineAsync.value;
 
     return SummaryCard(
       title: context.l10n.dashboardEstOneRm,
       icon: Icons.trending_up,
       onTap: () => context.goNamed(Routes.progressName),
-      isLoading: oneRmAsync.isLoading,
-      error: oneRmAsync.error,
-      metric: oneRmAsync.value == null
+      isLoading: headlineAsync.isLoading,
+      error: headlineAsync.error,
+      metric: headline == null
           ? null
           // Rounded like every other estimate in the app. "96.25 kg"
           // claimed a precision the Epley formula does not have, and
           // disagreed with the "96 kg" Progress shows for the same lift.
-          : UnitFormatters.estimate(
-              oneRmAsync.value!.currentKg, unit, context.l10n),
-      caption: oneRmAsync.value == null
+          : UnitFormatters.estimate(headline.bestKg, unit, context.l10n),
+      caption: headline == null
           ? null
           : localizedExerciseName(
               context,
               slugsById,
-              oneRmAsync.value!.exerciseId,
-              oneRmAsync.value!.exerciseName,
+              headline.exerciseId,
+              headline.exerciseName,
             ),
       emptyCaption: context.l10n.dashboardLogALiftToSeeThis,
-      trend: oneRmAsync.value == null
-          ? null
-          : _trendDirection(oneRmAsync.value!.trend),
-    );
-  }
-
-  TrendDirection _trendDirection(OneRMTrend trend) => switch (trend) {
+      trend: switch (headline?.trend) {
+        null => null,
         OneRMTrend.up => TrendDirection.up,
         OneRMTrend.down => TrendDirection.down,
         OneRMTrend.flat => TrendDirection.flat,
-      };
+      },
+    );
+  }
 }
 
 /// Consecutive trained weeks, over the whole history.

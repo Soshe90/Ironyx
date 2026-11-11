@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,062 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,068 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -181,6 +181,28 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** a whole first week (both its ends in, the day before out),
     this week left out, no line for a first week, Saturday weeks; all four
     failed on the old code. **Not checked:** on the phone.
+  - **Fixed: the Est. 1RM tile showed the last session, not the best.** It
+    took the most-logged lift's latest session against the one before it,
+    so a light day or a deload read as a lower 1RM with a red arrow (any
+    0.5 kg drop), and Progress gave the same lift another number. The tile
+    now shows the main lift's best estimate over the last three months
+    (Progress's default range), against the best before them; under 2.5%
+    either way it is flat, the threshold Progress's insights use. No arrow
+    without an earlier best, or when the only comparison is the lift's
+    first session (Progress words that as "since your first session").
+    After three months without a lift, the main lift's all-time best, no
+    arrow. Built from Progress's own providers (`loggedExercises`,
+    `strengthChange` for 3M and all time); the rule is
+    `pickStrengthHeadline` in `dashboard/domain/strength_headline.dart`.
+    "Main lift" is now Progress's: most *sessions*, where the tile counted
+    sets, so with uneven set counts the tile may name a different lift than
+    before, the one Progress's lift chart opens on. Removed:
+    `WorkoutDao.watchMostLoggedExerciseOneRM`, `MostLoggedOneRM` and their
+    three tests. **Tested:** the rule (lift choice, the threshold both
+    ways, no earlier best, first session, after a break) and the provider
+    on a real database (a deload keeps 150 kg and an up arrow where the old
+    tile showed 110 kg down; -1.3% is flat; a break shows the all-time
+    best). **Not checked:** on the phone.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the

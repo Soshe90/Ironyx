@@ -13,6 +13,7 @@ import '../../../core/formatters/week_start_controller.dart';
 import '../../../core/services/clock.dart';
 import '../../progress/domain/consistency_calculators.dart';
 import '../../progress/domain/progress_providers.dart';
+import 'strength_headline.dart';
 
 part 'dashboard_providers.g.dart';
 
@@ -38,10 +39,29 @@ Stream<TimerSession?> dashboardLastTimerSession(Ref ref) =>
 Stream<LibrarySummary> dashboardLibrarySummary(Ref ref) =>
     ref.watch(exerciseDaoProvider).watchLibrarySummary();
 
-/// Est. 1RM and trend for the most-logged lift, for the "Est. 1RM" card.
+/// The "Est. 1RM" tile: the main lift's best estimate over the last three
+/// months, and its trend against the best before them (see
+/// [pickStrengthHeadline]).
+///
+/// Built from the providers Progress shows, so the two tabs give a lift
+/// the same number: its lift list, and its strength rows for "3M" (its
+/// default range) and for all time (the fallback after a break). Each is
+/// one aggregate query, shared with Progress while that tab is open.
 @riverpod
-Stream<MostLoggedOneRM?> dashboardMostLoggedOneRM(Ref ref) =>
-    ref.watch(workoutDaoProvider).watchMostLoggedExerciseOneRM();
+Future<StrengthHeadline?> dashboardStrengthHeadline(Ref ref) async {
+  // All watched before the first await (see dashboardWeekSnapshot).
+  final Future<List<LoggedExercise>> lifts =
+      ref.watch(loggedExercisesProvider.future);
+  final Future<List<StrengthChange>> recent =
+      ref.watch(strengthChangeProvider(ProgressRange.quarter).future);
+  final Future<List<StrengthChange>> allTime =
+      ref.watch(strengthChangeProvider(ProgressRange.all).future);
+  return pickStrengthHeadline(
+    lifts: await lifts,
+    recent: await recent,
+    allTime: await allTime,
+  );
+}
 
 /// Latest body weight entry, for the "Body weight" card.
 @riverpod
