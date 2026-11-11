@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,139 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,141 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -220,6 +220,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     which escaped the tap handler. Saving a preset shows "Couldn't save the
     preset." on failure. Two new strings, en/ar. **Tested:** all four, each
     failing on the old code.
+  - **Fixed: a timer session's duration included its pauses.** It was
+    saved as the span from start to end, so a 4-minute timer paused for
+    ten minutes was 14 minutes, on Home's "Last timer" row too. It is now
+    the engine's elapsed time, which pauses do not add to, at most the
+    planned length; start and end are unchanged. Sessions already saved
+    keep their figure (owner's choice). To test it the controller now
+    takes its time from `clockProvider`, as the rest of the app does, and
+    hands that clock to the engine. **Tested:** 5 s, a ten-minute pause,
+    7 s saves 12 s (with the old formula, 612); a session run out saves
+    its planned 5 s.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
