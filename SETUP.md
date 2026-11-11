@@ -7,7 +7,7 @@ How to get from `git clone` to a running, testable, releasable Ironyx.
 Last verified end to end on Windows 11 with **Flutter 3.47.5 / Dart 3.13.4
 (stable)** on 2026-09-20. Re-checked on 2026-11-11 with the same Flutter:
 `flutter analyze --fatal-infos --fatal-warnings` clean, `dart format` clean,
-the asset-licence check passes, and `flutter test` reports 1,072 passed,
+the asset-licence check passes, and `flutter test` reports 1,074 passed,
 2 skipped, 0 failed.
 `pubspec.yaml` declares `sdk: '>=3.6.0 <4.0.0'`.
 

@@ -931,7 +931,15 @@ class _LastWorkoutRow extends ConsumerWidget {
     return _ActivityRow(
       icon: Icons.fitness_center_outlined,
       title: context.l10n.dashboardLastWorkout,
-      onTap: () => context.goNamed(Routes.trackerName),
+      // The row names one workout, so it opens that one. It used to open
+      // the Workouts tab, where the reader had to find it again in the
+      // history. With none yet, the Workouts tab is where one is started.
+      onTap: workout == null
+          ? () => context.goNamed(Routes.trackerName)
+          : () => context.pushNamed(
+                Routes.workoutDetailName,
+                pathParameters: <String, String>{'id': workout.id},
+              ),
       isLoading: workoutAsync.isLoading,
       error: workoutAsync.error,
       value: workout == null
@@ -1089,7 +1097,10 @@ class _BodyWeightCard extends ConsumerWidget {
     return SummaryCard(
       title: context.l10n.dashboardBodyWeight,
       icon: Icons.monitor_weight_outlined,
-      onTap: () => context.goNamed(Routes.progressName),
+      // Straight to the weigh-ins, which is what the tile shows; that page
+      // also logs one, empty or not. It used to open the top of Progress,
+      // with the body chapter at the far end of the page.
+      onTap: () => context.pushNamed(Routes.bodyMetricsHistoryName),
       isLoading: metricsAsync.isLoading,
       error: metricsAsync.error,
       metric: metricsAsync.value == null

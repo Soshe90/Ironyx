@@ -10,6 +10,8 @@ import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/core/widgets/trend_badge.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
+import 'package:ironyx/features/progress/presentation/body_metrics_history_page.dart';
+import 'package:ironyx/features/tracker/presentation/workout_detail_page.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
 
 import '../helpers/pump_app.dart';
@@ -659,6 +661,36 @@ void main() {
           tester.getTopLeft(find.text('STREAK')).dy,
           greaterThan(tester.getTopLeft(find.text('EST. 1RM')).dy),
         );
+        await disposeApp(tester);
+      });
+
+      testWidgets('the last-workout row opens that workout', (tester) async {
+        await open(tester);
+        final Finder row = find.text('Last workout');
+        await tester.ensureVisible(row);
+        await tester.pumpAndSettle();
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(WorkoutDetailPage), findsOneWidget);
+        expect(
+          tester
+              .widget<WorkoutDetailPage>(find.byType(WorkoutDetailPage))
+              .workoutId,
+          'w1',
+        );
+        await disposeApp(tester);
+      });
+
+      testWidgets('the body-weight tile opens the weigh-ins', (tester) async {
+        await open(tester);
+        final Finder tile = find.text('BODY WEIGHT');
+        await tester.ensureVisible(tile);
+        await tester.pumpAndSettle();
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BodyMetricsHistoryPage), findsOneWidget);
         await disposeApp(tester);
       });
 

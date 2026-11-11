@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,072 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,074 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -235,6 +235,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     error and its Retry button appear. Whether to turn retry off for
     local Drift queries (which do not fail transiently the way a network
     call does) is a decision for the whole app, in `ProviderScope`.
+  - **Changed: two taps lead where they point.** The "Last workout" row
+    opens that workout's detail page (it opened the Workouts tab, where it
+    had to be found again); with none yet it still opens the Workouts tab.
+    The body-weight tile opens the weigh-in history, which also logs one
+    (it opened the top of Progress, with the body chapter at its far end).
+    The week card, "See all" and the other three tiles still open
+    Progress, where their figures are explained. "Start from a program"
+    still opens the Workouts tab and its programs row; starting a program
+    from Home would need a picker, new work and not a fix. **Tested:** both
+    taps (each failed on the old code). **Not checked:** on the phone.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
