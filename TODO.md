@@ -341,7 +341,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     loading or on an error so a returning user never sees the welcome
     flash by. **Tested:** someone new (fails on the old code), new with a
     timer used (fails on the old code), and back after 90 days (unchanged:
-    the old wording and all four tiles). **Not checked:** on the phone.
+    the old wording and all four tiles). **Not checked:** on the phone
+    (the debug copy has workouts, so the welcome cannot show there).
+  - **Checked on the phone, 2026-11-11** (debug build of `0ec3bd1`, the
+    owner's data): the start card reads "آخر تمرين: قبل 7 أيام" (4 Nov
+    to 11 Nov) with no icon beside the headline; "This month" reads one
+    session, matching the history's single November workout, and opens
+    the Workouts tab; the week badge's 9,830 kg is 31 Oct (3,075 kg) plus
+    4 Nov (6,755 kg), last week from Saturday to the same moment. Not seen
+    on the phone: the break caption, "999%+" and the welcome, which this
+    data does not produce.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
