@@ -519,6 +519,8 @@
   "importXlsxAction": "Import XLSX",
   "importXlsxPickerTitle": "Choose your XLSX workout log",
   "importXlsxWrongType": "Please choose an .xlsx file.",
+  "importXlsxTooLarge": "This file is too large to import (over 10 MB).",
+  "@importXlsxTooLarge": {"description": "Snack bar when the chosen XLSX workout log is over the 10 MB import limit."},
   "importXlsxReadFailed": "Couldn't read this file. Make sure it's the .xlsx export from your training log.",
   "importXlsxApplyFailed": "Couldn't save the imported workouts. Nothing was written — try again.",
   "importXlsxDone": "Imported {count} workouts.",

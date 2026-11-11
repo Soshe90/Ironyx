@@ -40,6 +40,17 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
       return;
     }
     if (!context.mounted) return;
+    // Before anything is read into memory: a file this size is not a
+    // training log, and reading it could exhaust the memory.
+    if (await picked.length() > kMaxWorkoutXlsxBytes) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.importXlsxTooLarge)),
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
 
     final sourceUnit = await _chooseUnit(context);
     if (sourceUnit == null || !context.mounted) return;

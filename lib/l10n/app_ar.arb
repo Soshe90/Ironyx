@@ -499,6 +499,7 @@
   "importXlsxAction": "استيراد XLSX",
   "importXlsxPickerTitle": "اختر ملف سجلّ تمارينك بصيغة XLSX",
   "importXlsxWrongType": "الرجاء اختيار ملف بصيغة ‎.xlsx‎.",
+  "importXlsxTooLarge": "هذا الملف أكبر من أن يُستورد (أكثر من 10 ميغابايت).",
   "importXlsxReadFailed": "تعذّرت قراءة هذا الملف. تأكد من أنه ملف ‎.xlsx‎ المُصدَّر من سجلّ تمارينك.",
   "importXlsxApplyFailed": "تعذّر حفظ التمارين المستوردة. لم يُحفظ أي شيء — حاول مرة أخرى.",
   "importXlsxDone": "{count, plural, zero{لم تُستورد أي جلسة تدريبية} one{تم استيراد جلسة تدريبية واحدة} two{تم استيراد جلستين تدريبيتين} few{تم استيراد {count} جلسات تدريبية} many{تم استيراد {count} جلسة تدريبية} other{تم استيراد {count} جلسة تدريبية}}.",

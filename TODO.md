@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,099 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,102 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -151,6 +151,30 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     which has Retry. A double tap opened the program twice; it opens once.
     **Tested:** all three, each failing on the old code. **Found:** the
     error appears only after Riverpod's retries (see the next line).
+  - **Fixed: the XLSX import.**
+    - **A re-import could break every later import.** Imported workouts
+      sit at 12:00 UTC on their date, and the duplicate check read "the"
+      workout there with `getSingleOrNull`, which throws on two. Two get
+      there when an edited file is re-imported (its changed session is
+      not a duplicate, so it is added beside the old one) or when two
+      sessions share a date. From then on every import of the file failed
+      as "could not read". Each workout at that time is compared now.
+      **Tested:** reproduced on the old code ("Bad state: Too many
+      elements"); now the identical one is found and a new one is not.
+    - **Size limit:** files over 10 MB (`kMaxWorkoutXlsxBytes`) are refused
+      before they are read, with a message (new string, en/ar); `parse`
+      checks again.
+    - **Off the UI thread:** unzipping and walking the sheets runs through
+      `compute`; it froze the app while a workbook was read. Matching names
+      against the database stays on the main isolate. The rules are
+      unchanged and every existing import test passes through the new path.
+    - **Known risk, not fixed (owner's choice):** an XLSX is a zip, so a
+      small file can unpack to far more than 10 MB. Checking the unpacked
+      size needs the `archive` package as a direct dependency (it is
+      already a transitive one, through `excel`). Only the person who picks
+      the file is affected, and nothing is written before they confirm.
+    - **Unchanged, noted:** re-importing an edited file adds the changed
+      session beside the old one rather than replacing it.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

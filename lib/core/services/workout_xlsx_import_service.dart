@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:excel/excel.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
@@ -9,6 +10,27 @@ import '../database/daos/workout_dao.dart';
 import '../formatters/unit_formatters.dart';
 
 const _uuid = Uuid();
+
+/// Largest workbook the importer reads: 10 MB. A training log of years is
+/// well under 1 MB; past this the file is not one, and reading it into
+/// memory could exhaust it. The Workouts tab checks the size before it
+/// reads the file, and [WorkoutXlsxImportService.parse] checks again.
+///
+/// Not a guard against a "zip bomb": an XLSX is a zip, and a small file
+/// can unpack to far more. Checking the unpacked size needs the `archive`
+/// package directly, which the owner chose not to add (TODO.md).
+const int kMaxWorkoutXlsxBytes = 10 * 1024 * 1024;
+
+/// The workbook is larger than [kMaxWorkoutXlsxBytes].
+class WorkoutXlsxTooLargeException implements Exception {
+  const WorkoutXlsxTooLargeException(this.bytes);
+
+  final int bytes;
+
+  @override
+  String toString() =>
+      'WorkoutXlsxTooLargeException: $bytes bytes (limit $kMaxWorkoutXlsxBytes)';
+}
 
 /// Imports the workbook layout used by the user's historical training log.
 ///
@@ -23,7 +45,14 @@ class WorkoutXlsxImportService {
     AppDatabase db, {
     required WeightUnit sourceUnit,
   }) async {
-    final excel = Excel.decodeBytes(bytes);
+    if (bytes.length > kMaxWorkoutXlsxBytes) {
+      throw WorkoutXlsxTooLargeException(bytes.length);
+    }
+    // Unzipping and walking the sheets is the slow part, and it ran on the
+    // UI isolate: the app froze while a workbook was read. It runs in the
+    // background now and hands back plain values; matching names against
+    // the database stays here.
+    final List<_RawSession> sessions = await compute(_readSessions, bytes);
     // Names and aliases: the workbooks use coaching names ("Flat Dumbbell
     // Press") for catalogue exercises ("Dumbbell Bench Press"). The aliases
     // live in the seed, where the builder checks no two exercises share one.
@@ -31,54 +60,32 @@ class WorkoutXlsxImportService {
     final workouts = <ImportedHistoricalWorkout>[];
     final unknown = <String>{};
 
-    for (final sheet in excel.tables.values) {
-      final rows = sheet.rows;
-      // A blank or near-empty sheet (common as a trailing tab in a real
-      // workbook) has no header row group to read a date from. Row 0 is
-      // that header, rows from index 2 on are data — fewer than that and
-      // there is nothing here to import, not a malformed file.
-      if (rows.length < 3) continue;
-      for (final groupStart in _workoutGroupColumns) {
-        final date = _dateValue(_rowCell(rows[0], groupStart));
-        if (date == null) continue;
-
-        ImportedHistoricalExercise? currentExercise;
-        final importedExercises = <ImportedHistoricalExercise>[];
-        for (var rowIndex = 2; rowIndex < rows.length; rowIndex++) {
-          final row = rows[rowIndex];
-          final candidate = _exerciseName(row);
-          final reps = _number(_rowCell(row, groupStart));
-          final weight = _number(_rowCell(row, groupStart + 1));
-
-          if (candidate != null && reps == null && weight == null) {
-            final exerciseId = exercises[normalizeExerciseName(candidate)];
-            if (exerciseId == null) unknown.add(candidate);
-            currentExercise = ImportedHistoricalExercise(
-              exerciseId: exerciseId,
-              name: candidate,
-              sets: [],
-            );
-            importedExercises.add(currentExercise);
-            continue;
-          }
-
-          if (currentExercise == null || reps == null || reps <= 0) continue;
-          currentExercise.sets.add(
-            ImportedHistoricalSet(
-              reps: reps.round(),
-              weightKg: _toKg(weight ?? 0, sourceUnit),
-            ),
-          );
-        }
-
-        final populated = importedExercises
-            .where((exercise) => exercise.sets.isNotEmpty)
-            .toList();
-        if (populated.isNotEmpty) {
-          workouts.add(
-            ImportedHistoricalWorkout(date: date, exercises: populated),
-          );
-        }
+    for (final _RawSession session in sessions) {
+      final importedExercises = <ImportedHistoricalExercise>[];
+      for (final _RawExercise raw in session.exercises) {
+        final exerciseId = exercises[normalizeExerciseName(raw.name)];
+        if (exerciseId == null) unknown.add(raw.name);
+        importedExercises.add(
+          ImportedHistoricalExercise(
+            exerciseId: exerciseId,
+            name: raw.name,
+            sets: <ImportedHistoricalSet>[
+              for (final _RawSet set in raw.sets)
+                ImportedHistoricalSet(
+                  reps: set.reps.round(),
+                  weightKg: _toKg(set.weight ?? 0, sourceUnit),
+                ),
+            ],
+          ),
+        );
+      }
+      final populated = importedExercises
+          .where((exercise) => exercise.sets.isNotEmpty)
+          .toList();
+      if (populated.isNotEmpty) {
+        workouts.add(
+          ImportedHistoricalWorkout(date: session.date, exercises: populated),
+        );
       }
     }
 
@@ -110,6 +117,12 @@ class WorkoutXlsxImportService {
   /// exact file (or an overlapping one) was already imported. A manually
   /// logged workout on the same calendar day has a different `startedAt`
   /// and is never flagged.
+  ///
+  /// There can be several workouts at that timestamp: two sessions with one
+  /// date in the workbook, or a re-import of an edited file, whose changed
+  /// session is not a duplicate and is added beside the old one. This read
+  /// them with `getSingleOrNull`, which throws on two, so from then on every
+  /// import of the file failed as "could not read". Each is compared now.
   Future<bool> _isDuplicateOfExisting(
     AppDatabase db,
     ImportedHistoricalWorkout workout,
@@ -120,11 +133,22 @@ class WorkoutXlsxImportService {
       workout.date.day,
       12,
     );
-    final existingWorkout = await (db.select(db.workoutsTable)
+    final List<WorkoutsTableData> existing = await (db.select(db.workoutsTable)
           ..where((t) => t.startedAt.equals(candidateStartedAt)))
-        .getSingleOrNull();
-    if (existingWorkout == null) return false;
+        .get();
+    for (final WorkoutsTableData existingWorkout in existing) {
+      if (await _sameContent(db, existingWorkout, workout)) return true;
+    }
+    return false;
+  }
 
+  /// Whether [existingWorkout] holds exactly [workout]'s exercises, in
+  /// order, with identical sets.
+  Future<bool> _sameContent(
+    AppDatabase db,
+    WorkoutsTableData existingWorkout,
+    ImportedHistoricalWorkout workout,
+  ) async {
     final existingExercises = await (db.select(db.workoutExercisesTable)
           ..where((t) => t.workoutId.equals(existingWorkout.id))
           ..orderBy([(t) => OrderingTerm.asc(t.orderIndex)]))
@@ -321,6 +345,77 @@ class WorkoutXlsxImportService {
     'Max effort - I could not have done any more reps',
     "Failed - I tried to do another rep but couldn't",
   };
+}
+
+/// One dated session as read from the workbook, before any database
+/// lookup: plain values, so it can come back from the background isolate.
+class _RawSession {
+  const _RawSession(this.date, this.exercises);
+
+  final DateTime date;
+
+  /// Every exercise heading under the date, in order, including ones with
+  /// no sets: their names still count as unknown when nothing matches.
+  final List<_RawExercise> exercises;
+}
+
+class _RawExercise {
+  _RawExercise(this.name);
+
+  final String name;
+  final List<_RawSet> sets = <_RawSet>[];
+}
+
+class _RawSet {
+  const _RawSet(this.reps, this.weight);
+
+  final double reps;
+  final double? weight;
+}
+
+/// Unzips the workbook and walks its sheets: run through `compute`, off
+/// the UI isolate. The rules are the ones [WorkoutXlsxImportService.parse]
+/// had inline.
+List<_RawSession> _readSessions(List<int> bytes) {
+  final excel = Excel.decodeBytes(bytes);
+  final sessions = <_RawSession>[];
+  for (final sheet in excel.tables.values) {
+    final rows = sheet.rows;
+    // A blank or near-empty sheet (common as a trailing tab in a real
+    // workbook) has no header row group to read a date from. Row 0 is that
+    // header, rows from index 2 on are data — fewer than that and there is
+    // nothing here to import, not a malformed file.
+    if (rows.length < 3) continue;
+    for (final groupStart in WorkoutXlsxImportService._workoutGroupColumns) {
+      final date = WorkoutXlsxImportService._dateValue(
+        WorkoutXlsxImportService._rowCell(rows[0], groupStart),
+      );
+      if (date == null) continue;
+
+      _RawExercise? current;
+      final exercises = <_RawExercise>[];
+      for (var rowIndex = 2; rowIndex < rows.length; rowIndex++) {
+        final row = rows[rowIndex];
+        final candidate = WorkoutXlsxImportService._exerciseName(row);
+        final reps = WorkoutXlsxImportService._number(
+          WorkoutXlsxImportService._rowCell(row, groupStart),
+        );
+        final weight = WorkoutXlsxImportService._number(
+          WorkoutXlsxImportService._rowCell(row, groupStart + 1),
+        );
+
+        if (candidate != null && reps == null && weight == null) {
+          current = _RawExercise(candidate);
+          exercises.add(current);
+          continue;
+        }
+        if (current == null || reps == null || reps <= 0) continue;
+        current.sets.add(_RawSet(reps, weight));
+      }
+      sessions.add(_RawSession(date, exercises));
+    }
+  }
+  return sessions;
 }
 
 class WorkoutXlsxImportResult {
