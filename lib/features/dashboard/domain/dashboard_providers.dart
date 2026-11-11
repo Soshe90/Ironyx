@@ -7,6 +7,7 @@ import '../../../core/database/tables/body_metrics.dart';
 import '../../../core/database/tables/profiles.dart';
 import '../../../core/database/tables/timer_sessions.dart';
 import '../../../core/database/tables/workouts.dart';
+import '../../../core/error_reporting.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/week_start.dart';
 import '../../../core/formatters/week_start_controller.dart';
@@ -206,15 +207,47 @@ Future<WeekSnapshot> dashboardWeekSnapshot(Ref ref) async {
       ref.watch(dashboardWeeklyVolumeProvider.future);
   final Future<List<WorkoutFrequency>> frequencyFuture =
       ref.watch(dashboardWeeklyFrequencyProvider.future);
-  final Future<double> toDateFuture =
-      ref.watch(dashboardLastWeekToDateVolumeProvider.future);
+  // Optional: without it the card shows last week's total and no badge
+  // (see [WeekSnapshot.previousToDateVolumeKg]). Its failure used to take
+  // the whole card down to "Could not load this week" when the figures the
+  // card is about had loaded.
+  //
+  // Read as a state, not awaited: Riverpod retries a failed provider, and
+  // its `.future` stays pending while it does, so awaiting it kept the card
+  // loading through every retry. Only a first load is waited for; if it
+  // fails, the state change rebuilds this snapshot without it.
+  final AsyncValue<double> samePoint =
+      ref.watch(dashboardLastWeekToDateVolumeProvider);
+  final Future<double?>? samePointFirstLoad = samePoint.hasValue ||
+          samePoint.hasError
+      ? null
+      : ref.watch(dashboardLastWeekToDateVolumeProvider.future).then<double?>(
+            (double v) => v,
+            // Superseded by the rebuild above; handled so it is not uncaught.
+            onError: (Object _, StackTrace __) => null,
+          );
   return WeekSnapshot.from(
     volume: await volumeFuture,
     frequency: await frequencyFuture,
     weekStart: weekStart,
     today: today,
-    previousToDateVolumeKg: await toDateFuture,
+    previousToDateVolumeKg: samePoint.hasError
+        ? _reportSamePoint(samePoint)
+        : samePoint.hasValue
+            ? samePoint.value
+            : await samePointFirstLoad,
   );
+}
+
+/// Logs a failed same-point figure (debug builds only, see [reportError])
+/// and stands in for it with null.
+double? _reportSamePoint(AsyncValue<double> failed) {
+  reportError(
+    failed.error!,
+    failed.stackTrace,
+    context: 'dashboard same point',
+  );
+  return null;
 }
 
 /// Derived training status for the current week.

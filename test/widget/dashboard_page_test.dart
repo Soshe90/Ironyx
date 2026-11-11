@@ -194,6 +194,50 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets('the week card stays up when only the same-point figure fails',
+        (tester) async {
+      await WorkoutDao(database).insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'lastWeek',
+          startedAt: DateTime.now().subtract(const Duration(days: 8)),
+          endedAt: Value(
+            DateTime.now().subtract(const Duration(days: 8, minutes: -30)),
+          ),
+          totalVolumeKg: const Value(200),
+        ),
+        const [],
+        const [],
+      );
+      await pumpApp(
+        tester,
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dashboardLastWeekToDateVolumeProvider.overrideWith(
+            (ref) => Stream<double>.error(Exception('boom')),
+          ),
+        ],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not load this week'), findsNothing);
+      expect(find.text('300 kg'), findsOneWidget);
+      expect(find.text('1 / 3'), findsOneWidget);
+      // No like-for-like figure, so no badge: last week's total as context.
+      expect(find.textContaining('Same point'), findsNothing);
+      final Finder weekCard = find.ancestor(
+        of: find.text('300 kg'),
+        matching: find.byType(AppCard),
+      );
+      expect(
+        find.descendant(of: weekCard, matching: find.byType(TrendBadge)),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+
+      await disposeApp(tester);
+    });
+
     testWidgets('the week card shows its own error when the snapshot fails',
         (tester) async {
       await pumpApp(

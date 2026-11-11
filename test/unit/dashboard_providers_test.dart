@@ -883,4 +883,45 @@ void main() {
       expect(seen, <double>[0, 10, 30]);
     });
   });
+
+  group('the week card without the same-point figure', () {
+    test('a failure there leaves the card its own figures', () async {
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'lastWeek',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 3, 18),
+        weightKg: 100,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'thisWeek',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 9, 18),
+        weightKg: 80,
+        reps: 1,
+      );
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => DateTime(2026, 11, 10, 11)),
+          dashboardLastWeekToDateVolumeProvider.overrideWith(
+            (ref) => Stream<double>.error(Exception('boom')),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+
+      final WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.volumeKg, 80);
+      expect(week.previousVolumeKg, 100);
+      expect(week.sessions, 1);
+      expect(week.previousToDateVolumeKg, isNull);
+    });
+  });
 }

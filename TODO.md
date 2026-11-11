@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,070 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,072 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -218,6 +218,23 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     saving at 09:00 moves the cut-off past a 07:30 workout (it read 0 with
     the old fixed cut-off, run to check); the stream re-reads its bound on
     each write and skips repeats. **Not checked:** on the phone.
+  - **Fixed: the week card failed with its optional figure.** The snapshot
+    awaited the same-point figure with the two series the card is about, so
+    an error in that one query showed "Could not load this week". Worse,
+    Riverpod 3 retries a failed provider and keeps its `.future` pending
+    while it does, so the card first sat loading through every retry. The
+    snapshot now reads that figure's state: it waits only for a first load,
+    and on an error it builds without it (no badge, "Last week X"), logged
+    through `reportError` (debug builds only). **Tested:** the provider
+    with the figure failing (it hung until the 30 s test timeout on the old
+    code) and the page (the old code showed "Could not load this week").
+    **Not checked:** on the phone.
+  - **Open, app-wide, not changed:** Riverpod 3's automatic retry applies
+    to every provider. A query that fails shows its card loading through
+    the retries (backoff from 200 ms, several seconds in all) before the
+    error and its Retry button appear. Whether to turn retry off for
+    local Drift queries (which do not fail transiently the way a network
+    call does) is a decision for the whole app, in `ProviderScope`.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
