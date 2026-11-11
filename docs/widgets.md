@@ -68,7 +68,7 @@ Two layers:
 | --- | --- |
 | `showExerciseDetailSheet`, `ExerciseDetailSheet` (`library/.../exercise_detail_sheet.dart`) | The "how to do it" sheet: media, muscles, equipment, ordered steps and a YouTube search. The one entry point for every screen that names an exercise, so Library, a program day, a saved workout and the live session all show the same thing. An id that no longer resolves gets the not-found state. Lives in Library rather than `core/` because it needs Library's catalogue localisation. |
 | `ExerciseInfoTapTarget`, `ExerciseInfoIcon` (`exercise_detail_sheet.dart`) | Makes an exercise heading open that sheet: ≥48 dp target, ink ripple, merged button semantics. The ⓘ icon is both the visible cue and the screen-reader label ("How to do …"). Used by Programs and Tracker; wrap the heading only, never a whole card with set rows inside. |
-| `ExerciseThumbnail`, `exercisePictureUrl`, `equipmentIcon` (`library/.../exercise_media.dart`) | Exercise picture with loading and fallback states (including YouTube's grey 120×90 "missing" placeholder), shared by the Library grid and the detail sheet. |
+| `ExerciseThumbnail`, `exercisePictureUrl`, `equipmentIcon` (`library/.../exercise_media.dart`) | Exercise picture with loading and fallback states (including YouTube's grey 120×90 "missing" placeholder), shared by the Library grid and the detail sheet. `decodeWidth` decodes a bundled picture at the size shown (rows at 1.5× their 56 dp square, cards at their width); remote ones keep their own size, which the 120×90 check needs. |
 
 ### Dashboard, Progress, Profile
 

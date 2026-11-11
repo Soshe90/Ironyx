@@ -514,6 +514,10 @@ class _ExerciseRow extends StatelessWidget {
                       url: thumbnailUrl,
                       fallbackUrl: exercisePictureUrl(summary.fallbackMedia),
                       fallbackIcon: fallbackIcon,
+                      // Cropped to fill a square: half again the width, so
+                      // a 3:2 picture is still as tall as the square, and a
+                      // 2:3 one as wide.
+                      decodeWidth: _rowThumbnailSize * 1.5,
                     ),
             ),
           ),
@@ -586,12 +590,18 @@ class _ExerciseCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.sm),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: ExerciseThumbnail(
-                  url: url,
-                  fallbackUrl: exercisePictureUrl(summary.fallbackMedia),
-                  fallbackIcon: summary.equipmentIds.isEmpty
-                      ? Icons.fitness_center
-                      : equipmentIcon(summary.equipmentIds.first),
+                child: LayoutBuilder(
+                  // Decoded at the card's own width: a 16:9 box is wider
+                  // than the pictures, so its width is what has to be met.
+                  builder: (BuildContext context, BoxConstraints box) =>
+                      ExerciseThumbnail(
+                    url: url,
+                    fallbackUrl: exercisePictureUrl(summary.fallbackMedia),
+                    fallbackIcon: summary.equipmentIds.isEmpty
+                        ? Icons.fitness_center
+                        : equipmentIcon(summary.equipmentIds.first),
+                    decodeWidth: box.maxWidth,
+                  ),
                 ),
               ),
             ),

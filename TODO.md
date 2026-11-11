@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,143 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,145 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -239,6 +239,19 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     escape character, are escaped now. **Tested:** the × clears the filter
     with no menu opened; "_", "%" and "0% e" find only the exercise holding
     them. Both fail on the old code.
+  - **Performance: bundled pictures are decoded at the size shown.** The
+    608 pictures are 600×400, about 1 MB each decoded, and a phone row
+    shows one in a 56 dp square; scrolling the catalogue filled Flutter's
+    100 MB image cache over and over. `ExerciseThumbnail.decodeWidth` now
+    decodes a bundled picture at its shown width in device pixels: rows at
+    1.5 times the square (so a 3:2 picture is still as tall as it, and a
+    2:3 one as wide, when cropped to fill), cards at their own width.
+    About 0.13 MB a row on this phone instead of 1 MB. Remote video
+    thumbnails keep their own size: a missing one is told by its exact
+    120×90. Nothing looks different. **Tested:** with a decode width the
+    picture is a `ResizeImage` at that width times the pixel ratio, shape
+    kept; without one, the full asset. Not run on the old code: the test
+    uses the new parameter. **Not checked:** sharpness on the phone.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
