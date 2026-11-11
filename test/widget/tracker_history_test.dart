@@ -754,6 +754,50 @@ void main() {
       await disposeTracker(tester);
     });
 
+    testWidgets('your programs come first, then the built-in, by name',
+        (tester) async {
+      final DateTime at = DateTime(2026, 1, 1);
+      for (final (String id, String name) in <(String, String)>[
+        ('builtin_ppl', 'Push / Pull / Legs'),
+        ('builtin_full_body', 'Full Body'),
+      ]) {
+        await database.into(database.programsTable).insert(
+              ProgramsTableCompanion.insert(
+                id: id,
+                name: name,
+                createdAt: at,
+                updatedAt: at,
+                isBuiltIn: const Value(true),
+              ),
+            );
+      }
+      await const ProgramImportService().apply(
+        database,
+        await const ProgramImportService().parse(
+          'program,day,exercise,sets\n'
+          'Zeta,Day 1,Incline Press,3\n'
+          'alpha,Day 1,Incline Press,3\n',
+          database,
+        ),
+      );
+      await pumpTracker(tester, surfaceSize: const Size(1400, 800));
+
+      final List<String> order = <String>[
+        'alpha',
+        'Zeta',
+        'Full Body',
+        'Push / Pull / Legs',
+      ];
+      for (int i = 1; i < order.length; i++) {
+        expect(
+          tester.getCenter(find.text(order[i])).dx,
+          greaterThan(tester.getCenter(find.text(order[i - 1])).dx),
+          reason: '${order[i - 1]} before ${order[i]}',
+        );
+      }
+      await disposeTracker(tester);
+    });
+
     testWidgets('in Arabic the first program is on the right', (tester) async {
       await importPrograms(2);
       await pumpApp(

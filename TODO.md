@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,105 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,106 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -197,6 +197,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     `trackerResumeWithExercises`). **Tested:** the button, its icon and
     that it opens the workout (fails on the old code); the count updates as
     exercises are added. **Not checked:** on the phone.
+  - **Changed: program order.** The query orders by the stored name, byte
+    by byte, so the user's own programs fell between the built-in ones and
+    "Zeta" came before "alpha". The row now shows the user's programs
+    first, then the built-in ones, each by the name shown, ignoring case;
+    sorted in the widget because the shown name can be a translation. The
+    review had said the order looked shuffled in Arabic: wrong, the three
+    built-in Arabic names happen to sort as the English ones do (as the
+    phone showed). **Tested:** alpha, Zeta, Full Body, Push / Pull / Legs
+    in that order (fails on the old code).
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

@@ -478,8 +478,35 @@ class _ProgramStrip extends StatelessWidget {
   final List<ProgramSummary> programs;
   final ValueChanged<String> onOpen;
 
+  /// The user's own programs first, then the built-in ones, each in the
+  /// order of the name shown, ignoring case.
+  ///
+  /// The query orders by the stored name, byte by byte: the user's
+  /// programs fell between the built-in ones, and "Zeta" came before
+  /// "alpha". Sorted here, not in SQL, because the shown name can be a
+  /// translation the database does not hold.
+  static List<ProgramSummary> _ordered(
+    List<ProgramSummary> programs,
+    String Function(ProgramSummary) nameOf,
+  ) {
+    final List<(ProgramSummary, String)> named = <(ProgramSummary, String)>[
+      for (final ProgramSummary p in programs) (p, nameOf(p).toLowerCase()),
+    ];
+    named.sort(((ProgramSummary, String) a, (ProgramSummary, String) b) {
+      if (a.$1.program.isBuiltIn != b.$1.program.isBuiltIn) {
+        return a.$1.program.isBuiltIn ? 1 : -1;
+      }
+      return a.$2.compareTo(b.$2);
+    });
+    return <ProgramSummary>[for (final (ProgramSummary p, _) in named) p];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final List<ProgramSummary> programs = _ordered(
+      this.programs,
+      (ProgramSummary p) => p.program.displayName(context),
+    );
     // Follows the system text size, so two lines of a name still fit.
     final double cardHeight =
         MediaQuery.textScalerOf(context).scale(_programCardHeight);
