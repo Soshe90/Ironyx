@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,108 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,112 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -218,6 +218,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     its volume. **Tested:** the query (completed sets only; workouts with
     none absent) and the row (fails on the old code). **Not checked:** on
     the phone.
+  - **Refactor: `tracker_page.dart` split.** 1,175 lines and 15 widgets
+    became the page (scaffold, headings, calendar toggle, menus, start and
+    resume; 484 lines) and three files in `tracker/presentation/widgets/`:
+    `program_strip.dart`, `history_list.dart` (the list, month headings and
+    the day sheet) and `history_row.dart` (a row, its title fitting and its
+    date tile). The month grouping left the list's widget for a pure
+    `groupHistoryByMonth` in `tracker/domain/history_grouping.dart`, with
+    four unit tests (empty, months and their totals, a month in two years,
+    a month's first and last minutes). Moved, not rewritten: sorted line by
+    line, old and new differ only in `super.key` on the now-public
+    constructors, doc comments, the grouping's signature and one line the
+    formatter rewrapped. Every existing test passes unchanged.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs
