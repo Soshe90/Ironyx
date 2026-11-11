@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,121 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,123 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -144,6 +144,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     query typed without marks finds "ضغط بار على مقعد مستوٍ" (fails on the
     old code); an unknown word finds nothing; `containsArabic`.
     **Not checked:** on the phone.
+  - **Fixed: a search dropped the filters.** The page watched either the
+    search or the filters, so with text in the box the muscle, equipment
+    and movement filters were ignored while their chips still showed as
+    active. `ExerciseDao.filterBy` now takes the search too (`query`, name
+    or alias), each criterion narrowing the others; `searchByName` calls
+    it, and the separate search provider, left with no user, is removed.
+    Same for the picker sheet's muscle filter. **Tested:** the query with a
+    search and a filter, a blank search, no match; on the page, "pu" with
+    Chest gives Push-Up and not Pull-Up (fails on the old code).
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

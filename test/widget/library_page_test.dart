@@ -240,6 +240,26 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets('a search keeps the filters chosen', (tester) async {
+      await pumpLibrary(tester);
+
+      await tester.tap(find.text('Muscle'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chest').last);
+      await tester.pumpAndSettle();
+      // "pu" is in Push-Up and Pull-Up; only Push-Up is chest.
+      await tester.enterText(find.byType(TextField), 'pu');
+      await tester.pump(AppDuration.inputDebounce);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Push-Up'), findsOneWidget);
+      expect(find.text('Pull-Up'), findsNothing,
+          reason: 'the search used to drop the muscle filter');
+      expect(find.text('Barbell Bench Press'), findsNothing);
+
+      await disposeApp(tester);
+    });
+
     testWidgets('tapping exercise shows detail sheet', (tester) async {
       await pumpLibrary(tester);
 

@@ -105,26 +105,19 @@ Map<String, String> exerciseSlugsById(Ref ref) {
   };
 }
 
-/// Stream of exercises matching a search query (name or alias).
-@Riverpod(keepAlive: true)
-Stream<List<ExerciseSummary>> exercisesSearchStream(
-  Ref ref,
-  String query,
-) =>
-    ref.watch(exerciseSeederProvider.future).asStream().asyncExpand(
-          (_) => ref.watch(exerciseDaoProvider).searchByName(query),
-        );
-
-/// Stream of exercises filtered by criteria.
+/// Stream of exercises narrowed by a name or alias search and by filters,
+/// all at once (see `ExerciseDao.filterBy`).
 @Riverpod(keepAlive: true)
 Stream<List<ExerciseSummary>> exercisesFilteredStream(
   Ref ref, {
+  String? query,
   String? muscleId,
   String? equipmentId,
   MovementPattern? pattern,
 }) =>
     ref.watch(exerciseSeederProvider.future).asStream().asyncExpand(
           (_) => ref.watch(exerciseDaoProvider).filterBy(
+                query: query,
                 muscleId: muscleId,
                 equipmentId: equipmentId,
                 pattern: pattern,

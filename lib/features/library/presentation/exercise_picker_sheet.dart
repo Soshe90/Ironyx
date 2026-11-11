@@ -69,12 +69,16 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
     // the names shown, since the database holds only the English ones.
     final bool arabicSearch = containsArabic(searchQuery);
 
+    // The search and the muscle filter narrow one query together.
+    final String? sqlQuery =
+        searchQuery.isNotEmpty && !arabicSearch ? searchQuery : null;
     final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      searchQuery.isNotEmpty && !arabicSearch
-          ? exercisesSearchStreamProvider(searchQuery)
-          : _selectedMuscleId != null
-              ? exercisesFilteredStreamProvider(muscleId: _selectedMuscleId)
-              : allExercisesStreamProvider,
+      sqlQuery != null || _selectedMuscleId != null
+          ? exercisesFilteredStreamProvider(
+              query: sqlQuery,
+              muscleId: _selectedMuscleId,
+            )
+          : allExercisesStreamProvider,
     );
     final muscles = ref.watch(musclesStreamProvider).value ?? const <Muscle>[];
 

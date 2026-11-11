@@ -54,9 +54,14 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
   Stream<List<ExerciseSummary>> watchAll() => _watchSummaries();
 
   /// Search exercises by name or alias (case-insensitive, partial match).
-  Stream<List<ExerciseSummary>> searchByName(String query) {
-    final normalized = query.trim().toLowerCase();
-    if (normalized.isEmpty) return watchAll();
+  Stream<List<ExerciseSummary>> searchByName(String query) =>
+      filterBy(query: query);
+
+  /// An exercise whose name or one of its aliases holds [query], in any
+  /// case; null for a blank query (nothing to narrow by).
+  Expression<bool>? _nameOrAliasMatches(String? query) {
+    final String normalized = (query ?? '').trim().toLowerCase();
+    if (normalized.isEmpty) return null;
 
     final aliasMatch = existsQuery(
       select(exerciseAliasesTable)
@@ -66,10 +71,7 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
               a.alias.lower().like('%$normalized%'),
         ),
     );
-
-    return _watchSummaries(
-      exercisesTable.name.lower().like('%$normalized%') | aliasMatch,
-    );
+    return exercisesTable.name.lower().like('%$normalized%') | aliasMatch;
   }
 
   /// Every exercise's id by its normalized name and by each normalized
@@ -115,8 +117,15 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     return byKey;
   }
 
-  /// Filter exercises by muscle, equipment, and/or movement pattern.
+  /// Exercises matching every criterion given: a name or alias holding
+  /// [query], and the muscle, equipment and movement pattern.
+  ///
+  /// The search and the filters were alternatives: with text in the search
+  /// box the filters were ignored while their chips still showed as active,
+  /// so "bench" with Chest chosen listed every bench exercise. They are one
+  /// query now, each criterion narrowing the others.
   Stream<List<ExerciseSummary>> filterBy({
+    String? query,
     String? muscleId,
     String? equipmentId,
     MovementPattern? pattern,
@@ -125,6 +134,9 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     void and(Expression<bool> expr) {
       where = where == null ? expr : where! & expr;
     }
+
+    final Expression<bool>? matchesQuery = _nameOrAliasMatches(query);
+    if (matchesQuery != null) and(matchesQuery);
 
     if (muscleId != null) {
       and(

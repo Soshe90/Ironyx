@@ -73,18 +73,23 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     // against the names shown, over the same list the filters give.
     final bool arabicSearch = containsArabic(searchQuery);
 
+    // The search (a Latin one; see above) and the filters narrow one
+    // query together.
+    final String? sqlQuery =
+        searchQuery.isNotEmpty && !arabicSearch ? searchQuery : null;
+    final bool narrowed = sqlQuery != null ||
+        _selectedMuscleId != null ||
+        _selectedEquipmentId != null ||
+        _selectedPattern != null;
     final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      searchQuery.isNotEmpty && !arabicSearch
-          ? exercisesSearchStreamProvider(searchQuery)
-          : (_selectedMuscleId != null ||
-                  _selectedEquipmentId != null ||
-                  _selectedPattern != null)
-              ? exercisesFilteredStreamProvider(
-                  muscleId: _selectedMuscleId,
-                  equipmentId: _selectedEquipmentId,
-                  pattern: _selectedPattern,
-                )
-              : allExercisesStreamProvider,
+      narrowed
+          ? exercisesFilteredStreamProvider(
+              query: sqlQuery,
+              muscleId: _selectedMuscleId,
+              equipmentId: _selectedEquipmentId,
+              pattern: _selectedPattern,
+            )
+          : allExercisesStreamProvider,
     );
 
     return Scaffold(
