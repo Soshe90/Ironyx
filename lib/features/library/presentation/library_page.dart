@@ -81,16 +81,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         _selectedMuscleId != null ||
         _selectedEquipmentId != null ||
         _selectedPattern != null;
-    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      narrowed
-          ? exercisesFilteredStreamProvider(
-              query: sqlQuery,
-              muscleId: _selectedMuscleId,
-              equipmentId: _selectedEquipmentId,
-              pattern: _selectedPattern,
-            )
-          : allExercisesStreamProvider,
-    );
+    final source = narrowed
+        ? exercisesFilteredStreamProvider(
+            query: sqlQuery,
+            muscleId: _selectedMuscleId,
+            equipmentId: _selectedEquipmentId,
+            pattern: _selectedPattern,
+          )
+        : allExercisesStreamProvider;
+    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(source);
 
     return Scaffold(
       appBar: AppBar(
@@ -155,7 +154,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               error: (error, _) => ErrorView(
                 title: context.l10n.libraryLoadFailed,
                 details: error.toString(),
-                onRetry: () => ref.invalidate(allExercisesStreamProvider),
+                // The query on screen; it reloaded the full list, so a
+                // failed search or filter could not be retried.
+                onRetry: () => ref.invalidate(source),
               ),
             ),
           ),

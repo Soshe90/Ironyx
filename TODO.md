@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,130 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,132 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -185,6 +185,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** a bodyweight row has its icon and no row has the generic
     one; in Arabic a row's detail line reads "· بار ·" and the filter lists
     "وزن الجسم" (both fail on the old code).
+  - **Fixed: searches piled up, and Retry reloaded the wrong thing.**
+    `exercisesFilteredStream` was kept alive per argument set, so every
+    search typed and every filter combination tried stayed a live query,
+    re-run on every exercise change, for as long as the app ran; it is
+    released now once nothing shows it. Retry on a failed search or filter
+    reloaded the full list instead, so it could not recover; it reloads the
+    query on screen. The picker sheet's error had no Retry; it has one.
+    **Tested:** a released search no longer exists; after a failed search,
+    Retry runs that search again (it went from 11 tries, the first plus
+    Riverpod's ten retries, to 11: nothing). Both fail on the old code.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

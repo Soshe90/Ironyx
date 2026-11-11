@@ -107,7 +107,11 @@ Map<String, String> exerciseSlugsById(Ref ref) {
 
 /// Stream of exercises narrowed by a name or alias search and by filters,
 /// all at once (see `ExerciseDao.filterBy`).
-@Riverpod(keepAlive: true)
+///
+/// Released once nothing shows it. Kept alive, every search typed and
+/// every filter combination tried stayed in memory as a live query, each
+/// re-run whenever an exercise changed, for as long as the app ran.
+@riverpod
 Stream<List<ExerciseSummary>> exercisesFilteredStream(
   Ref ref, {
   String? query,

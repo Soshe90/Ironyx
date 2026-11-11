@@ -72,14 +72,13 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
     // The search and the muscle filter narrow one query together.
     final String? sqlQuery =
         searchQuery.isNotEmpty && !arabicSearch ? searchQuery : null;
-    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      sqlQuery != null || _selectedMuscleId != null
-          ? exercisesFilteredStreamProvider(
-              query: sqlQuery,
-              muscleId: _selectedMuscleId,
-            )
-          : allExercisesStreamProvider,
-    );
+    final source = sqlQuery != null || _selectedMuscleId != null
+        ? exercisesFilteredStreamProvider(
+            query: sqlQuery,
+            muscleId: _selectedMuscleId,
+          )
+        : allExercisesStreamProvider;
+    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(source);
     final muscles = ref.watch(musclesStreamProvider).value ?? const <Muscle>[];
 
     return DraggableScrollableSheet(
@@ -209,6 +208,8 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                 title: context.l10n.libraryLoadFailed,
                 details: error.toString(),
                 compact: true,
+                // It had none: a failure in the sheet could only be closed.
+                onRetry: () => ref.invalidate(source),
               ),
             ),
           ),

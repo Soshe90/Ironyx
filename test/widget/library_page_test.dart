@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/equipment_dao.dart';
@@ -137,11 +138,17 @@ void main() {
       await database.close();
     }
 
-    Future<void> pumpLibrary(WidgetTester tester, {String? locale}) => pumpApp(
+    Future<void> pumpLibrary(
+      WidgetTester tester, {
+      String? locale,
+      List<dynamic> overrides = const <dynamic>[],
+    }) =>
+        pumpApp(
           tester,
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             ...stubSeeders(),
+            ...overrides,
           ],
           initialLocation: '/library',
           prefs: <String, Object>{
@@ -308,6 +315,52 @@ void main() {
       expect(find.text('Bodyweight'), findsNothing);
 
       await disposeApp(tester);
+    });
+
+    testWidgets('Retry reloads the search that failed', (tester) async {
+      int tries = 0;
+      await pumpLibrary(
+        tester,
+        overrides: [
+          exercisesFilteredStreamProvider(query: 'boom').overrideWith((ref) {
+            tries++;
+            return Stream<List<ExerciseSummary>>.error(Exception('boom'));
+          }),
+        ],
+      );
+      await tester.enterText(find.byType(TextField), 'boom');
+      await tester.pump(AppDuration.inputDebounce);
+      // Riverpod retries a failure before showing it (about 38 s).
+      for (int i = 0; i < 45; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(find.text('Try again'), findsOneWidget);
+
+      final int before = tries;
+      await tester.tap(find.text('Try again'));
+      await tester.pump();
+      expect(tries, greaterThan(before),
+          reason: 'Retry reloaded the full list, not the failed search');
+
+      await disposeApp(tester);
+    });
+
+    test('a search no longer shown is released', () async {
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          ...stubSeeders().cast(),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = exercisesFilteredStreamProvider(query: 'squat');
+      final sub = container.listen(provider, (_, __) {});
+      expect(container.exists(provider), isTrue);
+
+      sub.close();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(container.exists(provider), isFalse,
+          reason: 'kept alive, every search stayed a live query');
     });
 
     testWidgets('a search keeps the filters chosen', (tester) async {
