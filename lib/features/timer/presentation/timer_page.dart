@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_providers.dart';
+import '../../../core/error_reporting.dart';
 import '../../../core/formatters/number_input.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/l10n/l10n_extension.dart';
@@ -63,13 +64,23 @@ class TimerPage extends ConsumerWidget {
               _CustomBuilder(
                 onStart: (preset) => startTimer(context, ref, preset),
                 onSave: (preset) async {
-                  await ref.read(timerPresetDaoProvider).save(preset);
-                  ref.invalidate(savedTimerPresetsProvider);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(context.l10n.timerPresetSaved)),
+                  final ScaffoldMessengerState messenger =
+                      ScaffoldMessenger.of(context);
+                  final AppLocalizations l10n = context.l10n;
+                  try {
+                    await ref.read(timerPresetDaoProvider).save(preset);
+                  } on Object catch (error, stackTrace) {
+                    // It escaped the tap handler, and the tap did nothing.
+                    reportError(error, stackTrace, context: 'save preset');
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(l10n.timerPresetSaveFailed)),
                     );
+                    return;
                   }
+                  ref.invalidate(savedTimerPresetsProvider);
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.timerPresetSaved)),
+                  );
                 },
               ),
             ],
@@ -80,26 +91,54 @@ class TimerPage extends ConsumerWidget {
   }
 }
 
+/// True while [startTimer] is starting a session: from the first tap to
+/// the timer screen opening.
+bool _startingTimer = false;
+
 /// Starts [preset] and opens the full-screen timer.
 ///
 /// Permission is re-checked on every start (users revoke in system
 /// settings) and requested in context if needed. A denial must never block
 /// the timer (ADR-4) — it only costs the background notification.
+///
+/// Three guards, each for something that happened:
+/// * A session already running (backgrounded, its screen closed) is
+///   opened, not replaced. Starting again threw it away unsaved.
+/// * A second tap while the first is still starting is ignored. The wait
+///   on the permission let a double tap start two sessions and push two
+///   timer screens.
+/// * A failure shows a message and is logged; it escaped the tap handler,
+///   and the tap did nothing.
 Future<void> startTimer(
   BuildContext context,
   WidgetRef ref,
   TimerPreset preset,
 ) async {
-  final NotificationService notifications =
-      ref.read(notificationServiceProvider);
+  final TimerController controller = ref.read(timerControllerProvider.notifier);
+  if (controller.isActive) {
+    unawaited(context.pushNamed(Routes.activeTimerName));
+    return;
+  }
+  if (_startingTimer) return;
+  _startingTimer = true;
+  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  final AppLocalizations l10n = context.l10n;
+  try {
+    final NotificationService notifications =
+        ref.read(notificationServiceProvider);
 
-  final bool alreadyGranted = await notifications.isPermissionGranted;
-  final bool granted =
-      alreadyGranted || await notifications.requestPermission();
+    final bool alreadyGranted = await notifications.isPermissionGranted;
+    final bool granted =
+        alreadyGranted || await notifications.requestPermission();
 
-  await ref
-      .read(timerControllerProvider.notifier)
-      .start(preset, notificationGranted: granted);
+    await controller.start(preset, notificationGranted: granted);
+  } on Object catch (error, stackTrace) {
+    reportError(error, stackTrace, context: 'start timer');
+    messenger.showSnackBar(SnackBar(content: Text(l10n.timerStartFailed)));
+    return;
+  } finally {
+    _startingTimer = false;
+  }
 
   if (context.mounted) {
     unawaited(context.pushNamed(Routes.activeTimerName));

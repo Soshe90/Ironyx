@@ -1,12 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/timer_preset_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/formatters/number_input.dart';
+import 'package:ironyx/core/services/notification_service.dart';
+import 'package:ironyx/features/timer/domain/timer_controller.dart';
+import 'package:ironyx/features/timer/domain/timer_engine.dart';
 import 'package:ironyx/features/timer/domain/timer_preset.dart';
+import 'package:ironyx/features/timer/presentation/active_timer_page.dart';
 
 import '../helpers/pump_app.dart';
+
+/// Counts starts instead of running a session; [fail] makes start throw.
+class _CountingController extends TimerController {
+  int starts = 0;
+  bool fail = false;
+
+  @override
+  TimerSnapshot? build() => null;
+
+  @override
+  bool get isActive => state != null;
+
+  @override
+  Future<void> start(
+    TimerPreset preset, {
+    required bool notificationGranted,
+  }) async {
+    starts++;
+    if (fail) throw StateError('no wakelock');
+    state = const TimerSnapshot(
+      currentIndex: 0,
+      currentPhase: TimerPhase(type: TimerPhaseType.work, durationSeconds: 20),
+      remaining: Duration(seconds: 20),
+      elapsed: Duration.zero,
+      total: Duration(minutes: 4),
+      progress: 0,
+      isRunning: true,
+      isComplete: false,
+    );
+  }
+
+  @override
+  Future<void> stop() async => state = null;
+}
+
+/// Granted, after a moment: the wait a real permission check takes.
+class _SlowNotifications extends NoopNotificationService {
+  @override
+  Future<bool> get isPermissionGranted =>
+      Future<bool>.delayed(const Duration(milliseconds: 200), () => true);
+}
+
+class _FailingPresetDao extends TimerPresetDao {
+  _FailingPresetDao(super.db);
+
+  @override
+  Future<String> save(TimerPreset preset) =>
+      Future<String>.error(StateError('disk full'));
+}
 
 void main() {
   group('TimerPage', () {
@@ -160,6 +214,91 @@ void main() {
         () => TimerPresetDao(database).getAll(),
       );
       expect(presets!.single.name, '30s work / 10s rest × 8');
+    });
+    group('starting a timer', () {
+      late _CountingController controller;
+
+      Future<void> open(WidgetTester tester,
+              {List<dynamic> extra = const []}) =>
+          pumpApp(
+            tester,
+            overrides: [
+              appDatabaseProvider.overrideWithValue(database),
+              timerControllerProvider.overrideWith(() => controller),
+              notificationServiceProvider
+                  .overrideWithValue(_SlowNotifications()),
+              ...extra,
+            ],
+            initialLocation: '/timer',
+            prefs: const {'exercise_seed_version': 999999},
+            surfaceSize: const Size(400, 1800),
+          );
+
+      Future<void> frames(WidgetTester tester) async {
+        for (int i = 0; i < 6; i++) {
+          await tester.pump(const Duration(milliseconds: 150));
+        }
+      }
+
+      setUp(() => controller = _CountingController());
+
+      testWidgets('a double tap starts one session', (tester) async {
+        await open(tester);
+        await tester.tap(find.text('Tabata'));
+        await tester.pump(const Duration(milliseconds: 20));
+        await tester.tap(find.text('Tabata'));
+        await frames(tester);
+
+        expect(controller.starts, 1,
+            reason: 'the second tap, during the wait, started a second one');
+        expect(find.byType(ActiveTimerPage), findsOneWidget);
+      });
+
+      testWidgets('with a session running, a preset opens it', (tester) async {
+        await open(tester);
+        // Through the container, which attaches the notifier first; set
+        // before that, its state was reset by build() on the first read.
+        await tester.runAsync(
+          () => ProviderScope.containerOf(tester.element(find.text('Tabata')))
+              .read(timerControllerProvider.notifier)
+              .start(TimerPresets.tabata(), notificationGranted: true),
+        );
+        controller.starts = 0;
+        await tester.pump();
+
+        await tester.tap(find.text('HIIT'));
+        await frames(tester);
+
+        expect(controller.starts, 0,
+            reason: 'starting again threw the running session away');
+        expect(find.byType(ActiveTimerPage), findsOneWidget);
+      });
+
+      testWidgets('a start that fails says so', (tester) async {
+        controller.fail = true;
+        await open(tester);
+        await tester.tap(find.text('Tabata'));
+        await frames(tester);
+
+        expect(find.text("Couldn't start the timer."), findsOneWidget);
+        expect(find.byType(ActiveTimerPage), findsNothing);
+      });
+
+      testWidgets('a save that fails says so', (tester) async {
+        await open(
+          tester,
+          extra: [
+            timerPresetDaoProvider
+                .overrideWith((ref) => _FailingPresetDao(database)),
+          ],
+        );
+        await tester.tap(find.text('Save preset'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Save'));
+        await frames(tester);
+
+        expect(find.text("Couldn't save the preset."), findsOneWidget);
+      });
     });
   });
 }
