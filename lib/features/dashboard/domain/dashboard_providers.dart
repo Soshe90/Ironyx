@@ -371,16 +371,25 @@ class WeekSnapshot {
       if (cursor.isBefore(oldest)) idle = 0;
     }
 
+    final List<double> finished = <double>[
+      for (final WeeklyVolume w in volume)
+        if (w.weekStart.isBefore(thisWeek) && !_sameDay(w.weekStart, thisWeek))
+          w.totalVolumeKg,
+    ];
+
     return WeekSnapshot(
       volumeKg: volumeFor(thisWeek),
       previousVolumeKg: volumeFor(lastWeek),
       sessions: sessionsFor(thisWeek),
-      volumeSeries: <double>[
-        for (final WeeklyVolume w in volume)
-          if (w.weekStart.isBefore(thisWeek) &&
-              !_sameDay(w.weekStart, thisWeek))
-            w.totalVolumeKg,
-      ],
+      // At most the window's eight weeks. Its start is a local midnight,
+      // and the weeks are bucketed with today's UTC offset: across a
+      // daylight-saving change that midnight lands an hour into the day
+      // before, a week earlier, and the series gained a ninth point at its
+      // start, a zero (the query starts at that same instant, so the extra
+      // week is always empty). CI caught it in America/Los_Angeles.
+      volumeSeries: finished.length > _heroWeeks
+          ? finished.sublist(finished.length - _heroWeeks)
+          : finished,
       hasHistory: volume.isNotEmpty,
       previousToDateVolumeKg: previousToDateVolumeKg,
       weeksWithoutWorkouts: idle >= 2 ? idle : 0,

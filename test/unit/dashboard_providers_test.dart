@@ -597,6 +597,32 @@ void main() {
       return container.read(dashboardWeekSnapshotProvider.future);
     }
 
+    test('a ninth, empty week before the window is not drawn', () {
+      // What the window's query returns across a daylight-saving change in
+      // a zone such as America/Los_Angeles: its start, a local midnight
+      // bucketed with today's offset, falls into the week before. Built by
+      // hand here, so it fails in every zone and not only in those.
+      final DateTime thisWeek = DateTime(2026, 11, 9);
+      final List<WeeklyVolume> volume = <WeeklyVolume>[
+        for (int back = 9; back >= 0; back--)
+          WeeklyVolume(
+            weekStart: DateTime(2026, 11, 9 - 7 * back),
+            totalVolumeKg: back == 9 ? 0 : back * 10.0,
+          ),
+      ];
+
+      final WeekSnapshot week = WeekSnapshot.from(
+        volume: volume,
+        frequency: const <WorkoutFrequency>[],
+        weekStart: WeekStart.monday,
+        today: thisWeek.add(const Duration(days: 1)),
+      );
+
+      expect(week.volumeSeries, hasLength(8));
+      expect(week.volumeSeries.first, 80, reason: 'the empty ninth is gone');
+      expect(week.volumeSeries.last, 10);
+    });
+
     test('its first point is a whole week', () async {
       await seedExercise('bench', 'Bench Press');
       // Now is Tue 10 Nov 2026; eight weeks before this one starts Mon 14

@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,117 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,118 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -335,6 +335,14 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** a whole first week (both its ends in, the day before out),
     this week left out, no line for a first week, Saturday weeks; all four
     failed on the old code. **Not checked:** on the phone.
+    **Fixed after CI, 2026-11-11:** in a zone with daylight saving the line
+    still had nine points, a zero first: the window starts at a local
+    midnight, bucketed with today's UTC offset, so across a clock change
+    that midnight falls an hour into the day before, a week earlier. CI's
+    America/Los_Angeles run failed on it; Windows runs could not show it.
+    The series now keeps the last eight finished weeks (the extra one is
+    always empty: the query starts at that instant). A new test builds the
+    nine weeks by hand, so it fails in every zone on the old code.
   - **Fixed: the Est. 1RM tile showed the last session, not the best.** It
     took the most-logged lift's latest session against the one before it,
     so a light day or a deload read as a lower 1RM with a red arrow (any
