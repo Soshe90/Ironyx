@@ -687,6 +687,7 @@
     }
   },
   "dashboardNoRecentTrainingCaption": "سجّل تمرينًا وستظهر هنا حصيلتك الأسبوعية وسلسلة مواظبتك واتجاهاتك. السجلّ الأقدم موجود في تبويب التقدّم.",
+  "dashboardFirstWeek": "أسبوعك الأول يبدأ من هنا",
   "dashboardVolumeEyebrow": "الحجم التدريبي",
   "dashboardSessionGoal": "الهدف الأسبوعي للجلسات",
   "dashboardSessionGoalProgress": "{completed} / {target}",

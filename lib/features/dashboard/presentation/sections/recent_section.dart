@@ -22,16 +22,25 @@ import '../../domain/dashboard_providers.dart';
 /// Priority four: what happened most recently. Compact rows, not tiles —
 /// these are navigation affordances with a value attached, not metrics to
 /// compare at a glance.
-class RecentSection extends StatelessWidget {
+class RecentSection extends ConsumerWidget {
   const RecentSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Before a first workout there is no last workout to show ("Nothing
+    // yet" was a dead row), and unless a timer has been used, nothing
+    // recent at all: then the heading goes too.
+    final bool isNewUser = ref.watch(dashboardIsNewUserProvider);
+    final AsyncValue<TimerSession?> timer =
+        ref.watch(dashboardLastTimerSessionProvider);
+    if (isNewUser && timer.hasValue && timer.value == null) {
+      return const SizedBox.shrink();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         SectionHeader(title: context.l10n.dashboardRecent),
-        const _LastWorkoutRow(),
+        if (!isNewUser) const _LastWorkoutRow(),
         const _LastTimerRow(),
       ],
     );

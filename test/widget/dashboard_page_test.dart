@@ -913,5 +913,93 @@ void main() {
       await tester.pump(Duration.zero);
       await database.close();
     });
+
+    Future<void> openTall(WidgetTester tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: const <String, Object>{'exercise_seed_version': 999999},
+        surfaceSize: const Size(400, 1600),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> close(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+      await database.close();
+    }
+
+    testWidgets('someone new is welcomed, not shown five empty states',
+        (tester) async {
+      await openTall(tester);
+
+      expect(find.text('Your first week starts here'), findsOneWidget);
+      expect(find.textContaining('No training in the last'), findsNothing);
+      expect(find.textContaining('Older history'), findsNothing);
+      // Only body weight applies before a first workout.
+      expect(find.text('BODY WEIGHT'), findsOneWidget);
+      for (final String gone in <String>['EST. 1RM', 'STREAK', 'THIS MONTH']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      // No last workout, no timer used: nothing recent, heading included.
+      expect(find.text('Recent'), findsNothing);
+      expect(find.text('Last workout'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await close(tester);
+    });
+
+    testWidgets('someone new who has used the timer still sees it',
+        (tester) async {
+      final DateTime started =
+          DateTime.now().subtract(const Duration(minutes: 5));
+      await TimerDao(database).insertSession(
+        TimerSessionsTableCompanion.insert(
+          id: 't1',
+          startedAt: started,
+          endedAt: Value(started.add(const Duration(seconds: 20))),
+          plannedDurationSeconds: 240,
+          actualDurationSeconds: const Value(20),
+          presetName: 'Tabata',
+          totalIntervals: 8,
+        ),
+        const <TimerIntervalsTableCompanion>[],
+      );
+      await openTall(tester);
+
+      expect(find.text('Recent'), findsOneWidget);
+      expect(find.text('Last timer'), findsOneWidget);
+      expect(find.text('Last workout'), findsNothing);
+      await close(tester);
+    });
+
+    testWidgets('someone back after a long break is not taken for new',
+        (tester) async {
+      final DateTime long = DateTime.now().subtract(const Duration(days: 90));
+      await WorkoutDao(database).insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'old',
+          startedAt: long,
+          endedAt: Value(long.add(const Duration(minutes: 40))),
+          totalVolumeKg: const Value(500),
+        ),
+        const [],
+        const [],
+      );
+      await openTall(tester);
+
+      expect(find.text('No training in the last 8 weeks'), findsOneWidget);
+      expect(find.text('Your first week starts here'), findsNothing);
+      for (final String tile in <String>[
+        'EST. 1RM',
+        'BODY WEIGHT',
+        'STREAK',
+        'THIS MONTH',
+      ]) {
+        expect(find.text(tile), findsOneWidget, reason: tile);
+      }
+      expect(find.text('Last workout'), findsOneWidget);
+      await close(tester);
+    });
   });
 }

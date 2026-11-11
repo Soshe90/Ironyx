@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,090 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,093 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -329,6 +329,19 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
       (same day, across midnight, a week, a month boundary, clock-change
       weekends), both languages, and the page (tile titles, caption, no
       icon). **Not checked:** on the phone.
+  - **Changed: Home for someone who has never finished a workout.** It was
+    five empty states at once: "No training in the last 8 weeks" (implying
+    some before) with a caption about "older history", three tiles each
+    asking for a workout, and a "Last workout: Nothing yet" row. Now the
+    week card reads "Your first week starts here" (new string, en/ar) above
+    the goal and the day strip; Progress shows only the body-weight tile,
+    full width (a weigh-in needs no workout); Recent is gone unless a timer
+    has been used. One signal decides it, `dashboardIsNewUser` (from
+    Progress's `firstWorkoutAt`, the first finished workout), false while
+    loading or on an error so a returning user never sees the welcome
+    flash by. **Tested:** someone new (fails on the old code), new with a
+    timer used (fails on the old code), and back after 90 days (unchanged:
+    the old wording and all four tiles). **Not checked:** on the phone.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the

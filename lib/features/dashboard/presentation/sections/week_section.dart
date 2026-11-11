@@ -52,6 +52,7 @@ class ThisWeekSection extends ConsumerWidget {
         profileAsync.value?.weeklySessionTarget ?? defaultWeeklySessionTarget;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final DateTime today = ref.watch(todayProvider);
+    final bool isNewUser = ref.watch(dashboardIsNewUserProvider);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final AppLocalizations l10n = context.l10n;
@@ -93,6 +94,7 @@ class ThisWeekSection extends ConsumerWidget {
                   ),
                   data: (s) => _WeekBody(
                     snapshot: s,
+                    isNewUser: isNewUser,
                     weeklyTarget: weeklyTarget,
                     weekdayAsync: weekdayAsync,
                     today: today,
@@ -123,6 +125,7 @@ class _WeekLoading extends StatelessWidget {
 class _WeekBody extends StatelessWidget {
   const _WeekBody({
     required this.snapshot,
+    required this.isNewUser,
     required this.weeklyTarget,
     required this.weekdayAsync,
     required this.today,
@@ -131,6 +134,9 @@ class _WeekBody extends StatelessWidget {
   });
 
   final WeekSnapshot snapshot;
+
+  /// No workout ever finished: welcomed, not told about a lapse.
+  final bool isNewUser;
   final int weeklyTarget;
   final AsyncValue<List<WeekdayDistribution>> weekdayAsync;
   final DateTime today;
@@ -146,18 +152,27 @@ class _WeekBody extends StatelessWidget {
       // The series only covers the hero window, so an empty one means
       // "nothing recent" — not "never trained". Saying the latter to a
       // user with years of history behind them reads as data loss.
+      //
+      // Someone who has never trained is welcomed instead: "No training in
+      // the last 8 weeks" implies there was some before, and the caption's
+      // "older history" does not exist. The start card above already says
+      // how to begin, so the welcome is one line.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            l10n.dashboardNoRecentTraining(dashboardHeroWeeks),
+            isNewUser
+                ? l10n.dashboardFirstWeek
+                : l10n.dashboardNoRecentTraining(dashboardHeroWeeks),
             style: theme.textTheme.titleSmall,
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            l10n.dashboardNoRecentTrainingCaption,
-            style: AppTypography.caption(theme),
-          ),
+          if (!isNewUser) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l10n.dashboardNoRecentTrainingCaption,
+              style: AppTypography.caption(theme),
+            ),
+          ],
           // The goal and the week strip stay visible: they are the invitation
           // to start, and hiding them makes a new user's dashboard look
           // broken rather than empty.

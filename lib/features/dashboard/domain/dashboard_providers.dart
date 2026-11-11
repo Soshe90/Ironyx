@@ -63,6 +63,21 @@ Future<StrengthHeadline?> dashboardStrengthHeadline(Ref ref) async {
 Stream<BodyMetrics?> dashboardLatestBodyMetrics(Ref ref) =>
     ref.watch(bodyMetricsDaoProvider).watchLatest();
 
+/// Whether it is known that no workout has ever been finished: someone
+/// brand new, or who has deleted every workout.
+///
+/// Home was five empty states at once for them: "No training in the last
+/// 8 weeks" (which implies there was some before), three tiles each asking
+/// for a workout, and a "Last workout: Nothing yet" row. With this, Home
+/// welcomes them instead and keeps only what applies before a first
+/// workout. False while loading or on an error, so a returning user never
+/// sees the welcome flash by.
+@riverpod
+bool dashboardIsNewUser(Ref ref) {
+  final AsyncValue<DateTime?> first = ref.watch(firstWorkoutAtProvider);
+  return first.hasValue && first.value == null;
+}
+
 /// Finished workouts this calendar month, for the "This month" tile.
 ///
 /// It replaced an all-time average duration, which barely moved and, with

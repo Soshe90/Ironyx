@@ -25,11 +25,24 @@ import '../widgets/summary_card.dart';
 /// Priority three: four progress signals worth surfacing off-screen, as
 /// an even two-by-two. (It was two tiles and a third stretched full width
 /// under them, with its one short figure adrift in the middle.)
-class ProgressSection extends StatelessWidget {
+class ProgressSection extends ConsumerWidget {
   const ProgressSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Before a first workout only body weight applies: the other three
+    // tiles could only ask for a workout, which the start card already
+    // does. Alone, the tile takes the row; beside nothing, half a row
+    // read as something missing.
+    if (ref.watch(dashboardIsNewUserProvider)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SectionHeader(title: context.l10n.navProgress),
+          const _BodyWeightCard(),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[

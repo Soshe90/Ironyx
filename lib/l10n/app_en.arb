@@ -714,6 +714,8 @@
     }
   },
   "dashboardNoRecentTrainingCaption": "Log a workout and your weekly volume, streak and trends will appear here. Older history is on the Progress tab.",
+  "dashboardFirstWeek": "Your first week starts here",
+  "@dashboardFirstWeek": {"description": "Heading of the dashboard's This week card for someone who has never finished a workout, above the session goal and the day strip."},
   "dashboardVolumeEyebrow": "VOLUME",
   "dashboardSessionGoal": "Weekly session goal",
   "dashboardSessionGoalProgress": "{completed} / {target}",
