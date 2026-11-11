@@ -1053,6 +1053,8 @@
 
   "libraryTitle": "Exercise library",
   "libraryClearFilters": "Clear filters",
+  "libraryClearFilterOf": "Clear {filter} filter",
+  "@libraryClearFilterOf": {"description": "Tooltip of the × on an active Library filter chip. {filter} is the filter's name, e.g. Muscle.", "placeholders": {"filter": {"type": "String"}}},
   "librarySearchHint": "Search exercises",
   "libraryClearSearch": "Clear search",
   "libraryLoadFailed": "Failed to load exercises",

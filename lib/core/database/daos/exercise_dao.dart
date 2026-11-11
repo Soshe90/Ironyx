@@ -63,15 +63,19 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     final String normalized = (query ?? '').trim().toLowerCase();
     if (normalized.isEmpty) return null;
 
+    // `%` and `_` are LIKE's wildcards; typed, they are just characters.
+    // Unescaped, a search for "_" matched every exercise.
+    final String pattern = '%${_escapeLike(normalized)}%';
     final aliasMatch = existsQuery(
       select(exerciseAliasesTable)
         ..where(
           (a) =>
               a.exerciseId.equalsExp(exercisesTable.id) &
-              a.alias.lower().like('%$normalized%'),
+              a.alias.lower().like(pattern, escapeChar: _likeEscape),
         ),
     );
-    return exercisesTable.name.lower().like('%$normalized%') | aliasMatch;
+    return exercisesTable.name.lower().like(pattern, escapeChar: _likeEscape) |
+        aliasMatch;
   }
 
   /// Every exercise's id by its normalized name and by each normalized
@@ -116,6 +120,14 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     }
     return byKey;
   }
+
+  static const String _likeEscape = r'\';
+
+  /// [text] with LIKE's wildcards and its escape character escaped.
+  static String _escapeLike(String text) => text
+      .replaceAll(_likeEscape, '$_likeEscape$_likeEscape')
+      .replaceAll('%', '$_likeEscape%')
+      .replaceAll('_', '${_likeEscape}_');
 
   /// Exercises matching every criterion given: a name or alias holding
   /// [query], and the muscle, equipment and movement pattern.

@@ -292,7 +292,10 @@ class _FilterMenuChip<T extends Object> extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
     final bool active = value != null;
 
-    return PopupMenuButton<T?>(
+    final Color ink =
+        active ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
+
+    final Widget menu = PopupMenuButton<T?>(
       tooltip: context.l10n.libraryFilterBy(label.toLowerCase()),
       initialValue: value,
       onSelected: onChanged,
@@ -305,20 +308,12 @@ class _FilterMenuChip<T extends Object> extends StatelessWidget {
         for (final T option in options)
           PopupMenuItem<T?>(value: option, child: Text(getLabel(option))),
       ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        constraints: const BoxConstraints(
-          minHeight: AppSpacing.minTapTarget,
-        ),
-        decoration: BoxDecoration(
-          color: active ? scheme.secondaryContainer : scheme.surface,
-          border: Border.all(
-            color: active ? scheme.secondary : scheme.outlineVariant,
-          ),
-          borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: Padding(
+        padding: EdgeInsetsDirectional.only(
+          start: AppSpacing.md,
+          end: active ? AppSpacing.xs : AppSpacing.md,
+          top: AppSpacing.sm,
+          bottom: AppSpacing.sm,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -326,22 +321,47 @@ class _FilterMenuChip<T extends Object> extends StatelessWidget {
             Text(
               active ? getLabel(value as T) : label,
               style: theme.textTheme.labelLarge?.copyWith(
-                color: active
-                    ? scheme.onSecondaryContainer
-                    : scheme.onSurfaceVariant,
+                color: ink,
                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
-            Icon(
-              active ? Icons.close : Icons.arrow_drop_down,
-              size: 18,
-              color: active
-                  ? scheme.onSecondaryContainer
-                  : scheme.onSurfaceVariant,
-            ),
+            if (!active) ...<Widget>[
+              const SizedBox(width: AppSpacing.xs),
+              Icon(Icons.arrow_drop_down, size: 18, color: ink),
+            ],
           ],
         ),
+      ),
+    );
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: AppSpacing.minTapTarget),
+      decoration: BoxDecoration(
+        color: active ? scheme.secondaryContainer : scheme.surface,
+        border: Border.all(
+          color: active ? scheme.secondary : scheme.outlineVariant,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          menu,
+          // The "×" clears this filter. It sat inside the menu's button, so
+          // a tap on it only opened the menu again.
+          if (active)
+            IconButton(
+              tooltip: context.l10n.libraryClearFilterOf(label),
+              onPressed: () => onChanged(null),
+              icon: Icon(Icons.close, size: 18, color: ink),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: AppSpacing.minTapTarget - AppSpacing.sm,
+                minHeight: AppSpacing.minTapTarget,
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -363,6 +363,26 @@ void main() {
           reason: 'kept alive, every search stayed a live query');
     });
 
+    testWidgets("an active chip's × clears its filter", (tester) async {
+      await pumpLibrary(tester);
+      await tester.tap(find.text('Muscle'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chest').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Back Squat'), findsNothing);
+
+      await tester.tap(find.byTooltip('Clear Muscle filter'));
+      await tester.pumpAndSettle();
+
+      // No menu opened, and the filter is gone.
+      expect(find.text('All Muscle'), findsNothing);
+      expect(find.byType(PopupMenuItem<Object?>), findsNothing);
+      expect(find.text('Back Squat'), findsOneWidget);
+      expect(find.text('Muscle'), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
     testWidgets('a search keeps the filters chosen', (tester) async {
       await pumpLibrary(tester);
 

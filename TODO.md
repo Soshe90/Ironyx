@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,141 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,143 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -230,6 +230,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     hands that clock to the engine. **Tested:** 5 s, a ten-minute pause,
     7 s saves 12 s (with the old formula, 612); a session run out saves
     its planned 5 s.
+  - **Fixed: two small Library faults.** An active filter chip showed an
+    "×", but it sat inside the chip's menu button, so tapping it opened
+    the menu again; the "×" is now its own button ("Clear Muscle filter",
+    new string, en/ar) and clears that filter, while the rest of the chip
+    still opens the menu. And `%` and `_` typed in the search were LIKE
+    wildcards, so a search for "_" matched every exercise; they, and the
+    escape character, are escaped now. **Tested:** the × clears the filter
+    with no menu opened; "_", "%" and "0% e" find only the exercise holding
+    them. Both fail on the old code.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

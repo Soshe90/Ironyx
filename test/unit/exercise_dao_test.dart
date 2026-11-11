@@ -175,6 +175,30 @@ void main() {
       expect(results.map((s) => s.exercise.id), ['row']);
     });
 
+    test('% and _ in a search are characters, not wildcards', () async {
+      await seedExercise(
+        id: 'bench',
+        name: 'Bench Press',
+        primaryMuscleId: 'chest',
+        equipmentId: 'barbell',
+      );
+      await seedExercise(
+        id: 'odd',
+        name: '100% Effort_Hold',
+        primaryMuscleId: 'chest',
+        equipmentId: 'barbell',
+      );
+
+      expect((await dao.searchByName('_').first).map((s) => s.exercise.id),
+          <String>['odd'],
+          reason: 'an unescaped _ matched every exercise');
+      expect((await dao.searchByName('%').first).map((s) => s.exercise.id),
+          <String>['odd']);
+      expect((await dao.searchByName('0% e').first).map((s) => s.exercise.id),
+          <String>['odd']);
+      expect(await dao.searchByName(r'\').first, isEmpty);
+    });
+
     test('a search and a filter narrow together', () async {
       await seedExercise(
         id: 'bench',

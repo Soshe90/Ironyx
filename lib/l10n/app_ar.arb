@@ -986,6 +986,7 @@
 
   "libraryTitle": "مكتبة التمارين",
   "libraryClearFilters": "مسح عوامل التصفية",
+  "libraryClearFilterOf": "إلغاء تصفية {filter}",
   "librarySearchHint": "البحث عن تمارين",
   "libraryClearSearch": "مسح البحث",
   "libraryLoadFailed": "تعذّر تحميل التمارين",
