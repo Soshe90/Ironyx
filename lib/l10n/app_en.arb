@@ -641,6 +641,10 @@
     }
   },
   "timerPositiveValuesRequired": "Work, rest and rounds must be positive.",
+  "timerRoundsTooMany": "Rounds can be at most {max}.",
+  "timerPhaseTooLong": "Work, rest, warm-up and cool-down can be at most {max} seconds each.",
+  "@timerPhaseTooLong": {"description": "Snack bar when a custom timer phase is longer than allowed (one hour).", "placeholders": {"max": {"type": "int"}}},
+  "@timerRoundsTooMany": {"description": "Snack bar when a custom timer has more rounds than allowed.", "placeholders": {"max": {"type": "int"}}},
   "timerFieldWork": "Work (s)",
   "timerFieldRest": "Rest (s)",
   "timerFieldRounds": "Rounds",

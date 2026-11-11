@@ -272,10 +272,26 @@ class _CustomBuilderState extends ConsumerState<_CustomBuilder> {
     final int warmup = int.tryParse(_warmup.text) ?? 0;
     final int cooldown = int.tryParse(_cooldown.text) ?? 0;
 
-    if (work <= 0 || rest <= 0 || rounds <= 0 || warmup < 0 || cooldown < 0) {
+    final AppLocalizations l10n = context.l10n;
+    final CustomTimerProblem? problem = rest <= 0
+        ? CustomTimerProblem.notPositive
+        : checkCustomTimer(
+            workSeconds: work,
+            restSeconds: rest,
+            rounds: rounds,
+            warmupSeconds: warmup,
+            cooldownSeconds: cooldown,
+          );
+    if (problem != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.l10n.timerPositiveValuesRequired),
+          content: Text(switch (problem) {
+            CustomTimerProblem.notPositive => l10n.timerPositiveValuesRequired,
+            CustomTimerProblem.tooManyRounds =>
+              l10n.timerRoundsTooMany(kMaxTimerRounds),
+            CustomTimerProblem.phaseTooLong =>
+              l10n.timerPhaseTooLong(kMaxTimerPhaseSeconds),
+          }),
         ),
       );
       return null;

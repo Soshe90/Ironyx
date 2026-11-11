@@ -609,6 +609,8 @@
     }
   },
   "timerPositiveValuesRequired": "يجب أن تكون قيم العمل والراحة والجولات موجبة.",
+  "timerRoundsTooMany": "لا يمكن أن تزيد الجولات على {max}.",
+  "timerPhaseTooLong": "لا يمكن أن تزيد مدة العمل أو الراحة أو الإحماء أو التهدئة على {max} ثانية.",
   "timerFieldWork": "مدة العمل (ث)",
   "timerFieldRest": "الراحة (ث)",
   "timerFieldRounds": "الجولات",

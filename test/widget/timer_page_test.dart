@@ -84,5 +84,23 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
+    testWidgets('a custom timer past the limits does not start',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        initialLocation: '/timer',
+        prefs: const {'exercise_seed_version': 999999},
+        surfaceSize: const Size(400, 1400),
+      );
+      final Finder rounds = find.byType(TextField).at(2);
+      await tester.enterText(rounds, '80000');
+      await tester.tap(find.text('Start custom'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rounds can be at most 99.'), findsOneWidget);
+      expect(find.text('Start custom'), findsOneWidget,
+          reason: 'still on the Timer tab, nothing started');
+    });
   });
 }

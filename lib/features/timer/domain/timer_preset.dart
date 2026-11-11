@@ -52,6 +52,54 @@ extension TimerPresetX on TimerPreset {
   int get totalIntervals => phases.length;
 }
 
+/// Most rounds a custom timer can have.
+const int kMaxTimerRounds = 99;
+
+/// Longest a custom timer's work, rest, warm-up or cool-down can be: one
+/// hour.
+const int kMaxTimerPhaseSeconds = 3600;
+
+/// What is wrong with a custom timer's values, if anything.
+enum CustomTimerProblem {
+  /// Work and rounds must be above zero, the rest not below.
+  notPositive,
+
+  /// More than [kMaxTimerRounds] rounds.
+  tooManyRounds,
+
+  /// A phase longer than [kMaxTimerPhaseSeconds].
+  phaseTooLong,
+}
+
+/// Checks a custom timer's values against the limits; null when they are
+/// fine.
+///
+/// There were no upper limits: a typo of 80000 rounds built 160,000 phases,
+/// which the engine walks five times a second and the controller tried to
+/// schedule a notification for, one each. 99 rounds of up to an hour each
+/// is far past any real session.
+CustomTimerProblem? checkCustomTimer({
+  required int workSeconds,
+  required int restSeconds,
+  required int rounds,
+  int warmupSeconds = 0,
+  int cooldownSeconds = 0,
+}) {
+  if (workSeconds <= 0 ||
+      rounds <= 0 ||
+      restSeconds < 0 ||
+      warmupSeconds < 0 ||
+      cooldownSeconds < 0) {
+    return CustomTimerProblem.notPositive;
+  }
+  if (rounds > kMaxTimerRounds) return CustomTimerProblem.tooManyRounds;
+  if (<int>[workSeconds, restSeconds, warmupSeconds, cooldownSeconds]
+      .any((int s) => s > kMaxTimerPhaseSeconds)) {
+    return CustomTimerProblem.phaseTooLong;
+  }
+  return null;
+}
+
 /// Built-in quick-start presets and the custom-builder factory.
 abstract final class TimerPresets {
   static TimerPreset tabata() => TimerPreset(
@@ -82,6 +130,18 @@ abstract final class TimerPresets {
     int warmupSeconds = 0,
     int cooldownSeconds = 0,
   }) {
+    // Refused here as well as in the builder, so no caller can make a
+    // timer past the limits.
+    final CustomTimerProblem? problem = checkCustomTimer(
+      workSeconds: workSeconds,
+      restSeconds: restSeconds,
+      rounds: rounds,
+      warmupSeconds: warmupSeconds,
+      cooldownSeconds: cooldownSeconds,
+    );
+    if (problem != null) {
+      throw ArgumentError.value(problem, 'custom timer', 'outside the limits');
+    }
     return TimerPreset(
       id: 'custom',
       name: 'Custom',

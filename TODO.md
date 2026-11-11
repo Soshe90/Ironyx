@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,123 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,127 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -153,6 +153,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     Same for the picker sheet's muscle filter. **Tested:** the query with a
     search and a filter, a blank search, no match; on the page, "pu" with
     Chest gives Push-Up and not Pull-Up (fails on the old code).
+  - **Fixed: the custom timer had no upper limits.** Any number was taken:
+    80000 rounds built 160,000 phases, which the engine walks five times a
+    second and the controller tried to schedule a notification for, one
+    each. Now at most 99 rounds (`kMaxTimerRounds`) and 3,600 s per phase
+    (`kMaxTimerPhaseSeconds`), checked by `checkCustomTimer` in the domain;
+    the builder shows which limit was passed (two new strings, en/ar) and
+    starts or saves nothing, and `TimerPresets.custom` throws past them, so
+    no caller can build one. **Not covered:** presets read back from the
+    database (`decodeTimerPhases`) are not re-checked, so a restored backup
+    could still hold one made before this. **Tested:** the limits
+    themselves pass, one past fails, the factory throws, and on the page
+    80000 rounds shows "Rounds can be at most 99." (fails on the old code).
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
