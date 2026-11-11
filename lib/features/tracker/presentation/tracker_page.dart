@@ -690,6 +690,9 @@ class _HistorySliverList extends ConsumerWidget {
     final Map<String, List<WorkoutExerciseName>> namesByWorkout =
         ref.watch(workoutExerciseNamesProvider).value ?? const {};
     final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
+    // Null while loading: rows keep their volume until the counts arrive.
+    final Map<String, int>? setCounts =
+        ref.watch(workoutSetCountsProvider).value;
     final List<_HistoryEntry> entries = _group(workouts);
 
     return SliverList.builder(
@@ -708,6 +711,7 @@ class _HistorySliverList extends ConsumerWidget {
               _WorkoutHistoryTile(
                 workout: workout,
                 isPersonalRecord: prWorkoutIds.contains(workout.id),
+                setCount: setCounts == null ? null : setCounts[workout.id] ?? 0,
                 exerciseNames: _displayedNames(
                   context,
                   namesByWorkout[workout.id],
@@ -748,6 +752,8 @@ class _DayWorkoutsSheet extends ConsumerWidget {
     final Set<String> prWorkoutIds =
         ref.watch(personalRecordWorkoutIdsProvider).value ?? const <String>{};
     final Map<String, String> slugsById = ref.watch(exerciseSlugsByIdProvider);
+    final Map<String, int>? setCounts =
+        ref.watch(workoutSetCountsProvider).value;
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -775,6 +781,8 @@ class _DayWorkoutsSheet extends ConsumerWidget {
             _WorkoutHistoryTile(
               workout: workouts[i],
               isPersonalRecord: prWorkoutIds.contains(workouts[i].id),
+              setCount:
+                  setCounts == null ? null : setCounts[workouts[i].id] ?? 0,
               exerciseNames: _displayedNames(
                 context,
                 namesByWorkout[workouts[i].id],
@@ -854,11 +862,17 @@ class _WorkoutHistoryTile extends ConsumerWidget {
     required this.workout,
     required this.isPersonalRecord,
     required this.exerciseNames,
+    this.setCount,
     this.onOpen,
   });
 
   final Workout workout;
   final bool isPersonalRecord;
+
+  /// Completed sets, shown instead of the volume when the workout has none
+  /// (bodyweight or timed sets), where "0 kg" read as nothing done. Null
+  /// while the counts load: the volume shows until then.
+  final int? setCount;
 
   /// What a tap does; opening the workout's page when null. The day sheet
   /// passes its own, to close with the choice.
@@ -886,17 +900,26 @@ class _WorkoutHistoryTile extends ConsumerWidget {
     // [_HistoryTitle].
     final String? title =
         exerciseNames.isEmpty ? null : exerciseNames.join(l10n.listSeparator);
-    final String volumeText =
-        UnitFormatters.volume(workout.totalVolumeKg, unit, context.l10n);
-    final String summary = isPersonalRecord
-        ? l10n.trackerWorkoutSemanticPr(
+    // A workout with no load is measured in sets; it cannot hold a record
+    // either, since a record needs weight.
+    final bool bySets = workout.totalVolumeKg <= 0 && setCount != null;
+    final String volumeText = bySets
+        ? l10n.trackerSetCount(setCount!)
+        : UnitFormatters.volume(workout.totalVolumeKg, unit, context.l10n);
+    final String summary = bySets
+        ? l10n.trackerWorkoutSemanticSets(
             dates.full(workout.startedAt),
             volumeText,
           )
-        : l10n.trackerWorkoutSemantic(
-            dates.full(workout.startedAt),
-            volumeText,
-          );
+        : isPersonalRecord
+            ? l10n.trackerWorkoutSemanticPr(
+                dates.full(workout.startedAt),
+                volumeText,
+              )
+            : l10n.trackerWorkoutSemantic(
+                dates.full(workout.startedAt),
+                volumeText,
+              );
     // Watched, not read from the clock: the list outlives the day it was
     // built on, and yesterday's row must stop saying "today".
     final DateTime today = ref.watch(todayProvider);

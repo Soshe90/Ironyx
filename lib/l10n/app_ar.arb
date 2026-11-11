@@ -165,6 +165,8 @@
   "trackerHistoryLoadFailed": "تعذّر تحميل السجلّ",
   "trackerProgramsLoadFailed": "تعذّر تحميل البرامج",
   "trackerDayWorkoutsTitle": "تمارين يوم {date}",
+  "trackerSetCount": "{count, plural, zero{لا مجموعات} one{مجموعة واحدة} two{مجموعتان} few{{count} مجموعات} many{{count} مجموعةً} other{{count} مجموعة}}",
+  "trackerWorkoutSemanticSets": "تمرين في {date}، {sets}",
   "trackerProgramSemantic": "{name}، {days}",
   "@trackerProgramSemantic": {
     "placeholders": {

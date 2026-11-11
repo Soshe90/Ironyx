@@ -295,6 +295,54 @@ void main() {
     });
   });
 
+  testWidgets('a workout with no load shows its sets, not 0 kg',
+      (tester) async {
+    final DateTime at = DateTime.now().subtract(const Duration(days: 2));
+    await WorkoutDao(database).insertWorkout(
+      WorkoutsTableCompanion.insert(
+        id: 'bodyweight',
+        startedAt: at,
+        endedAt: Value(at.add(const Duration(minutes: 20))),
+        totalVolumeKg: const Value(0),
+      ),
+      [
+        WorkoutExercisesTableCompanion.insert(
+          id: 'bw_a',
+          workoutId: 'bodyweight',
+          exerciseId: 'my-row',
+          orderIndex: 0,
+        ),
+      ],
+      [
+        for (int i = 0; i < 4; i++)
+          WorkoutSetsTableCompanion.insert(
+            id: 'bw_s$i',
+            workoutExerciseId: 'bw_a',
+            setIndex: i,
+            weightKg: 0,
+            reps: 12,
+            // One left unticked: only completed sets count.
+            isCompleted: Value(i < 3),
+          ),
+      ],
+    );
+    await pumpTracker(tester);
+
+    expect(find.text('3 sets'), findsOneWidget);
+    expect(find.text('0 kg'), findsNothing);
+    // The loaded workout keeps its kilograms.
+    expect(find.text('1,200 kg'), findsWidgets);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) =>
+            w is Semantics &&
+            (w.properties.label?.endsWith(', 3 sets') ?? false),
+      ),
+      findsOneWidget,
+    );
+    await disposeTracker(tester);
+  });
+
   group('a calendar day', () {
     // Pinned to Tue 10 Nov 2026, so the calendar opens on November whatever
     // the real date; the seeded workout (three hours before the real now)

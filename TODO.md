@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,106 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,108 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -206,6 +206,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     built-in Arabic names happen to sort as the English ones do (as the
     phone showed). **Tested:** alpha, Zeta, Full Body, Push / Pull / Legs
     in that order (fails on the old code).
+  - **Changed: a workout with no load shows its sets, not "0 kg".** A
+    bodyweight or timed-only session read "0 kg", as if nothing was done.
+    Its row now shows its completed sets ("12 sets", new plural
+    `trackerSetCount`, en/ar), and a screen reader hears "Workout on
+    {date}, 12 sets" (`trackerWorkoutSemanticSets`). Rows with load keep
+    their kilograms, and month totals are unchanged. The counts come from
+    one `GROUP BY` for the whole history
+    (`WorkoutDao.watchCompletedSetCountByWorkout`, provider
+    `workoutSetCounts`), not a query per row; while they load, a row keeps
+    its volume. **Tested:** the query (completed sets only; workouts with
+    none absent) and the row (fails on the old code). **Not checked:** on
+    the phone.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

@@ -165,6 +165,12 @@ Stream<PreviousPerformance?> previousPerformance(Ref ref, String exerciseId) =>
 Stream<Map<String, List<WorkoutExerciseName>>> workoutExerciseNames(Ref ref) =>
     ref.watch(workoutDaoProvider).watchExerciseNamesByWorkout();
 
+/// Completed sets per workout, keyed by workout id — the history row's
+/// figure for a workout with no load.
+@Riverpod(keepAlive: true)
+Stream<Map<String, int>> workoutSetCounts(Ref ref) =>
+    ref.watch(workoutDaoProvider).watchCompletedSetCountByWorkout();
+
 /// IDs of workouts containing a personal-record set — used to badge the
 /// Tracker history list.
 @Riverpod(keepAlive: true)
