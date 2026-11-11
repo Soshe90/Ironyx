@@ -423,13 +423,22 @@ void main() {
     });
   });
 
-  testWidgets('XLSX import moved into the history menu', (tester) async {
+  testWidgets('both imports are in one app-bar menu', (tester) async {
     await pumpTracker(tester);
 
-    expect(find.text('Import XLSX'), findsNothing);
-    await tester.tap(find.byTooltip('History options'));
+    expect(find.text('Import workouts from XLSX'), findsNothing);
+    expect(find.byTooltip('History options'), findsNothing);
+    expect(find.byTooltip('Program options'), findsNothing);
+    final Finder menu = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byTooltip('Import'),
+    );
+    expect(menu, findsOneWidget);
+
+    await tester.tap(menu);
     await tester.pumpAndSettle();
-    expect(find.text('Import XLSX'), findsOneWidget);
+    expect(find.text('Import programs from CSV'), findsOneWidget);
+    expect(find.text('Import workouts from XLSX'), findsOneWidget);
 
     await disposeTracker(tester);
   });
@@ -575,7 +584,7 @@ void main() {
 
     expect(find.text('Strength Block'), findsOneWidget);
     expect(find.text('Import programs from CSV'), findsNothing);
-    await tester.tap(find.byTooltip('Program options'));
+    await tester.tap(find.byTooltip('Import'));
     await tester.pumpAndSettle();
     expect(find.text('Import programs from CSV'), findsOneWidget);
 
@@ -967,7 +976,7 @@ void main() {
 
     expect(find.text('No programs yet'), findsOneWidget);
     expect(find.byTooltip('Import programs from CSV'), findsOneWidget);
-    expect(find.byTooltip('Program options'), findsOneWidget);
+    expect(find.byTooltip('Import'), findsOneWidget);
 
     await disposeTracker(tester);
   });
@@ -979,7 +988,7 @@ void main() {
 
     expect(find.text('No workouts yet'), findsOneWidget);
     expect(find.byTooltip('Show calendar'), findsNothing);
-    expect(find.byTooltip('History options'), findsOneWidget);
+    expect(find.byTooltip('Import'), findsOneWidget);
 
     await disposeTracker(tester);
   });

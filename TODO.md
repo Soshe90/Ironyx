@@ -230,6 +230,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     line, old and new differ only in `super.key` on the now-public
     constructors, doc comments, the grouping's signature and one line the
     formatter rewrapped. Every existing test passes unchanged.
+  - **Changed: one import menu.** The Programs and History headings each
+    had a "⋮" holding one rare item (CSV and XLSX import). Both are now in
+    a single "⋮" in the app bar ("Import": "Import programs from CSV",
+    "Import workouts from XLSX"; two new strings, en/ar), and the headings
+    keep only their everyday action ("New", the calendar). The no-programs
+    card keeps its own import button. The two old menu tooltips are
+    removed (`trackerProgramOptions`, `trackerHistoryOptions`). **Tested:**
+    one menu with both items and no section menus (fails on the old code);
+    the existing import tests now open it.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

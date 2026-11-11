@@ -35,9 +35,8 @@ class TrackerPage extends ConsumerStatefulWidget {
   ConsumerState<TrackerPage> createState() => _TrackerPageState();
 }
 
-enum _HistoryMenuAction { importXlsx }
-
-enum _ProgramsMenuAction { importCsv }
+/// The tab's one overflow menu: the two imports, both rare.
+enum _ImportAction { programsCsv, workoutsXlsx }
 
 class _TrackerPageState extends ConsumerState<TrackerPage> {
   /// Month shown by the calendar. Starts on the current month and follows
@@ -82,7 +81,42 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
     final bool hasHistory = historyAsync.value?.isNotEmpty ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.navTracker)),
+      appBar: AppBar(
+        title: Text(context.l10n.navTracker),
+        // Both imports in one place. Each section had a menu of its own
+        // with this one rare item in it, two "⋮" for two one-off actions;
+        // the headings now keep only their everyday action.
+        actions: <Widget>[
+          PopupMenuButton<_ImportAction>(
+            tooltip: context.l10n.trackerImportMenu,
+            onSelected: (_ImportAction action) => switch (action) {
+              _ImportAction.programsCsv =>
+                ProgramImportAction.run(context, ref),
+              _ImportAction.workoutsXlsx =>
+                WorkoutXlsxImportAction.run(context, ref),
+            },
+            itemBuilder: (BuildContext context) =>
+                <PopupMenuEntry<_ImportAction>>[
+              PopupMenuItem<_ImportAction>(
+                value: _ImportAction.programsCsv,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.upload_file_outlined),
+                  title: Text(context.l10n.programImportTooltip),
+                ),
+              ),
+              PopupMenuItem<_ImportAction>(
+                value: _ImportAction.workoutsXlsx,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.table_view_outlined),
+                  title: Text(context.l10n.trackerImportWorkoutsXlsx),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: PageBody(
         gutter: false,
         child: CustomScrollView(
@@ -97,53 +131,20 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
             SliverPadding(
               padding: context.sliverGutter,
               sliver: SliverToBoxAdapter(
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: SectionHeader(
-                        title: context.l10n.trackerPrograms,
-                        // What a program is, for someone who has none. Once
-                        // there are cards under the heading they say it
-                        // themselves, and the sentence only wrapped onto a
-                        // second line with one word on it.
-                        // Only once the list is known to be empty: while it
-                        // loads, or when it failed, there may be programs.
-                        subtitle: programsAsync.hasValue &&
-                                programsAsync.value!.isEmpty
-                            ? context.l10n.trackerProgramsSubtitle
-                            : null,
-                        actionLabel: context.l10n.trackerNew,
-                        onAction: () =>
-                            context.pushNamed(Routes.programNewName),
-                      ),
-                    ),
-                    // CSV import lived only in the no-programs card, which
-                    // the seeded built-in programs mean almost nobody sees.
-                    // Here it is always reachable; a menu, as in History,
-                    // because it is rare next to "New".
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: PopupMenuButton<_ProgramsMenuAction>(
-                        tooltip: context.l10n.trackerProgramOptions,
-                        onSelected: (_ProgramsMenuAction action) =>
-                            switch (action) {
-                          _ProgramsMenuAction.importCsv =>
-                            ProgramImportAction.run(context, ref),
-                        },
-                        itemBuilder: (BuildContext context) =>
-                            <PopupMenuEntry<_ProgramsMenuAction>>[
-                          PopupMenuItem<_ProgramsMenuAction>(
-                            value: _ProgramsMenuAction.importCsv,
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.upload_file_outlined),
-                              title: Text(context.l10n.programImportTooltip),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: SectionHeader(
+                  title: context.l10n.trackerPrograms,
+                  // What a program is, for someone who has none. Once
+                  // there are cards under the heading they say it
+                  // themselves, and the sentence only wrapped onto a
+                  // second line with one word on it.
+                  // Only once the list is known to be empty: while it
+                  // loads, or when it failed, there may be programs.
+                  subtitle:
+                      programsAsync.hasValue && programsAsync.value!.isEmpty
+                          ? context.l10n.trackerProgramsSubtitle
+                          : null,
+                  actionLabel: context.l10n.trackerNew,
+                  onAction: () => context.pushNamed(Routes.programNewName),
                 ),
               ),
             ),
@@ -244,29 +245,6 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                                 () => _showCalendar = !_showCalendar,
                               ),
                             ),
-                          // A rare, one-off import; it does not need the
-                          // section's only visible action.
-                          PopupMenuButton<_HistoryMenuAction>(
-                            tooltip: context.l10n.trackerHistoryOptions,
-                            onSelected: (_HistoryMenuAction action) =>
-                                switch (action) {
-                              _HistoryMenuAction.importXlsx =>
-                                WorkoutXlsxImportAction.run(context, ref),
-                            },
-                            itemBuilder: (BuildContext context) =>
-                                <PopupMenuEntry<_HistoryMenuAction>>[
-                              PopupMenuItem<_HistoryMenuAction>(
-                                value: _HistoryMenuAction.importXlsx,
-                                child: ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(
-                                    Icons.table_view_outlined,
-                                  ),
-                                  title: Text(context.l10n.importXlsxAction),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
