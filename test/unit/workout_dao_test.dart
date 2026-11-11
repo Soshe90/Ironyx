@@ -64,6 +64,45 @@ void main() {
     );
   }
 
+  test('watchCompletedSetCountByWorkout counts completed sets per workout',
+      () async {
+    Future<void> workout(String id, List<bool> completed) =>
+        workoutDao.insertWorkout(
+          WorkoutsTableCompanion.insert(
+            id: id,
+            startedAt: DateTime.utc(2026, 1, 1),
+            endedAt: Value(DateTime.utc(2026, 1, 1, 1)),
+          ),
+          [
+            WorkoutExercisesTableCompanion.insert(
+              id: '${id}_ex',
+              workoutId: id,
+              exerciseId: 'squat',
+              orderIndex: 0,
+            ),
+          ],
+          [
+            for (int i = 0; i < completed.length; i++)
+              WorkoutSetsTableCompanion.insert(
+                id: '${id}_s$i',
+                workoutExerciseId: '${id}_ex',
+                setIndex: i,
+                weightKg: 0,
+                reps: 10,
+                isCompleted: Value(completed[i]),
+              ),
+          ],
+        );
+    await workout('three', <bool>[true, true, false, true]);
+    await workout('none', <bool>[false]);
+    await workout('empty', <bool>[]);
+
+    expect(
+      await workoutDao.watchCompletedSetCountByWorkout().first,
+      <String, int>{'three': 3},
+    );
+  });
+
   group('watchPreviousPerformance', () {
     /// A squat session on [day] with [sets] of (weight, reps, completed,
     /// warm-up), finished unless [finished] is false.

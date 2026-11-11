@@ -162,7 +162,10 @@
   "trackerHistory": "History",
   "trackerShowCalendar": "Show calendar",
   "trackerHideCalendar": "Hide calendar",
-  "trackerHistoryOptions": "History options",
+  "trackerImportMenu": "Import",
+  "trackerImportWorkoutsXlsx": "Import workouts from XLSX",
+  "@trackerImportWorkoutsXlsx": {"description": "Item in the Workouts tab's import menu: import a historical workout log from an XLSX file."},
+  "@trackerImportMenu": {"description": "Tooltip of the Workouts tab's app-bar menu holding the program (CSV) and workout (XLSX) imports."},
   "trackerMoreExercises": "+{count}",
   "@trackerMoreExercises": {"description": "Pill beside a history row title: how many more exercises the title leaves out.", "placeholders": {"count": {"type": "int"}}},
   "trackerMonthSummary": "{workouts} · {volume}",
@@ -170,6 +173,16 @@
   "trackerNoWorkouts": "No workouts yet",
   "trackerNoWorkoutsMessage": "Finish a workout and it will show up here, with your volume and any personal records.",
   "trackerHistoryLoadFailed": "Failed to load history",
+  "trackerHistoryLoading": "Loading history",
+  "@trackerHistoryLoading": {"description": "Spoken for the placeholder rows shown while the Workouts history loads."},
+  "trackerProgramsLoadFailed": "Failed to load programs",
+  "trackerDayWorkoutsTitle": "Workouts on {date}",
+  "trackerSetCount": "{count, plural, =1{1 set} other{{count} sets}}",
+  "trackerWorkoutSemanticSets": "Workout on {date}, {sets}",
+  "@trackerWorkoutSemanticSets": {"description": "Screen-reader label of a history row for a workout with no load. {sets} is trackerSetCount, already formatted.", "placeholders": {"date": {"type": "String"}, "sets": {"type": "String"}}},
+  "@trackerSetCount": {"description": "A history row's figure for a workout with no load (bodyweight or timed sets), in place of its volume.", "placeholders": {"count": {"type": "int"}}},
+  "@trackerDayWorkoutsTitle": {"description": "Title of the sheet listing a calendar day's workouts when the day has more than one. {date} is the full date, already formatted.", "placeholders": {"date": {"type": "String"}}},
+  "@trackerProgramsLoadFailed": {"description": "Shown in place of the programs row on the Workouts tab when the programs could not be read, above a Retry button."},
   "trackerProgramSemantic": "{name}, {days}",
   "@trackerProgramSemantic": {
     "placeholders": {
@@ -177,10 +190,9 @@
       "days": { "type": "String", "example": "4 days" }
     }
   },
-  "trackerResumeSemantic": "Resume in-progress workout",
-  "trackerTapToResume": "Tap to resume",
-  "trackerResumeWithExercises": "{exercises} logged · tap to resume",
-  "@trackerResumeWithExercises": {
+  "trackerResumeWithCount": "Resume workout · {exercises}",
+  "@trackerResumeWithCount": {
+    "description": "The Workouts tab's resume button while a workout is open. {exercises} is already counted, e.g. 3 exercises.",
     "placeholders": {
       "exercises": { "type": "String", "example": "3 exercises" }
     }
@@ -372,7 +384,6 @@
     }
   },
   "programImportApplyFailed": "Couldn't save the imported programs. Nothing was written — try again.",
-  "trackerProgramOptions": "Program options",
   "dataAllDeleted": "All data deleted",
   "dataDeleteAllConfirmTitle": "Delete all data?",
   "dataDeleteAllConfirmBody": "This permanently deletes every workout, timer session, program, template, and body-metrics entry (built-in programs will be restored). The exercise library is kept. This cannot be undone.",
@@ -517,6 +528,8 @@
   "importXlsxAction": "Import XLSX",
   "importXlsxPickerTitle": "Choose your XLSX workout log",
   "importXlsxWrongType": "Please choose an .xlsx file.",
+  "importXlsxTooLarge": "This file is too large to import (over 10 MB).",
+  "@importXlsxTooLarge": {"description": "Snack bar when the chosen XLSX workout log is over the 10 MB import limit."},
   "importXlsxReadFailed": "Couldn't read this file. Make sure it's the .xlsx export from your training log.",
   "importXlsxApplyFailed": "Couldn't save the imported workouts. Nothing was written — try again.",
   "importXlsxDone": "Imported {count} workouts.",

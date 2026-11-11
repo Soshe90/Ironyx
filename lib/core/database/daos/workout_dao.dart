@@ -456,6 +456,30 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     });
   }
 
+  /// Completed sets per saved workout, keyed by workout id; a workout with
+  /// none is absent.
+  ///
+  /// The history row shows this in place of "0 kg" for a workout with no
+  /// load (bodyweight or timed sets). One `GROUP BY` for the whole history,
+  /// as [watchExerciseNamesByWorkout] is, rather than a count per row.
+  Stream<Map<String, int>> watchCompletedSetCountByWorkout() {
+    return customSelect(
+      '''
+      SELECT we.workout_id AS workout_id, COUNT(*) AS set_count
+      FROM workout_sets_table ws
+      JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
+      WHERE ws.is_completed = 1
+      GROUP BY we.workout_id
+      ''',
+      readsFrom: {workoutSetsTable, workoutExercisesTable},
+    ).watch().map(
+          (rows) => <String, int>{
+            for (final r in rows)
+              r.read<String>('workout_id'): r.read<int>('set_count'),
+          },
+        );
+  }
+
   /// The working sets of [exerciseId] from the most recent finished
   /// workout that has any — what the active workout shows as "last time".
   ///

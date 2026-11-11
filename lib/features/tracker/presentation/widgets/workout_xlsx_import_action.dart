@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/error_reporting.dart';
+import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/services/workout_xlsx_import_service.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// Preview-first importer for the user's historical XLSX workout log.
 ///
@@ -35,6 +37,17 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.importXlsxWrongType)),
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    // Before anything is read into memory: a file this size is not a
+    // training log, and reading it could exhaust the memory.
+    if (await picked.length() > kMaxWorkoutXlsxBytes) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.importXlsxTooLarge)),
         );
       }
       return;
@@ -129,44 +142,14 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
     WorkoutXlsxImportResult result,
     WeightUnit sourceUnit,
   ) {
-    final firstDate =
-        result.workouts.isEmpty ? null : result.workouts.first.date;
-    final lastDate = result.workouts.isEmpty ? null : result.workouts.last.date;
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(context.l10n.importXlsxConfirmTitle),
         content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.importXlsxConfirmSummary(
-                  result.workouts.length,
-                  result.totalSets,
-                  firstDate?.toIso8601String().split('T').first ??
-                      context.l10n.importXlsxNoDates,
-                  lastDate?.toIso8601String().split('T').first ?? '',
-                  sourceUnit.label,
-                ),
-              ),
-              if (result.duplicateCount > 0) ...[
-                const SizedBox(height: 16),
-                Text(
-                  context.l10n.importXlsxDuplicateNote(
-                    result.duplicateCount,
-                    result.workouts.length,
-                  ),
-                ),
-              ],
-              if (result.unknownExercises.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(context.l10n.importXlsxUnknownExercises),
-                const SizedBox(height: 8),
-                for (final name in result.unknownExercises) Text('• $name'),
-              ],
-            ],
+          child: WorkoutXlsxImportPreview(
+            result: result,
+            sourceUnit: sourceUnit,
           ),
         ),
         actions: [
@@ -182,6 +165,65 @@ class WorkoutXlsxImportAction extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// What the confirm dialog says will be imported: counts, the date range,
+/// skipped duplicates and names that match no exercise.
+///
+/// Its own widget so it can be checked without the file picker. The dates
+/// were ISO strings ("2026-11-04") in every language; they are formatted
+/// like every other date in the app now. They are the workbook's calendar
+/// dates, read as UTC midnight, and formatting keeps their fields, so no
+/// time zone moves a day. The gaps use the spacing scale, not literals.
+class WorkoutXlsxImportPreview extends StatelessWidget {
+  const WorkoutXlsxImportPreview({
+    required this.result,
+    required this.sourceUnit,
+    super.key,
+  });
+
+  final WorkoutXlsxImportResult result;
+  final WeightUnit sourceUnit;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+    final DateFormatters dates = DateFormatters.of(context);
+    final DateTime? firstDate =
+        result.workouts.isEmpty ? null : result.workouts.first.date;
+    final DateTime? lastDate =
+        result.workouts.isEmpty ? null : result.workouts.last.date;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.importXlsxConfirmSummary(
+            result.workouts.length,
+            result.totalSets,
+            firstDate == null ? l10n.importXlsxNoDates : dates.full(firstDate),
+            lastDate == null ? '' : dates.full(lastDate),
+            sourceUnit.label,
+          ),
+        ),
+        if (result.duplicateCount > 0) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            l10n.importXlsxDuplicateNote(
+              result.duplicateCount,
+              result.workouts.length,
+            ),
+          ),
+        ],
+        if (result.unknownExercises.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Text(l10n.importXlsxUnknownExercises),
+          const SizedBox(height: AppSpacing.sm),
+          for (final name in result.unknownExercises) Text('• $name'),
+        ],
+      ],
     );
   }
 }

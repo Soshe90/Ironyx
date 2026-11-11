@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,096 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,118 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -128,6 +128,160 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
+  fixed one item at a time, on `workouts/review-2026-11-11`, branched from
+  `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
+  - **Performance: typing in an open workout no longer rebuilds the tab.**
+    The page watched the whole draft to show the start button or the resume
+    banner, and the draft changes on every weight and rep typed: each
+    keystroke rebuilt the page, regrouping the entire history by month and
+    the calendar's set of days with it. A small `_StartOrResume` widget now
+    reads only the draft's exercise count; the page does not depend on the
+    draft at all. **Tested:** with Flutter's rebuild hook, typing a weight
+    and reps rebuilds neither the page nor the history list (on the old
+    code the page rebuilt), and an added exercise still reaches the banner.
+  - **Fixed: program failures were invisible.** If the programs failed to
+    load, the row showed nothing, and the heading its "what is a program"
+    line as if there were none; it now shows "Failed to load programs"
+    (new string, en/ar) with Retry, and the line appears only once the
+    list is known to be empty. A card waited for its program before
+    opening, and a failure there escaped the tap handler unhandled, so the
+    card did nothing; the wait is now capped at 600 ms and any failure is
+    logged, and the page opens anyway on its own loading or error state,
+    which has Retry. A double tap opened the program twice; it opens once.
+    **Tested:** all three, each failing on the old code. **Found:** the
+    error appears only after Riverpod's retries (see the next line).
+  - **Fixed: the XLSX import.**
+    - **A re-import could break every later import.** Imported workouts
+      sit at 12:00 UTC on their date, and the duplicate check read "the"
+      workout there with `getSingleOrNull`, which throws on two. Two get
+      there when an edited file is re-imported (its changed session is
+      not a duplicate, so it is added beside the old one) or when two
+      sessions share a date. From then on every import of the file failed
+      as "could not read". Each workout at that time is compared now.
+      **Tested:** reproduced on the old code ("Bad state: Too many
+      elements"); now the identical one is found and a new one is not.
+    - **Size limit:** files over 10 MB (`kMaxWorkoutXlsxBytes`) are refused
+      before they are read, with a message (new string, en/ar); `parse`
+      checks again.
+    - **Off the UI thread:** unzipping and walking the sheets runs through
+      `compute`; it froze the app while a workbook was read. Matching names
+      against the database stays on the main isolate. The rules are
+      unchanged and every existing import test passes through the new path.
+    - **Known risk, not fixed (owner's choice):** an XLSX is a zip, so a
+      small file can unpack to far more than 10 MB. Checking the unpacked
+      size needs the `archive` package as a direct dependency (it is
+      already a transitive one, through `excel`). Only the person who picks
+      the file is affected, and nothing is written before they confirm.
+    - **Unchanged, noted:** re-importing an edited file adds the changed
+      session beside the old one rather than replacing it.
+  - **Fixed: the calendar reached one workout per day.** Tapping a day
+    opened the first workout found, the latest, so a morning session on a
+    two-session day was reachable only from the list. A day with one
+    workout still opens it; with several, a sheet lists them ("Workouts on
+    {date}", new string, en/ar), as the same rows as the history list, and
+    opens the one chosen. The owner had first picked "scroll the list to
+    the day"; the sheet was chosen instead because the rows are built
+    lazily and vary in height, so a jump far down the list cannot land
+    reliably. **Tested:** one workout opens directly (unchanged); several
+    ask, and the earlier one opens (fails on the old code). Pinned clock,
+    so the tests run at any hour.
+  - **Changed: an open workout is resumed from a filled button.** It was a
+    plain card ("Workout in progress" over "3 exercises logged · tap to
+    resume"), lighter than the "Start workout" button it took the place
+    of, though an open workout is the most pressing thing on the tab. It
+    is now the same filled button, with play, reading "Resume workout" or
+    "Resume workout · 3 exercises" (new string `trackerResumeWithCount`,
+    en/ar). The three strings only the card used are removed
+    (`trackerResumeSemantic`, `trackerTapToResume`,
+    `trackerResumeWithExercises`). **Tested:** the button, its icon and
+    that it opens the workout (fails on the old code); the count updates as
+    exercises are added. **Not checked:** on the phone.
+  - **Changed: program order.** The query orders by the stored name, byte
+    by byte, so the user's own programs fell between the built-in ones and
+    "Zeta" came before "alpha". The row now shows the user's programs
+    first, then the built-in ones, each by the name shown, ignoring case;
+    sorted in the widget because the shown name can be a translation. The
+    review had said the order looked shuffled in Arabic: wrong, the three
+    built-in Arabic names happen to sort as the English ones do (as the
+    phone showed). **Tested:** alpha, Zeta, Full Body, Push / Pull / Legs
+    in that order (fails on the old code).
+  - **Changed: a workout with no load shows its sets, not "0 kg".** A
+    bodyweight or timed-only session read "0 kg", as if nothing was done.
+    Its row now shows its completed sets ("12 sets", new plural
+    `trackerSetCount`, en/ar), and a screen reader hears "Workout on
+    {date}, 12 sets" (`trackerWorkoutSemanticSets`). Rows with load keep
+    their kilograms, and month totals are unchanged. The counts come from
+    one `GROUP BY` for the whole history
+    (`WorkoutDao.watchCompletedSetCountByWorkout`, provider
+    `workoutSetCounts`), not a query per row; while they load, a row keeps
+    its volume. **Tested:** the query (completed sets only; workouts with
+    none absent) and the row (fails on the old code). **Not checked:** on
+    the phone.
+  - **Refactor: `tracker_page.dart` split.** 1,175 lines and 15 widgets
+    became the page (scaffold, headings, calendar toggle, menus, start and
+    resume; 484 lines) and three files in `tracker/presentation/widgets/`:
+    `program_strip.dart`, `history_list.dart` (the list, month headings and
+    the day sheet) and `history_row.dart` (a row, its title fitting and its
+    date tile). The month grouping left the list's widget for a pure
+    `groupHistoryByMonth` in `tracker/domain/history_grouping.dart`, with
+    four unit tests (empty, months and their totals, a month in two years,
+    a month's first and last minutes). Moved, not rewritten: sorted line by
+    line, old and new differ only in `super.key` on the now-public
+    constructors, doc comments, the grouping's signature and one line the
+    formatter rewrapped. Every existing test passes unchanged.
+  - **Changed: one import menu.** The Programs and History headings each
+    had a "⋮" holding one rare item (CSV and XLSX import). Both are now in
+    a single "⋮" in the app bar ("Import": "Import programs from CSV",
+    "Import workouts from XLSX"; two new strings, en/ar), and the headings
+    keep only their everyday action ("New", the calendar). The no-programs
+    card keeps its own import button. The two old menu tooltips are
+    removed (`trackerProgramOptions`, `trackerHistoryOptions`). **Tested:**
+    one menu with both items and no section menus (fails on the old code);
+    the existing import tests now open it.
+  - **Fixed: the XLSX confirm dialog's dates and spacing.** It showed the
+    range as ISO strings ("2026-11-04") in either language; the dates are
+    formatted like every other date in the app ("4 Nov 2026", "4 نوفمبر
+    2026"), keeping the workbook's calendar day (UTC midnight, formatted by
+    its own fields, so no time zone moves it). The gaps use the spacing
+    scale instead of literal 16 and 8. The body is its own widget,
+    `WorkoutXlsxImportPreview`, so it is tested without the file picker.
+    **Tested:** English and Arabic dates, and "No dates" for an empty file.
+    Not run on the old code: the body was not a widget of its own then.
+  - **Fixed: a history row was read twice by a screen reader.** Checked
+    first, by dumping the row's semantics node: its label was followed by
+    every text inside it ("Incline Press, Chest-Supported Row. Workout on
+    11 Nov 2026, 1,200 kg volume", then "Incline Press, +1, 1:46 PM · 45m,
+    1,200 kg"), and the time and duration were only in that second half.
+    The row is now read once: the exercises, the date and volume (or
+    sets), then the time and duration (`excludeSemantics`, with the tap
+    action on the label, since excluding the children drops the
+    InkWell's). The day sheet's rows are the same widget. **Tested:** the
+    label holds everything once, without the "+1" pill, and the semantics
+    tap opens the workout (fails on the old code). **Not checked:** with
+    TalkBack on the phone.
+  - **Changed: history loads as placeholder rows.** A spinner sat in the
+    middle of the page while the rest of the app loads as shimmer shaped
+    like its content. Three `WorkoutHistoryRowPlaceholder`s (date tile,
+    two lines, volume) stand in now, spoken as "Loading history" (new
+    string, en/ar). **Tested:** no spinner, three placeholders, the spoken
+    label. Not run on the old code: the test names the new widget.
+    This was the last of the twelve Workouts review items.
+  - **Checked on the phone, 2026-11-11** (debug build of `1491a49`, the
+    owner's data, Arabic): one "⋮" in the app bar holding both imports, in
+    Arabic; the Programs heading has only "New" and History only the
+    calendar; a history row is announced once, from the accessibility
+    dump: all eight exercises, the date, volume and record, then "9:29 ص،
+    58 د". The program order is Full Body, Upper / Lower, then Push / Pull
+    / Legs: the database copy showed the first two with `is_built_in = 0`,
+    which is by design (editing a built-in program makes it the user's, so
+    a re-seed cannot overwrite it), so they sort as the user's. **Found,
+    not changed:** `ProgramL10n.displayName` picks the Arabic name by id
+    alone, so an edited and *renamed* built-in program would still show
+    the built-in's Arabic name, against what `program_catalogue_ar.dart`
+    documents; nothing visible with this data (the names were kept).
+    **Not seen on the phone:** the day sheet, "N sets", the 10 MB message
+    and the history shimmer, which this data or speed does not produce.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs
@@ -239,7 +393,9 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Not checked:** on the phone.
   - **Open, app-wide, not changed:** Riverpod 3's automatic retry applies
     to every provider. A query that fails shows its card loading through
-    the retries (backoff from 200 ms, several seconds in all) before the
+    the retries (riverpod 3.4.3 `ProviderContainer.defaultRetry`: up to 10
+    retries for an exception, 200 ms doubling to a 6.4 s cap, about **38 s**
+    in all; seen again in the Workouts tab's programs row) before the
     error and its Retry button appear. Whether to turn retry off for
     local Drift queries (which do not fail transiently the way a network
     call does) is a decision for the whole app, in `ProviderScope`.

@@ -1,17 +1,27 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/program_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/database/tables/workouts.dart';
 import 'package:ironyx/core/formatters/week_start.dart';
 import 'package:ironyx/core/router/routes.dart';
 import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/services/program_import_service.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
+import 'package:ironyx/features/programs/domain/program_providers.dart';
+import 'package:ironyx/features/tracker/domain/active_workout_notifier.dart';
+import 'package:ironyx/features/tracker/presentation/tracker_page.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/history_calendar.dart';
+import 'package:ironyx/features/tracker/presentation/widgets/history_row.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -96,6 +106,8 @@ void main() {
     WidgetTester tester, {
     Size surfaceSize = const Size(400, 2000),
     DateTime Function()? clock,
+    List<dynamic> overrides = const <dynamic>[],
+    bool settle = true,
   }) async {
     await pumpApp(
       tester,
@@ -103,6 +115,7 @@ void main() {
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
         if (clock != null) clockProvider.overrideWithValue(clock),
+        ...overrides,
       ],
       prefs: const <String, Object>{
         'exercise_seed_version': 999999,
@@ -110,6 +123,7 @@ void main() {
       },
       surfaceSize: surfaceSize,
       awaitDatabase: true,
+      settle: settle,
     );
     await tester.pump();
   }
@@ -288,13 +302,150 @@ void main() {
     });
   });
 
-  testWidgets('XLSX import moved into the history menu', (tester) async {
+  testWidgets('a workout with no load shows its sets, not 0 kg',
+      (tester) async {
+    final DateTime at = DateTime.now().subtract(const Duration(days: 2));
+    await WorkoutDao(database).insertWorkout(
+      WorkoutsTableCompanion.insert(
+        id: 'bodyweight',
+        startedAt: at,
+        endedAt: Value(at.add(const Duration(minutes: 20))),
+        totalVolumeKg: const Value(0),
+      ),
+      [
+        WorkoutExercisesTableCompanion.insert(
+          id: 'bw_a',
+          workoutId: 'bodyweight',
+          exerciseId: 'my-row',
+          orderIndex: 0,
+        ),
+      ],
+      [
+        for (int i = 0; i < 4; i++)
+          WorkoutSetsTableCompanion.insert(
+            id: 'bw_s$i',
+            workoutExerciseId: 'bw_a',
+            setIndex: i,
+            weightKg: 0,
+            reps: 12,
+            // One left unticked: only completed sets count.
+            isCompleted: Value(i < 3),
+          ),
+      ],
+    );
     await pumpTracker(tester);
 
-    expect(find.text('Import XLSX'), findsNothing);
-    await tester.tap(find.byTooltip('History options'));
+    expect(find.text('3 sets'), findsOneWidget);
+    expect(find.text('0 kg'), findsNothing);
+    // The loaded workout keeps its kilograms.
+    expect(find.text('1,200 kg'), findsWidgets);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) =>
+            w is Semantics &&
+            (w.properties.label?.contains(', 3 sets. ') ?? false),
+      ),
+      findsOneWidget,
+    );
+    await disposeTracker(tester);
+  });
+
+  group('a calendar day', () {
+    // Pinned to Tue 10 Nov 2026, so the calendar opens on November whatever
+    // the real date; the seeded workout (three hours before the real now)
+    // does not matter to these days.
+    DateTime fakeNow() => DateTime(2026, 11, 10, 12);
+
+    Future<void> add(String id, DateTime at, double kg, String exercise) =>
+        WorkoutDao(database).insertWorkout(
+          WorkoutsTableCompanion.insert(
+            id: id,
+            startedAt: at,
+            endedAt: Value(at.add(const Duration(minutes: 30))),
+            totalVolumeKg: Value(kg),
+          ),
+          [
+            WorkoutExercisesTableCompanion.insert(
+              id: '${id}_a',
+              workoutId: id,
+              exerciseId: exercise,
+              orderIndex: 0,
+            ),
+          ],
+          const [],
+        );
+
+    Future<void> tapDay(WidgetTester tester, int day) async {
+      await tester.tap(find.byTooltip('Show calendar'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(HistoryCalendar),
+          matching: find.text('$day'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('with one workout opens it', (tester) async {
+      await add('nov6', DateTime(2026, 11, 6, 18), 700, 'my-row');
+      await pumpTracker(tester, clock: fakeNow);
+      await tapDay(tester, 6);
+
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(HistoryCalendar), findsNothing,
+          reason: 'on the workout page now');
+      expect(find.text('Chest-Supported Row'), findsWidgets);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('with several asks which, and opens the one chosen',
+        (tester) async {
+      await add('morning', DateTime(2026, 11, 5, 8), 1100, 'my-bench');
+      await add('evening', DateTime(2026, 11, 5, 18), 800, 'my-row');
+      await pumpTracker(tester, clock: fakeNow);
+      await tapDay(tester, 5);
+
+      final Finder sheet = find.byType(BottomSheet);
+      expect(sheet, findsOneWidget);
+      expect(
+        find.descendant(
+            of: sheet, matching: find.textContaining('Workouts on')),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: sheet, matching: find.text('1,100 kg')),
+          findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('800 kg')),
+          findsOneWidget);
+
+      // The morning one, which tapping the day could not reach before.
+      await tester.tap(
+        find.descendant(of: sheet, matching: find.text('1,100 kg')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(HistoryCalendar), findsNothing);
+      expect(find.text('Incline Press'), findsWidgets);
+      await disposeTracker(tester);
+    });
+  });
+
+  testWidgets('both imports are in one app-bar menu', (tester) async {
+    await pumpTracker(tester);
+
+    expect(find.text('Import workouts from XLSX'), findsNothing);
+    expect(find.byTooltip('History options'), findsNothing);
+    expect(find.byTooltip('Program options'), findsNothing);
+    final Finder menu = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byTooltip('Import'),
+    );
+    expect(menu, findsOneWidget);
+
+    await tester.tap(menu);
     await tester.pumpAndSettle();
-    expect(find.text('Import XLSX'), findsOneWidget);
+    expect(find.text('Import programs from CSV'), findsOneWidget);
+    expect(find.text('Import workouts from XLSX'), findsOneWidget);
 
     await disposeTracker(tester);
   });
@@ -440,7 +591,7 @@ void main() {
 
     expect(find.text('Strength Block'), findsOneWidget);
     expect(find.text('Import programs from CSV'), findsNothing);
-    await tester.tap(find.byTooltip('Program options'));
+    await tester.tap(find.byTooltip('Import'));
     await tester.pumpAndSettle();
     expect(find.text('Import programs from CSV'), findsOneWidget);
 
@@ -542,6 +693,77 @@ void main() {
       await disposeTracker(tester);
     });
 
+    testWidgets('programs that fail to load say so, with a retry',
+        (tester) async {
+      await pumpTracker(
+        tester,
+        overrides: [
+          programSummariesProvider.overrideWith(
+            (ref) => Stream<List<ProgramSummary>>.error(Exception('boom')),
+          ),
+        ],
+      );
+      // Riverpod retries a failed provider before reporting the error, and
+      // the row shows nothing while it does. Let the retries run out.
+      for (int i = 0; i < 40; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+
+      expect(find.text('Failed to load programs'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      // Not taken for an empty list.
+      expect(
+        find.text('Reusable day templates to start a session from'),
+        findsNothing,
+      );
+      expect(find.text('No programs yet'), findsNothing);
+      // The rest of the tab is still there.
+      expect(find.text('History'), findsOneWidget);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a program that fails to load still opens, on its error',
+        (tester) async {
+      await importPrograms(1);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(400, 800),
+        overrides: [
+          programDetailProvider.overrideWith(
+            (ref, String id) => Future<ProgramDetail?>.error(Exception('x')),
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Block 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Failed to load program'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a double tap on a card opens the program once',
+        (tester) async {
+      await importPrograms(1);
+      await pumpTracker(tester, surfaceSize: const Size(400, 800));
+
+      await tester.tap(find.text('Block 1'));
+      await tester.tap(find.text('Block 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Day 1'), findsOneWidget);
+
+      // One back is the Workouts tab again, not a second copy of the page.
+      final NavigatorState navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).last,
+      );
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Day 1'), findsNothing);
+      expect(find.text('Start workout'), findsOneWidget);
+      await disposeTracker(tester);
+    });
+
     testWidgets('the explanation shows only while there are no programs',
         (tester) async {
       const String explanation =
@@ -596,6 +818,50 @@ void main() {
       await disposeTracker(tester);
     });
 
+    testWidgets('your programs come first, then the built-in, by name',
+        (tester) async {
+      final DateTime at = DateTime(2026, 1, 1);
+      for (final (String id, String name) in <(String, String)>[
+        ('builtin_ppl', 'Push / Pull / Legs'),
+        ('builtin_full_body', 'Full Body'),
+      ]) {
+        await database.into(database.programsTable).insert(
+              ProgramsTableCompanion.insert(
+                id: id,
+                name: name,
+                createdAt: at,
+                updatedAt: at,
+                isBuiltIn: const Value(true),
+              ),
+            );
+      }
+      await const ProgramImportService().apply(
+        database,
+        await const ProgramImportService().parse(
+          'program,day,exercise,sets\n'
+          'Zeta,Day 1,Incline Press,3\n'
+          'alpha,Day 1,Incline Press,3\n',
+          database,
+        ),
+      );
+      await pumpTracker(tester, surfaceSize: const Size(1400, 800));
+
+      final List<String> order = <String>[
+        'alpha',
+        'Zeta',
+        'Full Body',
+        'Push / Pull / Legs',
+      ];
+      for (int i = 1; i < order.length; i++) {
+        expect(
+          tester.getCenter(find.text(order[i])).dx,
+          greaterThan(tester.getCenter(find.text(order[i - 1])).dx),
+          reason: '${order[i - 1]} before ${order[i]}',
+        );
+      }
+      await disposeTracker(tester);
+    });
+
     testWidgets('in Arabic the first program is on the right', (tester) async {
       await importPrograms(2);
       await pumpApp(
@@ -620,6 +886,81 @@ void main() {
     });
   });
 
+  testWidgets('typing in an open workout does not rebuild the tab',
+      (tester) async {
+    await pumpTracker(tester);
+    final ProviderContainer container = ProviderScope.containerOf(
+      tester.element(find.byType(TrackerPage)),
+    );
+    final ActiveWorkoutNotifier notifier =
+        container.read(activeWorkoutProvider.notifier);
+    await tester.runAsync(() async {
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'my-bench', name: 'Incline Press');
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Resume workout · 1 exercise'), findsOneWidget);
+
+    final List<String> rebuilt = <String>[];
+    debugOnRebuildDirtyWidget = (Element element, bool builtOnce) =>
+        rebuilt.add(element.widget.runtimeType.toString());
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+
+    final draft = container.read(activeWorkoutProvider)!;
+    final String exerciseId = draft.exercises.single.id;
+    final String setId = draft.exercises.single.sets.first.id;
+    await tester.runAsync(() async {
+      await notifier.updateSet(exerciseId, setId, weightKg: 60);
+      await notifier.updateSet(exerciseId, setId, reps: 8);
+    });
+    await tester.pumpAndSettle();
+
+    expect(rebuilt, isNot(contains('TrackerPage')),
+        reason: 'every keystroke rebuilt the page and its history');
+    expect(rebuilt, isNot(contains('_HistorySliverList')));
+
+    // An exercise added does reach the banner.
+    rebuilt.clear();
+    await tester.runAsync(
+      () => notifier.addExercise(exerciseId: 'my-row', name: 'Row'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Resume workout · 2 exercises'), findsOneWidget);
+    expect(rebuilt, isNot(contains('TrackerPage')));
+
+    await tester.runAsync(notifier.discard);
+    await disposeTracker(tester);
+  });
+
+  testWidgets('an open workout is resumed from a filled button',
+      (tester) async {
+    await pumpTracker(tester);
+    final ProviderContainer container = ProviderScope.containerOf(
+      tester.element(find.byType(TrackerPage)),
+    );
+    final ActiveWorkoutNotifier notifier =
+        container.read(activeWorkoutProvider.notifier);
+    await tester.runAsync(notifier.start);
+    await tester.pumpAndSettle();
+
+    // No exercises yet: the action alone.
+    final Finder resume = find.widgetWithText(FilledButton, 'Resume workout');
+    expect(resume, findsOneWidget);
+    expect(
+      find.descendant(of: resume, matching: find.byIcon(Icons.play_arrow)),
+      findsOneWidget,
+    );
+    expect(find.text('Start workout'), findsNothing);
+    expect(find.text('Workout in progress'), findsNothing);
+
+    await tester.tap(resume);
+    await tester.pumpAndSettle();
+    expect(find.byType(TrackerPage), findsNothing, reason: 'on the workout');
+
+    await tester.runAsync(notifier.discard);
+    await disposeTracker(tester);
+  });
+
   testWidgets('the start button carries the same plus as the dashboard',
       (tester) async {
     await pumpTracker(tester);
@@ -642,7 +983,7 @@ void main() {
 
     expect(find.text('No programs yet'), findsOneWidget);
     expect(find.byTooltip('Import programs from CSV'), findsOneWidget);
-    expect(find.byTooltip('Program options'), findsOneWidget);
+    expect(find.byTooltip('Import'), findsOneWidget);
 
     await disposeTracker(tester);
   });
@@ -654,8 +995,65 @@ void main() {
 
     expect(find.text('No workouts yet'), findsOneWidget);
     expect(find.byTooltip('Show calendar'), findsNothing);
-    expect(find.byTooltip('History options'), findsOneWidget);
+    expect(find.byTooltip('Import'), findsOneWidget);
 
+    await disposeTracker(tester);
+  });
+
+  testWidgets('a history row is read once, and opens from its label',
+      (tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await pumpTracker(tester);
+
+    final Finder row = find.byWidgetPredicate(
+      (Widget w) =>
+          w is Semantics &&
+          (w.properties.label?.startsWith('Incline Press, ') ?? false),
+    );
+    final SemanticsNode node = tester.getSemantics(row);
+    final String label = node.label;
+
+    // Everything the row shows, once: the exercises, the date and volume,
+    // and the time and duration, which only the visible text carried.
+    expect(
+        label, startsWith('Incline Press, Chest-Supported Row. Workout on '));
+    expect(label, contains('1,200 kg volume'));
+    expect(label, endsWith(', 45m'));
+    expect(label, isNot(contains('+1')), reason: 'the pill is not read');
+    expect('Incline Press'.allMatches(label), hasLength(1));
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+
+    // What TalkBack does on a double tap: the node's tap action.
+    tester.semantics.tap(
+      find.semantics.byLabel(RegExp(r'^Incline Press, Chest-Supported Row\.')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TrackerPage), findsNothing, reason: 'on the workout');
+
+    handle.dispose();
+    await disposeTracker(tester);
+  });
+
+  testWidgets('history loads as placeholder rows, not a spinner',
+      (tester) async {
+    final StreamController<List<Workout>> history =
+        StreamController<List<Workout>>();
+    addTearDown(history.close);
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await pumpTracker(
+      tester,
+      settle: false,
+      overrides: [
+        workoutHistoryStreamProvider.overrideWith((ref) => history.stream),
+      ],
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(WorkoutHistoryRowPlaceholder), findsNWidgets(3));
+    expect(find.bySemanticsLabel('Loading history'), findsOneWidget);
+
+    handle.dispose();
     await disposeTracker(tester);
   });
 }

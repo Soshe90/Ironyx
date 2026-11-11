@@ -345,4 +345,62 @@ void main() {
     expect(result.totalSets, 1);
     await database.close();
   });
+
+  test('two workouts already at one date no longer break the import', () async {
+    final database = AppDatabase.forTesting();
+    await seedExercise(database, 'bench-press');
+    List<int> workbook(int reps) => buildWorkbook(
+          date: DateTime.utc(2026, 1, 1),
+          exerciseName: 'bench-press',
+          reps: reps,
+          weight: 60,
+        );
+
+    // Imported, then the file edited and imported again: the edited
+    // session is not a duplicate, so a second workout lands on that date.
+    await service.apply(
+      database,
+      await service.parse(workbook(5), database, sourceUnit: WeightUnit.kg),
+    );
+    final edited =
+        await service.parse(workbook(6), database, sourceUnit: WeightUnit.kg);
+    expect(edited.duplicateCount, 0);
+    await service.apply(database, edited);
+
+    // A third import of either file used to throw "Too many elements".
+    final again =
+        await service.parse(workbook(5), database, sourceUnit: WeightUnit.kg);
+    expect(again.duplicateCount, 1, reason: 'matches the first of the two');
+    final third =
+        await service.parse(workbook(7), database, sourceUnit: WeightUnit.kg);
+    expect(third.duplicateCount, 0);
+    await database.close();
+  });
+
+  test('a workbook over the size limit is refused before it is read', () async {
+    final database = AppDatabase.forTesting();
+    await expectLater(
+      service.parse(
+        List<int>.filled(kMaxWorkoutXlsxBytes + 1, 0),
+        database,
+        sourceUnit: WeightUnit.kg,
+      ),
+      throwsA(isA<WorkoutXlsxTooLargeException>()),
+    );
+    await database.close();
+  });
+
+  test('a file that is not a workbook fails to parse, without a hang',
+      () async {
+    final database = AppDatabase.forTesting();
+    await expectLater(
+      service.parse(
+        List<int>.generate(2048, (int i) => i % 251),
+        database,
+        sourceUnit: WeightUnit.kg,
+      ),
+      throwsA(anything),
+    );
+    await database.close();
+  });
 }
