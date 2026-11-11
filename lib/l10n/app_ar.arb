@@ -164,6 +164,7 @@
   "trackerNoWorkouts": "لا توجد تمارين بعد",
   "trackerNoWorkoutsMessage": "أنهِ تمرينًا وسيظهر هنا، مع حجمك التدريبي وأي أرقام قياسية.",
   "trackerHistoryLoadFailed": "تعذّر تحميل السجلّ",
+  "trackerHistoryLoading": "جارٍ تحميل السجلّ",
   "trackerProgramsLoadFailed": "تعذّر تحميل البرامج",
   "trackerDayWorkoutsTitle": "تمارين يوم {date}",
   "trackerSetCount": "{count, plural, zero{لا مجموعات} one{مجموعة واحدة} two{مجموعتان} few{{count} مجموعات} many{{count} مجموعةً} other{{count} مجموعة}}",

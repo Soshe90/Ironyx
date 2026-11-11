@@ -173,6 +173,8 @@
   "trackerNoWorkouts": "No workouts yet",
   "trackerNoWorkoutsMessage": "Finish a workout and it will show up here, with your volume and any personal records.",
   "trackerHistoryLoadFailed": "Failed to load history",
+  "trackerHistoryLoading": "Loading history",
+  "@trackerHistoryLoading": {"description": "Spoken for the placeholder rows shown while the Workouts history loads."},
   "trackerProgramsLoadFailed": "Failed to load programs",
   "trackerDayWorkoutsTitle": "Workouts on {date}",
   "trackerSetCount": "{count, plural, =1{1 set} other{{count} sets}}",

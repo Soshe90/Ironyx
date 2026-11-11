@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -9,6 +11,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/program_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/database/tables/workouts.dart';
 import 'package:ironyx/core/formatters/week_start.dart';
 import 'package:ironyx/core/router/routes.dart';
 import 'package:ironyx/core/services/clock.dart';
@@ -18,6 +21,7 @@ import 'package:ironyx/features/programs/domain/program_providers.dart';
 import 'package:ironyx/features/tracker/domain/active_workout_notifier.dart';
 import 'package:ironyx/features/tracker/presentation/tracker_page.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/history_calendar.dart';
+import 'package:ironyx/features/tracker/presentation/widgets/history_row.dart';
 
 import '../helpers/pump_app.dart';
 
@@ -103,6 +107,7 @@ void main() {
     Size surfaceSize = const Size(400, 2000),
     DateTime Function()? clock,
     List<dynamic> overrides = const <dynamic>[],
+    bool settle = true,
   }) async {
     await pumpApp(
       tester,
@@ -118,6 +123,7 @@ void main() {
       },
       surfaceSize: surfaceSize,
       awaitDatabase: true,
+      settle: settle,
     );
     await tester.pump();
   }
@@ -1023,6 +1029,29 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(TrackerPage), findsNothing, reason: 'on the workout');
+
+    handle.dispose();
+    await disposeTracker(tester);
+  });
+
+  testWidgets('history loads as placeholder rows, not a spinner',
+      (tester) async {
+    final StreamController<List<Workout>> history =
+        StreamController<List<Workout>>();
+    addTearDown(history.close);
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await pumpTracker(
+      tester,
+      settle: false,
+      overrides: [
+        workoutHistoryStreamProvider.overrideWith((ref) => history.stream),
+      ],
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(WorkoutHistoryRowPlaceholder), findsNWidgets(3));
+    expect(find.bySemanticsLabel('Loading history'), findsOneWidget);
 
     handle.dispose();
     await disposeTracker(tester);

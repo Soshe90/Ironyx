@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,116 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,117 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -260,6 +260,13 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     label holds everything once, without the "+1" pill, and the semantics
     tap opens the workout (fails on the old code). **Not checked:** with
     TalkBack on the phone.
+  - **Changed: history loads as placeholder rows.** A spinner sat in the
+    middle of the page while the rest of the app loads as shimmer shaped
+    like its content. Three `WorkoutHistoryRowPlaceholder`s (date tile,
+    two lines, volume) stand in now, spoken as "Loading history" (new
+    string, en/ar). **Tested:** no spinner, three placeholders, the spoken
+    label. Not run on the old code: the test names the new widget.
+    This was the last of the twelve Workouts review items.
 - Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
   item at a time, on `home/review-2026-11-11` from `main`). **Not in the
   1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs

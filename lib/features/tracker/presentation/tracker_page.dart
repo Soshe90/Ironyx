@@ -21,6 +21,7 @@ import '../../programs/presentation/program_import_action.dart';
 import '../domain/active_workout_notifier.dart';
 import 'widgets/history_calendar.dart';
 import 'widgets/history_list.dart';
+import 'widgets/history_row.dart';
 import 'widgets/program_strip.dart';
 import 'widgets/workout_xlsx_import_action.dart';
 
@@ -302,9 +303,25 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                         ),
                       ],
                     ),
-              loading: () => const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
+              // Rows shaped like the ones on their way, as the rest of the
+              // app loads; a spinner in the middle of the page was the odd
+              // one out.
+              loading: () => SliverPadding(
+                padding: context.sliverGutter,
+                sliver: SliverToBoxAdapter(
+                  child: Semantics(
+                    label: context.l10n.trackerHistoryLoading,
+                    child: const ExcludeSemantics(
+                      child: Column(
+                        children: <Widget>[
+                          WorkoutHistoryRowPlaceholder(),
+                          WorkoutHistoryRowPlaceholder(),
+                          WorkoutHistoryRowPlaceholder(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
               error: (error, _) => SliverFillRemaining(
                 hasScrollBody: false,

@@ -15,6 +15,7 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/services/clock.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/loading_shimmer.dart';
 import '../../../../core/widgets/pr_badge.dart';
 
 /// Width of a history row's date tile; the row dividers are inset by it so
@@ -355,4 +356,38 @@ class _DateTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A history row while the history loads: the date tile, two lines and
+/// the volume, as shimmer. Silent to a screen reader; the list it stands
+/// in for says it is loading.
+class WorkoutHistoryRowPlaceholder extends StatelessWidget {
+  const WorkoutHistoryRowPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Row(
+          children: <Widget>[
+            LoadingShimmer(
+              width: historyDateTileWidth,
+              height: historyDateTileWidth,
+              radius: AppRadius.md,
+            ),
+            SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  LoadingShimmer(width: 160, height: 14),
+                  SizedBox(height: AppSpacing.sm),
+                  LoadingShimmer(width: 96, height: 12),
+                ],
+              ),
+            ),
+            SizedBox(width: AppSpacing.md),
+            LoadingShimmer(width: 64, height: 16),
+          ],
+        ),
+      );
 }
