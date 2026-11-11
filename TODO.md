@@ -244,7 +244,26 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     Progress, where their figures are explained. "Start from a program"
     still opens the Workouts tab and its programs row; starting a program
     from Home would need a picker, new work and not a fix. **Tested:** both
-    taps (each failed on the old code). **Not checked:** on the phone.
+    taps (each failed on the old code). **Not checked:** on the phone (see
+    the next line).
+  - **Checked on the phone, 2026-11-11** (debug build of `d292027`, the
+    owner's real data in the debug copy: Arabic, weeks from Saturday,
+    target 3): the sparkline is eight finished weeks with the break as its
+    dip; the day strip runs Saturday first, right to left, today ringed;
+    "Same point last week: 9,830 kg" against 0 kg on a Wednesday morning
+    (a true like-for-like ↓100%; see the open question below); Est. 1RM
+    47 kg for Face Pull, the most-sessions lift, with no arrow (its only
+    comparison is its first session); streak 2 weeks on Home and Progress;
+    Progress's longest streak 4 weeks on both "3M" and "1M" (it was cut to
+    the range before); the explainer's new wording, in Arabic; the last
+    workout row opens 4 Nov's workout, the body-weight tile the weigh-ins.
+    **Seen, not changed:** the Est. 1RM tile's Arabic title is ellipsized
+    ("الوزن التقديري لأقصى تكرار…"); the average-duration tile reads
+    14 min while the last workout was 58 min, which looks like short
+    durations in the imported data, not checked further. **Open question
+    for the owner:** with nothing yet this week, the badge is a red
+    "↓100%" whenever last week had trained by the same point; correct, but
+    it reads as a failure on a rest morning. **Not checked:** TalkBack.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
