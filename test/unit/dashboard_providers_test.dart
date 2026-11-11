@@ -924,4 +924,50 @@ void main() {
       expect(week.previousToDateVolumeKg, isNull);
     });
   });
+
+  group('what the week badge compares', () {
+    WeekSnapshot snapshot({required double volume, double? samePoint}) =>
+        WeekSnapshot(
+          volumeKg: volume,
+          previousVolumeKg: 1000,
+          sessions: 1,
+          volumeSeries: const <double>[],
+          hasHistory: true,
+          previousToDateVolumeKg: samePoint,
+        );
+
+    test('last week up to the same moment, never all of last week', () {
+      final WeekSnapshot week = snapshot(volume: 300, samePoint: 200);
+      expect(week.comparedWithKg, 200);
+      expect(week.volumeChange, closeTo(0.5, 1e-9));
+      expect(week.volumeChangePercent, 50);
+    });
+
+    test('nothing to compare with: no figure, no change', () {
+      for (final double? samePoint in <double?>[null, 0]) {
+        final WeekSnapshot week = snapshot(volume: 300, samePoint: samePoint);
+        expect(week.comparedWithKg, isNull, reason: '$samePoint');
+        expect(week.volumeChange, isNull, reason: '$samePoint');
+        expect(week.volumeChangePercent, isNull, reason: '$samePoint');
+      }
+    });
+
+    test('down is a negative change with an unsigned percentage', () {
+      final WeekSnapshot week = snapshot(volume: 150, samePoint: 200);
+      expect(week.volumeChange, closeTo(-0.25, 1e-9));
+      expect(week.volumeChangePercent, 25);
+    });
+
+    test('nothing yet this week against a trained week is down 100%', () {
+      final WeekSnapshot week = snapshot(volume: 0, samePoint: 9830);
+      expect(week.volumeChange, -1);
+      expect(week.volumeChangePercent, 100);
+    });
+
+    test('equal is no change, and the percentage rounds', () {
+      expect(snapshot(volume: 200, samePoint: 200).volumeChange, 0);
+      expect(snapshot(volume: 201, samePoint: 200).volumeChangePercent, 1);
+      expect(snapshot(volume: 200.9, samePoint: 200).volumeChangePercent, 0);
+    });
+  });
 }

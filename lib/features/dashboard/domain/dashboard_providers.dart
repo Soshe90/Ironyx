@@ -325,6 +325,33 @@ class WeekSnapshot {
   /// compared with. Null when not known, and then the card falls back to
   /// [previousVolumeKg].
   final double? previousToDateVolumeKg;
+
+  /// What this week so far is compared with: last week up to the same
+  /// moment. Null without that figure, or with nothing by then last week,
+  /// and then there is no badge and last week's total is context only.
+  ///
+  /// Against all of last week, as it once was, the badge was red from
+  /// every Monday: a week begun is not a week done.
+  double? get comparedWithKg {
+    final double? samePoint = previousToDateVolumeKg;
+    return samePoint != null && samePoint > 0 ? samePoint : null;
+  }
+
+  /// This week's change against [comparedWithKg], as a fraction (0.25 is
+  /// up 25%). Null when there is nothing to compare with.
+  double? get volumeChange {
+    final double? base = comparedWithKg;
+    return base == null ? null : (volumeKg - base) / base;
+  }
+
+  /// [volumeChange] as the whole percentage the badge prints, without its
+  /// sign (the badge's arrow carries that). The percentage, not the kilos:
+  /// it is the number a lifter reasons about.
+  int? get volumeChangePercent {
+    final double? change = volumeChange;
+    return change == null ? null : (change.abs() * 100).round();
+  }
+
   final int sessions;
 
   // No streak here: this snapshot sees only the eight-week window, which

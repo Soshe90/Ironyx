@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,074 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,079 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -264,6 +264,19 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     for the owner:** with nothing yet this week, the badge is a red
     "↓100%" whenever last week had trained by the same point; correct, but
     it reads as a failure on a rest morning. **Not checked:** TalkBack.
+  - **Refactor: `dashboard_page.dart` split, as Progress was.** 1,116
+    lines and 20 widgets became the page (scaffold, greeting, wide rows;
+    140 lines) and four files in `dashboard/presentation/sections/`:
+    `today_card.dart`, `week_section.dart`, `progress_section.dart` and
+    `recent_section.dart`. Their four entry widgets are public
+    (`TodayCard`, `ThisWeekSection`, `ProgressSection`, `RecentSection`);
+    everything inside them stays private. The code was moved, not
+    rewritten: sorted line by line, old and new differ only in the
+    `super.key` the now-public constructors take. The week badge's rule
+    left the widget for `WeekSnapshot`: `comparedWithKg`, `volumeChange`
+    and `volumeChangePercent`, each unit-tested; the badge reads them and
+    behaves as before. **Tested:** every existing Home test passes
+    unchanged, and five new tests cover the rule.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
