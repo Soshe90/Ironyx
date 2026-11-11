@@ -240,6 +240,37 @@ void main() {
       await disposeApp(tester);
     });
 
+    testWidgets('in Arabic the list is in the order of the Arabic names',
+        (tester) async {
+      // English order: Back Squat, Pull-Up, Push-Up. Arabic: سكوات خلفي,
+      // العقلة, تمرين الضغط, which sort as ا, ت, س.
+      for (final (String slug, String name) in <(String, String)>[
+        ('back-squat', 'Back Squat (catalogue)'),
+        ('pull-up', 'Pull-Up (catalogue)'),
+        ('push-up', 'Push-Up (catalogue)'),
+      ]) {
+        await ExerciseDao(database).upsertExercises([
+          ExercisesTableCompanion.insert(
+            id: slug,
+            slug: slug,
+            name: name,
+            category: 'strength',
+            difficulty: 'intermediate',
+            movementPattern: 'horizontalPush',
+            seedVersion: 1,
+          ),
+        ]);
+      }
+      await pumpLibrary(tester, locale: 'ar');
+
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(top('العقلة'), lessThan(top('تمرين الضغط')));
+      expect(top('تمرين الضغط'), lessThan(top('سكوات خلفي')),
+          reason: 'by the English names, سكوات خلفي came first');
+
+      await disposeApp(tester);
+    });
+
     testWidgets('a search keeps the filters chosen', (tester) async {
       await pumpLibrary(tester);
 

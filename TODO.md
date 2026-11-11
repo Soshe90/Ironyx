@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,127 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,128 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -165,6 +165,13 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     could still hold one made before this. **Tested:** the limits
     themselves pass, one past fails, the factory throws, and on the page
     80000 rounds shows "Rounds can be at most 99." (fails on the old code).
+  - **Fixed: in Arabic the Library was in no visible order.** The queries
+    sort by the stored English name. The list and the picker sheet are now
+    sorted by the name shown, folded as a search is (so أ and ا sort
+    together), ties by the stored name (`sortedByDisplayedName`); in
+    English nothing moves. **Tested:** العقلة, تمرين الضغط, سكوات خلفي in
+    that order (by the English names سكوات خلفي came first; fails on the
+    old code).
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

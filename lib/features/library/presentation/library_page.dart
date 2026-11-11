@@ -141,9 +141,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           Expanded(
             child: exercisesAsync.when(
               data: (exercises) => _ExerciseList(
-                exercises: arabicSearch
-                    ? matchingDisplayedName(context, exercises, searchQuery)
-                    : exercises,
+                exercises: sortedByDisplayedName(
+                  context,
+                  arabicSearch
+                      ? matchingDisplayedName(context, exercises, searchQuery)
+                      : exercises,
+                ),
                 onExerciseTap: _showExerciseDetail,
                 hasActiveFilters: _hasActiveFilters,
                 onClearFilters: _clearFilters,

@@ -192,3 +192,28 @@ List<ExerciseSummary> matchingDisplayedName(
         ))
           s,
     ];
+
+/// [exercises] in the order of the name shown: folded the way a search is
+/// (see `foldForSearch`), ties broken by the stored name so the order is
+/// the same on every build.
+///
+/// The queries order by the stored English name, so in Arabic the list
+/// was in no order a reader could see. Sorted here, not in SQL, because
+/// the shown name is a translation the database does not hold; a few
+/// hundred names take no time.
+List<ExerciseSummary> sortedByDisplayedName(
+  BuildContext context,
+  List<ExerciseSummary> exercises,
+) {
+  final List<(ExerciseSummary, String)> keyed = <(ExerciseSummary, String)>[
+    for (final ExerciseSummary s in exercises)
+      (s, foldForSearch(s.exercise.displayName(context))),
+  ];
+  keyed.sort(((ExerciseSummary, String) a, (ExerciseSummary, String) b) {
+    final int byShown = a.$2.compareTo(b.$2);
+    return byShown != 0
+        ? byShown
+        : a.$1.exercise.name.compareTo(b.$1.exercise.name);
+  });
+  return <ExerciseSummary>[for (final (ExerciseSummary s, _) in keyed) s];
+}

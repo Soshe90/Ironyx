@@ -145,9 +145,12 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
           Expanded(
             child: exercisesAsync.when(
               data: (all) {
-                final List<ExerciseSummary> exercises = arabicSearch
-                    ? matchingDisplayedName(context, all, searchQuery)
-                    : all;
+                final List<ExerciseSummary> exercises = sortedByDisplayedName(
+                  context,
+                  arabicSearch
+                      ? matchingDisplayedName(context, all, searchQuery)
+                      : all,
+                );
                 if (exercises.isEmpty) {
                   return EmptyState(
                     icon: Icons.search_off,
