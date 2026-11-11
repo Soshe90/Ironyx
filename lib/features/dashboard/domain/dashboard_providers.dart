@@ -80,18 +80,30 @@ Stream<List<WeekdayDistribution>> dashboardWeekdayDistribution(Ref ref) {
       );
 }
 
-/// Start of the hero window: midnight, [_heroWeeks] weeks before [today].
-DateTime _heroWindowStart(DateTime today) =>
-    DateTime(today.year, today.month, today.day - _heroWeeks * 7);
+/// Start of the hero window: the first day of the week [_heroWeeks] weeks
+/// before this one, so the window is [_heroWeeks] whole weeks and this one.
+///
+/// It was [today] minus 56 days, which is mid-week on every day but the
+/// first: the oldest bucket held only the days after that, and the
+/// sparkline began with a dip that was never in the training. (A week of
+/// 100 kg read 0 when its workout was on the first day.)
+DateTime _heroWindowStart(DateTime today, WeekStart weekStart) {
+  DateTime week = DateFormatters.startOfWeek(today, weekStart);
+  for (int i = 0; i < _heroWeeks; i++) {
+    week = DateFormatters.previousWeek(week);
+  }
+  return week;
+}
 
 /// Last 8 weeks of training volume, for the dashboard's hero card
 /// (headline number, trend vs. the prior week, and a sparkline).
 @riverpod
 Stream<List<WeeklyVolume>> dashboardWeeklyVolume(Ref ref) {
   final DateTime today = ref.watch(todayProvider);
+  final WeekStart weekStart = ref.watch(weekStartControllerProvider);
   return ref.watch(workoutDaoProvider).watchWeeklyVolume(
-        since: _heroWindowStart(today),
-        weekStart: ref.watch(weekStartControllerProvider),
+        since: _heroWindowStart(today, weekStart),
+        weekStart: weekStart,
         utcOffset: today.timeZoneOffset,
       );
 }
@@ -101,9 +113,10 @@ Stream<List<WeeklyVolume>> dashboardWeeklyVolume(Ref ref) {
 @riverpod
 Stream<List<WorkoutFrequency>> dashboardWeeklyFrequency(Ref ref) {
   final DateTime today = ref.watch(todayProvider);
+  final WeekStart weekStart = ref.watch(weekStartControllerProvider);
   return ref.watch(workoutDaoProvider).watchWorkoutFrequency(
-        since: _heroWindowStart(today),
-        weekStart: ref.watch(weekStartControllerProvider),
+        since: _heroWindowStart(today, weekStart),
+        weekStart: weekStart,
         utcOffset: today.timeZoneOffset,
       );
 }
@@ -233,7 +246,10 @@ class WeekSnapshot {
       previousVolumeKg: volumeFor(lastWeek),
       sessions: sessionsFor(thisWeek),
       volumeSeries: <double>[
-        for (final WeeklyVolume w in volume) w.totalVolumeKg
+        for (final WeeklyVolume w in volume)
+          if (w.weekStart.isBefore(thisWeek) &&
+              !_sameDay(w.weekStart, thisWeek))
+            w.totalVolumeKg,
       ],
       hasHistory: volume.isNotEmpty,
       previousToDateVolumeKg: previousToDateVolumeKg,
@@ -254,7 +270,18 @@ class WeekSnapshot {
 
   // No streak here: this snapshot sees only the eight-week window, which
   // capped it at 8. See [dashboardStreakWeeks].
+
+  /// Volume of each finished week in the window, oldest first: this week is
+  /// left out. A week in progress is low until it ends, so as the line's
+  /// last point it dipped every Monday whatever the training. This week's
+  /// figure is [volumeKg], printed beside the line.
   final List<double> volumeSeries;
+
+  /// Whether [volumeSeries] is worth drawing: two weeks or more, and some
+  /// volume in them. A flat line along zero (someone whose first workout
+  /// is this week) says nothing a "0 kg" does not.
+  bool get showsTrend =>
+      volumeSeries.length >= 2 && volumeSeries.any((double v) => v > 0);
 
   /// Whether anything was logged inside the hero window. False both for a
   /// brand-new account and for a lapsed one, so copy keyed off this must

@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,058 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,062 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -167,6 +167,20 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** 20 straight weeks read 20 on "1M" (it read 5); a ten-week
     run before the range is the longest (it read 1); both old figures
     reproduced by running the new tests on the old code.
+  - **Fixed: the volume sparkline dipped at both ends.** Its eight-week
+    window started at today minus 56 days, mid-week, so the oldest point
+    held part of a week (a 150 kg week read 50); and its last point was
+    the week in progress, low until the week ends, so the line fell every
+    Monday. The window now starts on the first day of the week eight weeks
+    before this one (the day chosen in Settings), and the line is the
+    eight finished weeks; this week's figure is the headline beside it.
+    The line is not drawn while those weeks are all zero (a first week of
+    training drew a flat line along the bottom). The week card's other
+    figures and "No training in the last 8 weeks" are unchanged, apart from
+    that window now reaching back to the start of its oldest week.
+    **Tested:** a whole first week (both its ends in, the day before out),
+    this week left out, no line for a first week, Saturday weeks; all four
+    failed on the old code. **Not checked:** on the phone.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the

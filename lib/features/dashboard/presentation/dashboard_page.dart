@@ -537,7 +537,7 @@ class _WeekBody extends StatelessWidget {
                 ],
               ),
             ),
-            if (snapshot.volumeSeries.length >= 2) ...<Widget>[
+            if (snapshot.showsTrend) ...<Widget>[
               const SizedBox(width: AppSpacing.md),
               SizedBox(
                 // Widens with the card rather than staying phone-sized on a

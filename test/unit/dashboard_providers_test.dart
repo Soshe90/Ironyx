@@ -122,7 +122,10 @@ void main() {
       expect(snapshot.volumeKg, 150);
       expect(snapshot.previousVolumeKg, 100);
       expect(snapshot.sessions, 3);
-      expect(snapshot.volumeSeries, <double>[50, 100, 150]);
+      // Finished weeks only: this week's 150 is the headline, and as the
+      // line's last point it would dip every week until the week ended.
+      expect(snapshot.volumeSeries, <double>[50, 100]);
+      expect(snapshot.showsTrend, isTrue);
       expect(snapshot.hasHistory, isTrue);
     });
 
@@ -713,6 +716,127 @@ void main() {
           await containerAt(DateTime(2026, 11, 10, 11));
 
       expect(await container.read(dashboardStreakWeeksProvider.future), 0);
+    });
+  });
+
+  group('the volume sparkline', () {
+    Future<WeekSnapshot> snapshotAt(DateTime now) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => now),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+      return container.read(dashboardWeekSnapshotProvider.future);
+    }
+
+    test('its first point is a whole week', () async {
+      await seedExercise('bench', 'Bench Press');
+      // Now is Tue 10 Nov 2026; eight weeks before this one starts Mon 14
+      // Sep. Its first day and its last both count, the day before it not.
+      await insertWorkoutWithSet(
+        workoutId: 'before',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 9, 13, 18),
+        weightKg: 1000,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'firstDay',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 9, 14, 8),
+        weightKg: 100,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'lastDay',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 9, 20, 18),
+        weightKg: 50,
+        reps: 1,
+      );
+
+      final WeekSnapshot week = await snapshotAt(DateTime(2026, 11, 10, 11));
+
+      expect(week.volumeSeries, hasLength(8));
+      expect(week.volumeSeries.first, 150,
+          reason: 'the window began on Tue 15 Sep, so this read 50');
+    });
+
+    test('this week is the headline, not the last point', () async {
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'lastWeek',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 4, 18),
+        weightKg: 200,
+        reps: 1,
+      );
+      await insertWorkoutWithSet(
+        workoutId: 'thisWeek',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 9, 18),
+        weightKg: 30,
+        reps: 1,
+      );
+
+      final WeekSnapshot week = await snapshotAt(DateTime(2026, 11, 10, 11));
+
+      expect(week.volumeKg, 30);
+      expect(week.volumeSeries.last, 200);
+      expect(week.volumeSeries, isNot(contains(30)));
+    });
+
+    test('is not drawn for a first week of training', () async {
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'first',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 9, 18),
+        weightKg: 100,
+        reps: 1,
+      );
+
+      final WeekSnapshot week = await snapshotAt(DateTime(2026, 11, 10, 11));
+
+      expect(week.hasHistory, isTrue);
+      expect(week.showsTrend, isFalse);
+    });
+
+    test('starts on the first day the user chose', () async {
+      await seedExercise('bench', 'Bench Press');
+      // Saturday weeks: eight before Sat 7 Nov starts Sat 12 Sep.
+      await insertWorkoutWithSet(
+        workoutId: 'firstDay',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 9, 12, 9),
+        weightKg: 100,
+        reps: 1,
+      );
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => DateTime(2026, 11, 10, 11)),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+      await container
+          .read(weekStartControllerProvider.notifier)
+          .set(WeekStart.saturday);
+
+      final WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.volumeSeries, hasLength(8));
+      expect(week.volumeSeries.first, 100);
     });
   });
 }
