@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
@@ -10,6 +11,7 @@ import 'package:ironyx/core/formatters/week_start_controller.dart';
 import 'package:ironyx/core/providers.dart';
 import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
+import 'package:ironyx/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Home's providers and the queries behind them. The Est. 1RM tile's rule
@@ -948,6 +950,84 @@ void main() {
       expect(snapshot(volume: 200, samePoint: 200).volumeChange, 0);
       expect(snapshot(volume: 201, samePoint: 200).volumeChangePercent, 1);
       expect(snapshot(volume: 200.9, samePoint: 200).volumeChangePercent, 0);
+    });
+  });
+
+  group('weeks without workouts', () {
+    // Tue 10 Nov 2026; weeks from Monday. This week is Mon 9 Nov.
+    final DateTime today = DateTime(2026, 11, 10);
+    DateTime week(int back) => DateTime(2026, 11, 9 - 7 * back);
+
+    WeekSnapshot from(Map<int, int> sessionsByWeeksBack,
+        {Map<int, double> volumeByWeeksBack = const <int, double>{}}) {
+      final List<int> backs = sessionsByWeeksBack.keys.toList()
+        ..sort((int a, int b) => b.compareTo(a));
+      return WeekSnapshot.from(
+        volume: <WeeklyVolume>[
+          for (final int b in backs)
+            WeeklyVolume(
+              weekStart: week(b),
+              totalVolumeKg: volumeByWeeksBack[b] ??
+                  (sessionsByWeeksBack[b]! > 0 ? 100 : 0),
+            ),
+        ],
+        frequency: <WorkoutFrequency>[
+          for (final int b in backs)
+            WorkoutFrequency(
+              weekStart: week(b),
+              workoutCount: sessionsByWeeksBack[b]!,
+            ),
+        ],
+        weekStart: WeekStart.monday,
+        today: today,
+      );
+    }
+
+    test('counts the empty weeks in a row, this one included', () {
+      expect(
+        from(<int, int>{4: 1, 3: 2, 2: 0, 1: 0, 0: 0}).weeksWithoutWorkouts,
+        3,
+      );
+      expect(
+        from(<int, int>{3: 1, 2: 1, 1: 0, 0: 0}).weeksWithoutWorkouts,
+        2,
+      );
+    });
+
+    test('this week alone empty is not a break', () {
+      expect(from(<int, int>{1: 2, 0: 0}).weeksWithoutWorkouts, 0);
+    });
+
+    test('back this week is not a break any more', () {
+      expect(
+        from(<int, int>{3: 1, 2: 0, 1: 0, 0: 1}).weeksWithoutWorkouts,
+        0,
+      );
+    });
+
+    test('nothing trained in the window is the no-history case, not this', () {
+      expect(from(<int, int>{2: 0, 1: 0, 0: 0}).weeksWithoutWorkouts, 0);
+      expect(from(const <int, int>{}).weeksWithoutWorkouts, 0);
+    });
+
+    test('a workout of timed sets only still counts as a workout', () {
+      // Last week: one session, no volume (all timed sets).
+      expect(
+        from(<int, int>{2: 1, 1: 1, 0: 0},
+            volumeByWeeksBack: <int, double>{1: 0}).weeksWithoutWorkouts,
+        0,
+      );
+    });
+
+    test('is said in English and Arabic', () async {
+      final AppLocalizations en =
+          await AppLocalizations.delegate.load(const Locale('en'));
+      final AppLocalizations ar =
+          await AppLocalizations.delegate.load(const Locale('ar'));
+      expect(en.dashboardNoWorkoutsForWeeks(2), 'No workouts for 2 weeks');
+      expect(en.dashboardNoWorkoutsForWeeks(5), 'No workouts for 5 weeks');
+      expect(ar.dashboardNoWorkoutsForWeeks(2), 'لا تمارين منذ أسبوعين');
+      expect(ar.dashboardNoWorkoutsForWeeks(3), contains('أسابيع'));
     });
   });
 }

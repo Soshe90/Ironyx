@@ -729,6 +729,8 @@
   "@dashboardLastWeekVolume": {"description": "Caption under this week's volume on the dashboard: last week's total, already formatted with its unit.", "placeholders": {"volume": {"type": "String"}}},
   "dashboardSamePointLastWeekVolume": "Same point last week: {volume}",
   "@dashboardSamePointLastWeekVolume": {"description": "Caption under this week's volume on the dashboard: last week's volume up to the same day and time, which the trend badge compares with. Already formatted with its unit.", "placeholders": {"volume": {"type": "String"}}},
+  "dashboardNoWorkoutsForWeeks": "{weeks, plural, =1{No workouts for a week} other{No workouts for {weeks} weeks}}",
+  "@dashboardNoWorkoutsForWeeks": {"description": "Caption under this week's volume on the dashboard when neither this week nor last week has a workout: how many weeks in a row, this one included, have had none (two or more).", "placeholders": {"weeks": {"type": "int"}}},
   "dashboardLastTrained": "Last workout: {when}",
   "@dashboardLastTrained": {"description": "Caption of the dashboard's start card. {when} is a relative day already in the user's language: Today, Yesterday, Monday, 3 Nov.", "placeholders": {"when": {"type": "String"}}},
   "dashboardStreakEmpty": "Train this week to start one",

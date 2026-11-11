@@ -23,6 +23,7 @@ import '../../../../core/widgets/responsive.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/sparkline.dart';
 import '../../../../core/widgets/trend_badge.dart';
+import '../../../progress/domain/consistency_calculators.dart';
 import '../../domain/dashboard_providers.dart';
 
 /// Trend trace beside the weekly volume figure.
@@ -39,8 +40,16 @@ class ThisWeekSection extends ConsumerWidget {
         ref.watch(dashboardWeekSnapshotProvider);
     final AsyncValue<List<WeekdayDistribution>> weekdayAsync =
         ref.watch(dashboardWeekdayDistributionProvider);
-    final Profile? profile = ref.watch(dashboardProfileProvider).value;
-    final int weeklyTarget = profile?.weeklySessionTarget ?? 3;
+    // The goal waits for the profile: read as `.value` it showed the
+    // default target of 3 until the profile arrived, then the real one. A
+    // profile that fails to load falls back to the default rather than
+    // taking the card down; the target is not what the card is about.
+    final AsyncValue<Profile?> profileAsync =
+        ref.watch(dashboardProfileProvider);
+    final bool profileLoading =
+        !profileAsync.hasValue && !profileAsync.hasError;
+    final int weeklyTarget =
+        profileAsync.value?.weeklySessionTarget ?? defaultWeeklySessionTarget;
     final WeightUnit unit = ref.watch(weightUnitControllerProvider);
     final DateTime today = ref.watch(todayProvider);
     final ThemeData theme = Theme.of(context);
@@ -51,14 +60,16 @@ class ThisWeekSection extends ConsumerWidget {
     // of them. A semantics node that appears only in `data` — alongside a
     // child that has its own, like fl_chart's LineChart — trips
     // `!semantics.parentDataDirty` when the branch switches.
-    final String semanticLabel = snapshotAsync.when(
-      loading: () => l10n.dashboardThisWeekSemanticLoading,
-      error: (_, __) => l10n.dashboardThisWeekSemanticError,
-      data: (s) => l10n.dashboardThisWeekSemantic(
-        UnitFormatters.volume(s.volumeKg, unit, context.l10n),
-        l10n.sessionCount(s.sessions),
-      ),
-    );
+    final String semanticLabel = profileLoading
+        ? l10n.dashboardThisWeekSemanticLoading
+        : snapshotAsync.when(
+            loading: () => l10n.dashboardThisWeekSemanticLoading,
+            error: (_, __) => l10n.dashboardThisWeekSemanticError,
+            data: (s) => l10n.dashboardThisWeekSemantic(
+              UnitFormatters.volume(s.volumeKg, unit, context.l10n),
+              l10n.sessionCount(s.sessions),
+            ),
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,33 +82,42 @@ class ThisWeekSection extends ConsumerWidget {
         AppCard(
           onTap: () => context.goNamed(Routes.progressName),
           semanticLabel: semanticLabel,
-          child: snapshotAsync.when(
-            loading: () => const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                LoadingShimmer(width: 160, height: AppTypography.metricSizeLg),
-                SizedBox(height: AppSpacing.sm),
-                LoadingShimmer(width: 110, height: 12),
-              ],
-            ),
-            error: (error, _) => ErrorView(
-              title: l10n.dashboardThisWeekLoadFailed,
-              details: error.toString(),
-              compact: true,
-            ),
-            data: (s) => _WeekBody(
-              snapshot: s,
-              weeklyTarget: weeklyTarget,
-              weekdayAsync: weekdayAsync,
-              today: today,
-              unit: unit,
-              scheme: scheme,
-            ),
-          ),
+          child: profileLoading
+              ? const _WeekLoading()
+              : snapshotAsync.when(
+                  loading: () => const _WeekLoading(),
+                  error: (error, _) => ErrorView(
+                    title: l10n.dashboardThisWeekLoadFailed,
+                    details: error.toString(),
+                    compact: true,
+                  ),
+                  data: (s) => _WeekBody(
+                    snapshot: s,
+                    weeklyTarget: weeklyTarget,
+                    weekdayAsync: weekdayAsync,
+                    today: today,
+                    unit: unit,
+                    scheme: scheme,
+                  ),
+                ),
         ),
       ],
     );
   }
+}
+
+class _WeekLoading extends StatelessWidget {
+  const _WeekLoading();
+
+  @override
+  Widget build(BuildContext context) => const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          LoadingShimmer(width: 160, height: AppTypography.metricSizeLg),
+          SizedBox(height: AppSpacing.sm),
+          LoadingShimmer(width: 110, height: 12),
+        ],
+      );
 }
 
 class _WeekBody extends StatelessWidget {
@@ -197,14 +217,20 @@ class _WeekBody extends StatelessWidget {
                         const SizedBox(width: AppSpacing.sm),
                         TrendBadge(
                           direction: trend,
-                          label: '${snapshot.volumeChangePercent}%',
+                          label: snapshot.volumeChangePercent! >
+                                  WeekSnapshot.maxShownChangePercent
+                              ? '${WeekSnapshot.maxShownChangePercent}%+'
+                              : '${snapshot.volumeChangePercent}%',
                         ),
                       ],
                     ],
                   ),
-                  // What the badge's percentage is a percentage of, or, with
-                  // no badge, last week's total as context.
-                  if (comparedWith != null || previous > 0) ...<Widget>[
+                  // What the badge's percentage is a percentage of; with no
+                  // badge, last week's total as context; and with neither
+                  // week trained, how long the break has been.
+                  if (comparedWith != null ||
+                      previous > 0 ||
+                      snapshot.weeksWithoutWorkouts > 0) ...<Widget>[
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       comparedWith != null
@@ -212,10 +238,14 @@ class _WeekBody extends StatelessWidget {
                               UnitFormatters.volume(
                                   comparedWith, unit, context.l10n),
                             )
-                          : l10n.dashboardLastWeekVolume(
-                              UnitFormatters.volume(
-                                  previous, unit, context.l10n),
-                            ),
+                          : previous > 0
+                              ? l10n.dashboardLastWeekVolume(
+                                  UnitFormatters.volume(
+                                      previous, unit, context.l10n),
+                                )
+                              : l10n.dashboardNoWorkoutsForWeeks(
+                                  snapshot.weeksWithoutWorkouts,
+                                ),
                       style: AppTypography.caption(theme),
                     ),
                   ],

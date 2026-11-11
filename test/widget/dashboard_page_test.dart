@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/timer_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/database/tables/profiles.dart';
 import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/core/widgets/trend_badge.dart';
@@ -691,6 +694,110 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(BodyMetricsHistoryPage), findsOneWidget);
+        await disposeApp(tester);
+      });
+
+      Future<void> openWith(WidgetTester tester, WeekSnapshot week) async {
+        await pumpApp(
+          tester,
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            dashboardWeekSnapshotProvider.overrideWith((ref) async => week),
+          ],
+          prefs: seededPrefs,
+          surfaceSize: const Size(400, 1600),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('a break of two weeks or more is said under the volume',
+          (tester) async {
+        await openWith(
+          tester,
+          const WeekSnapshot(
+            volumeKg: 0,
+            previousVolumeKg: 0,
+            sessions: 0,
+            volumeSeries: <double>[100, 100, 0, 0, 0, 0, 0, 0],
+            hasHistory: true,
+            previousToDateVolumeKg: 0,
+            weeksWithoutWorkouts: 2,
+          ),
+        );
+
+        expect(find.text('No workouts for 2 weeks'), findsOneWidget);
+        expect(find.textContaining('Last week'), findsNothing);
+        final Finder weekCard = find.ancestor(
+          of: find.text('No workouts for 2 weeks'),
+          matching: find.byType(AppCard),
+        );
+        expect(
+          find.descendant(of: weekCard, matching: find.byType(TrendBadge)),
+          findsNothing,
+        );
+        await disposeApp(tester);
+      });
+
+      testWidgets('a change past 999% is printed as 999%+', (tester) async {
+        await openWith(
+          tester,
+          const WeekSnapshot(
+            volumeKg: 300,
+            previousVolumeKg: 50,
+            sessions: 1,
+            volumeSeries: <double>[50, 50],
+            hasHistory: true,
+            previousToDateVolumeKg: 2,
+          ),
+        );
+
+        expect(find.text('999%+'), findsOneWidget);
+        expect(find.text('14900%'), findsNothing);
+        await disposeApp(tester);
+      });
+
+      testWidgets('at 999% exactly the number is still printed',
+          (tester) async {
+        await openWith(
+          tester,
+          const WeekSnapshot(
+            volumeKg: 1099,
+            previousVolumeKg: 100,
+            sessions: 1,
+            volumeSeries: <double>[100, 100],
+            hasHistory: true,
+            previousToDateVolumeKg: 100,
+          ),
+        );
+
+        expect(find.text('999%'), findsOneWidget);
+        await disposeApp(tester);
+      });
+
+      testWidgets('the goal waits for the profile instead of showing 3',
+          (tester) async {
+        final StreamController<Profile?> profile = StreamController<Profile?>();
+        addTearDown(profile.close);
+        await pumpApp(
+          tester,
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            dashboardProfileProvider.overrideWith((ref) => profile.stream),
+          ],
+          prefs: seededPrefs,
+          surfaceSize: const Size(400, 1600),
+          settle: false,
+        );
+        for (int i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+
+        // The rest of the page is up; the card is still loading.
+        expect(find.text('Start workout'), findsOneWidget);
+        expect(find.textContaining(' / 3'), findsNothing);
+        // The card's body (its VOLUME eyebrow) has not replaced the shimmer.
+        expect(find.text('VOLUME'), findsNothing);
+
         await disposeApp(tester);
       });
 

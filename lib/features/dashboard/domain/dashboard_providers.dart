@@ -253,6 +253,7 @@ class WeekSnapshot {
     required this.volumeSeries,
     required this.hasHistory,
     this.previousToDateVolumeKg,
+    this.weeksWithoutWorkouts = 0,
   });
 
   /// Builds the snapshot from the two weekly series.
@@ -294,6 +295,26 @@ class WeekSnapshot {
       return 0;
     }
 
+    // Weeks in a row without a workout, ending with this one. Counted by
+    // sessions, not volume: a workout of timed sets has no volume but is
+    // still a workout. Only a break of two weeks or more is one (this week
+    // alone is just a week not yet begun), and only inside the window: with
+    // nothing in it at all, the card says "No training in the last 8 weeks"
+    // instead.
+    int idle = 0;
+    if (frequency.isNotEmpty) {
+      DateTime oldest = frequency.first.weekStart;
+      for (final WorkoutFrequency f in frequency) {
+        if (f.weekStart.isBefore(oldest)) oldest = f.weekStart;
+      }
+      DateTime cursor = thisWeek;
+      while (!cursor.isBefore(oldest) && sessionsFor(cursor) == 0) {
+        idle++;
+        cursor = DateFormatters.previousWeek(cursor);
+      }
+      if (cursor.isBefore(oldest)) idle = 0;
+    }
+
     return WeekSnapshot(
       volumeKg: volumeFor(thisWeek),
       previousVolumeKg: volumeFor(lastWeek),
@@ -306,6 +327,7 @@ class WeekSnapshot {
       ],
       hasHistory: volume.isNotEmpty,
       previousToDateVolumeKg: previousToDateVolumeKg,
+      weeksWithoutWorkouts: idle >= 2 ? idle : 0,
     );
   }
 
@@ -319,6 +341,18 @@ class WeekSnapshot {
   /// compared with. Null when not known, and then the card falls back to
   /// [previousVolumeKg].
   final double? previousToDateVolumeKg;
+
+  /// Weeks in a row without a workout, this one included, when that is
+  /// two or more and something was trained earlier in the window; 0
+  /// otherwise. The card says "No workouts for N weeks" with it: a break of
+  /// two to seven weeks used to leave the card silent, with no badge (both
+  /// weeks zero) and no caption (last week's total zero).
+  final int weeksWithoutWorkouts;
+
+  /// The largest change the badge prints as a number; past it, "999%+". A
+  /// first workout against a few kilos at the same point last week read
+  /// "4900%", which says nothing more and can crowd the volume figure.
+  static const int maxShownChangePercent = 999;
 
   /// What this week so far is compared with: last week up to the same
   /// moment. Null without that figure, or with nothing by then last week,

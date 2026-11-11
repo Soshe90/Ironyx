@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,077 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,087 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -286,6 +286,27 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   - **Owner's decision on the week badge:** keep showing the real status,
     "↓100%" included, when nothing is logged yet this week; it is not to
     be hidden until the first workout.
+  - **Added: the week card says when there has been a break.** With
+    neither this week nor last week trained, the card had no badge (both
+    zero) and no caption (last week's total zero): a break of two to seven
+    weeks left it silent ("No training in the last 8 weeks" only comes
+    after eight). It now reads "No workouts for N weeks" (new string,
+    en/ar with Arabic plurals), N counting the empty weeks in a row, this
+    one included (`WeekSnapshot.weeksWithoutWorkouts`). Counted by
+    sessions, not volume, so a week of timed sets only is not a break.
+  - **Fixed: the badge's percentage has a ceiling.** Past 999% it reads
+    "999%+" (`WeekSnapshot.maxShownChangePercent`): a first workout against
+    a few kilos at the same point last week read "14900%".
+  - **Fixed: the session goal showed 3 before the real target.** The
+    target was read as the profile's `.value`, so the card showed the
+    default "x / 3" until the profile arrived. The card now waits for the
+    profile (it shows its loading state); a profile that fails to load
+    falls back to `defaultWeeklySessionTarget`, Progress's constant, instead
+    of a second literal 3. **Tested:** the break count (a break, this week
+    only, back this week, nothing in the window, timed sets), both
+    languages, the caption on the page, 999%+ and 999%, the goal while the
+    profile is loading. Not run on the old code: the tests use the new
+    field and string. **Not checked:** on the phone.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
