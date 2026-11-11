@@ -42,4 +42,19 @@ class TimerPresetDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> remove(String id) =>
       (delete(timerPresetsTable)..where((t) => t.id.equals(id))).go();
+
+  /// Deletes the preset and returns its row as it was, for an undo to put
+  /// back with [restore]; null when there was none.
+  Future<TimerPresetsTableData?> take(String id) => transaction(() async {
+        final TimerPresetsTableData? row = await (select(timerPresetsTable)
+              ..where((t) => t.id.equals(id)))
+            .getSingleOrNull();
+        if (row != null) await remove(id);
+        return row;
+      });
+
+  /// Puts back a row [take] removed, with its original creation time, so it
+  /// returns to the same place in the list rather than to the end.
+  Future<void> restore(TimerPresetsTableData row) =>
+      into(timerPresetsTable).insertOnConflictUpdate(row);
 }

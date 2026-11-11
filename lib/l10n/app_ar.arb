@@ -594,6 +594,10 @@
   "timerCustomTitle": "مخصّص",
   "timerCustomSubtitle": "أنشئ فترة زمنية ثم ابدأها أو احفظها",
   "timerPresetSaved": "تم حفظ الإعداد.",
+  "timerPresetNameTitle": "سمِّ هذا الإعداد",
+  "timerPresetNameLabel": "الاسم",
+  "timerPresetDeleted": "حُذف الإعداد",
+  "timerPresetOptions": "خيارات الإعداد",
   "timerPresetsLoadFailed": "تعذّر تحميل الإعدادات المحفوظة",
   "timerPresetSemantic": "ابدأ {name}، {duration} إجمالًا",
   "@timerPresetSemantic": {

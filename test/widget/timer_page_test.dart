@@ -102,5 +102,64 @@ void main() {
       expect(find.text('Start custom'), findsOneWidget,
           reason: 'still on the Timer tab, nothing started');
     });
+    testWidgets('a preset is saved under a name, and can be deleted',
+        (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        initialLocation: '/timer',
+        prefs: const {'exercise_seed_version': 999999},
+        surfaceSize: const Size(400, 1800),
+        awaitDatabase: true,
+      );
+
+      await tester.tap(find.text('Save preset'));
+      await tester.pumpAndSettle();
+      // Filled in with the formula; replaced with a name of one's own.
+      expect(find.text('Name this preset'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+        '30s work / 10s rest × 8',
+      );
+      await tester.enterText(find.byType(TextField).last, 'Leg day finisher');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Leg day finisher'), findsOneWidget,
+          reason: 'every saved preset used to read "Custom"');
+
+      await tester.tap(find.byTooltip('Preset options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(find.text('Leg day finisher'), findsNothing);
+      expect(find.text('Preset deleted'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Leg day finisher'), findsOneWidget);
+    });
+
+    testWidgets('a blank name saves the formula', (tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        initialLocation: '/timer',
+        prefs: const {'exercise_seed_version': 999999},
+        surfaceSize: const Size(400, 1800),
+        awaitDatabase: true,
+      );
+
+      await tester.tap(find.text('Save preset'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, '   ');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final presets = await tester.runAsync(
+        () => TimerPresetDao(database).getAll(),
+      );
+      expect(presets!.single.name, '30s work / 10s rest × 8');
+    });
   });
 }

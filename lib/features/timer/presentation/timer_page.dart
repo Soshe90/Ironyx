@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/formatters/number_input.dart';
 import '../../../core/formatters/unit_formatters.dart';
@@ -130,6 +131,7 @@ class _SavedPresets extends ConsumerWidget {
                     _PresetCard(
                       preset: preset,
                       onTap: () => startTimer(context, ref, preset),
+                      onDelete: () => _delete(context, ref, preset),
                     ),
                 ],
               ),
@@ -151,11 +153,52 @@ class _SavedPresets extends ConsumerWidget {
   }
 }
 
+/// Deletes a saved preset, with an undo that puts it back in its place.
+///
+/// There was no way to delete one: the DAO had `remove`, but no screen
+/// called it, and saving the same values twice made a second copy.
+Future<void> _delete(
+  BuildContext context,
+  WidgetRef ref,
+  TimerPreset preset,
+) async {
+  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  final AppLocalizations l10n = context.l10n;
+  final dao = ref.read(timerPresetDaoProvider);
+  final TimerPresetsTableData? row = await dao.take(preset.id);
+  ref.invalidate(savedTimerPresetsProvider);
+  if (row == null) return;
+  // Replaces a message still showing (a "Preset saved." of a moment ago),
+  // or the Undo would queue behind it and could expire unseen.
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(l10n.timerPresetDeleted),
+      duration: AppDuration.undoWindow,
+      // An action makes a snack bar persist by default; this one must go
+      // when the undo window closes (as the discarded-workout one does).
+      persist: false,
+      action: SnackBarAction(
+        label: l10n.actionUndo,
+        onPressed: () async {
+          await dao.restore(row);
+          ref.invalidate(savedTimerPresetsProvider);
+        },
+      ),
+    ),
+  );
+}
+
+enum _PresetAction { delete }
+
 class _PresetCard extends StatelessWidget {
-  const _PresetCard({required this.preset, required this.onTap});
+  const _PresetCard({required this.preset, required this.onTap, this.onDelete});
 
   final TimerPreset preset;
   final VoidCallback onTap;
+
+  /// Shown as a menu on saved presets; the built-in ones have none.
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +274,24 @@ class _PresetCard extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.xs),
             Icon(Icons.play_circle_rounded, color: scheme.primary, size: 28),
+            if (onDelete != null)
+              PopupMenuButton<_PresetAction>(
+                tooltip: context.l10n.timerPresetOptions,
+                onSelected: (_PresetAction action) => switch (action) {
+                  _PresetAction.delete => onDelete!(),
+                },
+                itemBuilder: (BuildContext context) =>
+                    <PopupMenuEntry<_PresetAction>>[
+                  PopupMenuItem<_PresetAction>(
+                    value: _PresetAction.delete,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.delete_outline),
+                      title: Text(context.l10n.actionDelete),
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -311,9 +372,20 @@ class _CustomBuilderState extends ConsumerState<_CustomBuilder> {
     if (preset != null) widget.onStart(preset);
   }
 
+  /// Asks for a name, then saves. Every saved preset was named "Custom",
+  /// so a list of them told them apart only by their numbers.
   Future<void> _save() async {
     final preset = _readPreset();
-    if (preset != null) await widget.onSave(preset);
+    if (preset == null) return;
+    final String formula = preset.displayDescription(context.l10n);
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (_) => _PresetNameDialog(initial: formula),
+    );
+    if (name == null || !mounted) return;
+    await widget.onSave(
+      preset.copyWith(name: name.trim().isEmpty ? formula : name.trim()),
+    );
   }
 
   @override
@@ -432,6 +504,61 @@ class _NumberField extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Longest name a saved preset can have.
+const int kMaxPresetNameLength = 40;
+
+/// Asks for a saved preset's name, filled in with its formula. Pops with
+/// the text, or null when cancelled. Owns its controller, so the field is
+/// never left pointing at a disposed one while the dialog animates out.
+class _PresetNameDialog extends StatefulWidget {
+  const _PresetNameDialog({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_PresetNameDialog> createState() => _PresetNameDialogState();
+}
+
+class _PresetNameDialogState extends State<_PresetNameDialog> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.initial.length > kMaxPresetNameLength
+        ? widget.initial.substring(0, kMaxPresetNameLength)
+        : widget.initial,
+  );
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.timerPresetNameTitle),
+      content: TextField(
+        controller: _name,
+        autofocus: true,
+        maxLength: kMaxPresetNameLength,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(labelText: l10n.timerPresetNameLabel),
+        onSubmitted: (String value) => Navigator.pop(context, value),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _name.text),
+          child: Text(l10n.actionSave),
+        ),
+      ],
     );
   }
 }

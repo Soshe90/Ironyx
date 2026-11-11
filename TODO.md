@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,132 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,135 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -195,6 +195,20 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** a released search no longer exists; after a failed search,
     Retry runs that search again (on the old code the count stayed at 11,
     the first try plus Riverpod's ten retries). Both fail on the old code.
+  - **Changed: saved timer presets have names, and can be deleted.** Every
+    saved preset was named "Custom", so a list of them told them apart only
+    by their numbers; and nothing could delete one (the DAO had `remove`,
+    no screen called it). "Save preset" now asks for a name, filled in with
+    the formula ("30s work / 10s rest × 8"), up to 40 characters, a blank
+    one saving the formula. Each saved preset has a menu with Delete, and
+    a snack bar offers Undo, which puts the row back with its own creation
+    time, so in its place (`TimerPresetDao.take` / `restore`). The delete
+    message replaces a "Preset saved." still showing, or its Undo would
+    queue behind it. Four new strings, en/ar. Presets saved before keep
+    the name "Custom". **Tested:** take and restore keep the order; a
+    preset saved under a name, deleted and brought back; a blank name
+    saves the formula. The naming test fails on the old code.
+    **Not checked:** on the phone.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

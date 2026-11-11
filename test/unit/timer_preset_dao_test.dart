@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/timer_preset_dao.dart';
+import 'package:ironyx/core/database/tables/timer_presets.dart';
 import 'package:ironyx/features/timer/domain/timer_preset.dart';
 
 void main() {
@@ -69,5 +70,34 @@ void main() {
     await dao.remove(id);
 
     expect(await dao.getAll(), isEmpty);
+  });
+
+  test('take removes a preset, and restore puts it back in its place',
+      () async {
+    // Saved a day apart; the database keeps creation times to the second.
+    for (final (String id, String name, int day) in <(String, String, int)>[
+      ('first', 'A', 1),
+      ('second', 'B', 2),
+    ]) {
+      await dao.restore(
+        TimerPresetsTableData(
+          id: id,
+          name: name,
+          description: '',
+          phasesJson: encodeTimerPhases(TimerPresets.tabata().phases),
+          createdAt: DateTime.utc(2026, 1, day),
+        ),
+      );
+    }
+
+    final row = await dao.take('first');
+    expect(row, isNotNull);
+    expect((await dao.getAll()).map((p) => p.id), <String>['second']);
+    expect(await dao.take('first'), isNull, reason: 'already gone');
+
+    await dao.restore(row!);
+    // Back first, by its own creation time, not at the end.
+    expect((await dao.getAll()).map((p) => p.id), <String>['first', 'second']);
+    expect((await dao.getAll()).first.name, 'A');
   });
 }
