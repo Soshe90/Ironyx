@@ -170,9 +170,7 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                       if (summary.primaryMuscle != null)
                         summary.primaryMuscle!.localizedName(context),
                       if (summary.equipmentNames.isNotEmpty)
-                        summary.equipmentNames
-                            .map((String e) =>
-                                localizedEquipmentName(context, e))
+                        localizedEquipmentNames(context, summary)
                             .join(context.l10n.listSeparator),
                     ].join(' · ');
                     return ListTile(

@@ -51,13 +51,24 @@ String localizedMuscleName(
 ) =>
     _lookup(context, kMuscleNamesAr, muscleId) ?? fallbackName;
 
-/// Translates an equipment name as `ExerciseSummary` carries it.
+/// An exercise summary's equipment, translated: each name looked up by
+/// its id (`kEquipmentNamesAr` is keyed by id), the English name where
+/// there is no translation. In the order the summary lists them.
 ///
-/// That list holds `EquipmentTable.name`, which the seed keeps equal to the
-/// row's id — so the same table serves both. Falls back to [name] itself,
-/// which is what the English UI already shows.
-String localizedEquipmentName(BuildContext context, String name) =>
-    _lookup(context, kEquipmentNamesAr, name) ?? name;
+/// Looked up by name before, on the claim that the seed keeps each name
+/// equal to its id; it does not ("Barbell" against "barbell"), so in Arabic
+/// every Library row showed English equipment.
+List<String> localizedEquipmentNames(
+  BuildContext context,
+  ExerciseSummary summary,
+) =>
+    <String>[
+      for (int i = 0; i < summary.equipmentNames.length; i++)
+        (i < summary.equipmentIds.length
+                ? _lookup(context, kEquipmentNamesAr, summary.equipmentIds[i])
+                : null) ??
+            summary.equipmentNames[i],
+    ];
 
 /// Translates an exercise name for a query result that denormalized it
 /// (e.g. `StrengthChange.exerciseName`, `LoggedExercise.exerciseName`)

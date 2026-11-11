@@ -6,6 +6,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/muscle_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/theme/app_spacing.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
 
 import '../helpers/pump_app.dart';
 import '../helpers/stub_seeders.dart';
@@ -267,6 +268,44 @@ void main() {
       expect(top('العقلة'), lessThan(top('تمرين الضغط')));
       expect(top('تمرين الضغط'), lessThan(top('سكوات خلفي')),
           reason: 'by the English names, سكوات خلفي came first');
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('a row shows its equipment icon', (tester) async {
+      await pumpLibrary(tester);
+
+      // Push-Up is bodyweight; its name was looked up as an icon id and
+      // always fell through to the generic "more" icon.
+      final Finder pushUp = find.ancestor(
+        of: find.text('Push-Up'),
+        matching: find.byType(AppCard),
+      );
+      expect(
+        find.descendant(
+            of: pushUp, matching: find.byIcon(Icons.accessibility_new)),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.more_horiz), findsNothing);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('in Arabic equipment is translated, in rows and the filter',
+        (tester) async {
+      await pumpLibrary(tester, locale: 'ar');
+
+      // Back Squat: legs, barbell. "بار" is barbell in Arabic.
+      // The detail line under a name is "muscle · equipment · pattern".
+      expect(find.textContaining(' · بار · '), findsWidgets);
+      expect(find.textContaining(' · Barbell'), findsNothing,
+          reason: 'equipment was looked up by name and stayed English');
+      expect(find.textContaining('Bodyweight'), findsNothing);
+
+      await tester.tap(find.text('المعدّات'));
+      await tester.pumpAndSettle();
+      expect(find.text('وزن الجسم'), findsWidgets);
+      expect(find.text('Bodyweight'), findsNothing);
 
       await disposeApp(tester);
     });

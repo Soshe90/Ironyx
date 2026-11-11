@@ -213,7 +213,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 .where((e) => e.id == _selectedEquipmentId)
                 .firstOrNull,
             options: equipment,
-            getLabel: (e) => e.name,
+            // Translated, as the rows under it are.
+            getLabel: (e) => e.localizedName(context),
             onChanged: (v) => setState(() => _selectedEquipmentId = v?.id),
           ),
           _FilterMenuChip<MovementPattern>(
@@ -455,14 +456,13 @@ class _ExerciseRow extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final exercise = summary.exercise;
-    final String equipmentLabel = summary.equipmentNames
-        .map((String e) => localizedEquipmentName(context, e))
+    final String equipmentLabel = localizedEquipmentNames(context, summary)
         .join(context.l10n.listSeparator);
     final String? muscle = summary.primaryMuscle?.localizedName(context);
     final String? thumbnailUrl = exercisePictureUrl(summary.media);
-    final IconData fallbackIcon = summary.equipmentNames.isEmpty
+    final IconData fallbackIcon = summary.equipmentIds.isEmpty
         ? Icons.fitness_center
-        : equipmentIcon(summary.equipmentNames.first);
+        : equipmentIcon(summary.equipmentIds.first);
 
     final String meta = <String>[
       if (muscle != null) muscle,
@@ -549,8 +549,7 @@ class _ExerciseCard extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final exercise = summary.exercise;
-    final equipmentLabel = summary.equipmentNames
-        .map((String e) => localizedEquipmentName(context, e))
+    final equipmentLabel = localizedEquipmentNames(context, summary)
         .join(context.l10n.listSeparator);
 
     return AppCard(
@@ -569,9 +568,9 @@ class _ExerciseCard extends StatelessWidget {
                 child: ExerciseThumbnail(
                   url: url,
                   fallbackUrl: exercisePictureUrl(summary.fallbackMedia),
-                  fallbackIcon: summary.equipmentNames.isEmpty
+                  fallbackIcon: summary.equipmentIds.isEmpty
                       ? Icons.fitness_center
-                      : equipmentIcon(summary.equipmentNames.first),
+                      : equipmentIcon(summary.equipmentIds.first),
                 ),
               ),
             ),
@@ -612,7 +611,9 @@ class _ExerciseCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  equipmentIcon(summary.equipmentNames.first),
+                  summary.equipmentIds.isEmpty
+                      ? Icons.fitness_center
+                      : equipmentIcon(summary.equipmentIds.first),
                   size: 14,
                   color: scheme.onSurfaceVariant,
                 ),

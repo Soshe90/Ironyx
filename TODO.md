@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,128 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,130 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -172,6 +172,19 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     English nothing moves. **Tested:** العقلة, تمرين الضغط, سكوات خلفي in
     that order (by the English names سكوات خلفي came first; fails on the
     old code).
+  - **Fixed: equipment icons and Arabic equipment names in the Library.**
+    `ExerciseSummary` carried only the equipment's names, and both the
+    icon and the Arabic name are keyed by id. A comment claimed the seed
+    keeps each name equal to its id; it does not ("Barbell", "barbell").
+    So every row and card had the generic "more" icon, and in Arabic every
+    row, card and picker line showed English equipment (the review had
+    said the rows were translated: wrong, only the detail sheet was, by
+    id). The summary now carries `equipmentIds` too, the icon and the
+    names (`localizedEquipmentNames`) are looked up by id, and the
+    equipment filter's menu is translated (`Equipment.localizedName`).
+    **Tested:** a bodyweight row has its icon and no row has the generic
+    one; in Arabic a row's detail line reads "· بار ·" and the filter lists
+    "وزن الجسم" (both fail on the old code).
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
