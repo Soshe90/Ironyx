@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,10 +8,13 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/timer_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/database/tables/profiles.dart';
 import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/core/widgets/trend_badge.dart';
 import 'package:ironyx/features/dashboard/domain/dashboard_providers.dart';
+import 'package:ironyx/features/progress/presentation/body_metrics_history_page.dart';
+import 'package:ironyx/features/tracker/presentation/workout_detail_page.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
 
 import '../helpers/pump_app.dart';
@@ -190,6 +195,50 @@ void main() {
 
       expect(find.text('Recent'), findsOneWidget);
       expect(find.text('Last timer'), findsNothing);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('the week card stays up when only the same-point figure fails',
+        (tester) async {
+      await WorkoutDao(database).insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'lastWeek',
+          startedAt: DateTime.now().subtract(const Duration(days: 8)),
+          endedAt: Value(
+            DateTime.now().subtract(const Duration(days: 8, minutes: -30)),
+          ),
+          totalVolumeKg: const Value(200),
+        ),
+        const [],
+        const [],
+      );
+      await pumpApp(
+        tester,
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dashboardLastWeekToDateVolumeProvider.overrideWith(
+            (ref) => Stream<double>.error(Exception('boom')),
+          ),
+        ],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not load this week'), findsNothing);
+      expect(find.text('300 kg'), findsOneWidget);
+      expect(find.text('1 / 3'), findsOneWidget);
+      // No like-for-like figure, so no badge: last week's total as context.
+      expect(find.textContaining('Same point'), findsNothing);
+      final Finder weekCard = find.ancestor(
+        of: find.text('300 kg'),
+        matching: find.byType(AppCard),
+      );
+      expect(
+        find.descendant(of: weekCard, matching: find.byType(TrendBadge)),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
 
       await disposeApp(tester);
     });
@@ -381,11 +430,13 @@ void main() {
           find.byWidgetPredicate(
             (Widget w) =>
                 w is Text &&
-                (w.data == 'Last workout: Today' ||
-                    w.data == 'Last workout: Yesterday'),
+                (w.data == 'Last workout: today' ||
+                    w.data == 'Last workout: yesterday'),
           ),
           findsOneWidget,
         );
+        // Nothing decorative beside the headline any more.
+        expect(find.byIcon(Icons.bolt_rounded), findsNothing);
         expect(
           find.text('Start a session and log your sets as you go.'),
           findsNothing,
@@ -601,20 +652,155 @@ void main() {
           'EST. 1RM',
           'BODY WEIGHT',
           'STREAK',
-          'AVERAGE DURATION',
+          'THIS MONTH',
         ]) {
           expect(find.text(title), findsOneWidget, reason: title);
         }
         expect(find.text('1 wk'), findsOneWidget);
-        // Two rows of two: the streak sits beside the average duration.
+        expect(find.text('AVERAGE DURATION'), findsNothing);
+        // Two rows of two: the streak sits beside this month's count.
         expect(
           tester.getTopLeft(find.text('STREAK')).dy,
-          tester.getTopLeft(find.text('AVERAGE DURATION')).dy,
+          tester.getTopLeft(find.text('THIS MONTH')).dy,
         );
         expect(
           tester.getTopLeft(find.text('STREAK')).dy,
           greaterThan(tester.getTopLeft(find.text('EST. 1RM')).dy),
         );
+        await disposeApp(tester);
+      });
+
+      testWidgets('the last-workout row opens that workout', (tester) async {
+        await open(tester);
+        final Finder row = find.text('Last workout');
+        await tester.ensureVisible(row);
+        await tester.pumpAndSettle();
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(WorkoutDetailPage), findsOneWidget);
+        expect(
+          tester
+              .widget<WorkoutDetailPage>(find.byType(WorkoutDetailPage))
+              .workoutId,
+          'w1',
+        );
+        await disposeApp(tester);
+      });
+
+      testWidgets('the body-weight tile opens the weigh-ins', (tester) async {
+        await open(tester);
+        final Finder tile = find.text('BODY WEIGHT');
+        await tester.ensureVisible(tile);
+        await tester.pumpAndSettle();
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BodyMetricsHistoryPage), findsOneWidget);
+        await disposeApp(tester);
+      });
+
+      Future<void> openWith(WidgetTester tester, WeekSnapshot week) async {
+        await pumpApp(
+          tester,
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            dashboardWeekSnapshotProvider.overrideWith((ref) async => week),
+          ],
+          prefs: seededPrefs,
+          surfaceSize: const Size(400, 1600),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('a break of two weeks or more is said under the volume',
+          (tester) async {
+        await openWith(
+          tester,
+          const WeekSnapshot(
+            volumeKg: 0,
+            previousVolumeKg: 0,
+            sessions: 0,
+            volumeSeries: <double>[100, 100, 0, 0, 0, 0, 0, 0],
+            hasHistory: true,
+            previousToDateVolumeKg: 0,
+            weeksWithoutWorkouts: 2,
+          ),
+        );
+
+        expect(find.text('No workouts for 2 weeks'), findsOneWidget);
+        expect(find.textContaining('Last week'), findsNothing);
+        final Finder weekCard = find.ancestor(
+          of: find.text('No workouts for 2 weeks'),
+          matching: find.byType(AppCard),
+        );
+        expect(
+          find.descendant(of: weekCard, matching: find.byType(TrendBadge)),
+          findsNothing,
+        );
+        await disposeApp(tester);
+      });
+
+      testWidgets('a change past 999% is printed as 999%+', (tester) async {
+        await openWith(
+          tester,
+          const WeekSnapshot(
+            volumeKg: 300,
+            previousVolumeKg: 50,
+            sessions: 1,
+            volumeSeries: <double>[50, 50],
+            hasHistory: true,
+            previousToDateVolumeKg: 2,
+          ),
+        );
+
+        expect(find.text('999%+'), findsOneWidget);
+        expect(find.text('14900%'), findsNothing);
+        await disposeApp(tester);
+      });
+
+      testWidgets('at 999% exactly the number is still printed',
+          (tester) async {
+        await openWith(
+          tester,
+          const WeekSnapshot(
+            volumeKg: 1099,
+            previousVolumeKg: 100,
+            sessions: 1,
+            volumeSeries: <double>[100, 100],
+            hasHistory: true,
+            previousToDateVolumeKg: 100,
+          ),
+        );
+
+        expect(find.text('999%'), findsOneWidget);
+        await disposeApp(tester);
+      });
+
+      testWidgets('the goal waits for the profile instead of showing 3',
+          (tester) async {
+        final StreamController<Profile?> profile = StreamController<Profile?>();
+        addTearDown(profile.close);
+        await pumpApp(
+          tester,
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            dashboardProfileProvider.overrideWith((ref) => profile.stream),
+          ],
+          prefs: seededPrefs,
+          surfaceSize: const Size(400, 1600),
+          settle: false,
+        );
+        for (int i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+
+        // The rest of the page is up; the card is still loading.
+        expect(find.text('Start workout'), findsOneWidget);
+        expect(find.textContaining(' / 3'), findsNothing);
+        // The card's body (its VOLUME eyebrow) has not replaced the shimmer.
+        expect(find.text('VOLUME'), findsNothing);
+
         await disposeApp(tester);
       });
 
@@ -726,6 +912,94 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
       await database.close();
+    });
+
+    Future<void> openTall(WidgetTester tester) async {
+      await pumpApp(
+        tester,
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        prefs: const <String, Object>{'exercise_seed_version': 999999},
+        surfaceSize: const Size(400, 1600),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> close(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+      await database.close();
+    }
+
+    testWidgets('someone new is welcomed, not shown five empty states',
+        (tester) async {
+      await openTall(tester);
+
+      expect(find.text('Your first week starts here'), findsOneWidget);
+      expect(find.textContaining('No training in the last'), findsNothing);
+      expect(find.textContaining('Older history'), findsNothing);
+      // Only body weight applies before a first workout.
+      expect(find.text('BODY WEIGHT'), findsOneWidget);
+      for (final String gone in <String>['EST. 1RM', 'STREAK', 'THIS MONTH']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      // No last workout, no timer used: nothing recent, heading included.
+      expect(find.text('Recent'), findsNothing);
+      expect(find.text('Last workout'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await close(tester);
+    });
+
+    testWidgets('someone new who has used the timer still sees it',
+        (tester) async {
+      final DateTime started =
+          DateTime.now().subtract(const Duration(minutes: 5));
+      await TimerDao(database).insertSession(
+        TimerSessionsTableCompanion.insert(
+          id: 't1',
+          startedAt: started,
+          endedAt: Value(started.add(const Duration(seconds: 20))),
+          plannedDurationSeconds: 240,
+          actualDurationSeconds: const Value(20),
+          presetName: 'Tabata',
+          totalIntervals: 8,
+        ),
+        const <TimerIntervalsTableCompanion>[],
+      );
+      await openTall(tester);
+
+      expect(find.text('Recent'), findsOneWidget);
+      expect(find.text('Last timer'), findsOneWidget);
+      expect(find.text('Last workout'), findsNothing);
+      await close(tester);
+    });
+
+    testWidgets('someone back after a long break is not taken for new',
+        (tester) async {
+      final DateTime long = DateTime.now().subtract(const Duration(days: 90));
+      await WorkoutDao(database).insertWorkout(
+        WorkoutsTableCompanion.insert(
+          id: 'old',
+          startedAt: long,
+          endedAt: Value(long.add(const Duration(minutes: 40))),
+          totalVolumeKg: const Value(500),
+        ),
+        const [],
+        const [],
+      );
+      await openTall(tester);
+
+      expect(find.text('No training in the last 8 weeks'), findsOneWidget);
+      expect(find.text('Your first week starts here'), findsNothing);
+      for (final String tile in <String>[
+        'EST. 1RM',
+        'BODY WEIGHT',
+        'STREAK',
+        'THIS MONTH',
+      ]) {
+        expect(find.text(tile), findsOneWidget, reason: tile);
+      }
+      expect(find.text('Last workout'), findsOneWidget);
+      await close(tester);
     });
   });
 }

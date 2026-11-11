@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 
 import '../../formatters/date_formatters.dart';
@@ -161,15 +163,48 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Home compares this week so far with last week up to the same moment,
   /// which a weekly series cannot answer: it only has whole weeks. One
   /// `SUM` over the indexed `started_at`.
-  Stream<double> watchVolumeBetween(DateTime from, DateTime until) {
-    final Expression<double> total = workoutsTable.totalVolumeKg.sum();
-    return (selectOnly(workoutsTable)
-          ..addColumns(<Expression<Object>>[total])
-          ..where(workoutsTable.endedAt.isNotNull() &
-              workoutsTable.startedAt.isBiggerOrEqualValue(from) &
-              workoutsTable.startedAt.isSmallerThanValue(until)))
-        .map((TypedResult row) => row.read(total) ?? 0)
-        .watchSingle();
+  ///
+  /// [until] is a function, called again each time the workouts table
+  /// changes, because "the same moment last week" moves with the clock. A
+  /// fixed bound was taken when the stream was made, and the provider only
+  /// remakes it a few times a day: at 09:00, after saving a workout, Home
+  /// was still comparing with last week up to 07:00 and missed a workout
+  /// from 07:30 last week. Rebuilding the provider on every write instead
+  /// would ripple through the week card's other dependencies.
+  ///
+  /// Listens before the first read, so a write in between is not missed,
+  /// and reads one at a time ([Stream.asyncMap]), so an older total cannot
+  /// arrive after a newer one. Repeats of the same total are dropped.
+  Stream<double> watchVolumeBetween(
+    DateTime from,
+    DateTime Function() until,
+  ) {
+    Future<double> read() {
+      final Expression<double> total = workoutsTable.totalVolumeKg.sum();
+      return (selectOnly(workoutsTable)
+            ..addColumns(<Expression<Object>>[total])
+            ..where(workoutsTable.endedAt.isNotNull() &
+                workoutsTable.startedAt.isBiggerOrEqualValue(from) &
+                workoutsTable.startedAt.isSmallerThanValue(until())))
+          .map((TypedResult row) => row.read(total) ?? 0)
+          .getSingle();
+    }
+
+    StreamSubscription<Set<TableUpdate>>? updates;
+    late final StreamController<void> triggers;
+    triggers = StreamController<void>(
+      onListen: () {
+        updates = tableUpdates(TableUpdateQuery.onTable(workoutsTable))
+            .listen((_) => triggers.add(null));
+        triggers.add(null);
+      },
+      // One listener (Riverpod's): once it goes, so does the controller.
+      onCancel: () async {
+        await updates?.cancel();
+        await triggers.close();
+      },
+    );
+    return triggers.stream.asyncMap((_) => read()).distinct();
   }
 
   /// When the latest finished workout started; null with none. The other
@@ -184,18 +219,16 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         .watchSingle();
   }
 
-  Stream<double?> watchAverageDurationSeconds() => customSelect(
-        '''
-        SELECT AVG(duration_seconds) AS average_seconds
-        FROM workouts_table
-        WHERE ended_at IS NOT NULL
-          AND duration_seconds IS NOT NULL
-          AND duration_seconds > 0
-        ''',
-        readsFrom: {workoutsTable},
-      ).watch().map(
-            (rows) => rows.single.read<double?>('average_seconds'),
-          );
+  /// How many finished workouts started at or after [from].
+  Stream<int> watchFinishedWorkoutCountSince(DateTime from) {
+    final Expression<int> count = workoutsTable.id.count();
+    return (selectOnly(workoutsTable)
+          ..addColumns(<Expression<Object>>[count])
+          ..where(workoutsTable.endedAt.isNotNull() &
+              workoutsTable.startedAt.isBiggerOrEqualValue(from)))
+        .map((TypedResult row) => row.read(count) ?? 0)
+        .watchSingle();
+  }
 
   /// Weekly volume aggregation — computed in SQL (ADR-1).
   /// Returns (week_start, total_volume_kg) for completed workouts, with
@@ -1194,82 +1227,6 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         );
   }
 
-  /// Est. 1RM and trend for the Progress dashboard card: the exercise with
-  /// the most logged sets overall, its most recent workout's best estimated
-  /// 1RM, and whether that beats the workout before it. Same Epley formula
-  /// and reps-1-12 estimation window as [watchOneRMSeries].
-  Stream<MostLoggedOneRM?> watchMostLoggedExerciseOneRM() {
-    return customSelect(
-      '''
-      WITH set_counts AS (
-        SELECT we.exercise_id AS exercise_id, COUNT(*) AS set_count
-        FROM workout_sets_table ws
-        JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
-        JOIN workouts_table w ON we.workout_id = w.id
-        WHERE ws.is_completed = 1
-          AND ws.is_warmup = 0
-          AND w.ended_at IS NOT NULL
-          AND ws.reps BETWEEN 1 AND 12
-          AND ws.weight_kg > 0
-        GROUP BY we.exercise_id
-        ORDER BY set_count DESC
-        LIMIT 1
-      ),
-      per_workout AS (
-        SELECT
-          w.started_at AS started_at,
-          MAX(
-            CASE WHEN ws.reps = 1 THEN ws.weight_kg
-                 ELSE ws.weight_kg * (1 + ws.reps / 30.0) END
-          ) AS best_1rm
-        FROM workout_sets_table ws
-        JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
-        JOIN workouts_table w ON we.workout_id = w.id
-        WHERE we.exercise_id = (SELECT exercise_id FROM set_counts)
-          AND ws.is_completed = 1
-          AND ws.is_warmup = 0
-          AND w.ended_at IS NOT NULL
-          AND ws.reps BETWEEN 1 AND 12
-          AND ws.weight_kg > 0
-        GROUP BY w.id, w.started_at
-      )
-      SELECT
-        (SELECT exercise_id FROM set_counts) AS exercise_id,
-        (SELECT name FROM exercises_table
-          WHERE id = (SELECT exercise_id FROM set_counts)) AS exercise_name,
-        best_1rm
-      FROM per_workout
-      ORDER BY started_at DESC
-      LIMIT 2
-      ''',
-      readsFrom: {
-        workoutSetsTable,
-        workoutExercisesTable,
-        workoutsTable,
-        exercisesTable,
-      },
-    ).watch().map((rows) {
-      if (rows.isEmpty) return null;
-      final String exerciseId = rows.first.read<String>('exercise_id');
-      final String exerciseName = rows.first.read<String>('exercise_name');
-      final double currentKg = rows.first.read<double>('best_1rm');
-      final double? previousKg =
-          rows.length > 1 ? rows[1].read<double>('best_1rm') : null;
-      return MostLoggedOneRM(
-        exerciseId: exerciseId,
-        exerciseName: exerciseName,
-        currentKg: currentKg,
-        trend: previousKg == null
-            ? OneRMTrend.flat
-            : currentKg > previousKg
-                ? OneRMTrend.up
-                : currentKg < previousKg
-                    ? OneRMTrend.down
-                    : OneRMTrend.flat,
-      );
-    });
-  }
-
   /// Insert a completed workout with exercises and sets in a transaction.
   Future<String> insertWorkout(
     WorkoutsTableCompanion workout,
@@ -1529,23 +1486,8 @@ class OneRMSeriesPoint {
   final bool isPersonalRecord;
 }
 
-/// Direction of change between a lift's most recent two 1RM estimates.
+/// Direction of a lift's estimated 1RM against an earlier best.
 enum OneRMTrend { up, down, flat }
-
-/// Est. 1RM for the most-logged exercise, for the Progress dashboard card.
-class MostLoggedOneRM {
-  const MostLoggedOneRM({
-    required this.exerciseId,
-    required this.exerciseName,
-    required this.currentKg,
-    required this.trend,
-  });
-
-  final String exerciseId;
-  final String exerciseName;
-  final double currentKg;
-  final OneRMTrend trend;
-}
 
 /// Workout with nested exercises and sets.
 class WorkoutWithDetails {

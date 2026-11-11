@@ -687,6 +687,7 @@
     }
   },
   "dashboardNoRecentTrainingCaption": "سجّل تمرينًا وستظهر هنا حصيلتك الأسبوعية وسلسلة مواظبتك واتجاهاتك. السجلّ الأقدم موجود في تبويب التقدّم.",
+  "dashboardFirstWeek": "أسبوعك الأول يبدأ من هنا",
   "dashboardVolumeEyebrow": "الحجم التدريبي",
   "dashboardSessionGoal": "الهدف الأسبوعي للجلسات",
   "dashboardSessionGoalProgress": "{completed} / {target}",
@@ -700,7 +701,9 @@
   "dashboardStatStreak": "سلسلة المواظبة",
   "dashboardLastWeekVolume": "الأسبوع الماضي {volume}",
   "dashboardSamePointLastWeekVolume": "في مثل هذا الوقت الأسبوع الماضي: {volume}",
+  "dashboardNoWorkoutsForWeeks": "{weeks, plural, zero{لا تمارين مؤخّرًا} one{لا تمارين منذ أسبوع} two{لا تمارين منذ أسبوعين} few{لا تمارين منذ {weeks} أسابيع} many{لا تمارين منذ {weeks} أسبوعًا} other{لا تمارين منذ {weeks} أسبوع}}",
   "dashboardLastTrained": "آخر تمرين: {when}",
+  "dashboardDaysAgo": "{days, plural, zero{اليوم} one{أمس} two{قبل يومين} few{قبل {days} أيام} many{قبل {days} يومًا} other{قبل {days} يوم}}",
   "dashboardStreakEmpty": "تمرّن هذا الأسبوع لتبدأ سلسلة",
   "dashboardStreakWeeks": "{count, plural, zero{لا أسابيع متتالية} one{أسبوع واحد متواصل} two{أسبوعان متواصلان} few{{count} أسابيع متتالية} many{{count} أسبوعًا متتاليًا} other{{count} أسبوع متتالٍ}}",
   "@dashboardStreakWeeks": {
@@ -716,8 +719,8 @@
   "dashboardEstOneRm": "الوزن التقديري لأقصى تكرار واحد",
   "dashboardLogALiftToSeeThis": "سجّل تمرينًا بالأوزان لعرض هذا",
   "dashboardBodyWeight": "وزن الجسم",
-  "dashboardAverageDuration": "متوسط المدة",
-  "dashboardAverageDurationEmpty": "أكمل تمرينًا لعرض هذا",
+  "dashboardWorkoutsThisMonth": "هذا الشهر",
+  "dashboardWorkoutsThisMonthEmpty": "لا تمارين بعد هذا الشهر",
   "dashboardNotRecorded": "غير مسجَّل",
   "dashboardRowSemantic": "{title}، {value}، {caption}",
   "@dashboardRowSemantic": {
@@ -1205,9 +1208,9 @@
   "explainerBalancePoint2": "ما فوق 1.33 يميل إلى الدفع، وما دون 0.75 يميل إلى السحب. وتُقرأ نسبة العلوي إلى السفلي بالطريقة نفسها.",
   "explainerBalanceCaveat": "الاختلال المقصود لا بأس به خلال مرحلة تدريبية، وإنما يستحق التصحيح ذلك الذي لم تختره.",
 
-  "explainerConsistencySummary": "هل تواظب على الحضور. تحتسب السلسلة الأسابيع المتتالية التي سجّلت فيها ما لا يقل عن هدفك الأسبوعي من الجلسات.",
-  "explainerConsistencyPoint1": "الهدف مأخوذ من ملفك الشخصي، فتُقاس السلسلة وفق خطتك أنت لا وفق رقم ثابت.",
-  "explainerConsistencyPoint2": "أطول سلسلة هي رقمك القياسي عبر تاريخك كله، لا ضمن النطاق المحدّد أعلاه فقط.",
+  "explainerConsistencySummary": "هل تواظب على الحضور. تحتسب السلسلة الأسابيع المتتالية التي سجّلت فيها تمرينًا واحدًا على الأقل.",
+  "explainerConsistencyPoint1": "الالتزام هو نسبة الأسابيع التي بلغت فيها هدفك الأسبوعي من الجلسات. الهدف مأخوذ من ملفك الشخصي، فيُقاس الالتزام وفق خطتك أنت لا وفق رقم ثابت.",
+  "explainerConsistencyPoint2": "تُحتسب السلسلتان عبر تاريخك كله، لا ضمن النطاق المحدّد أعلاه فقط. والأسبوع الجاري لا يقطع السلسلة قبل أن ينتهي.",
   "explainerConsistencyCaveat": "على مدى سنة، انتظام الحضور يتنبأ بالتقدّم أفضل من أي جلسة منفردة.",
 
   "explainerStrengthChangeSummary": "أعلى وزن تقديري لأقصى تكرار واحد لكل تمرين ضمن النطاق المحدّد، مقارنةً بأعلى وزن سجّلته في أي وقت قبله. والتمرين الذي بدأته داخل النطاق يُقارَن بأول جلسة له فيه.",

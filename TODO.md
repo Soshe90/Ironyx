@@ -30,8 +30,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,041 passed, 2 skipped, 0 failed** (2026-11-10; was
-  876 on 2026-11-05).
+- `flutter test`: **1,096 passed, 2 skipped, 0 failed** (2026-11-11; was
+  1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -128,6 +128,247 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-11, Home tab (reviewed like Progress, then fixed one
+  item at a time, on `home/review-2026-11-11` from `main`). **Not in the
+  1.0.5+6 bundle**, which was built from `a6c3305`: the next upload needs
+  versionCode 7.
+  - **Fixed: the streak tile could not read more than "8 wk".** It was
+    counted from the week card's eight-week window, so twenty straight
+    weeks showed 8. It now has its own provider,
+    `dashboardStreakWeeks`, over the whole history (one row per week since
+    the first workout), so a failure there costs the tile and not the week
+    card. The rule itself is one function, `currentStreakWeeks` in
+    `consistency_calculators.dart`, which Progress's consistency card now
+    calls too: a week counts with any finished workout, and an empty week
+    so far does not break the streak. Progress matched weeks by exact
+    instant, Home by calendar day; the shared rule matches by calendar day,
+    which is what survives a clock change. `WeekSnapshot.streakWeeks` is
+    gone, so nothing can read the capped figure again.
+  - **Tested:** the shared rule (empty, order, an empty week so far, a zero
+    or missing week, 60 weeks, Saturday buckets, clock-change weeks) and
+    the provider (20 weeks reads 20; a week off ends it; none is 0; it
+    regroups when the first day of the week changes). The old figure was
+    reproduced first: 20 straight weeks read 8. **Not checked:** on the
+    phone.
+  - **Fixed, at the owner's request: Progress's streaks were capped by the
+    range.** Both were counted inside the selected range, so on "1M"
+    neither could pass about five weeks, and the longest left out any run
+    begun before the range. Its explainer already said "Longest streak is
+    your record across your whole history". Both now count over every week
+    since the first workout (`allTimeWorkoutFrequency`, one provider and
+    one query that Home's tile reads too; `calculateConsistency` takes it
+    as `history`, and a new shared `longestStreakWeeks`). Adherence is
+    still a figure about the range. With it: `consistencySummary` now
+    passes the app's clock, so "this week" no longer comes from the device
+    clock while the range comes from `localNow`. The explainer said a
+    streak counts weeks that met the session *target*; the app (both tabs)
+    has always counted any week with a workout, so the copy was corrected
+    (en, ar), and adherence is named as the figure that uses the target.
+    **Tested:** 20 straight weeks read 20 on "1M" (it read 5); a ten-week
+    run before the range is the longest (it read 1); both old figures
+    reproduced by running the new tests on the old code.
+  - **Fixed: the volume sparkline dipped at both ends.** Its eight-week
+    window started at today minus 56 days, mid-week, so the oldest point
+    held part of a week (a 150 kg week read 50); and its last point was
+    the week in progress, low until the week ends, so the line fell every
+    Monday. The window now starts on the first day of the week eight weeks
+    before this one (the day chosen in Settings), and the line is the
+    eight finished weeks; this week's figure is the headline beside it.
+    The line is not drawn while those weeks are all zero (a first week of
+    training drew a flat line along the bottom). The week card's other
+    figures and "No training in the last 8 weeks" are unchanged, apart from
+    that window now reaching back to the start of its oldest week.
+    **Tested:** a whole first week (both its ends in, the day before out),
+    this week left out, no line for a first week, Saturday weeks; all four
+    failed on the old code. **Not checked:** on the phone.
+    **Fixed after CI, 2026-11-11:** in a zone with daylight saving the line
+    still had nine points, a zero first: the window starts at a local
+    midnight, bucketed with today's UTC offset, so across a clock change
+    that midnight falls an hour into the day before, a week earlier. CI's
+    America/Los_Angeles run failed on it; Windows runs could not show it.
+    The series now keeps the last eight finished weeks (the extra one is
+    always empty: the query starts at that instant). A new test builds the
+    nine weeks by hand, so it fails in every zone on the old code.
+  - **Fixed: the Est. 1RM tile showed the last session, not the best.** It
+    took the most-logged lift's latest session against the one before it,
+    so a light day or a deload read as a lower 1RM with a red arrow (any
+    0.5 kg drop), and Progress gave the same lift another number. The tile
+    now shows the main lift's best estimate over the last three months
+    (Progress's default range), against the best before them; under 2.5%
+    either way it is flat, the threshold Progress's insights use. No arrow
+    without an earlier best, or when the only comparison is the lift's
+    first session (Progress words that as "since your first session").
+    After three months without a lift, the main lift's all-time best, no
+    arrow. Built from Progress's own providers (`loggedExercises`,
+    `strengthChange` for 3M and all time); the rule is
+    `pickStrengthHeadline` in `dashboard/domain/strength_headline.dart`.
+    "Main lift" is now Progress's: most *sessions*, where the tile counted
+    sets, so with uneven set counts the tile may name a different lift than
+    before, the one Progress's lift chart opens on. Removed:
+    `WorkoutDao.watchMostLoggedExerciseOneRM`, `MostLoggedOneRM` and their
+    three tests. **Tested:** the rule (lift choice, the threshold both
+    ways, no earlier best, first session, after a break) and the provider
+    on a real database (a deload keeps 150 kg and an up arrow where the old
+    tile showed 110 kg down; -1.3% is flat; a break shows the all-time
+    best). **Not checked:** on the phone.
+  - **Fixed: "Same point last week" lagged behind the clock.** Its cut-off
+    (now minus seven days) was fixed when the query was made, and the
+    provider is only remade when `localNow` changes (noon, 18:00,
+    midnight). At 09:00, after saving a workout, Home still compared with
+    last week up to 07:00, so a workout from 07:30 last week was left out
+    and the badge read higher than it should. `watchVolumeBetween` now takes
+    the cut-off as a function and reads it again on every write to the
+    workouts table, so it is current whenever this week's figure changes.
+    It listens before its first read, reads one at a time and drops repeat
+    totals. Between writes the cut-off still moves only with `localNow`:
+    with nothing saved, a workout from last week can join the comparison
+    up to six hours late; this week's figure is not moving then. **Tested:**
+    saving at 09:00 moves the cut-off past a 07:30 workout (it read 0 with
+    the old fixed cut-off, run to check); the stream re-reads its bound on
+    each write and skips repeats. **Not checked:** on the phone.
+  - **Fixed: the week card failed with its optional figure.** The snapshot
+    awaited the same-point figure with the two series the card is about, so
+    an error in that one query showed "Could not load this week". Worse,
+    Riverpod 3 retries a failed provider and keeps its `.future` pending
+    while it does, so the card first sat loading through every retry. The
+    snapshot now reads that figure's state: it waits only for a first load,
+    and on an error it builds without it (no badge, "Last week X"), logged
+    through `reportError` (debug builds only). **Tested:** the provider
+    with the figure failing (it hung until the 30 s test timeout on the old
+    code) and the page (the old code showed "Could not load this week").
+    **Not checked:** on the phone.
+  - **Open, app-wide, not changed:** Riverpod 3's automatic retry applies
+    to every provider. A query that fails shows its card loading through
+    the retries (backoff from 200 ms, several seconds in all) before the
+    error and its Retry button appear. Whether to turn retry off for
+    local Drift queries (which do not fail transiently the way a network
+    call does) is a decision for the whole app, in `ProviderScope`.
+  - **Changed: two taps lead where they point.** The "Last workout" row
+    opens that workout's detail page (it opened the Workouts tab, where it
+    had to be found again); with none yet it still opens the Workouts tab.
+    The body-weight tile opens the weigh-in history, which also logs one
+    (it opened the top of Progress, with the body chapter at its far end).
+    The week card, "See all" and the other three tiles still open
+    Progress, where their figures are explained. "Start from a program"
+    still opens the Workouts tab and its programs row; starting a program
+    from Home would need a picker, new work and not a fix. **Tested:** both
+    taps (each failed on the old code). **Not checked:** on the phone (see
+    the next line).
+  - **Checked on the phone, 2026-11-11** (debug build of `d292027`, the
+    owner's real data in the debug copy: Arabic, weeks from Saturday,
+    target 3): the sparkline is eight finished weeks with the break as its
+    dip; the day strip runs Saturday first, right to left, today ringed;
+    "Same point last week: 9,830 kg" against 0 kg on a Wednesday morning
+    (a true like-for-like ↓100%; see the open question below); Est. 1RM
+    47 kg for Face Pull, the most-sessions lift, with no arrow (its only
+    comparison is its first session); streak 2 weeks on Home and Progress;
+    Progress's longest streak 4 weeks on both "3M" and "1M" (it was cut to
+    the range before); the explainer's new wording, in Arabic; the last
+    workout row opens 4 Nov's workout, the body-weight tile the weigh-ins.
+    **Seen, not changed:** the Est. 1RM tile's Arabic title is ellipsized
+    ("الوزن التقديري لأقصى تكرار…"); the average-duration tile reads
+    14 min while the last workout was 58 min, which looks like short
+    durations in the imported data, not checked further. **Open question
+    for the owner:** with nothing yet this week, the badge is a red
+    "↓100%" whenever last week had trained by the same point; correct, but
+    it reads as a failure on a rest morning (answered the same day: keep
+    it). **Not checked:** TalkBack.
+  - **Refactor: `dashboard_page.dart` split, as Progress was.** 1,116
+    lines and 20 widgets became the page (scaffold, greeting, wide rows;
+    140 lines) and four files in `dashboard/presentation/sections/`:
+    `today_card.dart`, `week_section.dart`, `progress_section.dart` and
+    `recent_section.dart`. Their four entry widgets are public
+    (`TodayCard`, `ThisWeekSection`, `ProgressSection`, `RecentSection`);
+    everything inside them stays private. The code was moved, not
+    rewritten: sorted line by line, old and new differ only in the
+    `super.key` the now-public constructors take. The week badge's rule
+    left the widget for `WeekSnapshot`: `comparedWithKg`, `volumeChange`
+    and `volumeChangePercent`, each unit-tested; the badge reads them and
+    behaves as before. **Tested:** every existing Home test passes
+    unchanged, and five new tests cover the rule.
+  - **Removed: dead code for a Library card Home no longer has.**
+    `dashboardLibrarySummaryProvider`, `ExerciseDao.watchLibrarySummary`
+    (a watched `SELECT` of the whole exercise table) and `LibrarySummary`
+    were read by nothing in `lib/`; their two tests went with them, the
+    only thing that used them. Nothing on screen changes.
+  - **Owner's decision on the week badge:** keep showing the real status,
+    "↓100%" included, when nothing is logged yet this week; it is not to
+    be hidden until the first workout.
+  - **Added: the week card says when there has been a break.** With
+    neither this week nor last week trained, the card had no badge (both
+    zero) and no caption (last week's total zero): a break of two to seven
+    weeks left it silent ("No training in the last 8 weeks" only comes
+    after eight). It now reads "No workouts for N weeks" (new string,
+    en/ar with Arabic plurals), N counting the empty weeks in a row, this
+    one included (`WeekSnapshot.weeksWithoutWorkouts`). Counted by
+    sessions, not volume, so a week of timed sets only is not a break.
+  - **Fixed: the badge's percentage has a ceiling.** Past 999% it reads
+    "999%+" (`WeekSnapshot.maxShownChangePercent`): a first workout against
+    a few kilos at the same point last week read "14900%".
+  - **Fixed: the session goal showed 3 before the real target.** The
+    target was read as the profile's `.value`, so the card showed the
+    default "x / 3" until the profile arrived. The card now waits for the
+    profile (it shows its loading state); a profile that fails to load
+    falls back to `defaultWeeklySessionTarget`, Progress's constant, instead
+    of a second literal 3. **Tested:** the break count (a break, this week
+    only, back this week, nothing in the window, timed sets), both
+    languages, the caption on the page, 999%+ and 999%, the goal while the
+    profile is loading. Not run on the old code: the tests use the new
+    field and string. **Not checked:** on the phone.
+  - **Changed (owner's choices): the start card and the fourth tile.**
+    - The start card's caption says how long ago, in calendar days: "Last
+      workout: 7 days ago" (today / yesterday / N days ago; new plural
+      string `dashboardDaysAgo`, en/ar). It gave the date, which the
+      Recent row under it also gives. Days are counted on dates, not
+      hours (`calendarDaysBetween`, on UTC dates so a clock change cannot
+      lose a day). Progress's hero keeps its date.
+    - The bolt icon beside the start card's headline is gone, and with it
+      the play arrow it became during a workout; the "IN PROGRESS" label
+      already says that.
+    - The "Average duration" tile is now "This month": finished workouts
+      since the 1st (`WorkoutDao.watchFinishedWorkoutCountSince`, one
+      `COUNT`), opening the Workouts tab. The all-time average barely
+      moved and read 14 min beside a 58-minute last session with the
+      owner's imported data. Removed with it:
+      `dashboardAverageWorkoutDurationProvider`,
+      `WorkoutDao.watchAverageDurationSeconds`, its two tests and the two
+      strings. **Tested:** the count (finished only, the 1st included),
+      the tile starting again on the 1st with the app open, calendar days
+      (same day, across midnight, a week, a month boundary, clock-change
+      weekends), both languages, and the page (tile titles, caption, no
+      icon). **Not checked:** on the phone.
+  - **Changed: Home for someone who has never finished a workout.** It was
+    five empty states at once: "No training in the last 8 weeks" (implying
+    some before) with a caption about "older history", three tiles each
+    asking for a workout, and a "Last workout: Nothing yet" row. Now the
+    week card reads "Your first week starts here" (new string, en/ar) above
+    the goal and the day strip; Progress shows only the body-weight tile,
+    full width (a weigh-in needs no workout); Recent is gone unless a timer
+    has been used. One signal decides it, `dashboardIsNewUser` (from
+    Progress's `firstWorkoutAt`, the first finished workout), false while
+    loading or on an error so a returning user never sees the welcome
+    flash by. **Tested:** someone new (fails on the old code), new with a
+    timer used (fails on the old code), and back after 90 days (unchanged:
+    the old wording and all four tiles). **Not checked:** on the phone
+    (the debug copy has workouts, so the welcome cannot show there).
+  - **Checked on the phone, 2026-11-11** (debug build of `0ec3bd1`, the
+    owner's data): the start card reads "آخر تمرين: قبل 7 أيام" (4 Nov
+    to 11 Nov) with no icon beside the headline; "This month" reads one
+    session, matching the history's single November workout, and opens
+    the Workouts tab; the week badge's 9,830 kg is 31 Oct (3,075 kg) plus
+    4 Nov (6,755 kg), last week from Saturday to the same moment. Not seen
+    on the phone: the break caption, "999%+" and the welcome, which this
+    data does not produce.
+  - **Performance: the start card no longer rebuilds while a workout is
+    typed in.** It watched the whole draft, which changes on every weight
+    and rep entered, while the workout page sits on top. It now selects
+    the two numbers it shows (`draftCounts`: exercises and completed
+    sets, a record compared by value), so it rebuilds only when a draft
+    opens or closes, an exercise is added or removed, or a set is ticked.
+    Nothing on screen changes. **Tested:** the selection hears ticking,
+    not typing (`draft_counts_test.dart`). **Reasoned, not tested:** that
+    the card uses it, from the code. This was the last of the twelve Home
+    review items.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
@@ -231,6 +472,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     a program" is a text action instead of a second outlined button.
   - **Progress.** Two rows of two tiles (Est. 1RM, body weight, streak,
     average duration) in place of two tiles and a lone full-width one.
+    (The average duration became "This month" on 2026-11-11.)
   - No query or provider changed. **Not checked:** tablet width on a
     device; TalkBack.
 - Changed 2026-11-05, Workouts tab:
