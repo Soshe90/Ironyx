@@ -146,17 +146,23 @@ Stream<List<WorkoutFrequency>> dashboardWeeklyFrequency(Ref ref) {
 ///
 /// Comparing this week so far with all of last week made the badge red
 /// from every Monday ("0 kg, down 100%" on a Tuesday, seen on the phone).
-/// [localNowProvider] is coarse (it changes at each part of the day and on
-/// resume), so "the same moment" can lag by a few hours, never by a day.
+///
+/// "The same moment" is read from [clockProvider] each time a workout is
+/// saved, edited or deleted (see `WorkoutDao.watchVolumeBetween`), so it is
+/// current whenever this week's figure changes. Between writes it moves
+/// when [localNowProvider] does, at noon, 18:00 and midnight: with nothing
+/// saved, a workout from last week can join the comparison up to six hours
+/// late. The week this compares with follows [localNowProvider] too.
 @riverpod
 Stream<double> dashboardLastWeekToDateVolume(Ref ref) {
   final DateTime now = ref.watch(localNowProvider);
+  final DateTime Function() clock = ref.watch(clockProvider);
   final DateTime lastWeek = DateFormatters.previousWeek(
     DateFormatters.startOfWeek(now, ref.watch(weekStartControllerProvider)),
   );
   return ref.watch(workoutDaoProvider).watchVolumeBetween(
         lastWeek,
-        now.subtract(const Duration(days: DateTime.daysPerWeek)),
+        () => clock().subtract(const Duration(days: DateTime.daysPerWeek)),
       );
 }
 

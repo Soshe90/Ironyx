@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 
 import '../../formatters/date_formatters.dart';
@@ -161,15 +163,48 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   /// Home compares this week so far with last week up to the same moment,
   /// which a weekly series cannot answer: it only has whole weeks. One
   /// `SUM` over the indexed `started_at`.
-  Stream<double> watchVolumeBetween(DateTime from, DateTime until) {
-    final Expression<double> total = workoutsTable.totalVolumeKg.sum();
-    return (selectOnly(workoutsTable)
-          ..addColumns(<Expression<Object>>[total])
-          ..where(workoutsTable.endedAt.isNotNull() &
-              workoutsTable.startedAt.isBiggerOrEqualValue(from) &
-              workoutsTable.startedAt.isSmallerThanValue(until)))
-        .map((TypedResult row) => row.read(total) ?? 0)
-        .watchSingle();
+  ///
+  /// [until] is a function, called again each time the workouts table
+  /// changes, because "the same moment last week" moves with the clock. A
+  /// fixed bound was taken when the stream was made, and the provider only
+  /// remakes it a few times a day: at 09:00, after saving a workout, Home
+  /// was still comparing with last week up to 07:00 and missed a workout
+  /// from 07:30 last week. Rebuilding the provider on every write instead
+  /// would ripple through the week card's other dependencies.
+  ///
+  /// Listens before the first read, so a write in between is not missed,
+  /// and reads one at a time ([Stream.asyncMap]), so an older total cannot
+  /// arrive after a newer one. Repeats of the same total are dropped.
+  Stream<double> watchVolumeBetween(
+    DateTime from,
+    DateTime Function() until,
+  ) {
+    Future<double> read() {
+      final Expression<double> total = workoutsTable.totalVolumeKg.sum();
+      return (selectOnly(workoutsTable)
+            ..addColumns(<Expression<Object>>[total])
+            ..where(workoutsTable.endedAt.isNotNull() &
+                workoutsTable.startedAt.isBiggerOrEqualValue(from) &
+                workoutsTable.startedAt.isSmallerThanValue(until())))
+          .map((TypedResult row) => row.read(total) ?? 0)
+          .getSingle();
+    }
+
+    StreamSubscription<Set<TableUpdate>>? updates;
+    late final StreamController<void> triggers;
+    triggers = StreamController<void>(
+      onListen: () {
+        updates = tableUpdates(TableUpdateQuery.onTable(workoutsTable))
+            .listen((_) => triggers.add(null));
+        triggers.add(null);
+      },
+      // One listener (Riverpod's): once it goes, so does the controller.
+      onCancel: () async {
+        await updates?.cancel();
+        await triggers.close();
+      },
+    );
+    return triggers.stream.asyncMap((_) => read()).distinct();
   }
 
   /// When the latest finished workout started; null with none. The other

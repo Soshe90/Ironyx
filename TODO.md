@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,068 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,070 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -203,6 +203,21 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     on a real database (a deload keeps 150 kg and an up arrow where the old
     tile showed 110 kg down; -1.3% is flat; a break shows the all-time
     best). **Not checked:** on the phone.
+  - **Fixed: "Same point last week" lagged behind the clock.** Its cut-off
+    (now minus seven days) was fixed when the query was made, and the
+    provider is only remade when `localNow` changes (noon, 18:00,
+    midnight). At 09:00, after saving a workout, Home still compared with
+    last week up to 07:00, so a workout from 07:30 last week was left out
+    and the badge read higher than it should. `watchVolumeBetween` now takes
+    the cut-off as a function and reads it again on every write to the
+    workouts table, so it is current whenever this week's figure changes.
+    It listens before its first read, reads one at a time and drops repeat
+    totals. Between writes the cut-off still moves only with `localNow`:
+    with nothing saved, a workout from last week can join the comparison
+    up to six hours late; this week's figure is not moving then. **Tested:**
+    saving at 09:00 moves the cut-off past a 07:30 workout (it read 0 with
+    the old fixed cut-off, run to check); the stream re-reads its bound on
+    each write and skips repeats. **Not checked:** on the phone.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the

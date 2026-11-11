@@ -543,10 +543,11 @@ void main() {
       await workout('open', DateTime(2026, 11, 3, 19), 1000, ended: false);
       await workout('atUntil', until, 10000);
 
-      expect(await dao.watchVolumeBetween(from, until).first, 110);
+      expect(await dao.watchVolumeBetween(from, () => until).first, 110);
       expect(
         await dao
-            .watchVolumeBetween(DateTime(2020, 1, 1), DateTime(2020, 1, 2))
+            .watchVolumeBetween(
+                DateTime(2020, 1, 1), () => DateTime(2020, 1, 2))
             .first,
         0,
       );
@@ -769,6 +770,117 @@ void main() {
           await container.read(dashboardWeekSnapshotProvider.future);
       expect(week.volumeSeries, hasLength(8));
       expect(week.volumeSeries.first, 100);
+    });
+  });
+
+  group('the same point last week stays current', () {
+    Future<double?> eventually(
+      ProviderContainer c,
+      bool Function(double? value) matches,
+    ) async {
+      WeekSnapshot week = await c.read(dashboardWeekSnapshotProvider.future);
+      for (int i = 0; i < 50 && !matches(week.previousToDateVolumeKg); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        week = await c.read(dashboardWeekSnapshotProvider.future);
+      }
+      return week.previousToDateVolumeKg;
+    }
+
+    test('saving a workout moves the cut-off to now', () async {
+      await seedExercise('bench', 'Bench Press');
+      // Tue 3 Nov 07:30: inside "the same point" from 07:30 this Tuesday.
+      await insertWorkoutWithSet(
+        workoutId: 'lastTue',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 3, 7, 30),
+        weightKg: 100,
+        reps: 1,
+      );
+      DateTime fakeNow = DateTime(2026, 11, 10, 7);
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardWeekSnapshotProvider, (_, __) {});
+
+      expect(await eventually(container, (v) => v == 0), 0,
+          reason: 'at 07:00 last week had nothing yet');
+
+      // Two hours on, still the morning, so LocalNow has not changed. A
+      // workout is saved.
+      fakeNow = DateTime(2026, 11, 10, 9);
+      await insertWorkoutWithSet(
+        workoutId: 'thisTue',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 10, 8),
+        weightKg: 80,
+        reps: 1,
+      );
+
+      expect(await eventually(container, (v) => v == 100), 100,
+          reason: 'the cut-off stayed at 07:00 and read 0');
+      final WeekSnapshot week =
+          await container.read(dashboardWeekSnapshotProvider.future);
+      expect(week.volumeKg, 80);
+    });
+  });
+
+  group('WorkoutDao.watchVolumeBetween as a stream', () {
+    test('re-reads the bound on each write, and skips repeats', () async {
+      await seedExercise('bench', 'Bench Press');
+      final WorkoutDao dao = WorkoutDao(database);
+      DateTime until = DateTime(2026, 11, 3);
+      final List<double> seen = <double>[];
+      final sub = dao
+          .watchVolumeBetween(DateTime(2026, 11, 1), () => until)
+          .listen(seen.add);
+      addTearDown(sub.cancel);
+      Future<void> settle() => Future<void>.delayed(
+            const Duration(milliseconds: 50),
+          );
+
+      await settle();
+      expect(seen, <double>[0]);
+
+      // Inside the window: counted.
+      await insertWorkoutWithSet(
+        workoutId: 'a',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 2, 18),
+        weightKg: 10,
+        reps: 1,
+      );
+      await settle();
+      expect(seen, <double>[0, 10]);
+
+      // Past the bound: not counted, and the same total is not repeated.
+      await insertWorkoutWithSet(
+        workoutId: 'b',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 4, 18),
+        weightKg: 20,
+        reps: 1,
+      );
+      await settle();
+      expect(seen, <double>[0, 10]);
+
+      // The bound moves; the next write is read with it.
+      until = DateTime(2026, 11, 5);
+      await insertWorkoutWithSet(
+        workoutId: 'c',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 10, 1),
+        weightKg: 5,
+        reps: 1,
+      );
+      await settle();
+      expect(seen, <double>[0, 10, 30]);
     });
   });
 }
