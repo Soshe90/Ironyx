@@ -6,6 +6,7 @@ import '../../../core/database/daos/program_dao.dart';
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/workouts.dart';
+import '../../../core/error_reporting.dart';
 import '../../../core/formatters/date_formatters.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/week_start_controller.dart';
@@ -56,6 +57,17 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
   /// fold, so it is opt-in for the session.
   bool _showCalendar = false;
 
+  /// True while a program card is being opened, so a second tap (a double
+  /// tap, or an impatient one) does not push the same page twice.
+  bool _openingProgram = false;
+
+  /// How long a card waits for its program before opening anyway. The wait
+  /// only saves a spinner flash on a page whose data is nearly always cached
+  /// already; Riverpod keeps a failing provider's `.future` pending while it
+  /// retries, so without a limit a tap on a failing program did nothing for
+  /// seconds.
+  static const Duration _programPrefetchLimit = Duration(milliseconds: 600);
+
   @override
   Widget build(BuildContext context) {
     final WidgetRef ref = this.ref;
@@ -101,7 +113,10 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                         // there are cards under the heading they say it
                         // themselves, and the sentence only wrapped onto a
                         // second line with one word on it.
-                        subtitle: (programsAsync.value?.isEmpty ?? true)
+                        // Only once the list is known to be empty: while it
+                        // loads, or when it failed, there may be programs.
+                        subtitle: programsAsync.hasValue &&
+                                programsAsync.value!.isEmpty
                             ? context.l10n.trackerProgramsSubtitle
                             : null,
                         actionLabel: context.l10n.trackerNew,
@@ -193,8 +208,21 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
                       ),
                     ),
               loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-              error: (_, __) =>
-                  const SliverToBoxAdapter(child: SizedBox.shrink()),
+              // It showed nothing, and the heading's "what is a program"
+              // line, as if there were none.
+              error: (error, _) => SliverPadding(
+                padding: context.sliverGutter.copyWith(bottom: AppSpacing.xl),
+                sliver: SliverToBoxAdapter(
+                  child: AppCard(
+                    child: ErrorView(
+                      title: context.l10n.trackerProgramsLoadFailed,
+                      details: error.toString(),
+                      compact: true,
+                      onRetry: () => ref.invalidate(programSummariesProvider),
+                    ),
+                  ),
+                ),
+              ),
             ),
             SliverPadding(
               padding: context.sliverGutter,
@@ -347,17 +375,35 @@ class _TrackerPageState extends ConsumerState<TrackerPage> {
   /// [ProgramDetailPage] show its own brief loading spinner after the push
   /// starts — the data's almost always already cached from the list this
   /// card came from, so this avoids a pointless flash of a spinner.
+  ///
+  /// The wait is a nicety, so it never stops the page opening: past
+  /// [_programPrefetchLimit], or when the program fails to load, the page
+  /// opens anyway and shows its own loading or error state, with Retry. A
+  /// failure here used to escape the tap handler unhandled and leave the
+  /// card doing nothing.
   Future<void> _openProgram(
     BuildContext context,
     WidgetRef ref,
     String programId,
   ) async {
-    await ref.read(programDetailProvider(programId).future);
-    if (!context.mounted) return;
-    await context.pushNamed(
-      Routes.programDetailName,
-      pathParameters: {'id': programId},
-    );
+    if (_openingProgram) return;
+    _openingProgram = true;
+    try {
+      try {
+        await ref
+            .read(programDetailProvider(programId).future)
+            .timeout(_programPrefetchLimit);
+      } on Object catch (error, stackTrace) {
+        reportError(error, stackTrace, context: 'tracker open program');
+      }
+      if (!context.mounted) return;
+      await context.pushNamed(
+        Routes.programDetailName,
+        pathParameters: {'id': programId},
+      );
+    } finally {
+      _openingProgram = false;
+    }
   }
 }
 

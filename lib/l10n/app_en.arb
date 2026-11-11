@@ -170,6 +170,8 @@
   "trackerNoWorkouts": "No workouts yet",
   "trackerNoWorkoutsMessage": "Finish a workout and it will show up here, with your volume and any personal records.",
   "trackerHistoryLoadFailed": "Failed to load history",
+  "trackerProgramsLoadFailed": "Failed to load programs",
+  "@trackerProgramsLoadFailed": {"description": "Shown in place of the programs row on the Workouts tab when the programs could not be read, above a Retry button."},
   "trackerProgramSemantic": "{name}, {days}",
   "@trackerProgramSemantic": {
     "placeholders": {

@@ -163,6 +163,7 @@
   "trackerNoWorkouts": "لا توجد تمارين بعد",
   "trackerNoWorkoutsMessage": "أنهِ تمرينًا وسيظهر هنا، مع حجمك التدريبي وأي أرقام قياسية.",
   "trackerHistoryLoadFailed": "تعذّر تحميل السجلّ",
+  "trackerProgramsLoadFailed": "تعذّر تحميل البرامج",
   "trackerProgramSemantic": "{name}، {days}",
   "@trackerProgramSemantic": {
     "placeholders": {

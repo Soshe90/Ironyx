@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/program_dao.dart';
 import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/formatters/week_start.dart';
@@ -12,6 +13,7 @@ import 'package:ironyx/core/router/routes.dart';
 import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/services/program_import_service.dart';
 import 'package:ironyx/core/widgets/app_card.dart';
+import 'package:ironyx/features/programs/domain/program_providers.dart';
 import 'package:ironyx/features/tracker/domain/active_workout_notifier.dart';
 import 'package:ironyx/features/tracker/presentation/tracker_page.dart';
 import 'package:ironyx/features/tracker/presentation/widgets/history_calendar.dart';
@@ -99,6 +101,7 @@ void main() {
     WidgetTester tester, {
     Size surfaceSize = const Size(400, 2000),
     DateTime Function()? clock,
+    List<dynamic> overrides = const <dynamic>[],
   }) async {
     await pumpApp(
       tester,
@@ -106,6 +109,7 @@ void main() {
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
         if (clock != null) clockProvider.overrideWithValue(clock),
+        ...overrides,
       ],
       prefs: const <String, Object>{
         'exercise_seed_version': 999999,
@@ -542,6 +546,77 @@ void main() {
       expect(find.text('Day 1'), findsOneWidget);
       expect(find.text('Day 2'), findsOneWidget);
 
+      await disposeTracker(tester);
+    });
+
+    testWidgets('programs that fail to load say so, with a retry',
+        (tester) async {
+      await pumpTracker(
+        tester,
+        overrides: [
+          programSummariesProvider.overrideWith(
+            (ref) => Stream<List<ProgramSummary>>.error(Exception('boom')),
+          ),
+        ],
+      );
+      // Riverpod retries a failed provider before reporting the error, and
+      // the row shows nothing while it does. Let the retries run out.
+      for (int i = 0; i < 40; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+
+      expect(find.text('Failed to load programs'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      // Not taken for an empty list.
+      expect(
+        find.text('Reusable day templates to start a session from'),
+        findsNothing,
+      );
+      expect(find.text('No programs yet'), findsNothing);
+      // The rest of the tab is still there.
+      expect(find.text('History'), findsOneWidget);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a program that fails to load still opens, on its error',
+        (tester) async {
+      await importPrograms(1);
+      await pumpTracker(
+        tester,
+        surfaceSize: const Size(400, 800),
+        overrides: [
+          programDetailProvider.overrideWith(
+            (ref, String id) => Future<ProgramDetail?>.error(Exception('x')),
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Block 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Failed to load program'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await disposeTracker(tester);
+    });
+
+    testWidgets('a double tap on a card opens the program once',
+        (tester) async {
+      await importPrograms(1);
+      await pumpTracker(tester, surfaceSize: const Size(400, 800));
+
+      await tester.tap(find.text('Block 1'));
+      await tester.tap(find.text('Block 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Day 1'), findsOneWidget);
+
+      // One back is the Workouts tab again, not a second copy of the page.
+      final NavigatorState navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).last,
+      );
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Day 1'), findsNothing);
+      expect(find.text('Start workout'), findsOneWidget);
       await disposeTracker(tester);
     });
 
