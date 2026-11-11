@@ -63,10 +63,29 @@ Future<StrengthHeadline?> dashboardStrengthHeadline(Ref ref) async {
 Stream<BodyMetrics?> dashboardLatestBodyMetrics(Ref ref) =>
     ref.watch(bodyMetricsDaoProvider).watchLatest();
 
-/// Average duration of completed workouts, for the dashboard progress cards.
+/// Finished workouts this calendar month, for the "This month" tile.
+///
+/// It replaced an all-time average duration, which barely moved and, with
+/// imported workouts of short recorded durations, read 14 min beside a last
+/// session of 58. A count since the 1st moves with every session. Keyed on
+/// [todayProvider], so it starts again on the 1st while the app stays open.
 @riverpod
-Stream<double?> dashboardAverageWorkoutDuration(Ref ref) =>
-    ref.watch(workoutDaoProvider).watchAverageDurationSeconds();
+Stream<int> dashboardWorkoutsThisMonth(Ref ref) {
+  final DateTime today = ref.watch(todayProvider);
+  return ref
+      .watch(workoutDaoProvider)
+      .watchFinishedWorkoutCountSince(DateTime(today.year, today.month));
+}
+
+/// Whole calendar days from [from]'s date to [to]'s: 0 the same day, 1 the
+/// day after. By date, not by elapsed time, so a workout at 23:00 is
+/// "1 day ago" at 07:00 the next morning. Counted on UTC dates so a
+/// daylight-saving day of 23 or 25 hours is still one day.
+int calendarDaysBetween(DateTime from, DateTime to) => DateTime.utc(
+      to.year,
+      to.month,
+      to.day,
+    ).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
 
 /// Profile settings used by dashboard targets.
 @riverpod

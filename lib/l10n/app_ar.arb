@@ -702,6 +702,7 @@
   "dashboardSamePointLastWeekVolume": "في مثل هذا الوقت الأسبوع الماضي: {volume}",
   "dashboardNoWorkoutsForWeeks": "{weeks, plural, zero{لا تمارين مؤخّرًا} one{لا تمارين منذ أسبوع} two{لا تمارين منذ أسبوعين} few{لا تمارين منذ {weeks} أسابيع} many{لا تمارين منذ {weeks} أسبوعًا} other{لا تمارين منذ {weeks} أسبوع}}",
   "dashboardLastTrained": "آخر تمرين: {when}",
+  "dashboardDaysAgo": "{days, plural, zero{اليوم} one{أمس} two{قبل يومين} few{قبل {days} أيام} many{قبل {days} يومًا} other{قبل {days} يوم}}",
   "dashboardStreakEmpty": "تمرّن هذا الأسبوع لتبدأ سلسلة",
   "dashboardStreakWeeks": "{count, plural, zero{لا أسابيع متتالية} one{أسبوع واحد متواصل} two{أسبوعان متواصلان} few{{count} أسابيع متتالية} many{{count} أسبوعًا متتاليًا} other{{count} أسبوع متتالٍ}}",
   "@dashboardStreakWeeks": {
@@ -717,8 +718,8 @@
   "dashboardEstOneRm": "الوزن التقديري لأقصى تكرار واحد",
   "dashboardLogALiftToSeeThis": "سجّل تمرينًا بالأوزان لعرض هذا",
   "dashboardBodyWeight": "وزن الجسم",
-  "dashboardAverageDuration": "متوسط المدة",
-  "dashboardAverageDurationEmpty": "أكمل تمرينًا لعرض هذا",
+  "dashboardWorkoutsThisMonth": "هذا الشهر",
+  "dashboardWorkoutsThisMonthEmpty": "لا تمارين بعد هذا الشهر",
   "dashboardNotRecorded": "غير مسجَّل",
   "dashboardRowSemantic": "{title}، {value}، {caption}",
   "@dashboardRowSemantic": {

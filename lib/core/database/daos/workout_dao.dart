@@ -219,18 +219,16 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         .watchSingle();
   }
 
-  Stream<double?> watchAverageDurationSeconds() => customSelect(
-        '''
-        SELECT AVG(duration_seconds) AS average_seconds
-        FROM workouts_table
-        WHERE ended_at IS NOT NULL
-          AND duration_seconds IS NOT NULL
-          AND duration_seconds > 0
-        ''',
-        readsFrom: {workoutsTable},
-      ).watch().map(
-            (rows) => rows.single.read<double?>('average_seconds'),
-          );
+  /// How many finished workouts started at or after [from].
+  Stream<int> watchFinishedWorkoutCountSince(DateTime from) {
+    final Expression<int> count = workoutsTable.id.count();
+    return (selectOnly(workoutsTable)
+          ..addColumns(<Expression<Object>>[count])
+          ..where(workoutsTable.endedAt.isNotNull() &
+              workoutsTable.startedAt.isBiggerOrEqualValue(from)))
+        .map((TypedResult row) => row.read(count) ?? 0)
+        .watchSingle();
+  }
 
   /// Weekly volume aggregation — computed in SQL (ADR-1).
   /// Returns (week_start, total_volume_kg) for completed workouts, with

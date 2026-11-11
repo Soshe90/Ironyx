@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,087 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,090 passed, 2 skipped, 0 failed** (2026-11-11; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -307,6 +307,28 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     languages, the caption on the page, 999%+ and 999%, the goal while the
     profile is loading. Not run on the old code: the tests use the new
     field and string. **Not checked:** on the phone.
+  - **Changed (owner's choices): the start card and the fourth tile.**
+    - The start card's caption says how long ago, in calendar days: "Last
+      workout: 7 days ago" (today / yesterday / N days ago; new plural
+      string `dashboardDaysAgo`, en/ar). It gave the date, which the
+      Recent row under it also gives. Days are counted on dates, not
+      hours (`calendarDaysBetween`, on UTC dates so a clock change cannot
+      lose a day). Progress's hero keeps its date.
+    - The bolt icon beside the start card's headline is gone, and with it
+      the play arrow it became during a workout; the "IN PROGRESS" label
+      already says that.
+    - The "Average duration" tile is now "This month": finished workouts
+      since the 1st (`WorkoutDao.watchFinishedWorkoutCountSince`, one
+      `COUNT`), opening the Workouts tab. The all-time average barely
+      moved and read 14 min beside a 58-minute last session with the
+      owner's imported data. Removed with it:
+      `dashboardAverageWorkoutDurationProvider`,
+      `WorkoutDao.watchAverageDurationSeconds`, its two tests and the two
+      strings. **Tested:** the count (finished only, the 1st included),
+      the tile starting again on the 1st with the app open, calendar days
+      (same day, across midnight, a week, a month boundary, clock-change
+      weekends), both languages, and the page (tile titles, caption, no
+      icon). **Not checked:** on the phone.
 - Changed 2026-11-10, Progress tab (reviewed, then fixed one item at a
   time; commits `a6c7e51`..`ecb2ac0` on `recovery/2026-10-22`). **Not in the
   1.0.4+5 bundle**, which was built from `eafe670` before any of it: the
@@ -410,6 +432,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     a program" is a text action instead of a second outlined button.
   - **Progress.** Two rows of two tiles (Est. 1RM, body weight, streak,
     average duration) in place of two tiles and a lone full-width one.
+    (The average duration became "This month" on 2026-11-11.)
   - No query or provider changed. **Not checked:** tablet width on a
     device; TalkBack.
 - Changed 2026-11-05, Workouts tab:

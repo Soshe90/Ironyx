@@ -133,59 +133,6 @@ void main() {
     // currentStreakWeeks, and the provider's are in "the streak tile".
   });
 
-  group('WorkoutDao.watchAverageDurationSeconds', () {
-    test('ignores incomplete and legacy workouts without durations', () async {
-      await workoutDao.insertWorkout(
-        WorkoutsTableCompanion.insert(
-          id: 'incomplete',
-          startedAt: DateTime.utc(2026, 1, 1),
-          durationSeconds: const Value(60),
-        ),
-        const [],
-        const [],
-      );
-      await workoutDao.insertWorkout(
-        WorkoutsTableCompanion.insert(
-          id: 'legacy',
-          startedAt: DateTime.utc(2026, 1, 2),
-          endedAt: Value(DateTime.utc(2026, 1, 2, 0, 30)),
-        ),
-        const [],
-        const [],
-      );
-
-      expect(await workoutDao.watchAverageDurationSeconds().first, isNull);
-    });
-
-    test('averages recorded completed workout durations', () async {
-      await workoutDao.insertWorkout(
-        WorkoutsTableCompanion.insert(
-          id: 'short',
-          startedAt: DateTime.utc(2026, 1, 1),
-          endedAt: Value(DateTime.utc(2026, 1, 1, 0, 20)),
-          durationSeconds: const Value(1200),
-        ),
-        const [],
-        const [],
-      );
-      await workoutDao.insertWorkout(
-        WorkoutsTableCompanion.insert(
-          id: 'long',
-          startedAt: DateTime.utc(2026, 1, 2),
-          endedAt: Value(DateTime.utc(2026, 1, 2, 1)),
-          durationSeconds: const Value(3600),
-        ),
-        const [],
-        const [],
-      );
-
-      expect(
-        await workoutDao.watchAverageDurationSeconds().first,
-        closeTo(2400, 0.001),
-      );
-    });
-  });
-
   group('WeekSnapshot.from with an explicit today', () {
     test('"this week" follows the given day, not the device clock', () {
       final DateTime weekOfOct26 = DateTime(2026, 10, 26);
@@ -1028,6 +975,123 @@ void main() {
       expect(en.dashboardNoWorkoutsForWeeks(5), 'No workouts for 5 weeks');
       expect(ar.dashboardNoWorkoutsForWeeks(2), 'لا تمارين منذ أسبوعين');
       expect(ar.dashboardNoWorkoutsForWeeks(3), contains('أسابيع'));
+    });
+  });
+
+  group('workouts this month', () {
+    test('counts finished workouts from the given moment on', () async {
+      Future<void> workout(String id, DateTime at, {bool ended = true}) =>
+          workoutDao.insertWorkout(
+            WorkoutsTableCompanion.insert(
+              id: id,
+              startedAt: at,
+              endedAt: ended
+                  ? Value(at.add(const Duration(minutes: 30)))
+                  : const Value.absent(),
+            ),
+            const [],
+            const [],
+          );
+      await workout('october', DateTime(2026, 10, 31, 23, 59));
+      await workout('first', DateTime(2026, 11, 1));
+      await workout('later', DateTime(2026, 11, 9, 18));
+      await workout('open', DateTime(2026, 11, 10, 8), ended: false);
+
+      expect(
+        await workoutDao
+            .watchFinishedWorkoutCountSince(DateTime(2026, 11))
+            .first,
+        2,
+      );
+      expect(
+        await workoutDao
+            .watchFinishedWorkoutCountSince(DateTime(2026, 12))
+            .first,
+        0,
+      );
+    });
+
+    test('the tile starts again on the 1st', () async {
+      await seedExercise('bench', 'Bench Press');
+      await insertWorkoutWithSet(
+        workoutId: 'nov',
+        exerciseId: 'bench',
+        startedAt: DateTime(2026, 11, 20, 18),
+        weightKg: 100,
+        reps: 1,
+      );
+      DateTime fakeNow = DateTime(2026, 11, 30, 20);
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          sharedPreferencesProvider
+              .overrideWithValue(await SharedPreferences.getInstance()),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(dashboardWorkoutsThisMonthProvider, (_, __) {});
+
+      expect(
+        await container.read(dashboardWorkoutsThisMonthProvider.future),
+        1,
+      );
+
+      fakeNow = DateTime(2026, 12, 1, 7);
+      container.read(localNowProvider.notifier).refresh();
+      expect(
+        await container.read(dashboardWorkoutsThisMonthProvider.future),
+        0,
+      );
+    });
+  });
+
+  group('calendarDaysBetween', () {
+    test('counts dates, not hours', () {
+      expect(
+          calendarDaysBetween(
+              DateTime(2026, 11, 10, 8), DateTime(2026, 11, 10, 23)),
+          0);
+      // 23:00 to 07:00 is eight hours but the next day.
+      expect(
+          calendarDaysBetween(
+              DateTime(2026, 11, 9, 23), DateTime(2026, 11, 10, 7)),
+          1);
+      expect(
+          calendarDaysBetween(
+              DateTime(2026, 11, 3, 18), DateTime(2026, 11, 10)),
+          7);
+      expect(calendarDaysBetween(DateTime(2026, 10, 25), DateTime(2026, 11, 3)),
+          9);
+    });
+
+    test('a clock change does not lose or add a day', () {
+      // Only a zone that changes its clocks can tell: run with TZ=PST8PDT.
+      expect(
+          calendarDaysBetween(
+              DateTime(2026, 3, 7, 12), DateTime(2026, 3, 9, 12)),
+          2);
+      expect(
+          calendarDaysBetween(
+              DateTime(2026, 10, 31, 12), DateTime(2026, 11, 2, 12)),
+          2);
+    });
+
+    test('the start card says it in English and Arabic', () async {
+      final AppLocalizations en =
+          await AppLocalizations.delegate.load(const Locale('en'));
+      final AppLocalizations ar =
+          await AppLocalizations.delegate.load(const Locale('ar'));
+      expect(en.dashboardLastTrained(en.dashboardDaysAgo(0)),
+          'Last workout: today');
+      expect(en.dashboardLastTrained(en.dashboardDaysAgo(1)),
+          'Last workout: yesterday');
+      expect(en.dashboardLastTrained(en.dashboardDaysAgo(7)),
+          'Last workout: 7 days ago');
+      expect(ar.dashboardDaysAgo(1), 'أمس');
+      expect(ar.dashboardDaysAgo(2), 'قبل يومين');
+      expect(ar.dashboardDaysAgo(7), contains('أيام'));
     });
   });
 }

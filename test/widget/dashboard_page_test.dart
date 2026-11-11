@@ -430,11 +430,13 @@ void main() {
           find.byWidgetPredicate(
             (Widget w) =>
                 w is Text &&
-                (w.data == 'Last workout: Today' ||
-                    w.data == 'Last workout: Yesterday'),
+                (w.data == 'Last workout: today' ||
+                    w.data == 'Last workout: yesterday'),
           ),
           findsOneWidget,
         );
+        // Nothing decorative beside the headline any more.
+        expect(find.byIcon(Icons.bolt_rounded), findsNothing);
         expect(
           find.text('Start a session and log your sets as you go.'),
           findsNothing,
@@ -650,15 +652,16 @@ void main() {
           'EST. 1RM',
           'BODY WEIGHT',
           'STREAK',
-          'AVERAGE DURATION',
+          'THIS MONTH',
         ]) {
           expect(find.text(title), findsOneWidget, reason: title);
         }
         expect(find.text('1 wk'), findsOneWidget);
-        // Two rows of two: the streak sits beside the average duration.
+        expect(find.text('AVERAGE DURATION'), findsNothing);
+        // Two rows of two: the streak sits beside this month's count.
         expect(
           tester.getTopLeft(find.text('STREAK')).dy,
-          tester.getTopLeft(find.text('AVERAGE DURATION')).dy,
+          tester.getTopLeft(find.text('THIS MONTH')).dy,
         );
         expect(
           tester.getTopLeft(find.text('STREAK')).dy,

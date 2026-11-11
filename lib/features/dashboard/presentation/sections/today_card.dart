@@ -89,33 +89,17 @@ class TodayCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  inProgress
-                      ? l10n.dashboardWorkoutInProgress
-                      : l10n.dashboardReadyToTrain,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: AppColors.workoutHeroForeground,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.workoutHeroAccent.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  inProgress ? Icons.play_arrow_rounded : Icons.bolt_rounded,
-                  color: AppColors.workoutHeroAccent,
-                  size: 28,
-                ),
-              ),
-            ],
+          // No icon beside it: the bolt (a play arrow while in progress)
+          // said nothing the headline and the "IN PROGRESS" label do not,
+          // and competed with the headline for the eye.
+          Text(
+            inProgress
+                ? l10n.dashboardWorkoutInProgress
+                : l10n.dashboardReadyToTrain,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: AppColors.workoutHeroForeground,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -123,12 +107,15 @@ class TodayCard extends ConsumerWidget {
                 ? _draftSummary(l10n, draft.exercises.length, loggedSets)
                 // How long since the last session is the one fact that
                 // bears on starting another. The fixed sentence it replaces
-                // was read once and never again.
+                // was read once and never again. Said as days ago, not as
+                // a date: the Recent row below already gives the date, and
+                // "7 days ago" is what decides whether to train.
                 : lastWorkout == null
                     ? l10n.dashboardReadyToTrainCaption
                     : l10n.dashboardLastTrained(
-                        DateFormatters.of(context)
-                            .relativeDay(lastWorkout.startedAt, now: today),
+                        l10n.dashboardDaysAgo(
+                          calendarDaysBetween(lastWorkout.startedAt, today),
+                        ),
                       ),
             style: AppTypography.caption(theme).copyWith(
               color: AppColors.workoutHeroCaption,

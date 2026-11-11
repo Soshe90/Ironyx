@@ -48,7 +48,7 @@ class ProgressSection extends StatelessWidget {
           children: <Widget>[
             Expanded(child: _StreakCard()),
             SizedBox(width: AppSpacing.md),
-            Expanded(child: _AverageDurationCard()),
+            Expanded(child: _ThisMonthCard()),
           ],
         ),
       ],
@@ -119,28 +119,25 @@ class _StreakCard extends ConsumerWidget {
   }
 }
 
-class _AverageDurationCard extends ConsumerWidget {
-  const _AverageDurationCard();
+/// Finished workouts since the 1st. Opens the Workouts tab, whose history
+/// lists them.
+class _ThisMonthCard extends ConsumerWidget {
+  const _ThisMonthCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<double?> durationAsync =
-        ref.watch(dashboardAverageWorkoutDurationProvider);
-    final double? averageSeconds = durationAsync.value;
+    final AsyncValue<int> countAsync =
+        ref.watch(dashboardWorkoutsThisMonthProvider);
+    final int count = countAsync.value ?? 0;
 
     return SummaryCard(
-      title: context.l10n.dashboardAverageDuration,
-      icon: Icons.timelapse_outlined,
-      onTap: () => context.goNamed(Routes.progressName),
-      isLoading: durationAsync.isLoading,
-      error: durationAsync.error,
-      metric: averageSeconds == null
-          ? null
-          : UnitFormatters.durationShort(
-              Duration(seconds: averageSeconds.round()),
-              context.l10n,
-            ),
-      emptyCaption: context.l10n.dashboardAverageDurationEmpty,
+      title: context.l10n.dashboardWorkoutsThisMonth,
+      icon: Icons.calendar_month_outlined,
+      onTap: () => context.goNamed(Routes.trackerName),
+      isLoading: countAsync.isLoading,
+      error: countAsync.error,
+      metric: count == 0 ? null : context.l10n.sessionCount(count),
+      emptyCaption: context.l10n.dashboardWorkoutsThisMonthEmpty,
     );
   }
 }
