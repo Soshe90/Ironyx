@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,7 @@ import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/router/routes.dart';
 import 'package:ironyx/features/auth/domain/auth_controller.dart';
 import 'package:ironyx/features/auth/domain/auth_service.dart';
+import 'package:ironyx/features/backup/domain/cloud_backup_controller.dart';
 
 import '../helpers/fake_auth_service.dart';
 import '../helpers/pump_app.dart';
@@ -201,7 +204,20 @@ void main() {
     // a real sqlite3 handle — exercising that reseed race is not what this
     // test is about, so it's stubbed out the same way any other test that
     // isn't itself testing seeding does.
-    await pumpSettings(tester, overrides: stubSeeders());
+    // The erase also removes the import snapshots, a copy of the old
+    // account's data; pointed at a folder the test owns.
+    final Directory snapshots =
+        Directory.systemTemp.createTempSync('ironyx_conflict_erase');
+    addTearDown(() => snapshots.deleteSync(recursive: true));
+    File('${snapshots.path}/pre_import_snapshot_1.json')
+        .writeAsStringSync('{}');
+    await pumpSettings(
+      tester,
+      overrides: [
+        ...stubSeeders(),
+        snapshotDirectoryProvider.overrideWith((ref) async => snapshots.path),
+      ],
+    );
 
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
@@ -221,10 +237,23 @@ void main() {
     expect(find.text('Different account on this device'), findsOneWidget);
 
     await tester.tap(find.text('Erase local data and continue'));
+    // Deleting the snapshots is real file I/O, which only runs outside the
+    // test's fake clock: polled, as the Settings delete-all test does.
+    for (int i = 0;
+        i < 100 && find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
+        i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump();
+    }
     await tester.pumpAndSettle();
 
     // Back on Settings, now showing the new account.
     expect(find.text('new@example.com'), findsOneWidget);
+
+    expect(snapshots.listSync(), isEmpty,
+        reason: "the old account's data must not survive in a snapshot");
 
     final profile = await ProfileDao(database).get();
     expect(profile!.remoteUserId, isNot('user-existing'));

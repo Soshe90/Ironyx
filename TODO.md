@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,153 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,158 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -128,6 +128,40 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-12, Settings (reviewed, the review re-checked at the
+  owner's request, then fixed one item at a time, on
+  `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
+  - **Fixed: "Delete all data" left the user's data on the phone.** It
+    cleared the database only. Every import, and every cloud restore,
+    first saves a full snapshot of the data (name and email included) into
+    the app's private storage and keeps the last three; nothing ever
+    removed them, so after "Delete everything" Restore snapshot brought the
+    data back, and the confirmation's "This cannot be undone" was untrue.
+    An open workout (kept outside the database) and the user's own
+    exercises (typed in, or made by an XLSX import) survived as well. Now
+    `DataExportService.deleteAllUserData` also deletes custom exercises
+    and, after the database delete succeeds, the snapshots
+    (`deleteSnapshots`); and one `eraseLocalData` (settings/domain) does
+    the database, the snapshots, the open workout and the built-in
+    programs for both Settings and the account-conflict "erase and
+    continue", which had their own copies. The first review had proposed a
+    snapshot *before* deleting, which would have kept another full copy;
+    instead the dialog offers "Export first", a copy the user chooses and
+    places. The delete runs behind a progress dialog and a failure says so
+    (it escaped the tap handler). Three strings, en/ar, and the
+    confirmation's text now lists what goes. Android's own backup is off
+    (`allowBackup="false"`), so the snapshots never left the phone.
+    **Found while testing:** the progress dialog's helper started its work
+    before the dialog was built, so a fast failure left the spinner up for
+    good; it waits for the dialog now. **Tested:** custom exercises go,
+    even once used, the catalogue stays; snapshots go and nothing else in
+    their folder; a failed delete keeps them; end to end, the custom
+    exercise, the snapshot and the open workout are gone; "Export first"
+    deletes nothing; a failure shows its message and closes the spinner.
+    The custom-exercise and end-to-end tests fail on the old code. The
+    account-conflict erase test now also checks the old account's snapshot
+    is gone. **Not checked:** on the phone. **Open:** the account-conflict
+    erase has no error handling of its own (as before this change).
 - Changed 2026-11-11, Library and Timer tabs (reviewed together, then
   fixed one item at a time, on `library-timer/review-2026-11-11` from
   `main` after #4 and #5 merged). **Not in the 1.0.5+6 bundle.**

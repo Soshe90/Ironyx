@@ -386,7 +386,7 @@
   "programImportApplyFailed": "Couldn't save the imported programs. Nothing was written — try again.",
   "dataAllDeleted": "All data deleted",
   "dataDeleteAllConfirmTitle": "Delete all data?",
-  "dataDeleteAllConfirmBody": "This permanently deletes every workout, timer session, program, template, and body-metrics entry (built-in programs will be restored). The exercise library is kept. This cannot be undone.",
+  "dataDeleteAllConfirmBody": "This permanently deletes every workout, timer session, program, template, body-metrics entry and exercise of your own, an open workout, and the automatic copies kept for Restore snapshot (built-in programs will be restored). The exercise library is kept. This cannot be undone.",
   "dataDeleteConfirmWord": "DELETE",
   "@dataDeleteConfirmWord": {
     "description": "The word the user must type to unlock the delete-all button. Translate it: it is compared against what they type, so it has to be a word they can enter on their own keyboard."
@@ -398,6 +398,10 @@
     }
   },
   "dataDeleteEverything": "Delete everything",
+  "dataDeleteExportFirst": "Export first",
+  "dataDeleteFailed": "Something went wrong while deleting your data. Please try again.",
+  "@dataDeleteFailed": {"description": "Shown when Delete all data failed."},
+  "@dataDeleteExportFirst": {"description": "Button in the delete-all dialog: export a backup instead of deleting now."},
   "dataDeleteAllTitle": "Delete all data",
   "dataDeleteAllSubtitle": "Workouts, timers, programs, templates, body metrics",
   "dataTableWorkouts": "workouts",

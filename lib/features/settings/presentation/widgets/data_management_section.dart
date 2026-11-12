@@ -13,6 +13,7 @@ import '../../../../core/error_reporting.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/services/data_export_service.dart';
+import '../../domain/erase_local_data.dart';
 import '../../domain/export_envelope.dart';
 
 /// Export / import / delete-all-data controls (ADR-7).
@@ -412,37 +413,71 @@ class DataManagementSection extends ConsumerWidget {
       );
 
   Future<void> _deleteAll(BuildContext context, WidgetRef ref) async {
-    final bool? confirmed = await showDialog<bool>(
+    final AppLocalizations l10n = context.l10n;
+    final _DeleteChoice? choice = await showDialog<_DeleteChoice>(
       context: context,
       builder: (context) => const _DeleteAllDialog(),
     );
-    if (confirmed != true || !context.mounted) return;
-
-    final DataExportService service = ref.read(dataExportServiceProvider);
-    final AppDatabase db = ref.read(appDatabaseProvider);
-    await service.deleteAllUserData(db);
-    // Programs (built-in and user) were deleted along with their templates
-    // above — reset the seed marker and reseed so built-ins come back the
-    // same way the exercise catalogue survives a delete-all.
-    //
-    // This exact sequence is also used by the account-conflict "erase and
-    // continue" flow (`account_conflict_flow.dart`), where it once produced
-    // a hung `Future` under a specific widget-test pump interleaving with
-    // `programSeederProvider` also watched app-wide by `app.dart`. It did
-    // not reproduce here across several real end-to-end runs of this exact
-    // button (`test/widget/settings_page_test.dart`, "tapping Delete
-    // everything..."), so it looks like a test-harness artifact rather
-    // than a reachable bug — but
-    // it was never fully explained. See TODO.md's A2.14 for the
-    // reproduction, in case this ever hangs for real.
-    await ref.read(programSeederProvider.notifier).resetSeedVersion();
-    ref.invalidate(programSeederProvider);
-    await ref.read(programSeederProvider.future);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(context.l10n.dataAllDeleted)));
+    if (choice == _DeleteChoice.exportFirst) {
+      // Keeping a copy is the user's choice, and it lands where they put
+      // it. Nothing is deleted; they come back to delete once they have it.
+      await _export(context, ref);
+      return;
+    }
+    if (choice != _DeleteChoice.delete) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final bool done = await _withProgress(context, () => eraseLocalData(ref));
+    if (!context.mounted) return;
+    if (done) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.dataAllDeleted)));
+    } else {
+      await _showError(context, l10n.dataDeleteFailed);
+    }
+  }
+
+  /// Runs [work] behind a progress dialog that cannot be dismissed, and
+  /// says whether it succeeded; a failure is logged. It ran with nothing on
+  /// screen, and a failure escaped the tap handler unreported.
+  Future<bool> _withProgress(
+    BuildContext context,
+    Future<void> Function() work,
+  ) async {
+    // The dialog's own context, to close exactly it: Settings' context
+    // stays mounted whatever happens to the dialog above it. The work waits
+    // for it: started at once, a fast failure finished before the dialog
+    // was built, left nothing to close, and the spinner stayed for good.
+    final Completer<BuildContext> shown = Completer<BuildContext>();
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          if (!shown.isCompleted) shown.complete(dialogContext);
+          // Back must not close it either: the work goes on regardless.
+          return const PopScope(
+            canPop: false,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
+    );
+    final BuildContext dialogContext = await shown.future;
+    try {
+      await work();
+      return true;
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'DataManagementSection');
+      return false;
+    } finally {
+      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+    }
   }
 }
+
+/// What the delete-all dialog closes with.
+enum _DeleteChoice { delete, exportFirst }
 
 enum _ExportFormat { json, csv }
 
@@ -498,12 +533,18 @@ class _DeleteAllDialogState extends State<_DeleteAllDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: () => Navigator.pop(context),
           child: Text(l10n.actionCancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _DeleteChoice.exportFirst),
+          child: Text(l10n.dataDeleteExportFirst),
         ),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: scheme.error),
-          onPressed: _canConfirm ? () => Navigator.pop(context, true) : null,
+          onPressed: _canConfirm
+              ? () => Navigator.pop(context, _DeleteChoice.delete)
+              : null,
           child: Text(l10n.dataDeleteEverything),
         ),
       ],

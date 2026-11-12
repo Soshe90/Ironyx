@@ -768,7 +768,16 @@ class DataExportService {
   /// Deletes only the five root tables; every child table (workout
   /// exercises/sets, timer intervals, program↔template links, template
   /// exercises) cascades via its `onDelete: KeyAction.cascade` foreign key.
-  Future<void> deleteAllUserData(AppDatabase db) async {
+  /// Deletes the user's data, keeping the exercise catalogue.
+  ///
+  /// With [snapshotDirPath], the import snapshots there go too, once the
+  /// database delete has succeeded. Each is a full copy of the data, name
+  /// and email included; left behind, "delete all" was undone by Restore
+  /// snapshot, and the data stayed on the phone.
+  Future<void> deleteAllUserData(
+    AppDatabase db, {
+    String? snapshotDirPath,
+  }) async {
     await db.transaction(() async {
       await db.customStatement('DELETE FROM workouts_table');
       await db.customStatement('DELETE FROM timer_sessions_table');
@@ -780,12 +789,26 @@ class DataExportService {
       // leave the next person to open the app looking at someone else's
       // name and email.
       await db.customStatement('DELETE FROM profiles_table');
+      // The user's own exercises, typed in or made by an XLSX import, are
+      // theirs, not catalogue. Nothing uses them any more: the workouts and
+      // templates that did went above (their RESTRICT keys would otherwise
+      // stop this), and their own rows go with them by cascade.
+      await db
+          .customStatement('DELETE FROM exercises_table WHERE is_custom = 1');
     });
     // See the matching comment in `_applyImport`: `customStatement` never
     // notifies stream queries, so without this every `watch()` — Tracker
     // history, Progress, Dashboard — would keep showing the just-deleted
     // rows until the app restarts.
     db.markTablesUpdated(db.allTables);
+    if (snapshotDirPath != null) await deleteSnapshots(snapshotDirPath);
+  }
+
+  /// Deletes every import snapshot in [snapshotDirPath].
+  Future<void> deleteSnapshots(String snapshotDirPath) async {
+    for (final File file in await listSnapshots(snapshotDirPath)) {
+      await file.delete();
+    }
   }
 
   Future<void> writeStringToFile(String path, String content) =>
