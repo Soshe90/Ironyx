@@ -897,6 +897,8 @@
   "authSignedIn": "Signed in",
   "authSignOut": "Sign out",
   "authSignedOut": "Signed out",
+  "authSignedOutNotSaved": "Signed out, but saving that on this device failed.",
+  "@authSignedOutNotSaved": {"description": "Shown when sign-out succeeded but clearing the account from the local profile failed."},
   "authSignOutConfirmTitle": "Sign out?",
   "authSignOutConfirmBody": "Your workouts, programs and personal details stay on this device. Only the account link is removed.",
   "authAccountConflictTitle": "Different account on this device",
@@ -988,6 +990,8 @@
   },
   "accountDeleteAction": "Delete account",
   "accountDeleted": "Account deleted",
+  "accountDeletedNotSaved": "Your account was deleted, but saving that on this device failed.",
+  "@accountDeletedNotSaved": {"description": "Shown when the account was deleted but clearing it from the local profile failed."},
 
   "sizeBytes": "{count} B",
   "@sizeBytes": {

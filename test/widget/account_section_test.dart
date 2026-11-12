@@ -361,4 +361,102 @@ void main() {
 
     await disposeApp(tester);
   });
+
+  group('account failures are reported', () {
+    const AuthUser signedIn = AuthUser(
+      id: 'u1',
+      email: 'mustafa@example.com',
+      isEmailConfirmed: true,
+    );
+
+    Future<void> signOutWith(
+      WidgetTester tester,
+      AuthService service, {
+      List<dynamic> overrides = const [],
+    }) async {
+      await pumpApp(
+        tester,
+        initialLocation: Routes.settings,
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          authServiceProvider.overrideWithValue(service),
+          ...overrides,
+        ],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('an unexpected error says something went wrong',
+        (tester) async {
+      await signOutWith(tester, _ThrowingAuth(signedIn));
+
+      expect(find.text('Something went wrong'), findsOneWidget,
+          reason: 'only AuthFailure was caught; this escaped');
+      await disposeApp(tester);
+    });
+
+    testWidgets('signed out, but not saved on the device, says both',
+        (tester) async {
+      await signOutWith(
+        tester,
+        FakeAuthService(initialUser: signedIn),
+        overrides: [
+          profileDaoProvider.overrideWithValue(_FailingUnlink(database)),
+        ],
+      );
+
+      expect(
+        find.text('Signed out, but saving that on this device failed.'),
+        findsOneWidget,
+      );
+      await disposeApp(tester);
+    });
+
+    testWidgets('the delete-account dialog fits with the keyboard open',
+        (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: Routes.settings,
+        surfaceSize: const Size(360, 640),
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          authServiceProvider
+              .overrideWithValue(FakeAuthService(initialUser: signedIn)),
+        ],
+        prefs: seededPrefs,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull,
+          reason: 'the dialog overflowed under the keyboard');
+      await disposeApp(tester);
+    });
+  });
+}
+
+/// Signed in; signing out fails with an error that is not an AuthFailure.
+class _ThrowingAuth extends FakeAuthService {
+  _ThrowingAuth(AuthUser user) : super(initialUser: user);
+
+  @override
+  Future<void> signOut() => Future<void>.error(StateError('socket closed'));
+}
+
+/// Clearing the account from the profile fails.
+class _FailingUnlink extends ProfileDao {
+  _FailingUnlink(super.db);
+
+  @override
+  Future<void> unlinkAccount() => Future<void>.error(StateError('disk full'));
 }

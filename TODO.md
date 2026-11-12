@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,168 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,171 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -226,6 +226,20 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     snapshot is listed by its date and not its file name; a folder that
     cannot be read shows the restore-failed message (both fail on the old
     code); the time read from a name, and none from another name.
+  - **Fixed: Sign out and Delete account lost failures, and the delete
+    dialog overflowed.** Both caught only `AuthFailure`, so any other error
+    escaped the tap handler; and when the account service succeeded but
+    clearing the account from the device's profile failed, the user was
+    never told the account step had worked. Now an unexpected error says
+    "Something went wrong" and is logged, and a failed local step after a
+    successful remote one says so ("Signed out, but saving that on this
+    device failed", the same for a deleted account; two strings, en/ar).
+    The delete-account dialog scrolls: its field autofocuses, and with the
+    keyboard up on a small phone the content overflowed, as the delete-all
+    dialog's had on a real phone (the review had only reasoned this; the
+    test confirms it). **Tested:** an unexpected sign-out error, a failed
+    local step after sign-out, and the dialog with a 300 dp keyboard on a
+    360×640 screen; the first and the last fail on the old code.
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`

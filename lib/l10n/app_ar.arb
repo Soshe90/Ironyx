@@ -826,6 +826,7 @@
   "authSignedIn": "تم تسجيل الدخول",
   "authSignOut": "تسجيل الخروج",
   "authSignedOut": "تم تسجيل الخروج",
+  "authSignedOutNotSaved": "تم تسجيل الخروج، لكن تعذّر حفظ ذلك على هذا الجهاز.",
   "authSignOutConfirmTitle": "تسجيل الخروج؟",
   "authSignOutConfirmBody": "تبقى تمارينك وبرامجك وبياناتك الشخصية على هذا الجهاز. يُزال ارتباط الحساب فقط.",
   "authAccountConflictTitle": "حساب مختلف على هذا الجهاز",
@@ -914,6 +915,7 @@
   },
   "accountDeleteAction": "حذف الحساب",
   "accountDeleted": "تم حذف الحساب",
+  "accountDeletedNotSaved": "حُذف حسابك، لكن تعذّر حفظ ذلك على هذا الجهاز.",
 
   "sizeBytes": "{count} B",
   "@sizeBytes": {
