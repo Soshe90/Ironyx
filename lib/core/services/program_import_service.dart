@@ -241,7 +241,6 @@ class ProgramImportService {
     final value = _cell(row, index);
     return value.isEmpty ? null : value;
   }
-
 }
 
 /// Thrown when a spreadsheet is empty or missing the required header columns.
