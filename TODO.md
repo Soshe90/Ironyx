@@ -128,6 +128,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
+  stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
+  `package:flutter/material.dart`, moved into the separate `material_ui`
+  package; with `--fatal-infos` that failed `flutter analyze` on 134
+  imports, so every pull request failed (first seen on #6). 3.47.9 is the
+  last version CI passed on (#4, #5). This machine has 3.47.5. **Open:**
+  moving to Flutter 3.50, which needs the `material_ui` package added (a new
+  dependency, the owner's decision) and every Material import changed; and
+  whether to pin the local Flutter to the same version as CI.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
