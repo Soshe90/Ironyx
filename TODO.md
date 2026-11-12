@@ -249,6 +249,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     Same controls, same wording. **Tested:** the four share one card;
     every existing Settings test passes unchanged, including the week
     start fitting a narrow phone in Arabic. **Not checked:** on the phone.
+  - **Changed: tidy-up of the Data dialogs.** The backup import dialog's
+    confirm button had borrowed the XLSX importer's "Import" string
+    (`importXlsxConfirmAction`); it has its own, `dataImportConfirmAction`
+    (en/ar, same words), so changing one importer's wording no longer
+    changes the other's. The dialogs' fixed 12 and 16 dp gaps are now
+    `AppSpacing.md` and `AppSpacing.lg`, the same values, so nothing on
+    screen moves. **Tested:** all four gates; the existing import tests
+    find the button by the same words. No new test: nothing behaves
+    differently.
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`

@@ -319,6 +319,8 @@
   "dataImportTooLarge": "This file is too large to be a backup (over {max} MB).",
   "@dataImportTooLarge": {"description": "Shown when the file picked for import is over the size limit.", "placeholders": {"max": {"type": "int"}}},
   "dataImportBackupTitle": "Import backup",
+  "dataImportConfirmAction": "Import",
+  "@dataImportConfirmAction": {"description": "Confirm button of the backup import dialog. Its own string: it borrowed the XLSX importer's."},
   "dataImportNoWorkoutData": "This backup contains no workout data.",
   "dataImportModeMerge": "Merge",
   "dataImportModeMergeSubtitle": "Keep existing data, add this on top",

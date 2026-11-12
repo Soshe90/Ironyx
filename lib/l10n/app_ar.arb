@@ -299,6 +299,7 @@
   "dataImportUnreadable": "تعذّرت قراءة الملف المحدَّد.",
   "dataImportTooLarge": "هذا الملف أكبر من أن يكون نسخة احتياطية (أكثر من {max} ميغابايت).",
   "dataImportBackupTitle": "استيراد نسخة احتياطية",
+  "dataImportConfirmAction": "استيراد",
   "dataImportNoWorkoutData": "لا تحتوي هذه النسخة الاحتياطية على بيانات تمارين.",
   "dataImportModeMerge": "دمج",
   "dataImportModeMergeSubtitle": "الإبقاء على البيانات الحالية وإضافة هذه فوقها",

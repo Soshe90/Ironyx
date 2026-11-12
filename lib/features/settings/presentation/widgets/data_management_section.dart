@@ -14,6 +14,7 @@ import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/services/data_export_service.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../backup/domain/cloud_backup_controller.dart';
 import '../../domain/erase_local_data.dart';
 import '../../domain/export_envelope.dart';
@@ -388,7 +389,7 @@ class DataManagementSection extends ConsumerWidget {
                 if (highlights.isEmpty)
                   Text(context.l10n.dataImportNoWorkoutData),
                 if (missingTables.isNotEmpty || unknownTables.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     context.l10n.dataImportIntegrityWarning(
                       <String>[
@@ -406,7 +407,7 @@ class DataManagementSection extends ConsumerWidget {
                         TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 RadioGroup<ImportMode>(
                   groupValue: mode,
                   onChanged: (value) => setState(() => mode = value!),
@@ -439,7 +440,7 @@ class DataManagementSection extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, mode),
-              child: Text(context.l10n.importXlsxConfirmAction),
+              child: Text(context.l10n.dataImportConfirmAction),
             ),
           ],
         ),
@@ -606,7 +607,7 @@ class _DeleteAllDialogState extends State<_DeleteAllDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(l10n.dataDeleteAllConfirmBody),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               l10n.dataDeleteAllTypeToConfirm(confirmWord),
               style: TextStyle(color: scheme.error),
