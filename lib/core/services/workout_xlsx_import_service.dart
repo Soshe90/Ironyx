@@ -8,6 +8,7 @@ import '../database/daos/exercise_dao.dart';
 import '../database/daos/workout_dao.dart';
 
 import '../formatters/unit_formatters.dart';
+import '../set_volume.dart';
 
 const _uuid = Uuid();
 
@@ -59,39 +60,23 @@ class WorkoutXlsxImportService {
     final exercises = await ExerciseDao(db).exerciseIdsByLookupName();
     final workouts = <ImportedHistoricalWorkout>[];
     final unknown = <String>{};
-    // A weight below zero is not a lift: skipped, and counted for the
-    // preview. It was imported, and its negative volume skewed the totals.
-    // Zero is kept: a bodyweight set.
-    var skippedNegative = 0;
 
     for (final _RawSession session in sessions) {
       final importedExercises = <ImportedHistoricalExercise>[];
       for (final _RawExercise raw in session.exercises) {
         final exerciseId = exercises[normalizeExerciseName(raw.name)];
-        final sets = <ImportedHistoricalSet>[];
-        for (final _RawSet set in raw.sets) {
-          final double weight = set.weight ?? 0;
-          if (weight < 0) {
-            skippedNegative++;
-            continue;
-          }
-          sets.add(
-            ImportedHistoricalSet(
-              reps: set.reps.round(),
-              weightKg: _toKg(weight, sourceUnit),
-            ),
-          );
-        }
-        // Named as one to create only if a set is left to import: one
-        // whose sets were all left out is never created.
-        if (exerciseId == null && (sets.isNotEmpty || raw.sets.isEmpty)) {
-          unknown.add(raw.name);
-        }
+        if (exerciseId == null) unknown.add(raw.name);
         importedExercises.add(
           ImportedHistoricalExercise(
             exerciseId: exerciseId,
             name: raw.name,
-            sets: sets,
+            sets: <ImportedHistoricalSet>[
+              for (final _RawSet set in raw.sets)
+                ImportedHistoricalSet(
+                  reps: set.reps.round(),
+                  weightKg: _toKg(set.weight ?? 0, sourceUnit),
+                ),
+            ],
           ),
         );
       }
@@ -119,7 +104,6 @@ class WorkoutXlsxImportService {
     return WorkoutXlsxImportResult(
       workouts: markedWorkouts,
       unknownExercises: unknown.toList()..sort(),
-      negativeWeightSetsSkipped: skippedNegative,
       totalSets: markedWorkouts.fold(
         0,
         (sum, workout) =>
@@ -170,33 +154,21 @@ class WorkoutXlsxImportService {
           ..where((t) => t.workoutId.equals(existingWorkout.id))
           ..orderBy([(t) => OrderingTerm.asc(t.orderIndex)]))
         .get();
+    if (existingExercises.length != workout.exercises.length) return false;
 
-    // What an import of today would have written for this workout. Before
-    // 2026-11-12 a set with a negative weight was stored, and is now left
-    // out of a parse (with an exercise left with none); compared as stored,
-    // re-importing the same workbook no longer matched and every such
-    // session was imported a second time.
-    final stored = <(String, List<WorkoutSetsTableData>)>[];
-    for (final existingExercise in existingExercises) {
-      final sets = (await (db.select(db.workoutSetsTable)
-                ..where((t) => t.workoutExerciseId.equals(existingExercise.id))
-                ..orderBy([(t) => OrderingTerm.asc(t.setIndex)]))
-              .get())
-          .where((set) => set.weightKg >= 0)
-          .toList();
-      if (sets.isNotEmpty) stored.add((existingExercise.exerciseId, sets));
-    }
-    if (stored.length != workout.exercises.length) return false;
-
-    for (var i = 0; i < stored.length; i++) {
-      final (String storedExerciseId, List<WorkoutSetsTableData> existingSets) =
-          stored[i];
+    for (var i = 0; i < existingExercises.length; i++) {
+      final existingExercise = existingExercises[i];
       final importedExercise = workout.exercises[i];
       final resolvedExerciseId = importedExercise.exerciseId;
       if (resolvedExerciseId == null ||
-          storedExerciseId != resolvedExerciseId) {
+          existingExercise.exerciseId != resolvedExerciseId) {
         return false;
       }
+
+      final existingSets = await (db.select(db.workoutSetsTable)
+            ..where((t) => t.workoutExerciseId.equals(existingExercise.id))
+            ..orderBy([(t) => OrderingTerm.asc(t.setIndex)]))
+          .get();
       if (existingSets.length != importedExercise.sets.length) return false;
       for (var j = 0; j < existingSets.length; j++) {
         final existingSet = existingSets[j];
@@ -291,7 +263,7 @@ class WorkoutXlsxImportService {
                 isCompleted: const Value(true),
               ),
             );
-            volumeKg += importedSet.weightKg * importedSet.reps;
+            volumeKg += setVolumeKg(importedSet.weightKg, importedSet.reps);
           }
         }
 
@@ -452,15 +424,11 @@ class WorkoutXlsxImportResult {
     required this.workouts,
     required this.unknownExercises,
     required this.totalSets,
-    this.negativeWeightSetsSkipped = 0,
   });
 
   final List<ImportedHistoricalWorkout> workouts;
   final List<String> unknownExercises;
   final int totalSets;
-
-  /// Sets left out because their weight is below zero.
-  final int negativeWeightSetsSkipped;
 
   /// Workouts that already exist in history and [apply] will skip.
   int get duplicateCount => workouts.where((w) => w.isDuplicate).length;

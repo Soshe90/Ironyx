@@ -10,6 +10,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/set_volume.dart';
 import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -394,7 +395,7 @@ class _SessionTotals extends ConsumerWidget {
       for (final DraftSet set in exercise.sets) {
         if (!set.isCompleted || set.isWarmup || exercise.isWarmup) continue;
         completedSets++;
-        volumeKg += set.weightKg * set.reps;
+        volumeKg += setVolumeKg(set.weightKg, set.reps);
       }
     }
 

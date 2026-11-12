@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,222 passed, 2 skipped, 0 failed** (2026-11-12, on
+- `flutter test`: **1,223 passed, 2 skipped, 0 failed** (2026-11-12, on
   `review/production-2026-11-12`; 1,172 earlier that day, 1,041 on
   2026-11-10 and 876 on 2026-11-05). Format, analyze and the asset-licence
   check pass; the calendar and week tests pass under `TZ=PST8PDT`.
@@ -130,6 +130,40 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-12 (evening), assisted sets: **a negative weight is
+  assisted work, kept, and adds no volume** (owner chose "apply
+  recommended"; branch `assisted-weights/2026-11-12`). **Not in the
+  1.0.5+6 bundle.** Earlier the same day the XLSX import was made to leave
+  negative-weight sets out and a clean-up of stored ones was approved;
+  both were held because a training log's "-20" on an assisted pull-up is
+  history, not an error. Now:
+  - The XLSX import keeps them again, as it did before today; the preview
+    note about left-out sets and its string are gone, and duplicate
+    detection compares every set again.
+  - Volume treats load below zero as none, everywhere, through one rule:
+    `setVolumeKg` and its SQL form `kSqlSetVolume` in
+    `core/set_volume.dart` (the progress module's own copy moved there).
+    Summed as weight × reps, an assisted set *lowered* the totals it was
+    counted in. Covers a saved workout's total, the live session, history,
+    the workout detail, and the nine SQL volume queries (balance, muscle
+    groups, rep ranges, session load and the rest). Est. 1RM already
+    skipped weights at or below zero. ADR "Session volume" amended.
+  - Schema 12 → 13 (data only): workouts holding an assisted set have
+    their stored total recomputed by the session-volume rule; every other
+    stored total is left as written, and no set is changed. The matching
+    export step does the same for older backups. As with schema 12, a
+    backup from this build is refused by older builds.
+  - **Tested:** the rule (assisted set → 0); an assisted set imported from
+    a workbook, kept at -20 kg with volume 0; re-importing that workbook
+    adds nothing; balance and muscle-group volume count an assisted set as
+    0 (fails on the old queries); a real database file stamped v12 gets
+    the assisted workout's total recomputed, warm-up excluded, another
+    workout's total untouched and every set kept (fails with the step
+    disabled); the export step does the same.
+  - **Open:** the app has no way to *enter* assisted work: the number
+    fields drop "-", so editing an imported assisted set's weight makes it
+    a positive load. Logging assisted exercises in the app (a "-" key, or
+    an "assisted" toggle) is a product decision for the owner.
 - Changed 2026-11-12, production review (an outside review of the whole
   app, ten findings; each re-checked against the code, all ten real, three
   rated lower than the review did; fixed one item at a time on
@@ -280,6 +314,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     good. The same question applies to the XLSX import now leaving such
     sets out. Needs the owner's answer on how assisted work should be
     recorded before either is changed further.
+    *Settled the same evening: negative = assisted, kept, no volume; see
+    the assisted-sets entry above.*
   - **Fixed: a program CSV of any size was read and split on the UI
     thread.** Now a file over 1 MB (`kMaxProgramCsvBytes`; five programs
     of six days are about 15 KB) is refused before it is read, and again

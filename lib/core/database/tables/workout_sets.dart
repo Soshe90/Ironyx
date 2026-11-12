@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart' hide JsonKey;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../set_volume.dart';
 import '../app_database.dart';
-
 import 'workout_exercises.dart';
 
 part 'workout_sets.freezed.dart';
@@ -93,7 +93,7 @@ abstract class WorkoutSet with _$WorkoutSet {
       );
 
   /// Convenience: volume for this set in kg.
-  double get volumeKg => weightKg * reps;
+  double get volumeKg => setVolumeKg(weightKg, reps);
 
   /// Convenience: estimated 1RM using Epley formula (ADR-123).
   /// Only valid for 1–12 reps; returns weightKg directly at reps == 1.

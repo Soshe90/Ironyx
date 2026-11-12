@@ -604,12 +604,6 @@
       "total": { "type": "int" }
     }
   },
-  "importXlsxNegativeWeightNote": "Sets left out because their weight is below zero: {count}",
-  "@importXlsxNegativeWeightNote": {
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
   "importXlsxUnknownExercises": "These exercises are not in the catalogue and will be added as custom exercises:",
   "importXlsxConfirmAction": "Import",
 

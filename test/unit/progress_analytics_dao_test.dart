@@ -208,6 +208,23 @@ void main() {
     expect(result.single.totalVolumeKg, 100);
   });
 
+  test('an assisted set (negative weight) adds no volume, not less', () async {
+    // 2026-11-12: summed as weight × reps, assisted pull-ups logged as
+    // "-20" lowered the volume of everything they were counted with.
+    await insertSets(
+      id: 'mixed',
+      date: DateTime.utc(2026, 1, 6),
+      exerciseId: 'pull',
+      sets: [(60, 5, null), (-20, 8, null)],
+    );
+
+    final balance = await dao.watchBalanceRatios().first;
+    final muscles = await dao.watchWeeklyMuscleGroupVolume().first;
+
+    expect(balance.pullVolumeKg, 300);
+    expect(muscles.single.totalVolumeKg, 300);
+  });
+
   test('rep distribution returns all boundaries and zero buckets', () async {
     await insertWorkout(
         id: 'low', date: DateTime.utc(2026, 1, 5), exerciseId: 'push', reps: 5);

@@ -178,6 +178,8 @@ Workouts, programs, templates and body metrics stay in local SQLite and are neve
 
 **Session volume.** `Σ (weight_kg × reps)` over completed, non-warmup sets.
 
+> **Amended 2026-11-12 — a set with a negative weight adds no volume.** A negative weight is assisted work (an assisted pull-up logged as "-20", which training logs and the XLSX import keep). Load below zero counts as zero: `Σ (max(weight_kg, 0) × reps)`. One rule for every volume in the app, `setVolumeKg` / `kSqlSetVolume` in `core/set_volume.dart`; schema 13 recomputed the stored totals of workouts that hold such a set. Est. 1RM already skipped any weight at or below zero.
+
 ---
 
 ## Instructions to an AI assistant reading this file

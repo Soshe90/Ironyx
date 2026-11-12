@@ -3,12 +3,12 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/error_reporting.dart';
 import '../../../core/providers.dart';
+import '../../../core/set_volume.dart';
 import '../../../core/theme/app_spacing.dart';
 import 'draft_editor_controller.dart';
 import 'workout_draft.dart';
@@ -228,7 +228,7 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
           ),
         );
         if (set.isCompleted && !set.isWarmup && !exercise.isWarmup) {
-          totalVolumeKg += set.weightKg * set.reps;
+          totalVolumeKg += setVolumeKg(set.weightKg, set.reps);
         }
       }
     }

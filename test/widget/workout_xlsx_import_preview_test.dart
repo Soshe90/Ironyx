@@ -77,22 +77,4 @@ void main() {
     expect(text, contains('0 workouts'));
     expect(text, contains('No dates'));
   });
-
-  testWidgets('says how many sets were left out for a negative weight',
-      (tester) async {
-    final WorkoutXlsxImportResult skipped = WorkoutXlsxImportResult(
-      workouts: range.workouts,
-      unknownExercises: const <String>[],
-      totalSets: range.totalSets,
-      negativeWeightSetsSkipped: 3,
-    );
-    await summaryIn(tester, const Locale('en'), skipped);
-    expect(
-      find.text('Sets left out because their weight is below zero: 3'),
-      findsOneWidget,
-    );
-
-    await summaryIn(tester, const Locale('en'), range);
-    expect(find.textContaining('below zero'), findsNothing);
-  });
 }

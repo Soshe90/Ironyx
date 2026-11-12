@@ -217,12 +217,6 @@ class WorkoutXlsxImportPreview extends StatelessWidget {
             ),
           ),
         ],
-        if (result.negativeWeightSetsSkipped > 0) ...[
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            l10n.importXlsxNegativeWeightNote(result.negativeWeightSetsSkipped),
-          ),
-        ],
         if (result.unknownExercises.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.lg),
           Text(l10n.importXlsxUnknownExercises),

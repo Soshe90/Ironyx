@@ -35,6 +35,8 @@ void main() {
       expect(setVolumeKg(0, 10), 0);
       expect(setVolumeKg(50, 0), 0);
       expect(setVolumeKg(50, -1), 0);
+      // Assisted work, logged as a negative weight: no load lifted.
+      expect(setVolumeKg(-20, 8), 0);
     });
   });
 }

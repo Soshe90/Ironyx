@@ -11,6 +11,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/formatters/weight_unit_controller.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/set_volume.dart';
 import '../../../core/superset_grouping.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -240,7 +241,8 @@ class _ExerciseBreakdown extends ConsumerWidget {
     // is enough here.
     final double volumeKg = sets
         .where((WorkoutSet s) => s.isCompleted && !s.isWarmup)
-        .fold<double>(0, (double t, WorkoutSet s) => t + s.weightKg * s.reps);
+        .fold<double>(
+            0, (double t, WorkoutSet s) => t + setVolumeKg(s.weightKg, s.reps));
 
     final ExercisePerformance? performance = ref
         .watch(workoutPerformanceProvider(workoutId))
