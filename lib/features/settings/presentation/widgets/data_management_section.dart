@@ -141,26 +141,38 @@ class DataManagementSection extends ConsumerWidget {
     );
     if (picked == null || !context.mounted) return;
 
-    final String content;
-    try {
-      content = utf8.decode(await picked.readAsBytes());
-    } catch (_) {
-      if (!context.mounted) return;
-      await _showError(context, l10n.dataImportUnreadable);
-      return;
-    }
-
+    // Read and checked behind a progress dialog, in the background: a
+    // large backup was decoded on the UI thread, freezing the screen with
+    // nothing to say why, and the tile could be tapped again meanwhile.
     final DataExportService service = ref.read(dataExportServiceProvider);
-    final ImportEnvelope envelope;
-    try {
-      envelope = service.parseImport(content);
-    } on ImportValidationException catch (e) {
-      if (!context.mounted) return;
-      await _showError(context, e.messageFor(l10n));
+    ImportEnvelope? read;
+    Object? refusal;
+    // An unexpected failure (a file that cannot be read) is logged by
+    // _withProgress and leaves `read` null: "could not read".
+    await _withProgress(context, () async {
+      try {
+        read = await readImportFile(service, picked);
+      } on ImportValidationException catch (e) {
+        refusal = e;
+      } on ImportFileTooLargeException catch (e) {
+        refusal = e;
+      }
+    });
+    if (!context.mounted) return;
+    final ImportEnvelope? envelope = read;
+    if (envelope == null) {
+      await _showError(
+        context,
+        switch (refusal) {
+          final ImportValidationException e => e.messageFor(l10n),
+          ImportFileTooLargeException() =>
+            l10n.dataImportTooLarge(kMaxImportBytes ~/ (1024 * 1024)),
+          _ => l10n.dataImportUnreadable,
+        },
+      );
       return;
     }
 
-    if (!context.mounted) return;
     final database = ref.read(appDatabaseProvider);
     final expectedTables = {
       for (final table in database.allTables) table.actualTableName,
@@ -505,6 +517,33 @@ class DataManagementSection extends ConsumerWidget {
 
 /// What the delete-all dialog closes with.
 enum _DeleteChoice { delete, exportFirst }
+
+/// Largest file Import reads: 50 MB. A year of hard training exports to
+/// about 1.4 MB; a file this size is not a backup, and reading it whole
+/// could exhaust the memory.
+const int kMaxImportBytes = 50 * 1024 * 1024;
+
+/// The picked file is over [kMaxImportBytes].
+class ImportFileTooLargeException implements Exception {
+  const ImportFileTooLargeException(this.bytes);
+
+  final int bytes;
+}
+
+/// Reads [file] as a backup: its size checked before anything is read,
+/// then decoded and validated off the UI isolate. Throws
+/// [ImportFileTooLargeException], [ImportValidationException], or what
+/// reading or decoding throws for a file that cannot be read.
+@visibleForTesting
+Future<ImportEnvelope> readImportFile(
+  DataExportService service,
+  PlatformFile file,
+) async {
+  final int size = await file.length();
+  if (size > kMaxImportBytes) throw ImportFileTooLargeException(size);
+  final String content = utf8.decode(await file.readAsBytes());
+  return service.parseImportInBackground(content);
+}
 
 enum _ExportFormat { json, csv }
 

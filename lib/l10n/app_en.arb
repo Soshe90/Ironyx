@@ -314,6 +314,8 @@
   "dataImportSubtitle": "Restore from a backup file",
   "dataImportPickerTitle": "Choose a Ironyx backup",
   "dataImportUnreadable": "Could not read the selected file.",
+  "dataImportTooLarge": "This file is too large to be a backup (over {max} MB).",
+  "@dataImportTooLarge": {"description": "Shown when the file picked for import is over the size limit.", "placeholders": {"max": {"type": "int"}}},
   "dataImportBackupTitle": "Import backup",
   "dataImportNoWorkoutData": "This backup contains no workout data.",
   "dataImportModeMerge": "Merge",

@@ -296,6 +296,7 @@
   "dataImportSubtitle": "استعادة من ملف نسخة احتياطية",
   "dataImportPickerTitle": "اختر نسخة احتياطية من Ironyx",
   "dataImportUnreadable": "تعذّرت قراءة الملف المحدَّد.",
+  "dataImportTooLarge": "هذا الملف أكبر من أن يكون نسخة احتياطية (أكثر من {max} ميغابايت).",
   "dataImportBackupTitle": "استيراد نسخة احتياطية",
   "dataImportNoWorkoutData": "لا تحتوي هذه النسخة الاحتياطية على بيانات تمارين.",
   "dataImportModeMerge": "دمج",
