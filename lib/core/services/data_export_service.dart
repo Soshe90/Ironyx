@@ -646,16 +646,6 @@ class DataExportService {
             validateIdentifier:
                 column.name == 'id' && !catalogueTableNames.contains(tableName),
           );
-          final Object? value = row[column.name];
-          if (value is num &&
-              value < 0 &&
-              (_nonNegativeColumns[tableName]?.contains(column.name) ??
-                  false)) {
-            throw ImportValidationException(
-              'Invalid $tableName row ${rowIndex + 1}: column '
-              '"${column.name}" cannot be negative.',
-            );
-          }
         }
       }
     }
@@ -669,22 +659,6 @@ class DataExportService {
       preserveCatalogue: preserveCatalogue,
     );
   }
-
-  /// Columns no screen in the app can set below zero (the number fields
-  /// drop "-", and the set row refuses a negative), so a negative one in a
-  /// backup was not written by the app. A negative weight was accepted,
-  /// and its negative volume skewed every total and chart it reached.
-  static const Map<String, Set<String>> _nonNegativeColumns = {
-    'workout_sets_table': {
-      'weight_kg',
-      'reps',
-      'duration_seconds',
-      'rest_seconds',
-    },
-    // Not the workout's own `duration_seconds`: it is end minus start, and
-    // a phone clock set back during a workout makes it negative.
-    'workouts_table': {'total_volume_kg'},
-  };
 
   void _validateValue(
     String tableName,

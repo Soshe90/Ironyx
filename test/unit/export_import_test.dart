@@ -904,29 +904,16 @@ void main() {
       );
     });
 
-    // Production review 2026-11-12, finding 6. The app cannot write any of
-    // these below zero; a backup that holds one was edited or made
-    // elsewhere, and its negative volume would skew every total.
-    for (final (String table, String column, Object value)
-        in <(String, String, Object)>[
-      ('workout_sets_table', 'weight_kg', -10.0),
-      ('workout_sets_table', 'reps', -1),
-      ('workout_sets_table', 'rest_seconds', -30),
-      ('workout_sets_table', 'duration_seconds', -5),
-      ('workouts_table', 'total_volume_kg', -50.0),
-    ]) {
-      test('rejects a negative $column', () async {
-        await expectRejected(
-          (tables) => firstRow(tables, table)[column] = value,
-          '"$column" cannot be negative',
-        );
-      });
-    }
-
-    test('accepts a zero weight (a bodyweight set)', () async {
+    // Production review 2026-11-12, the review of its own fixes: before
+    // that date the XLSX import stored negative weights, so a phone that
+    // imported such a workbook writes them into every export, cloud backup
+    // and snapshot. Refusing them broke restore and undo for that phone;
+    // a restore takes back exactly what the app wrote.
+    test('restores a negative set weight and volume as they were', () async {
       const service = DataExportService();
       final tables = await exportedTables();
-      firstRow(tables, 'workout_sets_table')['weight_kg'] = 0.0;
+      firstRow(tables, 'workout_sets_table')['weight_kg'] = -10.0;
+      firstRow(tables, 'workouts_table')['total_volume_kg'] = -50.0;
       final database = AppDatabase.forTesting();
       addTearDown(database.close);
       await service.applyImport(
@@ -953,7 +940,13 @@ void main() {
         (await database.select(database.workoutSetsTable).get())
             .single
             .weightKg,
-        0,
+        -10,
+      );
+      expect(
+        (await database.select(database.workoutsTable).get())
+            .single
+            .totalVolumeKg,
+        -50,
       );
     });
 

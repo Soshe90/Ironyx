@@ -248,6 +248,22 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     at -10 kg left out and counted, at 0 kg kept; the preview shows the
     count only when there is one. **Not checked:** on the phone. The
     XLSX import already has a 10 MB size limit.
+    *Corrected the same day, after an independent review of this branch:
+    the JSON refusal was wrong and is removed.* "A backup the app wrote
+    cannot hold one" was false: until this change the XLSX import itself
+    stored negative weights, so a phone that imported such a workbook
+    writes them into every export, cloud backup and snapshot, and
+    refusing them broke restore and Restore snapshot for that phone. A
+    restore now takes back what the app wrote, negative or not (tested:
+    a backup with a -10 kg set and -50 kg volume restores as it was). Only
+    the XLSX import keeps new ones out. Also from the review: re-importing
+    a workbook imported before this change matched no stored session (the
+    stored copy still had its negative sets) and imported every such
+    session again; the duplicate check now compares as a parse of today
+    would have stored it (tested); and an unknown exercise whose sets
+    were all left out is no longer listed as one to create (tested).
+    **Open, owner's decision:** whether to clean negative sets already on
+    phones (a migration that changes stored data).
   - **Fixed: a program CSV of any size was read and split on the UI
     thread.** Now a file over 1 MB (`kMaxProgramCsvBytes`; five programs
     of six days are about 15 KB) is refused before it is read, and again
