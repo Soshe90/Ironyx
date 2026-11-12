@@ -189,6 +189,23 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     snapshot is harmless and the next import prunes it. **Tested:** an
     import whose pruning fails completes, its data is in and its snapshot
     written (fails on the old code). **Not checked:** on the phone.
+  - **Fixed: a saved workout could come back as an open one that could
+    not be finished.** Finish commits the workout to the database, then
+    removes the draft from preferences; two stores, no shared transaction.
+    An app stopped between the two relaunched with the saved workout open,
+    and every Finish failed on its id (the primary key kept it from being
+    saved twice, which was right). Now a restored draft whose id is
+    already a saved workout is dropped at launch
+    (`ActiveWorkoutNotifier.dropIfAlreadySaved`, from `app.dart`; only when
+    a draft was restored, so an ordinary launch reads nothing), and Finish
+    makes the same check (`WorkoutDao.workoutExists`) and clears the draft
+    instead of failing. Edits made to such a draft in the moment before
+    the launch check runs are not kept; the saved version stands. Moving
+    the draft into SQLite would close the window entirely, but is an ADR-1
+    change and was not made. **Tested:** the launch check drops it and
+    keeps the saved workout; Finish clears it (fails on the old code with
+    the UNIQUE constraint); an unsaved draft is kept. **Not checked:** on
+    the phone; a real kill in that window cannot be staged on a device.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

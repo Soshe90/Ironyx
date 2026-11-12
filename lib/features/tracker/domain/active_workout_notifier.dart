@@ -7,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/error_reporting.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_spacing.dart';
 import 'draft_editor_controller.dart';
@@ -138,6 +139,31 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
     _discarded = null;
   }
 
+  /// Drops a restored draft whose workout is already saved. Run once at
+  /// launch.
+  ///
+  /// Saving commits the workout to the database, then removes the draft
+  /// from preferences: two stores, no shared transaction. An app stopped
+  /// between the two came back with the saved workout open again, and its
+  /// Finish failed on the id that was already taken. Dropping it is safe:
+  /// the database holds that workout as it was finished.
+  Future<void> dropIfAlreadySaved() async {
+    final WorkoutDraft? draft = state;
+    if (draft == null) return;
+    try {
+      final bool saved =
+          await ref.read(workoutDaoProvider).workoutExists(draft.id);
+      if (!saved || !ref.mounted || state?.id != draft.id) return;
+      _forgetDiscarded();
+      state = null;
+      await _persist();
+    } catch (error, stackTrace) {
+      // A launch check: a failure leaves the draft as it was, and Finish
+      // makes the same check again.
+      reportError(error, stackTrace, context: 'dropIfAlreadySaved');
+    }
+  }
+
   /// The commit [save] is running, shared with any call made meanwhile.
   Future<void>? _saveInFlight;
 
@@ -153,6 +179,17 @@ class ActiveWorkoutNotifier extends _$ActiveWorkoutNotifier
   Future<void> _save() async {
     final draft = state;
     if (draft == null || draft.exercises.isEmpty) return;
+
+    // Already saved: the app stopped after the commit and before the draft
+    // was removed, so the saved workout came back as an open one, and every
+    // Finish failed on its id. It is saved; only the draft needs to go.
+    if (await ref.read(workoutDaoProvider).workoutExists(draft.id)) {
+      if (state?.id == draft.id) {
+        state = null;
+        await _persist();
+      }
+      return;
+    }
 
     final endedAt = DateTime.now().toUtc();
     final durationSeconds = endedAt.difference(draft.startedAt).inSeconds;

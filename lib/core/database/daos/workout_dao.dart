@@ -1251,6 +1251,16 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         );
   }
 
+  /// Whether a workout with [workoutId] is saved.
+  Future<bool> workoutExists(String workoutId) async {
+    final row = await (selectOnly(workoutsTable)
+          ..addColumns([workoutsTable.id])
+          ..where(workoutsTable.id.equals(workoutId))
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
   /// Insert a completed workout with exercises and sets in a transaction.
   Future<String> insertWorkout(
     WorkoutsTableCompanion workout,
