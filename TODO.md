@@ -229,6 +229,25 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     releases and cancels, and is reported once; the screen shows the
     message for a failed save and not for a saved one. **Not checked:** on
     the phone.
+  - **Fixed: imports accepted negative weights.** The XLSX workout import
+    refused reps of zero or less but took any weight, and a JSON import
+    checked only that numbers are finite; a negative weight was stored
+    with a negative volume that skewed every total and chart it reached.
+    No screen in the app can enter one (the number fields drop "-" and the
+    set row refuses it), so a JSON import now refuses a negative set
+    weight, reps, rest or duration, or workout volume, as a damaged file;
+    a backup the app wrote cannot hold one. Not the workout's own
+    duration: it is end minus start, and a clock set back mid-workout can
+    make it negative. The XLSX import leaves such a set out and the
+    preview says how many ("Sets left out because their weight is below
+    zero: N", new string, en/ar). Zero stays allowed (a bodyweight set).
+    No database CHECK constraint: that is a schema migration, and the
+    import checks are where outside data enters. **Tested:** each of the
+    five columns refused when negative; a zero weight imported; real
+    exports from the schema 5, 7 and 9 builds still restore; an XLSX set
+    at -10 kg left out and counted, at 0 kg kept; the preview shows the
+    count only when there is one. **Not checked:** on the phone. The
+    XLSX import already has a 10 MB size limit.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

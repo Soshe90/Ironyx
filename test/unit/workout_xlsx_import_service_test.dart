@@ -377,6 +377,44 @@ void main() {
     await database.close();
   });
 
+  test(
+      'a set with a negative weight is left out and counted; a zero weight '
+      'is kept', () async {
+    // Production review 2026-11-12, finding 6: a negative weight was
+    // imported, and its negative volume skewed every total.
+    final database = AppDatabase.forTesting();
+    addTearDown(database.close);
+    await seedExercise(database, 'bench');
+
+    final negative = await service.parse(
+      buildWorkbook(
+        date: DateTime(2026, 3, 1),
+        exerciseName: 'bench',
+        reps: 5,
+        weight: -10,
+      ),
+      database,
+      sourceUnit: WeightUnit.kg,
+    );
+    expect(negative.negativeWeightSetsSkipped, 1);
+    expect(negative.totalSets, 0);
+    expect(negative.workouts, isEmpty,
+        reason: 'its only set was left out, so nothing is left to import');
+
+    final zero = await service.parse(
+      buildWorkbook(
+        date: DateTime(2026, 3, 1),
+        exerciseName: 'bench',
+        reps: 12,
+        weight: 0,
+      ),
+      database,
+      sourceUnit: WeightUnit.kg,
+    );
+    expect(zero.negativeWeightSetsSkipped, 0);
+    expect(zero.totalSets, 1);
+  });
+
   test('a workbook over the size limit is refused before it is read', () async {
     final database = AppDatabase.forTesting();
     await expectLater(

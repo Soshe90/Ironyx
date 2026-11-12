@@ -59,23 +59,35 @@ class WorkoutXlsxImportService {
     final exercises = await ExerciseDao(db).exerciseIdsByLookupName();
     final workouts = <ImportedHistoricalWorkout>[];
     final unknown = <String>{};
+    // A weight below zero is not a lift: skipped, and counted for the
+    // preview. It was imported, and its negative volume skewed the totals.
+    // Zero is kept: a bodyweight set.
+    var skippedNegative = 0;
 
     for (final _RawSession session in sessions) {
       final importedExercises = <ImportedHistoricalExercise>[];
       for (final _RawExercise raw in session.exercises) {
         final exerciseId = exercises[normalizeExerciseName(raw.name)];
         if (exerciseId == null) unknown.add(raw.name);
+        final sets = <ImportedHistoricalSet>[];
+        for (final _RawSet set in raw.sets) {
+          final double weight = set.weight ?? 0;
+          if (weight < 0) {
+            skippedNegative++;
+            continue;
+          }
+          sets.add(
+            ImportedHistoricalSet(
+              reps: set.reps.round(),
+              weightKg: _toKg(weight, sourceUnit),
+            ),
+          );
+        }
         importedExercises.add(
           ImportedHistoricalExercise(
             exerciseId: exerciseId,
             name: raw.name,
-            sets: <ImportedHistoricalSet>[
-              for (final _RawSet set in raw.sets)
-                ImportedHistoricalSet(
-                  reps: set.reps.round(),
-                  weightKg: _toKg(set.weight ?? 0, sourceUnit),
-                ),
-            ],
+            sets: sets,
           ),
         );
       }
@@ -103,6 +115,7 @@ class WorkoutXlsxImportService {
     return WorkoutXlsxImportResult(
       workouts: markedWorkouts,
       unknownExercises: unknown.toList()..sort(),
+      negativeWeightSetsSkipped: skippedNegative,
       totalSets: markedWorkouts.fold(
         0,
         (sum, workout) =>
@@ -423,11 +436,15 @@ class WorkoutXlsxImportResult {
     required this.workouts,
     required this.unknownExercises,
     required this.totalSets,
+    this.negativeWeightSetsSkipped = 0,
   });
 
   final List<ImportedHistoricalWorkout> workouts;
   final List<String> unknownExercises;
   final int totalSets;
+
+  /// Sets left out because their weight is below zero.
+  final int negativeWeightSetsSkipped;
 
   /// Workouts that already exist in history and [apply] will skip.
   int get duplicateCount => workouts.where((w) => w.isDuplicate).length;

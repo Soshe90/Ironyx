@@ -904,6 +904,59 @@ void main() {
       );
     });
 
+    // Production review 2026-11-12, finding 6. The app cannot write any of
+    // these below zero; a backup that holds one was edited or made
+    // elsewhere, and its negative volume would skew every total.
+    for (final (String table, String column, Object value)
+        in <(String, String, Object)>[
+      ('workout_sets_table', 'weight_kg', -10.0),
+      ('workout_sets_table', 'reps', -1),
+      ('workout_sets_table', 'rest_seconds', -30),
+      ('workout_sets_table', 'duration_seconds', -5),
+      ('workouts_table', 'total_volume_kg', -50.0),
+    ]) {
+      test('rejects a negative $column', () async {
+        await expectRejected(
+          (tables) => firstRow(tables, table)[column] = value,
+          '"$column" cannot be negative',
+        );
+      });
+    }
+
+    test('accepts a zero weight (a bodyweight set)', () async {
+      const service = DataExportService();
+      final tables = await exportedTables();
+      firstRow(tables, 'workout_sets_table')['weight_kg'] = 0.0;
+      final database = AppDatabase.forTesting();
+      addTearDown(database.close);
+      await service.applyImport(
+        database,
+        ImportEnvelope(
+          formatVersion: DataExportService.formatVersion,
+          dbSchemaVersion: database.schemaVersion,
+          appVersion: '0.1.0',
+          exportedAt: DateTime.utc(2026),
+          tables: tables.map(
+            (key, value) => MapEntry(
+              key,
+              (value as List<dynamic>)
+                  .map((row) =>
+                      (row as Map<String, dynamic>).cast<String, Object?>())
+                  .toList(),
+            ),
+          ),
+        ),
+        mode: ImportMode.replace,
+        snapshotDirPath: snapshotDir.path,
+      );
+      expect(
+        (await database.select(database.workoutSetsTable).get())
+            .single
+            .weightKg,
+        0,
+      );
+    });
+
     test('rejects a null in a required column', () async {
       await expectRejected(
         (tables) => firstRow(tables, 'workout_sets_table')['reps'] = null,
