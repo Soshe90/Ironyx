@@ -362,6 +362,27 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     at each boundary, beside the in-app cue. Read from the code, **not
     checked on the phone**; if it doubles up, cancel on resume and
     schedule on pause as well as at start.
+  - **Independent review of this branch (same day).** A fresh reviewer
+    read the whole diff without these notes. Its findings and what became
+    of them: restore refused negative weights the old XLSX import had
+    stored (High; fixed, see the negative-weights entry); re-importing an
+    old workbook doubled sessions (fixed, same entry); a partial conflict
+    erase linked the new account over the old account's leftovers (fixed,
+    see the erase entry); the timer's "not saved" flag could outlive its
+    session when no screen read it (fixed: cleared on start, tested);
+    `pause()` still let an alert-cancel failure through (fixed, tested);
+    the restore re-check read the auth controller, which follows the auth
+    stream and can lag, rather than the live session the service checks
+    (fixed: `AuthService.currentUser`); an unknown exercise whose sets were
+    all left out was listed as one to create (fixed, tested); the build
+    script read only `storeFile=` (now also leading spaces, `:`, and an
+    escaped Windows path; checked in scratch copies); the Arabic restore
+    line said "في" twice (reworded). **Not fixed, known limits:** the
+    backup-binding tests mostly prove the controller passes the right
+    account; the Supabase service's own check after compression is not
+    reachable without a test client. The restore dialog describes the
+    backup Settings last loaded; a newer upload from another phone in the
+    meantime restores under the older date and size.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

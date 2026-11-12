@@ -127,7 +127,7 @@
   "backupRestoreTitle": "الاستعادة من حسابي",
   "backupRestoreSubtitle": "يستبدل البيانات الموجودة على هذا الجهاز بنسختك الاحتياطية",
   "backupRestoreConfirmTitle": "الاستعادة من حسابك؟",
-  "backupRestoreConfirmWhich": "ستُستعاد النسخة الاحتياطية المحفوظة في {backup}.",
+  "backupRestoreConfirmWhich": "ستُستعاد النسخة الاحتياطية المحفوظة بتاريخ {backup}.",
   "backupRestoreConfirmBody": "ستُستبدل كل بياناتك الحالية على هذا الجهاز بنسختك الاحتياطية.\n\nتُحفظ نسخة من البيانات الحالية أولًا، ويمكنك التراجع عن ذلك من إدارة البيانات.",
   "backupRestoreAction": "استعادة",
   "backupRestoring": "جارٍ الاستعادة…",

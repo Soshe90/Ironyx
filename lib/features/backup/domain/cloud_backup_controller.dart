@@ -138,8 +138,12 @@ class CloudBackupController extends _$CloudBackupController {
       // Checked again after the download and the decode, the last awaits
       // before local data is replaced: if the account changed meanwhile,
       // this is the previous account's backup and must not be applied.
+      //
+      // The service's live session, as the upload and download check it,
+      // not `authControllerProvider`, which follows the auth stream and can
+      // be a beat behind it.
       ensureSameAccount(
-        currentUserId: ref.read(authControllerProvider)?.id,
+        currentUserId: ref.read(authServiceProvider).currentUser?.id,
         expectedUserId: userId,
       );
       // `applyImport` validates too — schema version and every row — and

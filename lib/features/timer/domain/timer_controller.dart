@@ -97,6 +97,9 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     required bool notificationGranted,
   }) async {
     _preset = preset;
+    // A failure no screen was open to report belongs to that session, not
+    // to this one.
+    _saveFailed = false;
     _notificationDenied = !notificationGranted;
     _notificationGranted = notificationGranted;
     _startedAt = _now().toUtc();
@@ -121,7 +124,7 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
 
   Future<void> pause() async {
     _engine?.pause();
-    await _notifications.cancelAll();
+    await _bestEffort('notifications.cancelAll', _notifications.cancelAll);
     if (!_disposed) _tick();
   }
 

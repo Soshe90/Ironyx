@@ -298,6 +298,44 @@ void main() {
         verify(() => mockAudio.cue(TimerCue.complete)).called(1);
       });
 
+      test('a new session starts without an old save failure', () async {
+        final ProviderContainer broken = ProviderContainer(
+          overrides: [
+            timerDaoProvider.overrideWithValue(_FailingTimerDao(database)),
+            hapticsServiceProvider.overrideWithValue(mockHaptics),
+            notificationServiceProvider.overrideWithValue(mockNotifications),
+            timerAudioServiceProvider.overrideWithValue(mockAudio),
+            wakelockServiceProvider.overrideWithValue(mockWakelock),
+            timerSettingsControllerProvider.overrideWithValue(mockSettings),
+            appLocalizationsProvider
+                .overrideWith((_) async => AppLocalizationsEn()),
+          ],
+        );
+        addTearDown(broken.dispose);
+        final TimerController timer =
+            broken.read(timerControllerProvider.notifier);
+        await timer.start(TimerPresets.tabata(), notificationGranted: true);
+        await timer.stop();
+        // Nobody read the failure: the screen was not open.
+
+        await timer.start(TimerPresets.tabata(), notificationGranted: true);
+
+        expect(timer.takeSaveFailure(), isFalse);
+        await timer.stop();
+      });
+
+      test('alerts that cannot be cancelled do not fail a pause', () async {
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+        when(() => mockNotifications.cancelAll())
+            .thenThrow(StateError('alarm manager'));
+
+        await controller.pause();
+
+        expect(controller.state!.isRunning, isFalse);
+        when(() => mockNotifications.cancelAll()).thenAnswer((_) async {});
+      });
+
       test(
           'a session that cannot be written still ends cleanly and is '
           'reported once', () async {

@@ -85,7 +85,11 @@ require_release_signing() {
     exit 1
   fi
   local store
-  store="$(sed -n 's/^storeFile[[:space:]]*=[[:space:]]*//p' "$props" | tr -d '\r' | head -n 1)"
+  # Java properties syntax: optional leading spaces, "=" or ":" between key
+  # and value, and "\\" for one backslash (a Windows path), which Gradle
+  # unescapes when it reads the file.
+  store="$(sed -n 's/^[[:space:]]*storeFile[[:space:]]*[=:][[:space:]]*//p' "$props" | tr -d '\r' | head -n 1)"
+  store="${store//\\\\/\\}"
   if [[ -z "$store" ]]; then
     echo "error: $props has no storeFile line." >&2
     exit 1
