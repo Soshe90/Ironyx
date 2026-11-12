@@ -259,6 +259,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     quotes, commas, CRLF and the byte-order mark; the existing import tests
     pass through the isolate. **Not checked:** on the phone; the picker's
     size check is not reachable in a test (no picker channel).
+  - **Fixed: the CSV export wrote formula-like names as formulas.**
+    Exercise names are user text, and an XLSX import makes them from
+    whatever the workbook holds; a name such as `=1+1` was written as it
+    was, and a spreadsheet opening the export ran it. Text starting with
+    `=`, `+`, `-`, `@`, a tab or a carriage return now gets a leading
+    apostrophe (OWASP's advice for CSV injection), so the spreadsheet shows
+    it as text; a carriage return anywhere is now quoted too. The stored
+    name is unchanged, and the JSON export is not affected (nothing opens
+    it as a sheet). **Tested:** first tests of the CSV export: plain,
+    quoted, each of the six starts, a formula with commas, a "-" or "@"
+    later in a name left alone, and an export end to end. **Not checked:**
+    opening the file in Excel or Google Sheets.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
