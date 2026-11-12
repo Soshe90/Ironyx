@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/profile_dao.dart';
-import 'package:ironyx/core/database/database_providers.dart';
+import 'package:ironyx/core/providers.dart';
 import 'package:ironyx/core/router/routes.dart';
+import 'package:ironyx/core/services/data_export_service.dart';
 import 'package:ironyx/features/auth/domain/auth_controller.dart';
 import 'package:ironyx/features/auth/domain/auth_service.dart';
 import 'package:ironyx/features/backup/domain/cloud_backup_controller.dart';
@@ -268,6 +269,59 @@ void main() {
     await disposeApp(tester);
   });
 
+  testWidgets(
+      'signing in as a different account — an erase that fails undoes the '
+      'sign-in and says so', (tester) async {
+    // Production review 2026-11-12: the erase had no error handling, so a
+    // failure escaped the sign-in form (which catches only AuthFailure),
+    // leaving the new account signed in, unlinked, over the old account's
+    // data, with nothing on screen.
+    await ProfileDao(database).upsert(
+      const ProfilesTableCompanion(displayName: Value('Previous Owner')),
+    );
+    await ProfileDao(database)
+        .linkAccount(userId: 'user-existing', email: 'old@example.com');
+    auth.accounts['new@example.com'] = 'hunter22';
+    await pumpSettings(
+      tester,
+      overrides: [
+        ...stubSeeders(),
+        dataExportServiceProvider.overrideWithValue(_FailingDelete()),
+        snapshotDirectoryProvider.overrideWith((ref) async => 'unused'),
+      ],
+    );
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'new@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'hunter22',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Erase local data and continue'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.text(
+        'Something went wrong while deleting your data. Please try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(auth.currentUser, isNull, reason: 'the sign-in is undone');
+    final profile = await ProfileDao(database).get();
+    expect(profile!.remoteUserId, 'user-existing');
+    expect(profile.displayName, 'Previous Owner');
+
+    await disposeApp(tester);
+  });
+
   testWidgets('deleting an account requires confirmation and keeps local data',
       (tester) async {
     await ProfileDao(database).upsert(
@@ -459,4 +513,14 @@ class _FailingUnlink extends ProfileDao {
 
   @override
   Future<void> unlinkAccount() => Future<void>.error(StateError('disk full'));
+}
+
+/// A delete-all that fails before anything is deleted.
+class _FailingDelete extends DataExportService {
+  @override
+  Future<void> deleteAllUserData(
+    AppDatabase db, {
+    String? snapshotDirPath,
+  }) async =>
+      throw StateError('disk full');
 }

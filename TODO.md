@@ -155,6 +155,32 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     without uploading; `ensureSameAccount`'s three cases. **Not checked:**
     the Supabase service itself (no test client; the check is the shared
     function), and on the phone.
+  - **Fixed: an erase stopped at the first failed step.** "Delete all
+    data" and the account-conflict "erase and continue" delete the
+    database, then the snapshots, the open workout, and reseed the built-in
+    programs; a snapshot that could not be deleted stopped it there, so the
+    open workout stayed on the phone and the message was "Something went
+    wrong… try again" although the data was gone. Now the database step
+    still comes first and, if it fails, nothing else is touched (the
+    snapshots stay as a way back to data that is still there); after it,
+    each step runs whatever happened to the one before, each failure is
+    logged, and `EraseIncompleteException` names what is left. Settings
+    then says "Your data was deleted, but some of it could not be cleared
+    from this device. Delete all data again to finish" (new string, en/ar);
+    each step is safe to repeat. `deleteSnapshots` tries every file before
+    rethrowing the first failure. **Also fixed, the open item from the
+    Settings review:** the account-conflict erase had no error handling, so
+    a failure escaped the sign-in form (which catches only `AuthFailure`)
+    and left the new account signed in, unlinked, over the old account's
+    data, with nothing on screen. A failed erase now signs back out, as
+    "Keep my data" does, and says the delete failed; a partial one links
+    the account (the database is erased) and says what the Settings one
+    says. **Tested:** a snapshot failure after the database delete still
+    removes the open workout and shows the new message; one undeletable
+    snapshot no longer keeps the others; a failed conflict erase signs out
+    and leaves the old profile (fails on the old code). The Settings test
+    does not compile against the old code, so it was not seen to fail
+    there. **Not checked:** on the phone.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
@@ -189,6 +215,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     account-conflict erase test now also checks the old account's snapshot
     is gone. **Not checked:** on the phone. **Open:** the account-conflict
     erase has no error handling of its own (as before this change).
+    *Closed 2026-11-12 by the production review: it does now, see above.*
   - **Fixed: restoring a snapshot could lose the current data for good.**
     An import and a cloud restore save a snapshot of what they replace;
     Restore snapshot did not, so picking the wrong one was final. It does

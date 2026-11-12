@@ -20,6 +20,7 @@ import 'package:ironyx/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/pump_app.dart';
+import '../helpers/stub_seeders.dart';
 
 /// Stands in for the real [ExerciseSeeder] in the delete-all test below.
 ///
@@ -43,6 +44,7 @@ class _NoopExerciseSeeder extends ExerciseSeeder {
 class _CountingExportService extends DataExportService {
   int deletes = 0;
   bool fail = false;
+  bool failSnapshots = false;
 
   /// Holds the export open until completed, or fails it.
   Completer<String>? export;
@@ -58,6 +60,11 @@ class _CountingExportService extends DataExportService {
   }) async {
     deletes++;
     if (fail) throw StateError('disk full');
+  }
+
+  @override
+  Future<void> deleteSnapshots(String snapshotDirPath) async {
+    if (failSnapshots) throw const FileSystemException('locked');
   }
 }
 
@@ -691,6 +698,57 @@ void main() {
       expect(find.text('All data deleted'), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing,
           reason: 'the progress dialog is closed');
+    });
+    testWidgets(
+        'a delete that fails after the database is erased still removes the '
+        'open workout, and says the job is unfinished', (tester) async {
+      // Production review 2026-11-12, finding 3: a snapshot that could not
+      // be deleted stopped the erase there, so the open workout (kept
+      // outside the database) stayed, and the message was "Something went
+      // wrong... try again" although the data was already gone.
+      final _CountingExportService service = _CountingExportService()
+        ..failSnapshots = true;
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        prefs: const <String, Object>{
+          'active_workout_draft':
+              '{"id":"d1","startedAt":"2026-11-12T08:00:00.000Z",'
+                  '"exercises":[]}',
+        },
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dataExportServiceProvider.overrideWithValue(service),
+          snapshotDirectoryProvider.overrideWith((ref) async => 'unused'),
+          ...stubSeeders(),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final ProviderContainer container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      expect(container.read(activeWorkoutProvider), isNotNull);
+
+      await openDeleteDialog(tester);
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete everything'));
+      await tester.pumpAndSettle();
+
+      expect(service.deletes, 1);
+      expect(container.read(activeWorkoutProvider), isNull,
+          reason: 'the open workout goes even though the snapshots failed');
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('active_workout_draft'), isNull);
+      expect(
+        find.text(
+          'Your data was deleted, but some of it could not be cleared from '
+          'this device. Delete all data again to finish.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('All data deleted'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
   });
 

@@ -832,9 +832,23 @@ class DataExportService {
   }
 
   /// Deletes every import snapshot in [snapshotDirPath].
+  ///
+  /// Tries every file even when one cannot be deleted, then rethrows the
+  /// first failure: each snapshot is a full copy of the data, so one locked
+  /// file must not leave the others behind.
   Future<void> deleteSnapshots(String snapshotDirPath) async {
+    Object? firstError;
+    StackTrace? firstStack;
     for (final File file in await listSnapshots(snapshotDirPath)) {
-      await file.delete();
+      try {
+        await file.delete();
+      } catch (error, stackTrace) {
+        firstError ??= error;
+        firstStack ??= stackTrace;
+      }
+    }
+    if (firstError != null) {
+      Error.throwWithStackTrace(firstError, firstStack!);
     }
   }
 

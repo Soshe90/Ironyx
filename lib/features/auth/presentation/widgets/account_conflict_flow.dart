@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/error_reporting.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../settings/domain/erase_local_data.dart';
@@ -76,14 +77,44 @@ Future<bool> resolveAccountConflict(
 
   // The same erase as Settings' "Delete all data": the database, the
   // import snapshots, an open workout, then the built-in programs back.
-  await eraseLocalData(ref);
-
-  if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.authAccountConflictErasedMessage(user.email)),
-      ),
+  //
+  // A failure escaped to the sign-in form, which catches only
+  // `AuthFailure`: the new session stayed signed in, unlinked, with the old
+  // account's data possibly still here and nothing on screen.
+  final ScaffoldMessengerState? messenger =
+      context.mounted ? ScaffoldMessenger.of(context) : null;
+  try {
+    await eraseLocalData(ref);
+  } on EraseIncompleteException {
+    // The database is erased, so the old account's data is no longer in
+    // it and linking the new account is safe; something else is left
+    // over, and the user is told how to finish.
+    messenger?.showSnackBar(
+      SnackBar(content: Text(l10n.dataDeleteIncomplete)),
     );
+    return true;
+  } catch (error, stackTrace) {
+    // Nothing was erased (the database delete is the first thing that can
+    // change anything). Undo the sign-in, as "Keep my data" does, so the
+    // new account is not left signed in over the old account's data.
+    reportError(error, stackTrace, context: 'resolveAccountConflict.erase');
+    try {
+      await ref.read(authControllerProvider.notifier).signOut();
+    } catch (signOutError, signOutStack) {
+      reportError(
+        signOutError,
+        signOutStack,
+        context: 'resolveAccountConflict.signOut',
+      );
+    }
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.dataDeleteFailed)));
+    return false;
   }
+
+  messenger?.showSnackBar(
+    SnackBar(
+      content: Text(l10n.authAccountConflictErasedMessage(user.email)),
+    ),
+  );
   return true;
 }

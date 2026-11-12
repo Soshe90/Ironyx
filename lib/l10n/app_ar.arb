@@ -390,6 +390,7 @@
   },
   "dataDeleteEverything": "حذف كل شيء",
   "dataDeleteExportFirst": "التصدير أولًا",
+  "dataDeleteIncomplete": "حُذفت بياناتك، لكن تعذّر مسح بعضها من هذا الجهاز. احذف كل البيانات مرة أخرى لإكمال الحذف.",
   "dataDeleteFailed": "حدث خطأ أثناء حذف بياناتك. حاول مرة أخرى.",
   "dataDeleteAllTitle": "حذف كل البيانات",
   "dataDeleteAllSubtitle": "التمارين والمؤقّتات والبرامج والقوالب وقياسات الجسم",

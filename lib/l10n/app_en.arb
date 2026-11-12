@@ -422,6 +422,8 @@
   },
   "dataDeleteEverything": "Delete everything",
   "dataDeleteExportFirst": "Export first",
+  "dataDeleteIncomplete": "Your data was deleted, but some of it could not be cleared from this device. Delete all data again to finish.",
+  "@dataDeleteIncomplete": {"description": "Delete all data removed the database, but a snapshot, the open workout or the built-in programs step failed."},
   "dataDeleteFailed": "Something went wrong while deleting your data. Please try again.",
   "@dataDeleteFailed": {"description": "Shown when Delete all data failed."},
   "@dataDeleteExportFirst": {"description": "Button in the delete-all dialog: export a backup instead of deleting now."},
