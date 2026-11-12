@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,159 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,160 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -171,6 +171,23 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** restoring an empty snapshot over a history, then the
     snapshot saved by that restore, brings the history back (on the old
     code there was no second snapshot).
+  - **Fixed: import errors were English only, or lost.** The importer's 22
+    refusals each had an English message, shown as it was in Arabic too;
+    and those raised while applying (a backup missing data, an exercise
+    name already here) were caught as the generic "Import failed", their
+    reason lost. `ImportValidationException` now carries an
+    `ImportProblem`, seven kinds (not an export, made by a newer app, too
+    old, incomplete, exercise clash with its name, damaged, app mismatch),
+    and the Data section says each in the user's language
+    (`ImportValidationL10n.messageFor`, seven strings, en/ar), for a file
+    picked, a refusal while applying, and a snapshot restore. The English
+    detail stays in `message`, for logs and tests. Cloud restore already
+    translated its own (as "corrupt") and is unchanged. Grouped, at the
+    owner's choice, rather than 22 translations of row-level detail a user
+    cannot act on. **Tested:** each kind on the existing test that
+    triggers it (not JSON, newer format and schema, too-old schema,
+    incomplete replace, exercise clash and its name, a damaged row); every
+    kind has its own sentence, and an Arabic one.
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`

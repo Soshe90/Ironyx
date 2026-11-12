@@ -15,6 +15,7 @@ import '../../../../core/providers.dart';
 import '../../../../core/services/data_export_service.dart';
 import '../../domain/erase_local_data.dart';
 import '../../domain/export_envelope.dart';
+import '../import_problem_messages.dart';
 
 /// Export / import / delete-all-data controls (ADR-7).
 ///
@@ -138,7 +139,7 @@ class DataManagementSection extends ConsumerWidget {
       envelope = service.parseImport(content);
     } on ImportValidationException catch (e) {
       if (!context.mounted) return;
-      await _showError(context, e.message);
+      await _showError(context, e.messageFor(l10n));
       return;
     }
 
@@ -222,6 +223,9 @@ class DataManagementSection extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.dataSnapshotRestored)),
       );
+    } on ImportValidationException catch (e) {
+      if (!context.mounted) return;
+      await _showError(context, e.messageFor(l10n));
     } catch (e, stackTrace) {
       reportError(e, stackTrace,
           context: 'DataManagementSection.restoreSnapshot');
@@ -284,6 +288,12 @@ class DataManagementSection extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.dataImportComplete)));
+    } on ImportValidationException catch (e) {
+      // Refused before anything changed, for a reason the user can act on;
+      // it was shown as the generic "import failed", the reason lost.
+      closeProgressDialog();
+      if (!context.mounted) return;
+      await _showError(context, e.messageFor(l10n));
     } catch (e, stackTrace) {
       reportError(e, stackTrace, context: 'DataManagementSection.runImport');
       closeProgressDialog();

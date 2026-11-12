@@ -128,7 +128,8 @@ void main() {
       ),
       throwsA(
         isA<ImportValidationException>()
-            .having((e) => e.message, 'message', contains('newer')),
+            .having((e) => e.message, 'message', contains('newer'))
+            .having((e) => e.problem, 'problem', ImportProblem.madeByNewerApp),
       ),
     );
   });
@@ -150,7 +151,8 @@ void main() {
       ),
       throwsA(
         isA<ImportValidationException>()
-            .having((e) => e.message, 'message', contains('too old')),
+            .having((e) => e.message, 'message', contains('too old'))
+            .having((e) => e.problem, 'problem', ImportProblem.tooOld),
       ),
     );
     expect(await rows('SELECT id FROM workouts_table'), isEmpty);

@@ -262,6 +262,7 @@ class DataExportService {
       throw ImportValidationException(
         'This app database does not match the supported export table set: '
         'missing $missingDatabaseTables, extra $extraDatabaseTables.',
+        problem: ImportProblem.appMismatch,
       );
     }
 
@@ -292,6 +293,7 @@ class DataExportService {
           'This backup is missing data for: ${sortedMissing.join(', ')}. '
           'Replacing local data with an incomplete backup would delete it '
           'without anything to restore, so this import was cancelled.',
+          problem: ImportProblem.incomplete,
         );
       }
     }
@@ -449,6 +451,8 @@ class DataExportService {
           'This backup contains an exercise "${row['name']}" that this '
           'device already has under a different id, so it cannot be '
           'restored without renaming one of them.',
+          problem: ImportProblem.exerciseConflict,
+          subject: row['name']?.toString(),
         );
       }
     }

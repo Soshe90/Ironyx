@@ -68,12 +68,14 @@ ImportEnvelope upgradeEnvelope(
       'This backup was made by a newer version of Ironyx (database schema '
       '$from; this app uses $toSchemaVersion). Update the app before '
       'importing it.',
+      problem: ImportProblem.madeByNewerApp,
     );
   }
   if (from < kOldestUpgradableSchemaVersion) {
     throw ImportValidationException(
       'This backup is too old to import (database schema $from; the oldest '
       'supported is $kOldestUpgradableSchemaVersion).',
+      problem: ImportProblem.tooOld,
     );
   }
 
@@ -92,6 +94,7 @@ ImportEnvelope upgradeEnvelope(
       // than import data a missing step would have transformed.
       throw ImportValidationException(
         'This app cannot upgrade a backup from database schema $version.',
+        problem: ImportProblem.tooOld,
       );
     }
     step(tables);

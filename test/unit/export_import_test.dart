@@ -307,7 +307,8 @@ void main() {
 
     expect(
       () => service.parseImport(badJson),
-      throwsA(isA<ImportValidationException>()),
+      throwsA(isA<ImportValidationException>()
+          .having((e) => e.problem, 'problem', ImportProblem.madeByNewerApp)),
     );
   });
 
@@ -563,7 +564,10 @@ void main() {
         restore(),
         throwsA(
           isA<ImportValidationException>()
-              .having((e) => e.message, 'message', contains('Exercise x')),
+              .having((e) => e.message, 'message', contains('Exercise x'))
+              .having(
+                  (e) => e.problem, 'problem', ImportProblem.exerciseConflict)
+              .having((e) => e.subject, 'subject', 'Exercise x'),
         ),
       );
       expect(
@@ -604,7 +608,8 @@ void main() {
         mode: ImportMode.replace,
         snapshotDirPath: snapshotDir.path,
       ),
-      throwsA(isA<ImportValidationException>()),
+      throwsA(isA<ImportValidationException>()
+          .having((e) => e.problem, 'problem', ImportProblem.incomplete)),
     );
 
     // The seeded workout must survive untouched: rejection must happen
@@ -733,7 +738,8 @@ void main() {
           predicate<ImportValidationException>(
             (error) =>
                 error.message.contains('workouts_table row 1') &&
-                error.message.contains('started_at'),
+                error.message.contains('started_at') &&
+                error.problem == ImportProblem.damaged,
           ),
         ),
       );
@@ -895,7 +901,8 @@ void main() {
     const service = DataExportService();
     expect(
       () => service.parseImport('not json'),
-      throwsA(isA<ImportValidationException>()),
+      throwsA(isA<ImportValidationException>()
+          .having((e) => e.problem, 'problem', ImportProblem.notAnExport)),
     );
   });
 
