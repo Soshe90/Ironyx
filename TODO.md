@@ -272,7 +272,14 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     would have stored it (tested); and an unknown exercise whose sets
     were all left out is no longer listed as one to create (tested).
     **Open, owner's decision:** whether to clean negative sets already on
-    phones (a migration that changes stored data).
+    phones (a migration that changes stored data). *Approved by the owner
+    the same day, then held by me, before any code:* the catalogue has
+    assisted exercises (Band Assisted Pull-Up and others), and many lifters
+    log assistance as a negative weight, so a "-20" in a workbook may be
+    real history rather than an error. Deleting it would lose that for
+    good. The same question applies to the XLSX import now leaving such
+    sets out. Needs the owner's answer on how assisted work should be
+    recorded before either is changed further.
   - **Fixed: a program CSV of any size was read and split on the UI
     thread.** Now a file over 1 MB (`kMaxProgramCsvBytes`; five programs
     of six days are about 15 KB) is refused before it is read, and again
