@@ -171,6 +171,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** restoring an empty snapshot over a history, then the
     snapshot saved by that restore, brings the history back (on the old
     code there was no second snapshot).
+- Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
+  stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
+  `package:flutter/material.dart`, moved into the separate `material_ui`
+  package; with `--fatal-infos` that failed `flutter analyze` on 134
+  imports, so every pull request failed (first seen on #6). 3.47.9 is the
+  last version CI passed on (#4, #5). This machine has 3.47.5. **Open:**
+  moving to Flutter 3.50, which needs the `material_ui` package added (a new
+  dependency, the owner's decision) and every Material import changed; and
+  whether to pin the local Flutter to the same version as CI.
 - Changed 2026-11-11, Library and Timer tabs (reviewed together, then
   fixed one item at a time, on `library-timer/review-2026-11-11` from
   `main` after #4 and #5 merged). **Not in the 1.0.5+6 bundle.**
