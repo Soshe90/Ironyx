@@ -363,7 +363,7 @@
   "dataSnapshotNone": "There are no recent import snapshots.",
   "dataSnapshotDialogTitle": "Restore snapshot",
   "dataSnapshotConfirmTitle": "Restore snapshot?",
-  "dataSnapshotConfirmBody": "This replaces current user data with the state saved before that import.",
+  "dataSnapshotConfirmBody": "This replaces your current data with the copy saved at that time. A copy of your current data is saved first, so this can be undone the same way.",
   "dataSnapshotRestored": "Snapshot restored",
   "dataSnapshotRestoreFailed": "Couldn't restore this snapshot. Nothing on this device was changed — try again.",
   "programImportTooltip": "Import programs from CSV",

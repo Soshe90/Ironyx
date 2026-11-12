@@ -459,6 +459,19 @@ class DataExportService {
     return missing;
   }
 
+  /// When [snapshot] was taken, from its name
+  /// (`pre_import_snapshot_<milliseconds since the epoch>.json`), in local
+  /// time; null for a name that does not hold one.
+  static DateTime? snapshotTakenAt(File snapshot) {
+    final String name = snapshot.uri.pathSegments.last;
+    final Match? match =
+        RegExp(r'^pre_import_snapshot_(\d+)\.json$').firstMatch(name);
+    final int? ms = match == null ? null : int.tryParse(match.group(1)!);
+    return ms == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
+  }
+
   Future<List<File>> listSnapshots(String snapshotDirPath) async {
     final directory = Directory(snapshotDirPath);
     if (!directory.existsSync()) return const [];
@@ -505,7 +518,10 @@ class DataExportService {
     File snapshotFile, {
     required String snapshotDirPath,
   }) async {
-    final envelope = parseImport(await snapshotFile.readAsString());
+    // Decoded off the UI isolate, as Import does: a snapshot is a full
+    // export, megabytes for a long history.
+    final envelope =
+        await parseImportInBackground(await snapshotFile.readAsString());
     await _applyImport(
       db,
       envelope,

@@ -10,9 +10,11 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/error_reporting.dart';
+import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/services/data_export_service.dart';
+import '../../../backup/domain/cloud_backup_controller.dart';
 import '../../domain/erase_local_data.dart';
 import '../../domain/export_envelope.dart';
 import '../import_problem_messages.dart';
@@ -197,15 +199,28 @@ class DataManagementSection extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     final AppLocalizations l10n = context.l10n;
-    final service = ref.read(dataExportServiceProvider);
-    final supportDir = await getApplicationSupportDirectory();
-    final snapshots = await service.listSnapshots(supportDir.path);
+    final DataExportService service = ref.read(dataExportServiceProvider);
+    // Inside the error handling: finding the folder and listing it failed
+    // outside it, and the tap did nothing.
+    final String snapshotDir;
+    final List<File> snapshots;
+    try {
+      snapshotDir = await ref.read(snapshotDirectoryProvider.future);
+      snapshots = await service.listSnapshots(snapshotDir);
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'DataManagementSection.snapshots');
+      if (context.mounted) {
+        await _showError(context, l10n.dataSnapshotRestoreFailed);
+      }
+      return;
+    }
     if (!context.mounted) return;
     if (snapshots.isEmpty) {
       await _showError(context, l10n.dataSnapshotNone);
       return;
     }
 
+    final DateFormatters dates = DateFormatters.of(context);
     final File? selected = await showDialog<File>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -214,8 +229,13 @@ class DataManagementSection extends ConsumerWidget {
           for (final snapshot in snapshots)
             SimpleDialogOption(
               onPressed: () => Navigator.pop(context, snapshot),
+              // When it was taken, newest first; it showed the file's name,
+              // "pre_import_snapshot_1794398970790.json".
               child: Text(
-                snapshot.path.split(Platform.pathSeparator).last,
+                switch (DataExportService.snapshotTakenAt(snapshot)) {
+                  final DateTime at => '${dates.full(at)}, ${dates.time(at)}',
+                  null => snapshot.uri.pathSegments.last,
+                },
               ),
             ),
         ],
@@ -242,23 +262,29 @@ class DataManagementSection extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    try {
-      await service.restoreSnapshot(
-        ref.read(appDatabaseProvider),
-        selected,
-        snapshotDirPath: supportDir.path,
-      );
-      if (!context.mounted) return;
+    // Behind the progress dialog: it replaces every table, with nothing on
+    // screen before, and the tile could start a second restore.
+    ImportValidationException? refusal;
+    final bool restored = await _withProgress(context, () async {
+      try {
+        await service.restoreSnapshot(
+          ref.read(appDatabaseProvider),
+          selected,
+          snapshotDirPath: snapshotDir,
+        );
+      } on ImportValidationException catch (e) {
+        refusal = e;
+      }
+    });
+    if (!context.mounted) return;
+    final ImportValidationException? refused = refusal;
+    if (refused != null) {
+      await _showError(context, refused.messageFor(l10n));
+    } else if (restored) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.dataSnapshotRestored)),
       );
-    } on ImportValidationException catch (e) {
-      if (!context.mounted) return;
-      await _showError(context, e.messageFor(l10n));
-    } catch (e, stackTrace) {
-      reportError(e, stackTrace,
-          context: 'DataManagementSection.restoreSnapshot');
-      if (!context.mounted) return;
+    } else {
       await _showError(context, l10n.dataSnapshotRestoreFailed);
     }
   }

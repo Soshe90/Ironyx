@@ -110,4 +110,17 @@ void main() {
     // Reopened, so tearDown's close has something to close.
     database = AppDatabase.forTesting();
   });
+
+  test("a snapshot's time is read from its name", () {
+    expect(
+      DataExportService.snapshotTakenAt(
+        File('${snapshotDir.path}/pre_import_snapshot_1794398970790.json'),
+      ),
+      DateTime.fromMillisecondsSinceEpoch(1794398970790, isUtc: true).toLocal(),
+    );
+    expect(
+      DataExportService.snapshotTakenAt(File('${snapshotDir.path}/other.json')),
+      isNull,
+    );
+  });
 }

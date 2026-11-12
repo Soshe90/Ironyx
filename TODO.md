@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,165 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,168 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -214,6 +214,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     `readImportFile` with a stand-in picked file, since the picker has no
     test channel; not run on the old code (the function is new).
     **Not checked:** on the phone.
+  - **Fixed: Restore snapshot listed file names, and could fail silently.**
+    The list showed "pre_import_snapshot_1794398970790.json"; it shows when
+    each was taken ("12 Nov 2026, 9:01", from the name, by
+    `DataExportService.snapshotTakenAt`), the name kept for one that does
+    not parse. Finding and listing the folder were outside the error
+    handling (now `snapshotDirectoryProvider`, inside it); the restore runs
+    behind the progress dialog, a refusal says why (item 3's messages), and
+    the snapshot is decoded off the UI isolate. The confirmation now says a
+    copy of the current data is saved first (item 2). **Tested:** a
+    snapshot is listed by its date and not its file name; a folder that
+    cannot be read shows the restore-failed message (both fail on the old
+    code); the time read from a name, and none from another name.
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`

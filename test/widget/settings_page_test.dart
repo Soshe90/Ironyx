@@ -565,6 +565,72 @@ void main() {
           findsOneWidget);
     });
 
+    testWidgets('snapshots are listed by when they were taken', (tester) async {
+      final Directory snapshots =
+          Directory.systemTemp.createTempSync('ironyx_snapshot_list');
+      addTearDown(() => snapshots.deleteSync(recursive: true));
+      final DateTime taken = DateTime(2026, 11, 12, 9, 1);
+      File('${snapshots.path}/pre_import_snapshot_'
+              '${taken.toUtc().millisecondsSinceEpoch}.json')
+          .writeAsStringSync('{}');
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          snapshotDirectoryProvider.overrideWith((ref) async => snapshots.path),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Restore pre-import snapshot'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Restore pre-import snapshot'));
+      // Listing the folder is real file I/O.
+      for (int i = 0;
+          i < 50 && find.text('Restore snapshot').evaluate().isEmpty;
+          i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('12 Nov 2026'), findsOneWidget);
+      expect(find.textContaining('pre_import_snapshot'), findsNothing,
+          reason: 'it listed file names');
+    });
+
+    testWidgets('a snapshot folder that cannot be read says so',
+        (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          snapshotDirectoryProvider.overrideWith(
+            (ref) => Future<String>.error(StateError('no storage')),
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Restore pre-import snapshot'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Restore pre-import snapshot'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining("Couldn't restore this snapshot"),
+          findsOneWidget);
+    });
+
     testWidgets('a delete that fails says so', (tester) async {
       final _CountingExportService service = _CountingExportService()
         ..fail = true;
