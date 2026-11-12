@@ -610,6 +610,7 @@
   "timerCustomSubtitle": "أنشئ فترة زمنية ثم ابدأها أو احفظها",
   "timerPresetSaved": "تم حفظ الإعداد.",
   "timerPresetSaveFailed": "تعذّر حفظ الإعداد.",
+  "timerSessionNotSaved": "انتهى المؤقّت، لكن تعذّر حفظ هذه الجلسة في سجلّك.",
   "timerStartFailed": "تعذّر بدء المؤقّت.",
   "timerPresetNameTitle": "سمِّ هذا الإعداد",
   "timerPresetNameLabel": "الاسم",

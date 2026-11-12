@@ -25,6 +25,13 @@ class ActiveTimerPage extends ConsumerWidget {
     ref.listen<TimerSnapshot?>(timerControllerProvider, (previous, next) {
       // The controller nulls its state once the session finishes or is ended.
       if (next == null && context.mounted) {
+        // Said on the screen underneath, which stays: a session the history
+        // will not show must not end as if it had been saved.
+        if (ref.read(timerControllerProvider.notifier).takeSaveFailure()) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.timerSessionNotSaved)),
+          );
+        }
         // An end-confirmation dialog may still be open if the last interval
         // ran out under it; close it first, or this pop would close the
         // dialog and leave the page spinning on a null session.

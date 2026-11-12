@@ -206,6 +206,29 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     keeps the saved workout; Finish clears it (fails on the old code with
     the UNIQUE constraint); an unsaved draft is kept. **Not checked:** on
     the phone; a real kill in that window cannot be staged on a device.
+  - **Fixed: the timer could lose a session, or look started when it was
+    not.** Finishing released the wakelock, cancelled the alerts and
+    played the completion cues before writing the session, with the
+    engine already cleared; the wakelock call passes its failures on, so a
+    failure there skipped the write and nothing could retry it. Starting
+    set the engine, then held the wakelock, then made the ticker; a
+    wakelock failure left the timer counting as active with nothing
+    moving, and the Timer tab said "Couldn't start the timer". Now the
+    session is written first, and the wakelock, alerts, cues and audio
+    each run on their own (`_bestEffort`, logged), at start, finish, and
+    when the provider is disposed; alert scheduling no longer fails a
+    start, pause or skip. A write that fails is logged and the timer
+    screen, closing, says "The timer finished, but this session couldn't
+    be saved to your history" (new string, en/ar;
+    `TimerController.takeSaveFailure`). The session is not kept for a
+    retry: it is one history row, and a retry queue was not worth its
+    weight. **Tested:** a wakelock that cannot be held still starts and
+    ticks (fails with the guard removed); failing alert scheduling does
+    not fail the start; a wakelock that cannot be released still saves the
+    session and plays the cue; a failed write still ends the session,
+    releases and cancels, and is reported once; the screen shows the
+    message for a failed save and not for a saved one. **Not checked:** on
+    the phone.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

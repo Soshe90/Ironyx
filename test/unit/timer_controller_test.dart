@@ -251,6 +251,84 @@ void main() {
       expect(await timerDao.watchAll().first, hasLength(1));
     });
 
+    group('failures (production review 2026-11-12, finding 2)', () {
+      test(
+          'a wakelock that cannot be held does not stop the timer from '
+          'starting and ticking', () async {
+        // It threw out of start() with the engine set and no ticker: the
+        // timer counted as active, nothing moved, and the caller said it
+        // could not start.
+        when(() => mockWakelock.enable()).thenThrow(StateError('no wakelock'));
+
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+        final Duration before = controller.state!.remaining;
+        await Future<void>.delayed(const Duration(milliseconds: 1100));
+
+        expect(controller.isActive, isTrue);
+        expect(controller.state!.remaining, lessThan(before));
+      });
+
+      test('alerts that cannot be scheduled do not fail the start', () async {
+        when(() => mockNotifications.scheduleCompletion(
+              at: any(named: 'at'),
+              title: any(named: 'title'),
+              body: any(named: 'body'),
+            )).thenThrow(StateError('alarm manager'));
+
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+
+        expect(controller.isActive, isTrue);
+      });
+
+      test('a wakelock that cannot be released does not lose the session',
+          () async {
+        // The release came before the write; its failure skipped the
+        // write, and with the engine cleared nothing could retry it.
+        when(() => mockWakelock.disable()).thenThrow(StateError('no wakelock'));
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+
+        await controller.stop();
+
+        expect(await timerDao.watchAll().first, hasLength(1));
+        expect(controller.state, isNull);
+        expect(controller.takeSaveFailure(), isFalse);
+        verify(() => mockAudio.cue(TimerCue.complete)).called(1);
+      });
+
+      test(
+          'a session that cannot be written still ends cleanly and is '
+          'reported once', () async {
+        final ProviderContainer broken = ProviderContainer(
+          overrides: [
+            timerDaoProvider.overrideWithValue(_FailingTimerDao(database)),
+            hapticsServiceProvider.overrideWithValue(mockHaptics),
+            notificationServiceProvider.overrideWithValue(mockNotifications),
+            timerAudioServiceProvider.overrideWithValue(mockAudio),
+            wakelockServiceProvider.overrideWithValue(mockWakelock),
+            timerSettingsControllerProvider.overrideWithValue(mockSettings),
+            appLocalizationsProvider
+                .overrideWith((_) async => AppLocalizationsEn()),
+          ],
+        );
+        addTearDown(broken.dispose);
+        final TimerController timer =
+            broken.read(timerControllerProvider.notifier);
+        await timer.start(TimerPresets.tabata(), notificationGranted: true);
+
+        await timer.stop();
+
+        expect(timer.isActive, isFalse);
+        expect(timer.state, isNull);
+        verify(() => mockWakelock.disable()).called(1);
+        verify(() => mockNotifications.cancelAll()).called(greaterThan(0));
+        expect(timer.takeSaveFailure(), isTrue);
+        expect(timer.takeSaveFailure(), isFalse, reason: 'read once');
+      });
+    });
+
     test('notification denied flag is set when permission not granted',
         () async {
       final preset = TimerPresets.tabata();
@@ -554,4 +632,16 @@ void main() {
       expect(sessionCount, 1);
     });
   });
+}
+
+/// A timer DAO whose session write fails, as a full disk would.
+class _FailingTimerDao extends TimerDao {
+  _FailingTimerDao(super.db);
+
+  @override
+  Future<String> insertSession(
+    TimerSessionsTableCompanion session,
+    List<TimerIntervalsTableCompanion> intervals,
+  ) async =>
+      throw StateError('disk full');
 }

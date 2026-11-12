@@ -656,6 +656,8 @@
   "timerCustomSubtitle": "Build an interval and start or save it",
   "timerPresetSaved": "Preset saved.",
   "timerPresetSaveFailed": "Couldn't save the preset.",
+  "timerSessionNotSaved": "The timer finished, but this session couldn't be saved to your history.",
+  "@timerSessionNotSaved": {"description": "Snack bar when a finished timer session could not be written to the database."},
   "timerStartFailed": "Couldn't start the timer.",
   "@timerStartFailed": {"description": "Snack bar when a timer session failed to start."},
   "@timerPresetSaveFailed": {"description": "Snack bar when saving a timer preset failed."},
