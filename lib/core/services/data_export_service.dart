@@ -400,8 +400,20 @@ class DataExportService {
     // changed inside the transaction above.
     db.markTablesUpdated(db.allTables);
 
+    // Housekeeping after the import has committed, so it must not decide
+    // the outcome: a failure here was reported as "Import failed" although
+    // the data had already been replaced, and a retry imported it again.
+    // An extra old snapshot is harmless and the next import prunes it.
     if (createSnapshot) {
-      await _cleanupSnapshots(snapshotDirPath);
+      try {
+        await _cleanupSnapshots(snapshotDirPath);
+      } catch (error, stackTrace) {
+        reportError(
+          error,
+          stackTrace,
+          context: 'DataExportService.cleanupSnapshots',
+        );
+      }
     }
   }
 

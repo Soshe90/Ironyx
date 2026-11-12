@@ -181,6 +181,14 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     and leaves the old profile (fails on the old code). The Settings test
     does not compile against the old code, so it was not seen to fail
     there. **Not checked:** on the phone.
+  - **Fixed: an import could say "Import failed" after it succeeded.**
+    Pruning old snapshots (keep three) ran after the import had committed,
+    and its error reached Settings as "Import failed" over data already
+    replaced; a retry imported again. The same path serves cloud restore
+    and Restore snapshot. Pruning is now logged and ignored: an extra old
+    snapshot is harmless and the next import prunes it. **Tested:** an
+    import whose pruning fails completes, its data is in and its snapshot
+    written (fails on the old code). **Not checked:** on the phone.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

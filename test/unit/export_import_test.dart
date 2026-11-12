@@ -246,6 +246,35 @@ void main() {
     await database.close();
   });
 
+  test(
+      'an import that committed is not reported as failed when pruning old '
+      'snapshots fails', () async {
+    // Production review 2026-11-12, finding 4: the pruning ran after the
+    // commit and its error reached the caller, so Settings said "Import
+    // failed" over data that had already been replaced.
+    const _PruningFails service = _PruningFails();
+    final source = AppDatabase.forTesting();
+    await seed(source);
+    final String exportedJson = await service.buildJsonExport(source);
+    await source.close();
+
+    final destination = AppDatabase.forTesting();
+    addTearDown(destination.close);
+    await service.applyImport(
+      destination,
+      service.parseImport(exportedJson),
+      mode: ImportMode.replace,
+      snapshotDirPath: snapshotDir.path,
+    );
+
+    expect(await WorkoutDao(destination).getWithDetails('w1'), isNotNull);
+    expect(
+      snapshotDir.listSync(),
+      hasLength(1),
+      reason: 'the pre-import snapshot is still written',
+    );
+  });
+
   test('restoring a snapshot keeps one of what it replaced', () async {
     const service = DataExportService();
     final database = AppDatabase.forTesting();
@@ -981,4 +1010,14 @@ void main() {
       await subscription.cancel();
     });
   });
+}
+
+/// Writes the pre-import snapshot as usual, then cannot list the folder
+/// when pruning old ones.
+class _PruningFails extends DataExportService {
+  const _PruningFails();
+
+  @override
+  Future<List<File>> listSnapshots(String snapshotDirPath) async =>
+      throw const FileSystemException('cannot list');
 }
