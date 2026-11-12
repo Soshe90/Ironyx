@@ -130,6 +130,25 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- **Release bundle 1.0.6+7, built 2026-11-12** from commit `2156a2d`
+  (branch `assisted-weights/2026-11-12`, PR #10) with
+  `scripts/build_android.sh bundle`. It contains everything below dated up
+  to 2026-11-12: the Home, Workouts, Library and Timer, Settings and
+  production-review series, and assisted sets; the "Not in the 1.0.5+6
+  bundle" lines below are in this one. **Verified:** signed with the upload
+  key (`keytool -printcert`: CN=FitTrack, SHA-256 `57:08:11:C8…7D:90`, the
+  key 1.0.3 went to Play with); all 15 native libraries stripped; built
+  with `supabase.json` through the script. Archived outside the repo, with
+  its Dart symbols, in `C:\Users\musta\Projects\ironyx-releases\1.0.6+7`
+  (AAB SHA-256 `aa3c919c…d4ed5e`, in `SHA256SUMS`); copy that folder
+  somewhere durable. **Not checked:** the bundle running anywhere.
+  **Owner:** upload it to a Play testing track (internal or closed),
+  install from Play on the SM N970F (it updates the 1.0.3 install in
+  place, data kept, and runs the schema 11 → 13 upgrade), then run the
+  phone checks: the upgrade with real data, the timer on screen (does each
+  phase change also sound the system notification), export / import /
+  restore, and an assisted set from a workbook. If PR #10 changes before
+  it merges, rebuild.
 - Changed 2026-11-12 (evening), assisted sets: **a negative weight is
   assisted work, kept, and adds no volume** (owner chose "apply
   recommended"; branch `assisted-weights/2026-11-12`). **Not in the
