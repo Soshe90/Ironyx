@@ -13,6 +13,7 @@ import 'package:ironyx/core/formatters/week_start_controller.dart';
 import 'package:ironyx/core/formatters/weight_unit_controller.dart';
 import 'package:ironyx/core/providers.dart';
 import 'package:ironyx/core/services/data_export_service.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
 import 'package:ironyx/features/backup/domain/cloud_backup_controller.dart';
 import 'package:ironyx/features/tracker/domain/active_workout_notifier.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
@@ -629,6 +630,36 @@ void main() {
 
       expect(find.textContaining("Couldn't restore this snapshot"),
           findsOneWidget);
+    });
+
+    testWidgets('language, appearance, units and week start share one card',
+        (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        surfaceSize: const Size(400, 2400),
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Preferences'), findsOneWidget);
+      final Set<Element> cards = <Element>{
+        for (final String title in <String>[
+          'Language',
+          'Appearance',
+          'Units',
+          'Week starts on',
+        ])
+          tester.element(
+            find.ancestor(
+              of: find.text(title),
+              matching: find.byType(AppCard),
+            ),
+          ),
+      };
+      expect(cards, hasLength(1),
+          reason: 'each was a card under its own heading');
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('a delete that fails says so', (tester) async {

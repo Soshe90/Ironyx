@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,171 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,172 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -240,6 +240,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     test confirms it). **Tested:** an unexpected sign-out error, a failed
     local step after sign-out, and the dialog with a 300 dp keyboard on a
     360×640 screen; the first and the last fail on the old code.
+  - **Changed (owner's choice): one Preferences card.** Language,
+    Appearance, Units and Week start were each a card under its own
+    heading, four headings for four single controls. They are now rows of
+    one card under "Preferences" (new string, en/ar), each a small title,
+    its caption where it had one, and its control (`_PreferenceRow`). The
+    sound and haptics toggles keep their own card (they are the timer's).
+    Same controls, same wording. **Tested:** the four share one card;
+    every existing Settings test passes unchanged, including the week
+    start fitting a narrow phone in Arabic. **Not checked:** on the phone.
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`

@@ -45,6 +45,8 @@
   },
 
   "settingsLanguageTitle": "Language",
+  "settingsPreferencesTitle": "Preferences",
+  "@settingsPreferencesTitle": {"description": "Settings heading over language, appearance, units and the first day of the week."},
   "settingsLanguageSystem": "Match device",
   "settingsAppearanceTitle": "Appearance",
   "settingsThemeSystem": "System",

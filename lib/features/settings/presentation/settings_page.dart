@@ -58,91 +58,102 @@ class SettingsPage extends ConsumerWidget {
             // account, and someone who has just signed in on a fresh
             // install is exactly the person looking for it.
             const CloudBackupSection(),
-            SectionHeader(title: l10n.settingsLanguageTitle),
-            const AppCard(
+            // The four ways the app is set up, as rows of one card. Each was
+            // a card under its own heading: four headings for four single
+            // controls made the page long, and the eye had to restart at
+            // every one.
+            SectionHeader(title: l10n.settingsPreferencesTitle),
+            AppCard(
               padding: EdgeInsets.zero,
-              child: _LanguageSection(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(title: l10n.settingsAppearanceTitle),
-            AppCard(
-              child: SegmentedButton<ThemeMode>(
-                segments: <ButtonSegment<ThemeMode>>[
-                  ButtonSegment<ThemeMode>(
-                    value: ThemeMode.system,
-                    label: Text(l10n.settingsThemeSystem),
-                    icon: const Icon(Icons.brightness_auto_outlined),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _PreferenceRow(
+                    title: l10n.settingsLanguageTitle,
+                    // The radio tiles bring their own side padding.
+                    padded: false,
+                    child: const _LanguageSection(),
                   ),
-                  ButtonSegment<ThemeMode>(
-                    value: ThemeMode.light,
-                    label: Text(l10n.settingsThemeLight),
-                    icon: const Icon(Icons.light_mode_outlined),
-                  ),
-                  ButtonSegment<ThemeMode>(
-                    value: ThemeMode.dark,
-                    label: Text(l10n.settingsThemeDark),
-                    icon: const Icon(Icons.dark_mode_outlined),
-                  ),
-                ],
-                selected: <ThemeMode>{mode},
-                showSelectedIcon: false,
-                onSelectionChanged: (Set<ThemeMode> selection) async {
-                  await ref
-                      .read(themeModeControllerProvider.notifier)
-                      .set(selection.first);
-                },
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
-              title: l10n.settingsUnitsTitle,
-              subtitle: l10n.settingsUnitsSubtitle,
-            ),
-            AppCard(
-              child: SegmentedButton<WeightUnit>(
-                segments: <ButtonSegment<WeightUnit>>[
-                  for (final WeightUnit option in WeightUnit.values)
-                    ButtonSegment<WeightUnit>(
-                      value: option,
-                      label: Text(
-                        option == WeightUnit.kg
-                            ? l10n.settingsUnitKilograms
-                            : l10n.settingsUnitPounds,
-                      ),
+                  const Divider(height: 1),
+                  _PreferenceRow(
+                    title: l10n.settingsAppearanceTitle,
+                    child: SegmentedButton<ThemeMode>(
+                      segments: <ButtonSegment<ThemeMode>>[
+                        ButtonSegment<ThemeMode>(
+                          value: ThemeMode.system,
+                          label: Text(l10n.settingsThemeSystem),
+                          icon: const Icon(Icons.brightness_auto_outlined),
+                        ),
+                        ButtonSegment<ThemeMode>(
+                          value: ThemeMode.light,
+                          label: Text(l10n.settingsThemeLight),
+                          icon: const Icon(Icons.light_mode_outlined),
+                        ),
+                        ButtonSegment<ThemeMode>(
+                          value: ThemeMode.dark,
+                          label: Text(l10n.settingsThemeDark),
+                          icon: const Icon(Icons.dark_mode_outlined),
+                        ),
+                      ],
+                      selected: <ThemeMode>{mode},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (Set<ThemeMode> selection) async {
+                        await ref
+                            .read(themeModeControllerProvider.notifier)
+                            .set(selection.first);
+                      },
                     ),
-                ],
-                selected: <WeightUnit>{unit},
-                showSelectedIcon: false,
-                onSelectionChanged: (Set<WeightUnit> selection) async {
-                  await ref
-                      .read(weightUnitControllerProvider.notifier)
-                      .set(selection.first);
-                },
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
-              title: l10n.settingsWeekStartTitle,
-              subtitle: l10n.settingsWeekStartSubtitle,
-            ),
-            AppCard(
-              child: SegmentedButton<WeekStart>(
-                segments: <ButtonSegment<WeekStart>>[
-                  for (final WeekStart option in WeekStart.values)
-                    ButtonSegment<WeekStart>(
-                      value: option,
-                      // The day names the weekday chart already has, keyed
-                      // by the same lower-case names as the enum's.
-                      label: Text(l10n.progressWeekdayFull(option.name)),
+                  ),
+                  const Divider(height: 1),
+                  _PreferenceRow(
+                    title: l10n.settingsUnitsTitle,
+                    subtitle: l10n.settingsUnitsSubtitle,
+                    child: SegmentedButton<WeightUnit>(
+                      segments: <ButtonSegment<WeightUnit>>[
+                        for (final WeightUnit option in WeightUnit.values)
+                          ButtonSegment<WeightUnit>(
+                            value: option,
+                            label: Text(
+                              option == WeightUnit.kg
+                                  ? l10n.settingsUnitKilograms
+                                  : l10n.settingsUnitPounds,
+                            ),
+                          ),
+                      ],
+                      selected: <WeightUnit>{unit},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (Set<WeightUnit> selection) async {
+                        await ref
+                            .read(weightUnitControllerProvider.notifier)
+                            .set(selection.first);
+                      },
                     ),
+                  ),
+                  const Divider(height: 1),
+                  _PreferenceRow(
+                    title: l10n.settingsWeekStartTitle,
+                    subtitle: l10n.settingsWeekStartSubtitle,
+                    child: SegmentedButton<WeekStart>(
+                      segments: <ButtonSegment<WeekStart>>[
+                        for (final WeekStart option in WeekStart.values)
+                          ButtonSegment<WeekStart>(
+                            value: option,
+                            // The day names the weekday chart already has,
+                            // keyed by the same lower-case names as the
+                            // enum's.
+                            label: Text(l10n.progressWeekdayFull(option.name)),
+                          ),
+                      ],
+                      selected: <WeekStart>{weekStart},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (Set<WeekStart> selection) async {
+                        await ref
+                            .read(weekStartControllerProvider.notifier)
+                            .set(selection.first);
+                      },
+                    ),
+                  ),
                 ],
-                selected: <WeekStart>{weekStart},
-                showSelectedIcon: false,
-                onSelectionChanged: (Set<WeekStart> selection) async {
-                  await ref
-                      .read(weekStartControllerProvider.notifier)
-                      .set(selection.first);
-                },
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -191,6 +202,54 @@ class SettingsPage extends ConsumerWidget {
             const _StorageNote(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One setting in the Preferences card: a small title, an optional line on
+/// what it changes, then its control.
+class _PreferenceRow extends StatelessWidget {
+  const _PreferenceRow({
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.padded = true,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget child;
+
+  /// False for a control that pads itself (list tiles).
+  final bool padded;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    const EdgeInsets side = EdgeInsets.symmetric(horizontal: AppSpacing.lg);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(
+            padding: side,
+            child: Semantics(
+              header: true,
+              child: Text(title, style: theme.textTheme.titleSmall),
+            ),
+          ),
+          if (subtitle case final String line) ...<Widget>[
+            const SizedBox(height: AppSpacing.xxs),
+            Padding(
+              padding: side,
+              child: Text(line, style: AppTypography.caption(theme)),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          if (padded) Padding(padding: side, child: child) else child,
+        ],
       ),
     );
   }
