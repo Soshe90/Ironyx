@@ -95,7 +95,12 @@ silently ships with accounts off.
 
 `android/app/build.gradle.kts` signs `release` with a real key **only if
 `android/key.properties` exists**; otherwise it silently falls back to the
-debug key. A debug-signed bundle is not uploadable to Play. Both files below
+debug key. A debug-signed bundle is not uploadable to Play.
+`scripts/build_android.sh` refuses its release targets (`apk`, `bundle`,
+`install`) when `key.properties` is missing or the keystore it names is not
+there (since 2026-11-12); `ALLOW_DEBUG_SIGNING=1` builds one debug-signed on
+purpose, for a local smoke test only. The `keytool` check below still
+confirms *which* key signed it. Both files below
 are gitignored and are **not backed up by the repository** — losing the
 upload key means never updating the listing.
 

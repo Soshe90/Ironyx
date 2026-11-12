@@ -302,6 +302,20 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     **Tested:** the program's templates and exercises go and another
     program's stay (fails on the old code); a shared template stays; a
     standalone one stays; an unknown id deletes nothing.
+  - **Changed: a release build without the upload key now stops.**
+    Without `android/key.properties`, Gradle signs a release with the
+    debug key (so CI and `flutter run --release` build), and nothing said
+    so before the Play upload; `key.properties.txt` from another machine
+    did exactly that once. `scripts/build_android.sh` now refuses `apk`,
+    `bundle` and `install` when `key.properties` is missing, has no
+    `storeFile`, or names a keystore that is not there;
+    `ALLOW_DEBUG_SIGNING=1` builds one debug-signed on purpose. CI calls
+    `flutter build` itself and is unaffected. It checks that a key is
+    configured, not which: the `keytool -printcert` step in SETUP.md §5
+    still confirms the upload key. **Checked:** in a scratch copy with a
+    stand-in `flutter`, the five cases (missing file, missing keystore, a
+    good CRLF `key.properties`, the override, and `run` untouched). **Not
+    checked:** a real release build.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
