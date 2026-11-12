@@ -175,7 +175,14 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     data, with nothing on screen. A failed erase now signs back out, as
     "Keep my data" does, and says the delete failed; a partial one links
     the account (the database is erased) and says what the Settings one
-    says. **Tested:** a snapshot failure after the database delete still
+    says. *Corrected the same day after the branch review:* linking after
+    a partial erase put what was left of the old account (its open
+    workout, saved and backed up under the new one; its snapshots, full
+    copies of its data) under the new account. Now a partial erase links
+    only when the built-in programs were the one step to fail; otherwise
+    it signs back out and says to delete all data again, after which the
+    next sign-in finds no conflict (tested: a failed snapshot step leaves
+    the new account signed out and unlinked). **Tested:** a snapshot failure after the database delete still
     removes the open workout and shows the new message; one undeletable
     snapshot no longer keeps the others; a failed conflict erase signs out
     and leaves the old profile (fails on the old code). The Settings test

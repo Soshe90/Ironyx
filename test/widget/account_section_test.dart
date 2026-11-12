@@ -322,6 +322,50 @@ void main() {
     await disposeApp(tester);
   });
 
+  testWidgets(
+      'signing in as a different account — an erase that leaves the old '
+      "account's snapshots does not link the new one", (tester) async {
+    // Review of this branch: a partial erase linked the new account
+    // whatever was left, so the old account's snapshots (a full copy of
+    // its data) or its open workout stayed under the new account.
+    await ProfileDao(database)
+        .linkAccount(userId: 'user-existing', email: 'old@example.com');
+    auth.accounts['new@example.com'] = 'hunter22';
+    await pumpSettings(
+      tester,
+      overrides: [
+        ...stubSeeders(),
+        dataExportServiceProvider.overrideWithValue(_FailingSnapshots()),
+        snapshotDirectoryProvider.overrideWith((ref) async => 'unused'),
+      ],
+    );
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'new@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'hunter22',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Erase local data and continue'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+        find.textContaining('Delete all data again to finish'), findsOneWidget);
+    expect(auth.currentUser, isNull, reason: 'signed back out');
+    expect(await ProfileDao(database).get(), isNull,
+        reason: 'the database step ran; nothing was linked after it');
+
+    await disposeApp(tester);
+  });
+
   testWidgets('deleting an account requires confirmation and keeps local data',
       (tester) async {
     await ProfileDao(database).upsert(
@@ -523,4 +567,11 @@ class _FailingDelete extends DataExportService {
     String? snapshotDirPath,
   }) async =>
       throw StateError('disk full');
+}
+
+/// A delete-all whose database step succeeds and snapshot step fails.
+class _FailingSnapshots extends DataExportService {
+  @override
+  Future<void> deleteSnapshots(String snapshotDirPath) async =>
+      throw StateError('locked');
 }
