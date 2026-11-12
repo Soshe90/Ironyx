@@ -68,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   Future<void> _createIndexes() async {
     const indexes = [
@@ -258,6 +258,33 @@ class AppDatabase extends _$AppDatabase {
               await m.addColumn(
                 workoutExercisesTable,
                 workoutExercisesTable.supersetGroupId,
+              );
+            }
+          }
+          if (from < 12) {
+            // Data only, no model change: deleting a program used to leave
+            // its day templates behind (fixed in `ProgramDao.deleteProgram`,
+            // 2026-11-12), and this removes the ones already left. Every
+            // template the app has ever made belongs to a program day (no
+            // build has called `TemplateDao.insertTemplate`), so one no
+            // program links to is unreachable. Its exercise rows are
+            // deleted first: foreign keys are switched on in `beforeOpen`,
+            // which runs after this, so the cascade would not.
+            final tables = await customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN "
+              "('templates_table', 'template_exercises_table', "
+              "'program_templates_table')",
+            ).get();
+            if (tables.length == 3) {
+              const String orphans = 'SELECT id FROM templates_table '
+                  'WHERE id NOT IN '
+                  '(SELECT template_id FROM program_templates_table)';
+              await customStatement(
+                'DELETE FROM template_exercises_table '
+                'WHERE template_id IN ($orphans)',
+              );
+              await customStatement(
+                'DELETE FROM templates_table WHERE id IN ($orphans)',
               );
             }
           }

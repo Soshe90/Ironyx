@@ -49,6 +49,26 @@ final Map<int, void Function(ExportTables tables)> exportSchemaUpgrades = {
   // v10 -> v11: superset_group_id on template and workout exercises,
   // nullable.
   10: (tables) {},
+  // v11 -> v12: day templates no program links to are removed, as the
+  // database migration removes them, so restoring an older backup does not
+  // bring them back.
+  11: (tables) {
+    final Set<Object?> linked = {
+      for (final Map<String, Object?> row
+          in tables['program_templates_table'] ?? const [])
+        row['template_id'],
+    };
+    final List<Map<String, Object?>>? templates = tables['templates_table'];
+    if (templates == null) return;
+    final Set<Object?> orphans = {
+      for (final Map<String, Object?> row in templates)
+        if (!linked.contains(row['id'])) row['id'],
+    };
+    if (orphans.isEmpty) return;
+    templates.removeWhere((row) => orphans.contains(row['id']));
+    tables['template_exercises_table']
+        ?.removeWhere((row) => orphans.contains(row['template_id']));
+  },
 };
 
 /// Returns [envelope] upgraded to [toSchemaVersion], or [envelope] itself if

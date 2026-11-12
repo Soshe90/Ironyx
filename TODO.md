@@ -329,6 +329,20 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     owner's default:** templates already left behind on a phone are not
     cleaned up; they are invisible, and telling them from a standalone
     template is the same rule, so a later clean-up is one query if wanted.
+    *Done the same day at the owner's go-ahead: schema 11 → 12.* The
+    upgrade deletes day templates no program links to, and their exercise
+    rows (explicitly: foreign keys are switched on only after the
+    migration). Safe because no build has ever made a template outside a
+    program: `TemplateDao.insertTemplate` has had no caller since the first
+    commit (checked in git history). The matching export step (ADR-7)
+    removes them from an older backup too. Consequence of any schema bump,
+    as before: a backup or export from this build is refused by 1.0.5 and
+    older as "made by a newer version"; restoring into an older app is not
+    supported. **Tested:** a real database file stamped v11 upgrades with
+    the orphan gone and the linked template, its exercises and its program
+    kept (fails with the step disabled); the export step removes the same
+    rows and leaves a backup without templates alone; the schema 5, 7 and
+    9 fixtures still restore. **Not checked:** the upgrade on the phone.
     **Tested:** the program's templates and exercises go and another
     program's stay (fails on the old code); a shared template stays; a
     standalone one stays; an unknown id deletes nothing.
