@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,160 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,161 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -188,6 +188,18 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     triggers it (not JSON, newer format and schema, too-old schema,
     incomplete replace, exercise clash and its name, a damaged row); every
     kind has its own sentence, and an Arabic one.
+  - **Fixed: Export showed nothing while it ran, and failed silently.** It
+    reads every table with nothing on screen, the tile still tappable (a
+    second tap started a second export), and a failure to build or to save
+    escaped the tap handler. The backup is now built behind the progress
+    dialog; the system's save screen then opens (no dialog can stay over
+    it); a failure at either step says "Couldn't export your data" (new
+    string, en/ar) and is logged. The 20 MB figure in `buildJsonExport` is
+    a logged warning, not a refusal, so a large export still saves.
+    **Tested:** the spinner shows while the export is built, and a failed
+    build closes it and says so (fails on the old code: no spinner). The
+    save step is not reachable in a test (the file picker has no test
+    channel). **Not checked:** on the phone.
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`

@@ -43,6 +43,13 @@ class _CountingExportService extends DataExportService {
   int deletes = 0;
   bool fail = false;
 
+  /// Holds the export open until completed, or fails it.
+  Completer<String>? export;
+
+  @override
+  Future<String> buildJsonExport(AppDatabase db, {bool indent = true}) =>
+      export?.future ?? Future<String>.value('{}');
+
   @override
   Future<void> deleteAllUserData(
     AppDatabase db, {
@@ -521,6 +528,41 @@ void main() {
       // The export's own first step: choosing the format.
       expect(find.text('JSON backup (can be imported later)'), findsOneWidget);
       expect(service.deletes, 0);
+    });
+
+    testWidgets('an export shows its progress, and a failure says so',
+        (tester) async {
+      final _CountingExportService service = _CountingExportService()
+        ..export = Completer<String>();
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dataExportServiceProvider.overrideWithValue(service),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Export data'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export data'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('JSON backup (can be imported later)'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget,
+          reason: 'nothing showed while the export was built');
+
+      service.export!.completeError(StateError('disk full'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text("Couldn't export your data. Please try again."),
+          findsOneWidget);
     });
 
     testWidgets('a delete that fails says so', (tester) async {

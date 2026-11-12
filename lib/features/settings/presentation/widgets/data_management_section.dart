@@ -86,28 +86,45 @@ class DataManagementSection extends ConsumerWidget {
     final AppDatabase db = ref.read(appDatabaseProvider);
     final String timestamp =
         DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
+    final (String fileName, String mimeType) = switch (format) {
+      _ExportFormat.json => (
+          'ironyx_backup_$timestamp.json',
+          'application/json'
+        ),
+      _ExportFormat.csv => ('ironyx_export_$timestamp.csv', 'text/csv'),
+    };
 
-    final String content;
-    final String fileName;
-    final String mimeType;
-    switch (format) {
-      case _ExportFormat.json:
-        content = await service.buildJsonExport(db);
-        fileName = 'ironyx_backup_$timestamp.json';
-        mimeType = 'application/json';
-      case _ExportFormat.csv:
-        content = await service.buildCsvExport(db);
-        fileName = 'ironyx_export_$timestamp.csv';
-        mimeType = 'text/csv';
+    // Built behind a progress dialog: it reads every table, and the tile
+    // stayed tappable meanwhile, so a second tap started a second export.
+    // A failure here, or in saving below, escaped the tap handler, and the
+    // tap seemed to do nothing.
+    String content = '';
+    final bool built = await _withProgress(context, () async {
+      content = switch (format) {
+        _ExportFormat.json => await service.buildJsonExport(db),
+        _ExportFormat.csv => await service.buildCsvExport(db),
+      };
+    });
+    if (!context.mounted) return;
+    if (!built) {
+      await _showError(context, l10n.dataExportFailed);
+      return;
     }
 
-    final Uint8List bytes = Uint8List.fromList(utf8.encode(content));
-    final Uri? savedUri = await FilePicker.saveFile(
-      fileName: fileName,
-      bytes: bytes,
-      mimeType: mimeType,
-      dialogTitle: l10n.dataExportSaveDialog,
-    );
+    // The system's own save screen: no progress dialog can stay over it.
+    final Uri? savedUri;
+    try {
+      savedUri = await FilePicker.saveFile(
+        fileName: fileName,
+        bytes: Uint8List.fromList(utf8.encode(content)),
+        mimeType: mimeType,
+        dialogTitle: l10n.dataExportSaveDialog,
+      );
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'DataManagementSection.export');
+      if (context.mounted) await _showError(context, l10n.dataExportFailed);
+      return;
+    }
     if (!context.mounted) return;
     if (savedUri != null) {
       ScaffoldMessenger.of(context)

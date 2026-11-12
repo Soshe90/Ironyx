@@ -291,6 +291,7 @@
   "dataExportCsv": "جدول CSV (التمارين والمجموعات فقط)",
   "dataExportSaveDialog": "حفظ الملف المُصدَّر",
   "dataExportSaved": "تم حفظ الملف المُصدَّر",
+  "dataExportFailed": "تعذّر تصدير بياناتك. حاول مرة أخرى.",
   "dataImportTitle": "استيراد البيانات",
   "dataImportSubtitle": "استعادة من ملف نسخة احتياطية",
   "dataImportPickerTitle": "اختر نسخة احتياطية من Ironyx",

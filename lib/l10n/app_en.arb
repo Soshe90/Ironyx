@@ -308,6 +308,8 @@
   "dataExportCsv": "CSV spreadsheet (workouts and sets only)",
   "dataExportSaveDialog": "Save export",
   "dataExportSaved": "Export saved",
+  "dataExportFailed": "Couldn't export your data. Please try again.",
+  "@dataExportFailed": {"description": "Shown when building or saving an export failed."},
   "dataImportTitle": "Import data",
   "dataImportSubtitle": "Restore from a backup file",
   "dataImportPickerTitle": "Choose a Ironyx backup",
