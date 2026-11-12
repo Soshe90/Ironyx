@@ -29,6 +29,20 @@ class FakeCloudBackupService implements CloudBackupService {
   /// caller while an upload is still in flight.
   Duration uploadDelay = Duration.zero;
 
+  /// The live session, as the real service reads it from the Supabase
+  /// client. Null leaves the account check out (tests that predate it).
+  String? Function()? liveUserId;
+
+  /// Runs inside the call before the account check: a test switches the
+  /// session here to stand in for a sign-out or deep link mid-operation.
+  Future<void> Function()? beforeRequest;
+
+  /// Runs after a download succeeded, before it is returned.
+  Future<void> Function()? afterDownload;
+
+  /// The account each upload or download was bound to.
+  final List<String> boundUserIds = <String>[];
+
   @override
   bool get isAvailable => true;
 
@@ -38,14 +52,25 @@ class FakeCloudBackupService implements CloudBackupService {
     return info;
   }
 
+  Future<void> _checkAccount(String forUserId) async {
+    boundUserIds.add(forUserId);
+    await beforeRequest?.call();
+    final String? Function()? live = liveUserId;
+    if (live != null) {
+      ensureSameAccount(currentUserId: live(), expectedUserId: forUserId);
+    }
+  }
+
   @override
   Future<CloudBackupInfo> upload({
+    required String forUserId,
     required String payload,
     required String appVersion,
     required int dbSchemaVersion,
   }) async {
     if (failWith != null) throw failWith!;
     if (uploadDelay > Duration.zero) await Future<void>.delayed(uploadDelay);
+    await _checkAccount(forUserId);
     uploads++;
     this.payload = payload;
     return info = CloudBackupInfo(
@@ -57,12 +82,14 @@ class FakeCloudBackupService implements CloudBackupService {
   }
 
   @override
-  Future<String> download() async {
+  Future<String> download({required String forUserId}) async {
     if (failWith != null) throw failWith!;
+    await _checkAccount(forUserId);
     final String? stored = payload;
     if (stored == null) {
       throw const CloudBackupFailure(CloudBackupFailureKind.noBackupYet);
     }
+    await afterDownload?.call();
     return stored;
   }
 }
@@ -75,6 +102,7 @@ void main() {
     late FakeCloudBackupService cloud;
     late String snapshotDir;
     late ProviderContainer container;
+    late FakeAuthService auth;
 
     Future<void> seedWorkout(AppDatabase db, String id, double weight) async {
       await WorkoutDao(db).insertWorkout(
@@ -127,6 +155,7 @@ void main() {
     }) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final prefs = await SharedPreferences.getInstance();
+      auth = FakeAuthService(initialUser: user);
       return ProviderContainer(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
@@ -135,8 +164,7 @@ void main() {
           // applyImport writes a pre-import snapshot; the path_provider
           // channel is not registered in a unit test.
           snapshotDirectoryProvider.overrideWith((ref) async => snapshotDir),
-          authServiceProvider
-              .overrideWithValue(FakeAuthService(initialUser: user)),
+          authServiceProvider.overrideWithValue(auth),
         ],
       );
     }
@@ -367,6 +395,120 @@ void main() {
       expect(local.map((w) => w.id), containsAll(['w1', 'w_local']));
     });
 
+    test(
+        'backUpNow stays bound to the account it started with when the '
+        'session changes during the backup, and uploads nothing', () async {
+      // Production review 2026-11-12, finding 1: the upload took its
+      // destination from the live session after the export was built, so a
+      // sign-out or a deep link signing in someone else in that window
+      // wrote this device's data over the other account's backup.
+      await seedWorkout(database, 'w1', 100);
+      container = await containerFor(database);
+      cloud.liveUserId = () => auth.currentUser?.id;
+      cloud.beforeRequest = () async => auth.emitExternalChange(
+            const AuthUser(
+              id: 'user-2',
+              email: 'other@example.com',
+              isEmailConfirmed: true,
+            ),
+          );
+
+      await expectLater(
+        container.read(cloudBackupControllerProvider.notifier).backUpNow(),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.accountChanged,
+          ),
+        ),
+      );
+      expect(cloud.boundUserIds, ['user-1']);
+      expect(cloud.uploads, 0);
+      expect(cloud.payload, isNull);
+    });
+
+    test('backUpNow refuses when signed out, without building or uploading',
+        () async {
+      container = await containerFor(database, user: null);
+
+      await expectLater(
+        container.read(cloudBackupControllerProvider.notifier).backUpNow(),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.notSignedIn,
+          ),
+        ),
+      );
+      expect(cloud.boundUserIds, isEmpty);
+    });
+
+    test(
+        'restoreFromCloud does not apply a backup when the account changed '
+        'after it was downloaded', () async {
+      // The other half of finding 1: the download was checked, but nothing
+      // re-checked before local data was replaced, so the previous
+      // account's backup could be applied under the new one.
+      await seedWorkout(database, 'from_backup', 100);
+      container = await containerFor(database);
+      await container.read(cloudBackupControllerProvider.notifier).backUpNow();
+      await seedWorkout(database, 'local_only', 60);
+
+      cloud.afterDownload = () async => auth.emitExternalChange(
+            const AuthUser(
+              id: 'user-2',
+              email: 'other@example.com',
+              isEmailConfirmed: true,
+            ),
+          );
+
+      await expectLater(
+        container
+            .read(cloudBackupControllerProvider.notifier)
+            .restoreFromCloud(),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.accountChanged,
+          ),
+        ),
+      );
+      final ids = (await WorkoutDao(database).watchAll().first)
+          .map((w) => w.id)
+          .toSet();
+      expect(ids, {'from_backup', 'local_only'});
+      final List<FileSystemEntity> snapshots =
+          Directory(snapshotDir).listSync();
+      expect(snapshots, isEmpty, reason: 'refused before the import began');
+    });
+
+    test('ensureSameAccount: none, another, and the same account', () {
+      expect(
+        () => ensureSameAccount(currentUserId: null, expectedUserId: 'a'),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.notSignedIn,
+          ),
+        ),
+      );
+      expect(
+        () => ensureSameAccount(currentUserId: 'b', expectedUserId: 'a'),
+        throwsA(
+          isA<CloudBackupFailure>().having(
+            (f) => f.kind,
+            'kind',
+            CloudBackupFailureKind.accountChanged,
+          ),
+        ),
+      );
+      ensureSameAccount(currentUserId: 'a', expectedUserId: 'a');
+    });
+
     test('status is null when signed out, without calling the backend',
         () async {
       container = await containerFor(database, user: null);
@@ -386,7 +528,7 @@ void main() {
       expect(disabled.isAvailable, isFalse);
       expect(await disabled.head(), isNull);
       await expectLater(
-        disabled.download(),
+        disabled.download(forUserId: 'user-1'),
         throwsA(
           isA<CloudBackupFailure>().having(
             (f) => f.kind,

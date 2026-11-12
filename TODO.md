@@ -128,6 +128,33 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-12, production review (an outside review of the whole
+  app, ten findings; each re-checked against the code, all ten real, three
+  rated lower than the review did; fixed one item at a time on
+  `review/production-2026-11-12`). **Not in the 1.0.5+6 bundle.**
+  - **Fixed: a backup could land in another account's slot.** The upload
+    took its destination from the live session after the export was
+    built, and a restore never re-checked before replacing local data, so
+    a sign-out or a deep link signing in someone else during the operation
+    wrote this device's data over that account's backup, or applied the
+    previous account's backup under the new one. Not a row-level-security
+    bypass: the write was made as the new account. Now the account checked
+    at the start is passed to `upload` and `download` (`forUserId`); the
+    Supabase service refuses if the session is no longer that account
+    (`ensureSameAccount`) and writes the row under the bound id, so a later
+    switch is refused by RLS rather than redirected; and restore checks
+    again after the download and decode, just before applying. A new
+    failure kind, `accountChanged`, says "the account changed while this
+    was running, nothing was changed" (en/ar), since the existing mismatch
+    message advises signing out and in, which is wrong here. Signed out,
+    Back up now now refuses before building the export (it built it, then
+    the service refused). **Tested:** a session switch during the backup
+    uploads nothing and the upload was bound to the first account; a
+    switch after the download leaves local data and the snapshot folder
+    untouched (fails with the re-check removed); signed out refuses
+    without uploading; `ensureSameAccount`'s three cases. **Not checked:**
+    the Supabase service itself (no test client; the check is the shared
+    function), and on the phone.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

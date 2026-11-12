@@ -33,6 +33,7 @@ class _FakeBackupService implements CloudBackupService {
 
   @override
   Future<CloudBackupInfo> upload({
+    required String forUserId,
     required String payload,
     required String appVersion,
     required int dbSchemaVersion,
@@ -40,7 +41,7 @@ class _FakeBackupService implements CloudBackupService {
       throw UnimplementedError();
 
   @override
-  Future<String> download() {
+  Future<String> download({required String forUserId}) {
     downloads++;
     return _download();
   }
