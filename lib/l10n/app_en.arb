@@ -133,6 +133,12 @@
   "backupRestoreTitle": "Restore from my account",
   "backupRestoreSubtitle": "Replaces the data on this device with your backup",
   "backupRestoreConfirmTitle": "Restore from your account?",
+  "backupRestoreConfirmWhich": "This restores the backup from {backup}.",
+  "@backupRestoreConfirmWhich": {
+    "placeholders": {
+      "backup": { "type": "String" }
+    }
+  },
   "backupRestoreConfirmBody": "Everything currently on this device — workouts, programs, templates, body metrics — is replaced by your backup.\n\nA snapshot of the current data is saved first, so you can undo this from Data management.",
   "backupRestoreAction": "Restore",
   "backupRestoring": "Restoring…",

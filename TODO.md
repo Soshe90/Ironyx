@@ -316,6 +316,24 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     stand-in `flutter`, the five cases (missing file, missing keystore, a
     good CRLF `key.properties`, the override, and `run` untouched). **Not
     checked:** a real release build.
+  - **Changed: the cloud-restore confirmation names the backup.** It said
+    only that "your backup" would replace everything, so a months-old
+    backup read the same as yesterday's. It now opens with "This restores
+    the backup from 12 Nov 2026 at 9:01 · 40 KB" (new string, en/ar), from
+    the metadata Settings already shows; nothing is downloaded for it.
+    **Tested:** the dialog shows the date and size and downloads nothing.
+  - **ADR amendments (docs/ADR.md), where the code and the ADRs
+    disagreed and the code is right:** ADR-1, the open workout draft lives
+    in preferences, why, and the cross-store window finding 5 closed;
+    ADR-4, alerts are scheduled for the whole session (a phone can lock
+    without warning), not only on backgrounding, plus the best-effort
+    capabilities from finding 2; ADR-7, a cloud restore previews date and
+    size rather than entity counts. **Open, found writing the ADR-4 one:**
+    both notification channels are high importance, so a timer watched
+    on screen most likely also gets the system notification and its sound
+    at each boundary, beside the in-app cue. Read from the code, **not
+    checked on the phone**; if it doubles up, cancel on resume and
+    schedule on pause as well as at start.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
