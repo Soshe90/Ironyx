@@ -168,6 +168,11 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     _ticker?.cancel();
     _ticker = null;
     final TimerEngine? engine = _engine;
+    // Already finished, or never started: nothing to end. A second call
+    // (the last interval running out as End is pressed, or a tick and a
+    // stop in the same frame) played the completion sound and haptic
+    // again; only the session write was guarded, by its own null check.
+    if (engine == null) return;
     _engine = null;
 
     // Read before any of the awaits below, which can run past this

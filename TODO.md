@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,152 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,153 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -275,6 +275,14 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     `timerPhaseTooLong`). **Tested:** the total follows the rounds; a field
     is marked only after Start and clears as it is fixed; zero rest gives a
     work-only timer and its formula. All three fail on the old code.
+  - **Fixed: the completion sound and haptic could play more than once.**
+    `TimerController._finish` cleared the engine first but played the cues
+    unconditionally, so a second call (the last interval running out as
+    End is pressed) or a `stop()` on an idle timer played them again; only
+    the session write was guarded. It now returns when there is nothing to
+    finish. **Tested:** three ends play the cues once and save one session
+    (on the old code the haptic played three times).
+    This was the last of the fourteen Library and Timer review items.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

@@ -238,6 +238,19 @@ void main() {
       expect(session.actualDurationSeconds, 5);
     });
 
+    test('ending twice plays the completion cues once', () async {
+      await controller.start(TimerPresets.tabata(), notificationGranted: true);
+      clearInteractions(mockHaptics);
+      clearInteractions(mockAudio);
+
+      await Future.wait(<Future<void>>[controller.stop(), controller.stop()]);
+      await controller.stop();
+
+      verify(() => mockHaptics.heavy()).called(1);
+      verify(() => mockAudio.cue(TimerCue.complete)).called(1);
+      expect(await timerDao.watchAll().first, hasLength(1));
+    });
+
     test('notification denied flag is set when permission not granted',
         () async {
       final preset = TimerPresets.tabata();
