@@ -283,6 +283,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     finish. **Tested:** three ends play the cues once and save one session
     (on the old code the haptic played three times).
     This was the last of the fourteen Library and Timer review items.
+  - **Checked on the phone, 2026-11-12** (debug build of `6e1454d`, the
+    owner's data, Arabic): the Library lists its 304 exercises in Arabic
+    order (أرجحة…, أسطوانة…, البلانك…), equipment in Arabic in every row
+    ("كيتل بل", "بار", "وزن الجسم"), the bodyweight icon on bodyweight rows,
+    and the pictures sharp at the reduced decode size; the timer builder
+    shows "المجموع 05:20 · 16 فترةً", and "Save preset" opens the name
+    dialog filled with the Arabic formula and a 24/40 counter (cancelled,
+    nothing saved). **Not checked on the phone:** an Arabic search (adb
+    cannot type Arabic), filter chips, deleting a preset, starting a timer
+    (it would run on the owner's phone), and TalkBack.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
