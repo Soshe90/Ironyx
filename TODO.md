@@ -30,8 +30,10 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,172 passed, 2 skipped, 0 failed** (2026-11-12; was
-  1,041 on 2026-11-10 and 876 on 2026-11-05).
+- `flutter test`: **1,219 passed, 2 skipped, 0 failed** (2026-11-12, on
+  `review/production-2026-11-12`; 1,172 earlier that day, 1,041 on
+  2026-11-10 and 876 on 2026-11-05). Format, analyze and the asset-licence
+  check pass; the calendar and week tests pass under `TZ=PST8PDT`.
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
