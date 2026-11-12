@@ -44,9 +44,15 @@ class ProgramImportAction extends ConsumerWidget {
       allowedExtensions: ['csv'],
     );
     if (picked == null || !context.mounted) return;
-
+    // Refused unread: reading a file this size whole is the cost the limit
+    // exists to avoid.
     final String csv;
     try {
+      if (await picked.length() > kMaxProgramCsvBytes) {
+        if (!context.mounted) return;
+        _showMessage(context, context.l10n.programImportTooLarge);
+        return;
+      }
       csv = utf8.decode(await picked.readAsBytes());
     } on Object {
       if (!context.mounted) return;
@@ -74,6 +80,10 @@ class ProgramImportAction extends ConsumerWidget {
     } on ProgramImportException {
       if (!context.mounted) return;
       _showMessage(context, context.l10n.programImportInvalidHeader);
+      return;
+    } on ProgramCsvTooLargeException {
+      if (!context.mounted) return;
+      _showMessage(context, context.l10n.programImportTooLarge);
       return;
     } on Object catch (error, stackTrace) {
       // The catalogue and program-name lookups are database reads; a failure

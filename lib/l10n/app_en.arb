@@ -374,6 +374,7 @@
   "programImportTooltip": "Import programs from CSV",
   "programImportPickerTitle": "Choose a program spreadsheet",
   "programImportInvalidHeader": "The first row must contain \"program\", \"day\", and \"exercise\" columns.",
+  "programImportTooLarge": "This file is too large to be a program sheet (over 1 MB).",
   "programImportDone": "Programs imported.",
   "programImportConfirmTitle": "Import programs?",
   "programImportSummary": "{programs} programs \u00b7 {days} days \u00b7 {exercises} exercises",

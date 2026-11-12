@@ -248,6 +248,17 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     at -10 kg left out and counted, at 0 kg kept; the preview shows the
     count only when there is one. **Not checked:** on the phone. The
     XLSX import already has a 10 MB size limit.
+  - **Fixed: a program CSV of any size was read and split on the UI
+    thread.** Now a file over 1 MB (`kMaxProgramCsvBytes`; five programs
+    of six days are about 15 KB) is refused before it is read, and again
+    in `ProgramImportService.parse`, with "This file is too large to be a
+    program sheet (over 1 MB)" (new string, en/ar); the split into rows
+    runs on another isolate (`parseProgramCsv`). The limit is what bounds
+    the memory; the isolate keeps the screen moving. **Tested:** a CSV
+    over the limit is refused; the action says so; the split still handles
+    quotes, commas, CRLF and the byte-order mark; the existing import tests
+    pass through the isolate. **Not checked:** on the phone; the picker's
+    size check is not reachable in a test (no picker channel).
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
