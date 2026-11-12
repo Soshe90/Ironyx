@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,219 passed, 2 skipped, 0 failed** (2026-11-12, on
+- `flutter test`: **1,222 passed, 2 skipped, 0 failed** (2026-11-12, on
   `review/production-2026-11-12`; 1,172 earlier that day, 1,041 on
   2026-11-10 and 876 on 2026-11-05). Format, analyze and the asset-licence
   check pass; the calendar and week tests pass under `TZ=PST8PDT`.
