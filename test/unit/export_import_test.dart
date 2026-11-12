@@ -246,6 +246,55 @@ void main() {
     await database.close();
   });
 
+  test('restoring a snapshot keeps one of what it replaced', () async {
+    const service = DataExportService();
+    final database = AppDatabase.forTesting();
+    await seed(database);
+    Future<int> workouts() => database
+        .customSelect('SELECT COUNT(*) AS count FROM workouts_table')
+        .getSingle()
+        .then((row) => row.read<int>('count'));
+
+    // A snapshot of an empty history, made the way the app makes one: an
+    // export of a database. The seeded one is the live data.
+    final AppDatabase blank = AppDatabase.forTesting();
+    await ExerciseDao(blank).upsertExercises([
+      ExercisesTableCompanion.insert(
+        id: 'bench',
+        slug: 'bench',
+        name: 'Bench Press',
+        category: 'strength',
+        difficulty: 'intermediate',
+        movementPattern: 'horizontalPush',
+        seedVersion: 1,
+      ),
+    ]);
+    final File empty = File('${snapshotDir.path}/pre_import_snapshot_1.json')
+      ..writeAsStringSync(await service.buildJsonExport(blank));
+    await blank.close();
+    expect(await workouts(), 1);
+
+    // The wrong snapshot restored: the history is gone...
+    await service.restoreSnapshot(
+      database,
+      empty,
+      snapshotDirPath: snapshotDir.path,
+    );
+    expect(await workouts(), 0);
+
+    // ...but a snapshot of it was saved first, and brings it back.
+    final List<File> snapshots = await service.listSnapshots(snapshotDir.path);
+    expect(snapshots, hasLength(2),
+        reason: 'it saved none, and the history was lost for good');
+    await service.restoreSnapshot(
+      database,
+      snapshots.first,
+      snapshotDirPath: snapshotDir.path,
+    );
+    expect(await workouts(), 1);
+    await database.close();
+  });
+
   test('rejects a file with a newer formatVersion', () async {
     const service = DataExportService();
     final String badJson = jsonEncode({
@@ -258,7 +307,8 @@ void main() {
 
     expect(
       () => service.parseImport(badJson),
-      throwsA(isA<ImportValidationException>()),
+      throwsA(isA<ImportValidationException>()
+          .having((e) => e.problem, 'problem', ImportProblem.madeByNewerApp)),
     );
   });
 
@@ -514,7 +564,10 @@ void main() {
         restore(),
         throwsA(
           isA<ImportValidationException>()
-              .having((e) => e.message, 'message', contains('Exercise x')),
+              .having((e) => e.message, 'message', contains('Exercise x'))
+              .having(
+                  (e) => e.problem, 'problem', ImportProblem.exerciseConflict)
+              .having((e) => e.subject, 'subject', 'Exercise x'),
         ),
       );
       expect(
@@ -555,7 +608,8 @@ void main() {
         mode: ImportMode.replace,
         snapshotDirPath: snapshotDir.path,
       ),
-      throwsA(isA<ImportValidationException>()),
+      throwsA(isA<ImportValidationException>()
+          .having((e) => e.problem, 'problem', ImportProblem.incomplete)),
     );
 
     // The seeded workout must survive untouched: rejection must happen
@@ -684,7 +738,8 @@ void main() {
           predicate<ImportValidationException>(
             (error) =>
                 error.message.contains('workouts_table row 1') &&
-                error.message.contains('started_at'),
+                error.message.contains('started_at') &&
+                error.problem == ImportProblem.damaged,
           ),
         ),
       );
@@ -846,7 +901,8 @@ void main() {
     const service = DataExportService();
     expect(
       () => service.parseImport('not json'),
-      throwsA(isA<ImportValidationException>()),
+      throwsA(isA<ImportValidationException>()
+          .having((e) => e.problem, 'problem', ImportProblem.notAnExport)),
     );
   });
 

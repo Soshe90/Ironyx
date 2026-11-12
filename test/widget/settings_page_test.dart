@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +12,10 @@ import 'package:ironyx/core/formatters/week_start.dart';
 import 'package:ironyx/core/formatters/week_start_controller.dart';
 import 'package:ironyx/core/formatters/weight_unit_controller.dart';
 import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/services/data_export_service.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
+import 'package:ironyx/features/backup/domain/cloud_backup_controller.dart';
+import 'package:ironyx/features/tracker/domain/active_workout_notifier.dart';
 import 'package:ironyx/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,6 +36,29 @@ import '../helpers/pump_app.dart';
 class _NoopExerciseSeeder extends ExerciseSeeder {
   @override
   Future<void> build() async {}
+}
+
+/// Counts delete-all calls, and fails them on request, without touching
+/// a database.
+class _CountingExportService extends DataExportService {
+  int deletes = 0;
+  bool fail = false;
+
+  /// Holds the export open until completed, or fails it.
+  Completer<String>? export;
+
+  @override
+  Future<String> buildJsonExport(AppDatabase db, {bool indent = true}) =>
+      export?.future ?? Future<String>.value('{}');
+
+  @override
+  Future<void> deleteAllUserData(
+    AppDatabase db, {
+    String? snapshotDirPath,
+  }) async {
+    deletes++;
+    if (fail) throw StateError('disk full');
+  }
 }
 
 void main() {
@@ -383,16 +412,44 @@ void main() {
         return count;
       }
 
+      // What else delete-all must remove: an exercise of the user's own, an
+      // import snapshot, and an open workout.
+      await exerciseDao.upsertExercises([
+        ExercisesTableCompanion.insert(
+          id: 'mine',
+          slug: 'mine',
+          name: 'My Row',
+          category: 'other',
+          difficulty: 'intermediate',
+          movementPattern: 'other',
+          seedVersion: 0,
+          isCustom: const Value(true),
+        ),
+      ]);
+      final Directory snapshots =
+          Directory.systemTemp.createTempSync('ironyx_settings_delete');
+      addTearDown(() => snapshots.deleteSync(recursive: true));
+      File('${snapshots.path}/pre_import_snapshot_1.json')
+          .writeAsStringSync('{}');
+
       await pumpApp(
         tester,
         initialLocation: '/settings',
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
           exerciseSeederProvider.overrideWith(_NoopExerciseSeeder.new),
+          snapshotDirectoryProvider.overrideWith((ref) async => snapshots.path),
         ],
         awaitDatabase: true,
       );
       await tester.pumpAndSettle();
+      final ProviderContainer container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      await tester.runAsync(
+        () => container.read(activeWorkoutProvider.notifier).start(),
+      );
+      expect(container.read(activeWorkoutProvider), isNotNull);
 
       final int programsBefore = await pollProgramCount();
       expect(
@@ -426,6 +483,214 @@ void main() {
         reason: 'built-in programs must come back after delete-all, the '
             'same way the exercise catalogue does',
       );
+      expect(
+        snapshots.listSync(),
+        isEmpty,
+        reason: 'a snapshot is a full copy, and Restore snapshot undid the '
+            'delete with it',
+      );
+      expect(container.read(activeWorkoutProvider), isNull,
+          reason: 'the open workout is kept outside the database');
+      final mine = await database
+          .customSelect("SELECT id FROM exercises_table WHERE id = 'mine'")
+          .get();
+      expect(mine, isEmpty);
+      expect(find.text('All data deleted'), findsOneWidget);
+    });
+
+    Future<void> openDeleteDialog(WidgetTester tester) async {
+      await tester.scrollUntilVisible(
+        find.text('Delete all data'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete all data'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Export first offers the export and deletes nothing',
+        (tester) async {
+      final _CountingExportService service = _CountingExportService();
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dataExportServiceProvider.overrideWithValue(service),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await openDeleteDialog(tester);
+
+      await tester.tap(find.text('Export first'));
+      await tester.pumpAndSettle();
+
+      // The export's own first step: choosing the format.
+      expect(find.text('JSON backup (can be imported later)'), findsOneWidget);
+      expect(service.deletes, 0);
+    });
+
+    testWidgets('an export shows its progress, and a failure says so',
+        (tester) async {
+      final _CountingExportService service = _CountingExportService()
+        ..export = Completer<String>();
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dataExportServiceProvider.overrideWithValue(service),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Export data'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export data'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('JSON backup (can be imported later)'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget,
+          reason: 'nothing showed while the export was built');
+
+      service.export!.completeError(StateError('disk full'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text("Couldn't export your data. Please try again."),
+          findsOneWidget);
+    });
+
+    testWidgets('snapshots are listed by when they were taken', (tester) async {
+      final Directory snapshots =
+          Directory.systemTemp.createTempSync('ironyx_snapshot_list');
+      addTearDown(() => snapshots.deleteSync(recursive: true));
+      final DateTime taken = DateTime(2026, 11, 12, 9, 1);
+      File('${snapshots.path}/pre_import_snapshot_'
+              '${taken.toUtc().millisecondsSinceEpoch}.json')
+          .writeAsStringSync('{}');
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          snapshotDirectoryProvider.overrideWith((ref) async => snapshots.path),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Restore pre-import snapshot'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Restore pre-import snapshot'));
+      // Listing the folder is real file I/O.
+      for (int i = 0;
+          i < 50 && find.text('Restore snapshot').evaluate().isEmpty;
+          i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('12 Nov 2026'), findsOneWidget);
+      expect(find.textContaining('pre_import_snapshot'), findsNothing,
+          reason: 'it listed file names');
+    });
+
+    testWidgets('a snapshot folder that cannot be read says so',
+        (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          snapshotDirectoryProvider.overrideWith(
+            (ref) => Future<String>.error(StateError('no storage')),
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Restore pre-import snapshot'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Restore pre-import snapshot'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining("Couldn't restore this snapshot"),
+          findsOneWidget);
+    });
+
+    testWidgets('language, appearance, units and week start share one card',
+        (tester) async {
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        surfaceSize: const Size(400, 2400),
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Preferences'), findsOneWidget);
+      final Set<Element> cards = <Element>{
+        for (final String title in <String>[
+          'Language',
+          'Appearance',
+          'Units',
+          'Week starts on',
+        ])
+          tester.element(
+            find.ancestor(
+              of: find.text(title),
+              matching: find.byType(AppCard),
+            ),
+          ),
+      };
+      expect(cards, hasLength(1),
+          reason: 'each was a card under its own heading');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a delete that fails says so', (tester) async {
+      final _CountingExportService service = _CountingExportService()
+        ..fail = true;
+      await pumpApp(
+        tester,
+        initialLocation: '/settings',
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          dataExportServiceProvider.overrideWithValue(service),
+          snapshotDirectoryProvider.overrideWith((ref) async => 'unused'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      await openDeleteDialog(tester);
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete everything'));
+      await tester.pumpAndSettle();
+
+      expect(service.deletes, 1);
+      expect(
+        find.text(
+          'Something went wrong while deleting your data. Please try again.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('All data deleted'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing,
+          reason: 'the progress dialog is closed');
     });
   });
 

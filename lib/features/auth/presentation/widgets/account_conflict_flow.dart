@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
+import '../../../settings/domain/erase_local_data.dart';
 import '../../domain/auth_controller.dart';
 import '../../domain/auth_service.dart';
 
@@ -73,24 +74,9 @@ Future<bool> resolveAccountConflict(
     return false;
   }
 
-  final database = ref.read(appDatabaseProvider);
-  await ref.read(dataExportServiceProvider).deleteAllUserData(database);
-  // Programs (built-in and user) were deleted along with their templates —
-  // reset the seed marker and reseed so built-ins come back, the same as
-  // Settings' own "delete all data" flow.
-  //
-  // This exact reset -> invalidate -> read(...future) sequence once produced
-  // a hung `Future` in a widget test that drove it under a specific
-  // `tester.pump()`/`runAsync` interleaving, while `programSeederProvider`
-  // was also being watched app-wide by `app.dart`. It did not reproduce
-  // against the real Settings "delete all data" flow (same sequence, see
-  // `DataManagementSection._deleteAll`) across several real end-to-end
-  // widget-test runs, so it looks like a test-harness artifact rather than a
-  // reachable bug — but it was never fully explained. See TODO.md's A2.14
-  // for the reproduction, in case this ever hangs for real.
-  await ref.read(programSeederProvider.notifier).resetSeedVersion();
-  ref.invalidate(programSeederProvider);
-  await ref.read(programSeederProvider.future);
+  // The same erase as Settings' "Delete all data": the database, the
+  // import snapshots, an open workout, then the built-in programs back.
+  await eraseLocalData(ref);
 
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(

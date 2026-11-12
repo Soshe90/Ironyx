@@ -4,10 +4,49 @@ import 'dart:convert';
 enum ImportMode { merge, replace }
 
 /// Thrown when an import file fails validation before any data is touched.
-class ImportValidationException implements Exception {
-  ImportValidationException(this.message);
+/// Why a backup was refused, as the user needs to know it: each is one
+/// translated sentence (see `ImportValidationL10n`), where the 22 refusals
+/// each had their own English message, shown as they were in any language.
+enum ImportProblem {
+  /// The file is not an Ironyx export at all.
+  notAnExport,
 
+  /// Made by a newer version of the app: updating the app fixes it.
+  madeByNewerApp,
+
+  /// Made by a version too old for this app to read.
+  tooOld,
+
+  /// A replace would delete data the backup does not have.
+  incomplete,
+
+  /// One of its exercises is here already under another id; [subject] is
+  /// its name.
+  exerciseConflict,
+
+  /// A row, a column or a reference in it is wrong: damaged or edited.
+  damaged,
+
+  /// This app's own tables do not match what an export holds: a fault in
+  /// the app, not the file.
+  appMismatch,
+}
+
+class ImportValidationException implements Exception {
+  ImportValidationException(
+    this.message, {
+    this.problem = ImportProblem.damaged,
+    this.subject,
+  });
+
+  /// The detail, in English, for logs and tests. Not for the user: see
+  /// [problem].
   final String message;
+
+  final ImportProblem problem;
+
+  /// What [problem] is about, where it names something (an exercise).
+  final String? subject;
 
   @override
   String toString() => message;
@@ -50,28 +89,30 @@ class ImportEnvelope {
     try {
       decoded = jsonDecode(jsonContent);
     } on FormatException {
-      throw ImportValidationException(
-          'This file is not a valid Ironyx export.');
+      throw ImportValidationException('This file is not a valid Ironyx export.',
+          problem: ImportProblem.notAnExport);
     }
     if (decoded is! Map<String, dynamic>) {
-      throw ImportValidationException(
-          'This file is not a valid Ironyx export.');
+      throw ImportValidationException('This file is not a valid Ironyx export.',
+          problem: ImportProblem.notAnExport);
     }
 
     final Object? rawFormatVersion = decoded['formatVersion'];
     if (rawFormatVersion is! int) {
-      throw ImportValidationException(
-          'This file is not a valid Ironyx export.');
+      throw ImportValidationException('This file is not a valid Ironyx export.',
+          problem: ImportProblem.notAnExport);
     }
     if (rawFormatVersion > currentFormatVersion) {
       throw ImportValidationException(
         'This backup was made with a newer version of Ironyx '
         '(format $rawFormatVersion). Update the app before importing.',
+        problem: ImportProblem.madeByNewerApp,
       );
     }
     if (rawFormatVersion < currentFormatVersion) {
       throw ImportValidationException(
         'This backup format (version $rawFormatVersion) is no longer supported.',
+        problem: ImportProblem.tooOld,
       );
     }
 
@@ -84,14 +125,14 @@ class ImportEnvelope {
         rawAppVersion.trim().isEmpty ||
         rawExportedAt is! String ||
         DateTime.tryParse(rawExportedAt) == null) {
-      throw ImportValidationException(
-          'This file is not a valid Ironyx export.');
+      throw ImportValidationException('This file is not a valid Ironyx export.',
+          problem: ImportProblem.notAnExport);
     }
 
     final Object? rawTables = decoded['tables'];
     if (rawTables is! Map<String, dynamic>) {
-      throw ImportValidationException(
-          'This file is not a valid Ironyx export.');
+      throw ImportValidationException('This file is not a valid Ironyx export.',
+          problem: ImportProblem.notAnExport);
     }
     final Map<String, List<Map<String, Object?>>> tables;
     try {
@@ -103,8 +144,8 @@ class ImportEnvelope {
               .toList(),
       };
     } on TypeError {
-      throw ImportValidationException(
-          'This file is not a valid Ironyx export.');
+      throw ImportValidationException('This file is not a valid Ironyx export.',
+          problem: ImportProblem.notAnExport);
     }
 
     return ImportEnvelope(

@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,153 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,172 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -128,6 +128,146 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-12, Settings (reviewed, the review re-checked at the
+  owner's request, then fixed one item at a time, on
+  `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
+  - **Fixed: "Delete all data" left the user's data on the phone.** It
+    cleared the database only. Every import, and every cloud restore,
+    first saves a full snapshot of the data (name and email included) into
+    the app's private storage and keeps the last three; nothing ever
+    removed them, so after "Delete everything" Restore snapshot brought the
+    data back, and the confirmation's "This cannot be undone" was untrue.
+    An open workout (kept outside the database) and the user's own
+    exercises (typed in, or made by an XLSX import) survived as well. Now
+    `DataExportService.deleteAllUserData` also deletes custom exercises
+    and, after the database delete succeeds, the snapshots
+    (`deleteSnapshots`); and one `eraseLocalData` (settings/domain) does
+    the database, the snapshots, the open workout and the built-in
+    programs for both Settings and the account-conflict "erase and
+    continue", which had their own copies. The first review had proposed a
+    snapshot *before* deleting, which would have kept another full copy;
+    instead the dialog offers "Export first", a copy the user chooses and
+    places. The delete runs behind a progress dialog and a failure says so
+    (it escaped the tap handler). Three strings, en/ar, and the
+    confirmation's text now lists what goes. Android's own backup is off
+    (`allowBackup="false"`), so the snapshots never left the phone.
+    **Found while testing:** the progress dialog's helper started its work
+    before the dialog was built, so a fast failure left the spinner up for
+    good; it waits for the dialog now. **Tested:** custom exercises go,
+    even once used, the catalogue stays; snapshots go and nothing else in
+    their folder; a failed delete keeps them; end to end, the custom
+    exercise, the snapshot and the open workout are gone; "Export first"
+    deletes nothing; a failure shows its message and closes the spinner.
+    The custom-exercise and end-to-end tests fail on the old code. The
+    account-conflict erase test now also checks the old account's snapshot
+    is gone. **Not checked:** on the phone. **Open:** the account-conflict
+    erase has no error handling of its own (as before this change).
+  - **Fixed: restoring a snapshot could lose the current data for good.**
+    An import and a cloud restore save a snapshot of what they replace;
+    Restore snapshot did not, so picking the wrong one was final. It does
+    now (`restoreSnapshot` with `createSnapshot: true`). The new snapshot
+    is the newest and is kept; past three, the oldest goes, which may be
+    the one just restored, whose data is the live data by then.
+    **Tested:** restoring an empty snapshot over a history, then the
+    snapshot saved by that restore, brings the history back (on the old
+    code there was no second snapshot).
+  - **Fixed: import errors were English only, or lost.** The importer's 22
+    refusals each had an English message, shown as it was in Arabic too;
+    and those raised while applying (a backup missing data, an exercise
+    name already here) were caught as the generic "Import failed", their
+    reason lost. `ImportValidationException` now carries an
+    `ImportProblem`, seven kinds (not an export, made by a newer app, too
+    old, incomplete, exercise clash with its name, damaged, app mismatch),
+    and the Data section says each in the user's language
+    (`ImportValidationL10n.messageFor`, seven strings, en/ar), for a file
+    picked, a refusal while applying, and a snapshot restore. The English
+    detail stays in `message`, for logs and tests. Cloud restore already
+    translated its own (as "corrupt") and is unchanged. Grouped, at the
+    owner's choice, rather than 22 translations of row-level detail a user
+    cannot act on. **Tested:** each kind on the existing test that
+    triggers it (not JSON, newer format and schema, too-old schema,
+    incomplete replace, exercise clash and its name, a damaged row); every
+    kind has its own sentence, and an Arabic one.
+  - **Fixed: Export showed nothing while it ran, and failed silently.** It
+    reads every table with nothing on screen, the tile still tappable (a
+    second tap started a second export), and a failure to build or to save
+    escaped the tap handler. The backup is now built behind the progress
+    dialog; the system's save screen then opens (no dialog can stay over
+    it); a failure at either step says "Couldn't export your data" (new
+    string, en/ar) and is logged. The 20 MB figure in `buildJsonExport` is
+    a logged warning, not a refusal, so a large export still saves.
+    **Tested:** the spinner shows while the export is built, and a failed
+    build closes it and says so (fails on the old code: no spinner). The
+    save step is not reachable in a test (the file picker has no test
+    channel). **Not checked:** on the phone.
+  - **Fixed: Import read any size of file on the UI thread.** A picked file
+    was read whole and decoded on the UI isolate with nothing on screen,
+    the tile still tappable; the service's `parseImportInBackground` (the
+    one cloud restore uses) went unused here. Now `readImportFile` checks
+    the size first (over 50 MB, `kMaxImportBytes`, it is refused unread:
+    "This file is too large to be a backup", new string en/ar; a year of
+    hard training exports to about 1.4 MB), then decodes and validates in
+    the background, all behind the progress dialog. **Tested:** a file
+    over the limit is refused without being read; a real export reads
+    back; a file that is not an export is refused as such from the
+    background isolate; bytes that are not text cannot be read. Through
+    `readImportFile` with a stand-in picked file, since the picker has no
+    test channel; not run on the old code (the function is new).
+    **Not checked:** on the phone.
+  - **Fixed: Restore snapshot listed file names, and could fail silently.**
+    The list showed "pre_import_snapshot_1794398970790.json"; it shows when
+    each was taken ("12 Nov 2026, 9:01", from the name, by
+    `DataExportService.snapshotTakenAt`), the name kept for one that does
+    not parse. Finding and listing the folder were outside the error
+    handling (now `snapshotDirectoryProvider`, inside it); the restore runs
+    behind the progress dialog, a refusal says why (item 3's messages), and
+    the snapshot is decoded off the UI isolate. The confirmation now says a
+    copy of the current data is saved first (item 2). **Tested:** a
+    snapshot is listed by its date and not its file name; a folder that
+    cannot be read shows the restore-failed message (both fail on the old
+    code); the time read from a name, and none from another name.
+  - **Fixed: Sign out and Delete account lost failures, and the delete
+    dialog overflowed.** Both caught only `AuthFailure`, so any other error
+    escaped the tap handler; and when the account service succeeded but
+    clearing the account from the device's profile failed, the user was
+    never told the account step had worked. Now an unexpected error says
+    "Something went wrong" and is logged, and a failed local step after a
+    successful remote one says so ("Signed out, but saving that on this
+    device failed", the same for a deleted account; two strings, en/ar).
+    The delete-account dialog scrolls: its field autofocuses, and with the
+    keyboard up on a small phone the content overflowed, as the delete-all
+    dialog's had on a real phone (the review had only reasoned this; the
+    test confirms it). **Tested:** an unexpected sign-out error, a failed
+    local step after sign-out, and the dialog with a 300 dp keyboard on a
+    360×640 screen; the first and the last fail on the old code.
+  - **Changed (owner's choice): one Preferences card.** Language,
+    Appearance, Units and Week start were each a card under its own
+    heading, four headings for four single controls. They are now rows of
+    one card under "Preferences" (new string, en/ar), each a small title,
+    its caption where it had one, and its control (`_PreferenceRow`). The
+    sound and haptics toggles keep their own card (they are the timer's).
+    Same controls, same wording. **Tested:** the four share one card;
+    every existing Settings test passes unchanged, including the week
+    start fitting a narrow phone in Arabic. **Not checked:** on the phone.
+  - **Changed: tidy-up of the Data dialogs.** The backup import dialog's
+    confirm button had borrowed the XLSX importer's "Import" string
+    (`importXlsxConfirmAction`); it has its own, `dataImportConfirmAction`
+    (en/ar, same words), so changing one importer's wording no longer
+    changes the other's. The dialogs' fixed 12 and 16 dp gaps are now
+    `AppSpacing.md` and `AppSpacing.lg`, the same values, so nothing on
+    screen moves. **Tested:** all four gates; the existing import tests
+    find the button by the same words. No new test: nothing behaves
+    differently.
+  - **Phone check, 2026-11-12** (debug build on the owner's SM-N970F, in
+    Arabic, signed out; looked and cancelled only, no data changed):
+    **Verified** the Preferences card (language, appearance, units, week
+    start as rows of one card, the week start fitting); the Delete all
+    dialog with the keyboard up (fits, "Export first" shown, the delete
+    button disabled until the word is typed), cancelled; the snapshot list
+    showing date and time ("11 نوفمبر 2026, 3:09 م"), closed with Back.
+    **Not checked on the phone:** actually deleting, exporting, importing,
+    restoring, and the account actions (signed out, and each would change
+    the owner's data).
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/error_reporting.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -133,16 +134,63 @@ class AccountSection extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    if (!await _remote(
+      messenger,
+      l10n,
+      () => ref.read(authControllerProvider.notifier).deleteAccount(),
+    )) {
+      return;
+    }
+    // Account deletion is remote; local workouts remain on this device until
+    // the user explicitly removes them from Data Management.
+    await _unlink(
+      ref,
+      messenger,
+      done: l10n.accountDeleted,
+      doneButNotSaved: l10n.accountDeletedNotSaved,
+    );
+  }
+
+  /// Runs the account service's part, and reports any failure: the
+  /// expected [AuthFailure] in its own words, anything else as a generic
+  /// message, logged. Only [AuthFailure] was caught, so any other error
+  /// escaped the tap handler and the tap seemed to do nothing. True when it
+  /// succeeded.
+  static Future<bool> _remote(
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n,
+    Future<void> Function() action,
+  ) async {
     try {
-      await ref.read(authControllerProvider.notifier).deleteAccount();
-      // Account deletion is remote; local workouts remain on this device until
-      // the user explicitly removes them from Data Management.
-      await ref.read(profileDaoProvider).unlinkAccount();
-      messenger.showSnackBar(SnackBar(content: Text(l10n.accountDeleted)));
+      await action();
+      return true;
     } on AuthFailure catch (failure) {
       messenger.showSnackBar(
         SnackBar(content: Text(failure.messageFor(l10n))),
       );
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'AccountSection');
+      messenger.showSnackBar(SnackBar(content: Text(l10n.commonError)));
+    }
+    return false;
+  }
+
+  /// Clears the account from this device's profile once the account
+  /// service is done. A failure here comes after the remote part has
+  /// succeeded, so it says that it did: it used to be lost, and the user
+  /// never learnt the account step had worked.
+  static Future<void> _unlink(
+    WidgetRef ref,
+    ScaffoldMessengerState messenger, {
+    required String done,
+    required String doneButNotSaved,
+  }) async {
+    try {
+      await ref.read(profileDaoProvider).unlinkAccount();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'AccountSection.unlink');
+      messenger.showSnackBar(SnackBar(content: Text(doneButNotSaved)));
     }
   }
 
@@ -168,15 +216,19 @@ class AccountSection extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(authControllerProvider.notifier).signOut();
-      await ref.read(profileDaoProvider).unlinkAccount();
-      messenger.showSnackBar(SnackBar(content: Text(l10n.authSignedOut)));
-    } on AuthFailure catch (failure) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(failure.messageFor(l10n))),
-      );
+    if (!await _remote(
+      messenger,
+      l10n,
+      () => ref.read(authControllerProvider.notifier).signOut(),
+    )) {
+      return;
     }
+    await _unlink(
+      ref,
+      messenger,
+      done: l10n.authSignedOut,
+      doneButNotSaved: l10n.authSignedOutNotSaved,
+    );
   }
 }
 
@@ -206,24 +258,29 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
     return AlertDialog(
       title: Text(l10n.accountDeleteConfirmTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(l10n.accountDeleteConfirmBody),
-          const SizedBox(height: AppSpacing.lg),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.characters,
-            decoration: InputDecoration(
-              labelText: l10n.accountDeleteTypeToConfirm(
-                l10n.accountDeleteConfirmWord,
+      // Scrollable because the field autofocuses: on a small phone the
+      // keyboard takes most of the height, and a plain Column overflowed,
+      // as the delete-all dialog's did on a real phone.
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(l10n.accountDeleteConfirmBody),
+            const SizedBox(height: AppSpacing.lg),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              decoration: InputDecoration(
+                labelText: l10n.accountDeleteTypeToConfirm(
+                  l10n.accountDeleteConfirmWord,
+                ),
               ),
+              onChanged: (_) => setState(() {}),
             ),
-            onChanged: (_) => setState(() {}),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: <Widget>[
         TextButton(

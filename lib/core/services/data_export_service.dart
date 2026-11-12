@@ -262,6 +262,7 @@ class DataExportService {
       throw ImportValidationException(
         'This app database does not match the supported export table set: '
         'missing $missingDatabaseTables, extra $extraDatabaseTables.',
+        problem: ImportProblem.appMismatch,
       );
     }
 
@@ -292,6 +293,7 @@ class DataExportService {
           'This backup is missing data for: ${sortedMissing.join(', ')}. '
           'Replacing local data with an incomplete backup would delete it '
           'without anything to restore, so this import was cancelled.',
+          problem: ImportProblem.incomplete,
         );
       }
     }
@@ -449,10 +451,25 @@ class DataExportService {
           'This backup contains an exercise "${row['name']}" that this '
           'device already has under a different id, so it cannot be '
           'restored without renaming one of them.',
+          problem: ImportProblem.exerciseConflict,
+          subject: row['name']?.toString(),
         );
       }
     }
     return missing;
+  }
+
+  /// When [snapshot] was taken, from its name
+  /// (`pre_import_snapshot_<milliseconds since the epoch>.json`), in local
+  /// time; null for a name that does not hold one.
+  static DateTime? snapshotTakenAt(File snapshot) {
+    final String name = snapshot.uri.pathSegments.last;
+    final Match? match =
+        RegExp(r'^pre_import_snapshot_(\d+)\.json$').firstMatch(name);
+    final int? ms = match == null ? null : int.tryParse(match.group(1)!);
+    return ms == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
   }
 
   Future<List<File>> listSnapshots(String snapshotDirPath) async {
@@ -489,18 +506,28 @@ class DataExportService {
         preserveCatalogue: false,
       );
 
+  /// Replaces everything with [snapshotFile], first saving a snapshot of
+  /// what it replaces, as an import and a cloud restore do.
+  ///
+  /// It saved none, so restoring the wrong snapshot lost the current data
+  /// for good. The new snapshot is the newest, so it is kept; the oldest
+  /// past three goes, which may be the one just restored, whose data is
+  /// now the live data anyway.
   Future<void> restoreSnapshot(
     AppDatabase db,
     File snapshotFile, {
     required String snapshotDirPath,
   }) async {
-    final envelope = parseImport(await snapshotFile.readAsString());
+    // Decoded off the UI isolate, as Import does: a snapshot is a full
+    // export, megabytes for a long history.
+    final envelope =
+        await parseImportInBackground(await snapshotFile.readAsString());
     await _applyImport(
       db,
       envelope,
       mode: ImportMode.replace,
       snapshotDirPath: snapshotDirPath,
-      createSnapshot: false,
+      createSnapshot: true,
       preserveCatalogue: false,
     );
   }
@@ -768,7 +795,16 @@ class DataExportService {
   /// Deletes only the five root tables; every child table (workout
   /// exercises/sets, timer intervals, program↔template links, template
   /// exercises) cascades via its `onDelete: KeyAction.cascade` foreign key.
-  Future<void> deleteAllUserData(AppDatabase db) async {
+  /// Deletes the user's data, keeping the exercise catalogue.
+  ///
+  /// With [snapshotDirPath], the import snapshots there go too, once the
+  /// database delete has succeeded. Each is a full copy of the data, name
+  /// and email included; left behind, "delete all" was undone by Restore
+  /// snapshot, and the data stayed on the phone.
+  Future<void> deleteAllUserData(
+    AppDatabase db, {
+    String? snapshotDirPath,
+  }) async {
     await db.transaction(() async {
       await db.customStatement('DELETE FROM workouts_table');
       await db.customStatement('DELETE FROM timer_sessions_table');
@@ -780,12 +816,26 @@ class DataExportService {
       // leave the next person to open the app looking at someone else's
       // name and email.
       await db.customStatement('DELETE FROM profiles_table');
+      // The user's own exercises, typed in or made by an XLSX import, are
+      // theirs, not catalogue. Nothing uses them any more: the workouts and
+      // templates that did went above (their RESTRICT keys would otherwise
+      // stop this), and their own rows go with them by cascade.
+      await db
+          .customStatement('DELETE FROM exercises_table WHERE is_custom = 1');
     });
     // See the matching comment in `_applyImport`: `customStatement` never
     // notifies stream queries, so without this every `watch()` — Tracker
     // history, Progress, Dashboard — would keep showing the just-deleted
     // rows until the app restarts.
     db.markTablesUpdated(db.allTables);
+    if (snapshotDirPath != null) await deleteSnapshots(snapshotDirPath);
+  }
+
+  /// Deletes every import snapshot in [snapshotDirPath].
+  Future<void> deleteSnapshots(String snapshotDirPath) async {
+    for (final File file in await listSnapshots(snapshotDirPath)) {
+      await file.delete();
+    }
   }
 
   Future<void> writeStringToFile(String path, String content) =>

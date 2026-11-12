@@ -10,10 +10,15 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/error_reporting.dart';
+import '../../../../core/formatters/date_formatters.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/services/data_export_service.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../backup/domain/cloud_backup_controller.dart';
+import '../../domain/erase_local_data.dart';
 import '../../domain/export_envelope.dart';
+import '../import_problem_messages.dart';
 
 /// Export / import / delete-all-data controls (ADR-7).
 ///
@@ -84,28 +89,45 @@ class DataManagementSection extends ConsumerWidget {
     final AppDatabase db = ref.read(appDatabaseProvider);
     final String timestamp =
         DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
+    final (String fileName, String mimeType) = switch (format) {
+      _ExportFormat.json => (
+          'ironyx_backup_$timestamp.json',
+          'application/json'
+        ),
+      _ExportFormat.csv => ('ironyx_export_$timestamp.csv', 'text/csv'),
+    };
 
-    final String content;
-    final String fileName;
-    final String mimeType;
-    switch (format) {
-      case _ExportFormat.json:
-        content = await service.buildJsonExport(db);
-        fileName = 'ironyx_backup_$timestamp.json';
-        mimeType = 'application/json';
-      case _ExportFormat.csv:
-        content = await service.buildCsvExport(db);
-        fileName = 'ironyx_export_$timestamp.csv';
-        mimeType = 'text/csv';
+    // Built behind a progress dialog: it reads every table, and the tile
+    // stayed tappable meanwhile, so a second tap started a second export.
+    // A failure here, or in saving below, escaped the tap handler, and the
+    // tap seemed to do nothing.
+    String content = '';
+    final bool built = await _withProgress(context, () async {
+      content = switch (format) {
+        _ExportFormat.json => await service.buildJsonExport(db),
+        _ExportFormat.csv => await service.buildCsvExport(db),
+      };
+    });
+    if (!context.mounted) return;
+    if (!built) {
+      await _showError(context, l10n.dataExportFailed);
+      return;
     }
 
-    final Uint8List bytes = Uint8List.fromList(utf8.encode(content));
-    final Uri? savedUri = await FilePicker.saveFile(
-      fileName: fileName,
-      bytes: bytes,
-      mimeType: mimeType,
-      dialogTitle: l10n.dataExportSaveDialog,
-    );
+    // The system's own save screen: no progress dialog can stay over it.
+    final Uri? savedUri;
+    try {
+      savedUri = await FilePicker.saveFile(
+        fileName: fileName,
+        bytes: Uint8List.fromList(utf8.encode(content)),
+        mimeType: mimeType,
+        dialogTitle: l10n.dataExportSaveDialog,
+      );
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'DataManagementSection.export');
+      if (context.mounted) await _showError(context, l10n.dataExportFailed);
+      return;
+    }
     if (!context.mounted) return;
     if (savedUri != null) {
       ScaffoldMessenger.of(context)
@@ -122,26 +144,38 @@ class DataManagementSection extends ConsumerWidget {
     );
     if (picked == null || !context.mounted) return;
 
-    final String content;
-    try {
-      content = utf8.decode(await picked.readAsBytes());
-    } catch (_) {
-      if (!context.mounted) return;
-      await _showError(context, l10n.dataImportUnreadable);
-      return;
-    }
-
+    // Read and checked behind a progress dialog, in the background: a
+    // large backup was decoded on the UI thread, freezing the screen with
+    // nothing to say why, and the tile could be tapped again meanwhile.
     final DataExportService service = ref.read(dataExportServiceProvider);
-    final ImportEnvelope envelope;
-    try {
-      envelope = service.parseImport(content);
-    } on ImportValidationException catch (e) {
-      if (!context.mounted) return;
-      await _showError(context, e.message);
+    ImportEnvelope? read;
+    Object? refusal;
+    // An unexpected failure (a file that cannot be read) is logged by
+    // _withProgress and leaves `read` null: "could not read".
+    await _withProgress(context, () async {
+      try {
+        read = await readImportFile(service, picked);
+      } on ImportValidationException catch (e) {
+        refusal = e;
+      } on ImportFileTooLargeException catch (e) {
+        refusal = e;
+      }
+    });
+    if (!context.mounted) return;
+    final ImportEnvelope? envelope = read;
+    if (envelope == null) {
+      await _showError(
+        context,
+        switch (refusal) {
+          final ImportValidationException e => e.messageFor(l10n),
+          ImportFileTooLargeException() =>
+            l10n.dataImportTooLarge(kMaxImportBytes ~/ (1024 * 1024)),
+          _ => l10n.dataImportUnreadable,
+        },
+      );
       return;
     }
 
-    if (!context.mounted) return;
     final database = ref.read(appDatabaseProvider);
     final expectedTables = {
       for (final table in database.allTables) table.actualTableName,
@@ -166,15 +200,28 @@ class DataManagementSection extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     final AppLocalizations l10n = context.l10n;
-    final service = ref.read(dataExportServiceProvider);
-    final supportDir = await getApplicationSupportDirectory();
-    final snapshots = await service.listSnapshots(supportDir.path);
+    final DataExportService service = ref.read(dataExportServiceProvider);
+    // Inside the error handling: finding the folder and listing it failed
+    // outside it, and the tap did nothing.
+    final String snapshotDir;
+    final List<File> snapshots;
+    try {
+      snapshotDir = await ref.read(snapshotDirectoryProvider.future);
+      snapshots = await service.listSnapshots(snapshotDir);
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'DataManagementSection.snapshots');
+      if (context.mounted) {
+        await _showError(context, l10n.dataSnapshotRestoreFailed);
+      }
+      return;
+    }
     if (!context.mounted) return;
     if (snapshots.isEmpty) {
       await _showError(context, l10n.dataSnapshotNone);
       return;
     }
 
+    final DateFormatters dates = DateFormatters.of(context);
     final File? selected = await showDialog<File>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -183,8 +230,13 @@ class DataManagementSection extends ConsumerWidget {
           for (final snapshot in snapshots)
             SimpleDialogOption(
               onPressed: () => Navigator.pop(context, snapshot),
+              // When it was taken, newest first; it showed the file's name,
+              // "pre_import_snapshot_1794398970790.json".
               child: Text(
-                snapshot.path.split(Platform.pathSeparator).last,
+                switch (DataExportService.snapshotTakenAt(snapshot)) {
+                  final DateTime at => '${dates.full(at)}, ${dates.time(at)}',
+                  null => snapshot.uri.pathSegments.last,
+                },
               ),
             ),
         ],
@@ -211,20 +263,29 @@ class DataManagementSection extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    try {
-      await service.restoreSnapshot(
-        ref.read(appDatabaseProvider),
-        selected,
-        snapshotDirPath: supportDir.path,
-      );
-      if (!context.mounted) return;
+    // Behind the progress dialog: it replaces every table, with nothing on
+    // screen before, and the tile could start a second restore.
+    ImportValidationException? refusal;
+    final bool restored = await _withProgress(context, () async {
+      try {
+        await service.restoreSnapshot(
+          ref.read(appDatabaseProvider),
+          selected,
+          snapshotDirPath: snapshotDir,
+        );
+      } on ImportValidationException catch (e) {
+        refusal = e;
+      }
+    });
+    if (!context.mounted) return;
+    final ImportValidationException? refused = refusal;
+    if (refused != null) {
+      await _showError(context, refused.messageFor(l10n));
+    } else if (restored) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.dataSnapshotRestored)),
       );
-    } catch (e, stackTrace) {
-      reportError(e, stackTrace,
-          context: 'DataManagementSection.restoreSnapshot');
-      if (!context.mounted) return;
+    } else {
       await _showError(context, l10n.dataSnapshotRestoreFailed);
     }
   }
@@ -283,6 +344,12 @@ class DataManagementSection extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.dataImportComplete)));
+    } on ImportValidationException catch (e) {
+      // Refused before anything changed, for a reason the user can act on;
+      // it was shown as the generic "import failed", the reason lost.
+      closeProgressDialog();
+      if (!context.mounted) return;
+      await _showError(context, e.messageFor(l10n));
     } catch (e, stackTrace) {
       reportError(e, stackTrace, context: 'DataManagementSection.runImport');
       closeProgressDialog();
@@ -322,7 +389,7 @@ class DataManagementSection extends ConsumerWidget {
                 if (highlights.isEmpty)
                   Text(context.l10n.dataImportNoWorkoutData),
                 if (missingTables.isNotEmpty || unknownTables.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     context.l10n.dataImportIntegrityWarning(
                       <String>[
@@ -340,7 +407,7 @@ class DataManagementSection extends ConsumerWidget {
                         TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 RadioGroup<ImportMode>(
                   groupValue: mode,
                   onChanged: (value) => setState(() => mode = value!),
@@ -373,7 +440,7 @@ class DataManagementSection extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, mode),
-              child: Text(context.l10n.importXlsxConfirmAction),
+              child: Text(context.l10n.dataImportConfirmAction),
             ),
           ],
         ),
@@ -412,36 +479,97 @@ class DataManagementSection extends ConsumerWidget {
       );
 
   Future<void> _deleteAll(BuildContext context, WidgetRef ref) async {
-    final bool? confirmed = await showDialog<bool>(
+    final AppLocalizations l10n = context.l10n;
+    final _DeleteChoice? choice = await showDialog<_DeleteChoice>(
       context: context,
       builder: (context) => const _DeleteAllDialog(),
     );
-    if (confirmed != true || !context.mounted) return;
-
-    final DataExportService service = ref.read(dataExportServiceProvider);
-    final AppDatabase db = ref.read(appDatabaseProvider);
-    await service.deleteAllUserData(db);
-    // Programs (built-in and user) were deleted along with their templates
-    // above — reset the seed marker and reseed so built-ins come back the
-    // same way the exercise catalogue survives a delete-all.
-    //
-    // This exact sequence is also used by the account-conflict "erase and
-    // continue" flow (`account_conflict_flow.dart`), where it once produced
-    // a hung `Future` under a specific widget-test pump interleaving with
-    // `programSeederProvider` also watched app-wide by `app.dart`. It did
-    // not reproduce here across several real end-to-end runs of this exact
-    // button (`test/widget/settings_page_test.dart`, "tapping Delete
-    // everything..."), so it looks like a test-harness artifact rather
-    // than a reachable bug — but
-    // it was never fully explained. See TODO.md's A2.14 for the
-    // reproduction, in case this ever hangs for real.
-    await ref.read(programSeederProvider.notifier).resetSeedVersion();
-    ref.invalidate(programSeederProvider);
-    await ref.read(programSeederProvider.future);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(context.l10n.dataAllDeleted)));
+    if (choice == _DeleteChoice.exportFirst) {
+      // Keeping a copy is the user's choice, and it lands where they put
+      // it. Nothing is deleted; they come back to delete once they have it.
+      await _export(context, ref);
+      return;
+    }
+    if (choice != _DeleteChoice.delete) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final bool done = await _withProgress(context, () => eraseLocalData(ref));
+    if (!context.mounted) return;
+    if (done) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.dataAllDeleted)));
+    } else {
+      await _showError(context, l10n.dataDeleteFailed);
+    }
   }
+
+  /// Runs [work] behind a progress dialog that cannot be dismissed, and
+  /// says whether it succeeded; a failure is logged. It ran with nothing on
+  /// screen, and a failure escaped the tap handler unreported.
+  Future<bool> _withProgress(
+    BuildContext context,
+    Future<void> Function() work,
+  ) async {
+    // The dialog's own context, to close exactly it: Settings' context
+    // stays mounted whatever happens to the dialog above it. The work waits
+    // for it: started at once, a fast failure finished before the dialog
+    // was built, left nothing to close, and the spinner stayed for good.
+    final Completer<BuildContext> shown = Completer<BuildContext>();
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          if (!shown.isCompleted) shown.complete(dialogContext);
+          // Back must not close it either: the work goes on regardless.
+          return const PopScope(
+            canPop: false,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
+    );
+    final BuildContext dialogContext = await shown.future;
+    try {
+      await work();
+      return true;
+    } catch (e, stackTrace) {
+      reportError(e, stackTrace, context: 'DataManagementSection');
+      return false;
+    } finally {
+      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+    }
+  }
+}
+
+/// What the delete-all dialog closes with.
+enum _DeleteChoice { delete, exportFirst }
+
+/// Largest file Import reads: 50 MB. A year of hard training exports to
+/// about 1.4 MB; a file this size is not a backup, and reading it whole
+/// could exhaust the memory.
+const int kMaxImportBytes = 50 * 1024 * 1024;
+
+/// The picked file is over [kMaxImportBytes].
+class ImportFileTooLargeException implements Exception {
+  const ImportFileTooLargeException(this.bytes);
+
+  final int bytes;
+}
+
+/// Reads [file] as a backup: its size checked before anything is read,
+/// then decoded and validated off the UI isolate. Throws
+/// [ImportFileTooLargeException], [ImportValidationException], or what
+/// reading or decoding throws for a file that cannot be read.
+@visibleForTesting
+Future<ImportEnvelope> readImportFile(
+  DataExportService service,
+  PlatformFile file,
+) async {
+  final int size = await file.length();
+  if (size > kMaxImportBytes) throw ImportFileTooLargeException(size);
+  final String content = utf8.decode(await file.readAsBytes());
+  return service.parseImportInBackground(content);
 }
 
 enum _ExportFormat { json, csv }
@@ -479,7 +607,7 @@ class _DeleteAllDialogState extends State<_DeleteAllDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(l10n.dataDeleteAllConfirmBody),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               l10n.dataDeleteAllTypeToConfirm(confirmWord),
               style: TextStyle(color: scheme.error),
@@ -498,12 +626,18 @@ class _DeleteAllDialogState extends State<_DeleteAllDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: () => Navigator.pop(context),
           child: Text(l10n.actionCancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _DeleteChoice.exportFirst),
+          child: Text(l10n.dataDeleteExportFirst),
         ),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: scheme.error),
-          onPressed: _canConfirm ? () => Navigator.pop(context, true) : null,
+          onPressed: _canConfirm
+              ? () => Navigator.pop(context, _DeleteChoice.delete)
+              : null,
           child: Text(l10n.dataDeleteEverything),
         ),
       ],
