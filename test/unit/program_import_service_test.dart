@@ -93,6 +93,21 @@ void main() {
     );
   });
 
+  test('a large CSV under the limit is split on another isolate and read',
+      () async {
+    // Over the 64 KB threshold: this one goes through `compute`.
+    final StringBuffer csv = StringBuffer('program,day,exercise,sets\n');
+    for (int i = 0; i < 3000; i++) {
+      csv.writeln('Big Block,Day ${i % 7},Back Squat,3');
+    }
+    expect(csv.length, greaterThan(64 * 1024));
+
+    final result = await service.parse(csv.toString(), database);
+
+    expect(result.programs.single.name, 'Big Block');
+    expect(result.programs.single.days, hasLength(7));
+  });
+
   test('the split handles quotes, commas, CRLF and the byte-order mark', () {
     expect(
       parseProgramCsv('\uFEFFprogram,day\r\n"A, ""b""",Day 1\r\n'),

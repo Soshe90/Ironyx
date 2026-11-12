@@ -252,12 +252,17 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     thread.** Now a file over 1 MB (`kMaxProgramCsvBytes`; five programs
     of six days are about 15 KB) is refused before it is read, and again
     in `ProgramImportService.parse`, with "This file is too large to be a
-    program sheet (over 1 MB)" (new string, en/ar); the split into rows
-    runs on another isolate (`parseProgramCsv`). The limit is what bounds
-    the memory; the isolate keeps the screen moving. **Tested:** a CSV
-    over the limit is refused; the action says so; the split still handles
-    quotes, commas, CRLF and the byte-order mark; the existing import tests
-    pass through the isolate. **Not checked:** on the phone; the picker's
+    program sheet (over 1 MB)" (new string, en/ar); a file over 64 KB is
+    split into rows on another isolate (`parseProgramCsv`), a smaller one
+    in place, where it takes less time than starting an isolate. The limit
+    is what bounds the memory; the isolate keeps the screen moving. **Found
+    while testing:** the first version always used the isolate, and the
+    widget tests that import a small CSV hung the whole suite (an
+    isolate's reply never arrives under a widget test's fake clock); the
+    threshold fixed it, and is the better design regardless. **Tested:**
+    a CSV over the limit is refused; the action says so; a 70 KB CSV is
+    read through the isolate; the split still handles quotes, commas, CRLF
+    and the byte-order mark. **Not checked:** on the phone; the picker's
     size check is not reachable in a test (no picker channel).
   - **Fixed: the CSV export wrote formula-like names as formulas.**
     Exercise names are user text, and an XLSX import makes them from

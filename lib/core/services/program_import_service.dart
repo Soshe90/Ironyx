@@ -16,6 +16,9 @@ const _uuid = Uuid();
 /// [ProgramImportService.parse].
 const int kMaxProgramCsvBytes = 1024 * 1024;
 
+/// Above this many characters the CSV is split on another isolate.
+const int _parseInBackgroundAbove = 64 * 1024;
+
 /// The CSV is larger than [kMaxProgramCsvBytes].
 class ProgramCsvTooLargeException implements Exception {
   const ProgramCsvTooLargeException(this.size);
@@ -57,8 +60,12 @@ class ProgramImportService {
     if (csvText.length > kMaxProgramCsvBytes) {
       throw ProgramCsvTooLargeException(csvText.length);
     }
-    // Split off the UI isolate: it walks every character of the file.
-    final rows = await compute(parseProgramCsv, csvText);
+    // A large file is split off the UI isolate: it walks every character.
+    // A typical sheet (a few KB) is split here, where it takes less time
+    // than starting an isolate would.
+    final rows = csvText.length > _parseInBackgroundAbove
+        ? await compute(parseProgramCsv, csvText)
+        : parseProgramCsv(csvText);
     if (rows.isEmpty) throw const ProgramImportException();
 
     final header = rows.first.map((c) => c.trim().toLowerCase()).toList();
