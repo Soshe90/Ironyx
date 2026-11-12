@@ -271,6 +271,23 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     quoted, each of the six starts, a formula with commas, a "-" or "@"
     later in a name left alone, and an export end to end. **Not checked:**
     opening the file in Excel or Google Sheets.
+  - **Fixed: the strength chart merged workouts that started at the same
+    moment.** It picked each session's best set per start time, and an
+    XLSX import gives every session of a date the same noon timestamp, so
+    of two sessions with the lift on one date, one vanished from the chart
+    (history itself was intact). It picks per workout now. With it, a
+    record is judged against *strictly* earlier sessions on both the chart
+    and the PR badge (`watchPersonalRecordWorkoutIds`), as their comments
+    already said: `ROWS … 1 PRECEDING` compared two workouts at one moment
+    in whatever order SQLite produced; `RANGE … EXCLUDE GROUP` leaves
+    same-moment peers out, so neither is "earlier" (rather than ordering
+    the tie by id, which would be arbitrary). `EXCLUDE GROUP` needs SQLite
+    3.28; the tests run 3.53.4, and the app bundles its own SQLite through
+    the `sqlite3` packages, so the phone should have the same (**assumed,
+    not checked on the phone**). **Tested:** two workouts at one moment
+    are two points; both beat the history before them and are both PRs on
+    the chart and in the PR ids (both fail on the old queries); the
+    existing strength, analytics and 3,000-workout benchmark tests pass.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

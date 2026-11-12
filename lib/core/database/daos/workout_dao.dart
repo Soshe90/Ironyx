@@ -1122,8 +1122,12 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           ws.weight_kg as weight_kg,
           ws.reps as reps,
           $oneRm as one_rm,
+          -- One best set per workout. By start time, two workouts that
+          -- began at the same moment (an XLSX import gives every session of
+          -- a date the same noon timestamp) were taken as one, and the
+          -- chart lost one of them.
           ROW_NUMBER() OVER (
-            PARTITION BY w.started_at ORDER BY $oneRm DESC
+            PARTITION BY w.id ORDER BY $oneRm DESC
           ) as rank_in_session
         FROM workout_sets_table ws
         JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
@@ -1141,9 +1145,13 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           weight_kg,
           reps,
           one_rm,
+          -- Strictly earlier sessions only: EXCLUDE GROUP leaves out this
+          -- session's peers at the same start time, so of two at one moment
+          -- neither is compared with the other. ROWS ... 1 PRECEDING ranked
+          -- such ties in whatever order SQLite produced them.
           MAX(one_rm) OVER (
             ORDER BY date
-            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+            RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW EXCLUDE GROUP
           ) as prior_best
         FROM ranked
         WHERE rank_in_session = 1
@@ -1233,9 +1241,11 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           workout_id,
           started_at,
           best_one_rm,
+          -- "Strictly-earlier" as the comment above says: a workout at the
+          -- same start time is not earlier (see watchOneRMSeries).
           MAX(best_one_rm) OVER (
             PARTITION BY exercise_id ORDER BY started_at
-            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+            RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW EXCLUDE GROUP
           ) AS prior_best
         FROM workout_best
       )
