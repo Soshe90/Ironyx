@@ -11,6 +11,7 @@ import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/l10n/l10n_provider.dart';
 import '../../../core/providers.dart';
+import '../../../core/services/clock.dart';
 import '../../../core/services/haptics_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/timer_audio_service.dart';
@@ -41,12 +42,16 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
   bool _notificationDenied = false;
   bool _notificationGranted = false;
   bool _disposed = false;
+
+  /// The app's clock (`clockProvider`): the device clock, or a test's.
+  DateTime Function() _now = DateTime.now;
   late final NotificationService _notifications;
   late final WakelockService _wakelock;
   late final TimerAudioService _audio;
 
   @override
   TimerSnapshot? build() {
+    _now = ref.read(clockProvider);
     _notifications = ref.read(notificationServiceProvider);
     _wakelock = ref.read(wakelockServiceProvider);
     _audio = ref.read(timerAudioServiceProvider);
@@ -80,11 +85,11 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     _preset = preset;
     _notificationDenied = !notificationGranted;
     _notificationGranted = notificationGranted;
-    _startedAt = DateTime.now().toUtc();
+    _startedAt = _now().toUtc();
     _lastIndex = 0;
     _lastCountdownSecond = -1;
 
-    _engine = TimerEngine(phases: preset.phases)..start();
+    _engine = TimerEngine(phases: preset.phases, clock: _now)..start();
     await _wakelock.enable();
     if (_disposed) return;
     await _audio.preload();
@@ -163,6 +168,11 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     _ticker?.cancel();
     _ticker = null;
     final TimerEngine? engine = _engine;
+    // Already finished, or never started: nothing to end. A second call
+    // (the last interval running out as End is pressed, or a tick and a
+    // stop in the same frame) played the completion sound and haptic
+    // again; only the session write was guarded, by its own null check.
+    if (engine == null) return;
     _engine = null;
 
     // Read before any of the awaits below, which can run past this
@@ -202,11 +212,16 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
   Future<void> _writeSession(TimerDao dao, TimerEngine? engine) async {
     if (engine == null) return;
 
-    final DateTime endedAt = DateTime.now().toUtc();
-    final int actualSeconds = endedAt.difference(_startedAt).inSeconds;
+    final DateTime endedAt = _now().toUtc();
     final int totalIntervals = _preset.totalIntervals;
 
     final TimerSnapshot finalSnapshot = engine.snapshot();
+    // The time the timer ran: the engine's elapsed time, which pauses do
+    // not add to, at most the planned length. It was the wall-clock span
+    // from start to end, so a 4-minute timer paused for ten minutes was
+    // saved, and shown on Home, as 14 minutes. Start and end stay as they
+    // are: they are when the session happened.
+    final int actualSeconds = finalSnapshot.elapsed.inSeconds;
     final int intervalsCompleted =
         finalSnapshot.isComplete ? totalIntervals : finalSnapshot.currentIndex;
 
@@ -260,7 +275,7 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     if (_disposed) return;
     final TimerSnapshot snapshot = engine.snapshot();
     var boundary = Duration.zero;
-    final DateTime now = DateTime.now().toUtc();
+    final DateTime now = _now().toUtc();
     // `boundary` is the end of phase `index`, which is when phase `index + 1`
     // begins — so that is the phase the notification announces. The last
     // phase has no successor; its end is the timer finishing, not a boundary.

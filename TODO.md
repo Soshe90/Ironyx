@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,118 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,153 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -137,6 +137,171 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   moving to Flutter 3.50, which needs the `material_ui` package added (a new
   dependency, the owner's decision) and every Material import changed; and
   whether to pin the local Flutter to the same version as CI.
+- Changed 2026-11-11, Library and Timer tabs (reviewed together, then
+  fixed one item at a time, on `library-timer/review-2026-11-11` from
+  `main` after #4 and #5 merged). **Not in the 1.0.5+6 bundle.**
+  - **Fixed: searching in Arabic found nothing.** The search is SQL over the
+    stored English names and aliases; the Arabic names are a Dart table
+    (`exercise_catalogue_ar.dart`) the database does not hold, and the seed
+    has no Arabic aliases. A query with an Arabic letter
+    (`containsArabic`) is now matched in memory against the name shown and
+    the stored name (`matchingDisplayedName`), over the list the filters
+    give; a Latin query stays in SQL, aliases included. Same in the
+    exercise picker sheet. The Progress lift picker's fold moved to
+    `core/formatters/search_fold.dart` (`foldForSearch`, `matchesSearch`,
+    renamed from `liftMatchesQuery`) so both use one. **Tested:** an Arabic
+    query typed without marks finds "ضغط بار على مقعد مستوٍ" (fails on the
+    old code); an unknown word finds nothing; `containsArabic`.
+    **Not checked:** on the phone.
+  - **Fixed: a search dropped the filters.** The page watched either the
+    search or the filters, so with text in the box the muscle, equipment
+    and movement filters were ignored while their chips still showed as
+    active. `ExerciseDao.filterBy` now takes the search too (`query`, name
+    or alias), each criterion narrowing the others; `searchByName` calls
+    it, and the separate search provider, left with no user, is removed.
+    Same for the picker sheet's muscle filter. **Tested:** the query with a
+    search and a filter, a blank search, no match; on the page, "pu" with
+    Chest gives Push-Up and not Pull-Up (fails on the old code).
+  - **Fixed: the custom timer had no upper limits.** Any number was taken:
+    80000 rounds built 160,000 phases, which the engine walks five times a
+    second and the controller tried to schedule a notification for, one
+    each. Now at most 99 rounds (`kMaxTimerRounds`) and 3,600 s per phase
+    (`kMaxTimerPhaseSeconds`), checked by `checkCustomTimer` in the domain;
+    the builder shows which limit was passed (two new strings, en/ar; since
+    replaced by errors under the field, below) and starts or saves nothing, and `TimerPresets.custom` throws past them, so
+    no caller can build one. **Not covered:** presets read back from the
+    database (`decodeTimerPhases`) are not re-checked, so a restored backup
+    could still hold one made before this. **Tested:** the limits
+    themselves pass, one past fails, the factory throws, and on the page
+    80000 rounds shows "Rounds can be at most 99." (fails on the old code).
+  - **Fixed: in Arabic the Library was in no visible order.** The queries
+    sort by the stored English name. The list and the picker sheet are now
+    sorted by the name shown, folded as a search is (so أ and ا sort
+    together), ties by the stored name (`sortedByDisplayedName`); in
+    English nothing moves. **Tested:** العقلة, تمرين الضغط, سكوات خلفي in
+    that order (by the English names سكوات خلفي came first; fails on the
+    old code).
+  - **Fixed: equipment icons and Arabic equipment names in the Library.**
+    `ExerciseSummary` carried only the equipment's names, and both the
+    icon and the Arabic name are keyed by id. A comment claimed the seed
+    keeps each name equal to its id; it does not ("Barbell", "barbell").
+    So every row and card had the generic "more" icon, and in Arabic every
+    row, card and picker line showed English equipment (the review had
+    said the rows were translated: wrong, only the detail sheet was, by
+    id). The summary now carries `equipmentIds` too, the icon and the
+    names (`localizedEquipmentNames`) are looked up by id, and the
+    equipment filter's menu is translated (`Equipment.localizedName`).
+    **Tested:** a bodyweight row has its icon and no row has the generic
+    one; in Arabic a row's detail line reads "· بار ·" and the filter lists
+    "وزن الجسم" (both fail on the old code).
+  - **Fixed: searches piled up, and Retry reloaded the wrong thing.**
+    `exercisesFilteredStream` was kept alive per argument set, so every
+    search typed and every filter combination tried stayed a live query,
+    re-run on every exercise change, for as long as the app ran; it is
+    released now once nothing shows it. Retry on a failed search or filter
+    reloaded the full list instead, so it could not recover; it reloads the
+    query on screen. The picker sheet's error had no Retry; it has one.
+    **Tested:** a released search no longer exists; after a failed search,
+    Retry runs that search again (on the old code the count stayed at 11,
+    the first try plus Riverpod's ten retries). Both fail on the old code.
+  - **Changed: saved timer presets have names, and can be deleted.** Every
+    saved preset was named "Custom", so a list of them told them apart only
+    by their numbers; and nothing could delete one (the DAO had `remove`,
+    no screen called it). "Save preset" now asks for a name, filled in with
+    the formula ("30s work / 10s rest × 8"), up to 40 characters, a blank
+    one saving the formula. Each saved preset has a menu with Delete, and
+    a snack bar offers Undo, which puts the row back with its own creation
+    time, so in its place (`TimerPresetDao.take` / `restore`). The delete
+    message replaces a "Preset saved." still showing, or its Undo would
+    queue behind it. Four new strings, en/ar. Presets saved before keep
+    the name "Custom". **Tested:** take and restore keep the order; a
+    preset saved under a name, deleted and brought back; a blank name
+    saves the formula. The naming test fails on the old code.
+    **Not checked:** on the phone.
+  - **Fixed: starting a timer could lose a session, start two, or fail
+    silently.** `startTimer` now (1) opens a session already running
+    instead of replacing it: tapping any preset while one ran in the
+    background threw the running one away unsaved (found while planning
+    this item; the review had not listed it); (2) ignores a second tap
+    while the first is still starting, since the wait on the notification
+    permission let a double tap start two sessions and push two timer
+    screens; (3) shows "Couldn't start the timer." and logs a failure,
+    which escaped the tap handler. Saving a preset shows "Couldn't save the
+    preset." on failure. Two new strings, en/ar. **Tested:** all four, each
+    failing on the old code.
+  - **Fixed: a timer session's duration included its pauses.** It was
+    saved as the span from start to end, so a 4-minute timer paused for
+    ten minutes was 14 minutes, on Home's "Last timer" row too. It is now
+    the engine's elapsed time, which pauses do not add to, at most the
+    planned length; start and end are unchanged. Sessions already saved
+    keep their figure (owner's choice). To test it the controller now
+    takes its time from `clockProvider`, as the rest of the app does, and
+    hands that clock to the engine. **Tested:** 5 s, a ten-minute pause,
+    7 s saves 12 s (with the old formula, 612); a session run out saves
+    its planned 5 s.
+  - **Fixed: two small Library faults.** An active filter chip showed an
+    "×", but it sat inside the chip's menu button, so tapping it opened
+    the menu again; the "×" is now its own button ("Clear Muscle filter",
+    new string, en/ar) and clears that filter, while the rest of the chip
+    still opens the menu. And `%` and `_` typed in the search were LIKE
+    wildcards, so a search for "_" matched every exercise; they, and the
+    escape character, are escaped now. **Tested:** the × clears the filter
+    with no menu opened; "_", "%" and "0% e" find only the exercise holding
+    them. Both fail on the old code.
+  - **Performance: bundled pictures are decoded at the size shown.** The
+    608 pictures are 600×400, about 1 MB each decoded, and a phone row
+    shows one in a 56 dp square; scrolling the catalogue filled Flutter's
+    100 MB image cache over and over. `ExerciseThumbnail.decodeWidth` now
+    decodes a bundled picture at its shown width in device pixels: rows at
+    1.5 times the square (so a 3:2 picture is still as tall as it, and a
+    2:3 one as wide, when cropped to fill), cards at their own width.
+    About 0.13 MB a row on this phone instead of 1 MB. Remote video
+    thumbnails keep their own size: a missing one is told by its exact
+    120×90. Nothing looks different. **Tested:** with a decode width the
+    picture is a `ResizeImage` at that width times the pixel ratio, shape
+    kept; without one, the full asset. Not run on the old code: the test
+    uses the new parameter. **Not checked:** sharpness on the phone.
+  - **Refactor: one exercise search for the Library and the picker.** Both
+    screens had their own copy of the search box state, the typing delay,
+    the choice of query, the Arabic match and the sort, and the row, the
+    card and the picker each built the "muscle · equipment · pattern" line;
+    every fix above had to be made twice. They now share
+    `library/presentation/exercise_search.dart`: `DebouncedSearch` (a
+    mixin), `exerciseSource` (which query, also what Retry reloads),
+    `shownExercises` (Arabic match, then order) and `exerciseDetailLine`.
+    No behaviour change: every existing Library, picker and editor test
+    passes unchanged; four new tests cover the shared functions.
+  - **Changed: the custom timer builder.** It now shows how long the timer
+    runs as it is typed ("Total 05:20 · 16 intervals"), where that was
+    known only once it had started. A value out of range is marked under
+    its own field ("At least 1", "At most 99") instead of in a snack bar
+    that did not say which field it meant; errors show once Start or Save
+    has been pressed, then follow the typing, so a half-typed value is not
+    marked. Rest may be 0, a work-only timer, which the engine always ran
+    and the builder refused; its formula reads "30s work × 8", not "… /
+    0s rest × 8". Four new strings, en/ar; the three the snack bar used are
+    removed (`timerPositiveValuesRequired`, `timerRoundsTooMany`,
+    `timerPhaseTooLong`). **Tested:** the total follows the rounds; a field
+    is marked only after Start and clears as it is fixed; zero rest gives a
+    work-only timer and its formula. All three fail on the old code.
+  - **Fixed: the completion sound and haptic could play more than once.**
+    `TimerController._finish` cleared the engine first but played the cues
+    unconditionally, so a second call (the last interval running out as
+    End is pressed) or a `stop()` on an idle timer played them again; only
+    the session write was guarded. It now returns when there is nothing to
+    finish. **Tested:** three ends play the cues once and save one session
+    (on the old code the haptic played three times).
+    This was the last of the fourteen Library and Timer review items.
+  - **Checked on the phone, 2026-11-12** (debug build of `6e1454d`, the
+    owner's data, Arabic): the Library lists its 304 exercises in Arabic
+    order (أرجحة…, أسطوانة…, البلانك…), equipment in Arabic in every row
+    ("كيتل بل", "بار", "وزن الجسم"), the bodyweight icon on bodyweight rows,
+    and the pictures sharp at the reduced decode size; the timer builder
+    shows "المجموع 05:20 · 16 فترةً", and "Save preset" opens the name
+    dialog filled with the Arabic formula and a 24/40 counter (cancelled,
+    nothing saved). **Not checked on the phone:** an Arabic search (adb
+    cannot type Arabic), filter chips, deleting a preset, starting a timer
+    (it would run on the owner's phone), and TalkBack.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**

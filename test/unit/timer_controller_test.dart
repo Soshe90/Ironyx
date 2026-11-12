@@ -6,6 +6,7 @@ import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/timer_dao.dart';
 import 'package:ironyx/core/l10n/l10n_provider.dart';
 import 'package:ironyx/core/providers.dart';
+import 'package:ironyx/core/services/clock.dart';
 import 'package:ironyx/core/services/haptics_service.dart';
 import 'package:ironyx/core/services/notification_service.dart';
 import 'package:ironyx/core/services/timer_audio_service.dart';
@@ -167,6 +168,87 @@ void main() {
       final sessions = await timerDao.watchAll().first;
       expect(sessions, hasLength(1));
       expect(sessions.first.presetName, 'Tabata');
+    });
+
+    test('the saved duration is the time run, without pauses', () async {
+      DateTime fakeNow = DateTime.utc(2026, 11, 11, 9);
+      final ProviderContainer timed = ProviderContainer(
+        overrides: [
+          timerDaoProvider.overrideWithValue(timerDao),
+          hapticsServiceProvider.overrideWithValue(mockHaptics),
+          notificationServiceProvider.overrideWithValue(mockNotifications),
+          timerAudioServiceProvider.overrideWithValue(mockAudio),
+          wakelockServiceProvider.overrideWithValue(mockWakelock),
+          timerSettingsControllerProvider.overrideWithValue(mockSettings),
+          appLocalizationsProvider
+              .overrideWith((_) async => AppLocalizationsEn()),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(timed.dispose);
+      final TimerController timer =
+          timed.read(timerControllerProvider.notifier);
+
+      await timer.start(TimerPresets.tabata(), notificationGranted: true);
+      fakeNow = fakeNow.add(const Duration(seconds: 5));
+      await timer.pause();
+      // Ten minutes on pause.
+      fakeNow = fakeNow.add(const Duration(minutes: 10));
+      await timer.resume();
+      fakeNow = fakeNow.add(const Duration(seconds: 7));
+      await timer.stop();
+
+      final session = (await timerDao.watchAll().first).single;
+      expect(session.actualDurationSeconds, 12,
+          reason: 'it was the span from start to end, 612 s');
+      // When it happened is unchanged: start to end, pause included.
+      expect(session.endedAt!.difference(session.startedAt).inSeconds, 612);
+    });
+
+    test('a finished session is saved at its planned length', () async {
+      DateTime fakeNow = DateTime.utc(2026, 11, 11, 9);
+      final ProviderContainer timed = ProviderContainer(
+        overrides: [
+          timerDaoProvider.overrideWithValue(timerDao),
+          hapticsServiceProvider.overrideWithValue(mockHaptics),
+          notificationServiceProvider.overrideWithValue(mockNotifications),
+          timerAudioServiceProvider.overrideWithValue(mockAudio),
+          wakelockServiceProvider.overrideWithValue(mockWakelock),
+          timerSettingsControllerProvider.overrideWithValue(mockSettings),
+          appLocalizationsProvider
+              .overrideWith((_) async => AppLocalizationsEn()),
+          clockProvider.overrideWithValue(() => fakeNow),
+        ],
+      );
+      addTearDown(timed.dispose);
+      final TimerController timer =
+          timed.read(timerControllerProvider.notifier);
+      final preset = TimerPresets.custom(
+        workSeconds: 3,
+        restSeconds: 2,
+        rounds: 1,
+      );
+
+      await timer.start(preset, notificationGranted: true);
+      // Well past the end before the next tick notices.
+      fakeNow = fakeNow.add(const Duration(seconds: 30));
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+
+      final session = (await timerDao.watchAll().first).single;
+      expect(session.actualDurationSeconds, 5);
+    });
+
+    test('ending twice plays the completion cues once', () async {
+      await controller.start(TimerPresets.tabata(), notificationGranted: true);
+      clearInteractions(mockHaptics);
+      clearInteractions(mockAudio);
+
+      await Future.wait(<Future<void>>[controller.stop(), controller.stop()]);
+      await controller.stop();
+
+      verify(() => mockHaptics.heavy()).called(1);
+      verify(() => mockAudio.cue(TimerCue.complete)).called(1);
+      expect(await timerDao.watchAll().first, hasLength(1));
     });
 
     test('notification denied flag is set when permission not granted',

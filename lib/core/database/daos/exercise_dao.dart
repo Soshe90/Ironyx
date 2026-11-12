@@ -54,22 +54,28 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
   Stream<List<ExerciseSummary>> watchAll() => _watchSummaries();
 
   /// Search exercises by name or alias (case-insensitive, partial match).
-  Stream<List<ExerciseSummary>> searchByName(String query) {
-    final normalized = query.trim().toLowerCase();
-    if (normalized.isEmpty) return watchAll();
+  Stream<List<ExerciseSummary>> searchByName(String query) =>
+      filterBy(query: query);
 
+  /// An exercise whose name or one of its aliases holds [query], in any
+  /// case; null for a blank query (nothing to narrow by).
+  Expression<bool>? _nameOrAliasMatches(String? query) {
+    final String normalized = (query ?? '').trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+
+    // `%` and `_` are LIKE's wildcards; typed, they are just characters.
+    // Unescaped, a search for "_" matched every exercise.
+    final String pattern = '%${_escapeLike(normalized)}%';
     final aliasMatch = existsQuery(
       select(exerciseAliasesTable)
         ..where(
           (a) =>
               a.exerciseId.equalsExp(exercisesTable.id) &
-              a.alias.lower().like('%$normalized%'),
+              a.alias.lower().like(pattern, escapeChar: _likeEscape),
         ),
     );
-
-    return _watchSummaries(
-      exercisesTable.name.lower().like('%$normalized%') | aliasMatch,
-    );
+    return exercisesTable.name.lower().like(pattern, escapeChar: _likeEscape) |
+        aliasMatch;
   }
 
   /// Every exercise's id by its normalized name and by each normalized
@@ -115,8 +121,23 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     return byKey;
   }
 
-  /// Filter exercises by muscle, equipment, and/or movement pattern.
+  static const String _likeEscape = r'\';
+
+  /// [text] with LIKE's wildcards and its escape character escaped.
+  static String _escapeLike(String text) => text
+      .replaceAll(_likeEscape, '$_likeEscape$_likeEscape')
+      .replaceAll('%', '$_likeEscape%')
+      .replaceAll('_', '${_likeEscape}_');
+
+  /// Exercises matching every criterion given: a name or alias holding
+  /// [query], and the muscle, equipment and movement pattern.
+  ///
+  /// The search and the filters were alternatives: with text in the search
+  /// box the filters were ignored while their chips still showed as active,
+  /// so "bench" with Chest chosen listed every bench exercise. They are one
+  /// query now, each criterion narrowing the others.
   Stream<List<ExerciseSummary>> filterBy({
+    String? query,
     String? muscleId,
     String? equipmentId,
     MovementPattern? pattern,
@@ -125,6 +146,9 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
     void and(Expression<bool> expr) {
       where = where == null ? expr : where! & expr;
     }
+
+    final Expression<bool>? matchesQuery = _nameOrAliasMatches(query);
+    if (matchesQuery != null) and(matchesQuery);
 
     if (muscleId != null) {
       and(
@@ -204,11 +228,12 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
           ..where(exerciseEquipmentTable.exerciseId.isIn(ids)))
         .get();
     final equipmentByExercise = <String, List<String>>{};
+    final equipmentIdsByExercise = <String, List<String>>{};
     for (final row in equipmentRows) {
       final exerciseId = row.readTable(exerciseEquipmentTable).exerciseId;
-      (equipmentByExercise[exerciseId] ??= []).add(
-        row.readTable(equipmentTable).name,
-      );
+      final equipment = row.readTable(equipmentTable);
+      (equipmentByExercise[exerciseId] ??= []).add(equipment.name);
+      (equipmentIdsByExercise[exerciseId] ??= []).add(equipment.id);
     }
 
     final mediaRows = await (select(exerciseMediaTable)
@@ -227,6 +252,7 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
           exercise: exercise,
           primaryMuscle: primaryMuscles[exercise.id],
           equipmentNames: equipmentByExercise[exercise.id] ?? const [],
+          equipmentIds: equipmentIdsByExercise[exercise.id] ?? const [],
           media: bestMedia(mediaByExercise[exercise.id] ?? const []),
           fallbackMedia: _videoMedia(mediaByExercise[exercise.id] ?? const []),
         ),
@@ -443,11 +469,20 @@ class ExerciseSummary {
     required this.equipmentNames,
     required this.media,
     required this.fallbackMedia,
+    this.equipmentIds = const <String>[],
   });
 
   final Exercise exercise;
   final Muscle? primaryMuscle;
+
+  /// The equipment's English names, in the same order as [equipmentIds].
   final List<String> equipmentNames;
+
+  /// The equipment's ids: what its icon and its Arabic name are keyed by.
+  /// The names alone were passed to both, which match no key ("Barbell",
+  /// not "barbell"), so every row had the generic icon and, in Arabic, the
+  /// English name.
+  final List<String> equipmentIds;
 
   /// First media item by `sortOrder`, if any.
   final ExerciseMedia? media;

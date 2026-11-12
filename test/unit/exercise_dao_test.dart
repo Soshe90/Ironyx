@@ -175,6 +175,60 @@ void main() {
       expect(results.map((s) => s.exercise.id), ['row']);
     });
 
+    test('% and _ in a search are characters, not wildcards', () async {
+      await seedExercise(
+        id: 'bench',
+        name: 'Bench Press',
+        primaryMuscleId: 'chest',
+        equipmentId: 'barbell',
+      );
+      await seedExercise(
+        id: 'odd',
+        name: '100% Effort_Hold',
+        primaryMuscleId: 'chest',
+        equipmentId: 'barbell',
+      );
+
+      expect((await dao.searchByName('_').first).map((s) => s.exercise.id),
+          <String>['odd'],
+          reason: 'an unescaped _ matched every exercise');
+      expect((await dao.searchByName('%').first).map((s) => s.exercise.id),
+          <String>['odd']);
+      expect((await dao.searchByName('0% e').first).map((s) => s.exercise.id),
+          <String>['odd']);
+      expect(await dao.searchByName(r'\').first, isEmpty);
+    });
+
+    test('a search and a filter narrow together', () async {
+      await seedExercise(
+        id: 'bench',
+        name: 'Bench Press',
+        primaryMuscleId: 'chest',
+        equipmentId: 'barbell',
+      );
+      await seedExercise(
+        id: 'stepup',
+        name: 'Bench Step-Up',
+        primaryMuscleId: 'legs',
+        equipmentId: 'bodyweight',
+      );
+      await seedExercise(
+        id: 'fly',
+        name: 'Cable Fly',
+        primaryMuscleId: 'chest',
+        equipmentId: 'barbell',
+      );
+
+      final both = await dao.filterBy(query: 'bench', muscleId: 'chest').first;
+      expect(both.map((s) => s.exercise.id), <String>['bench'],
+          reason: 'the search alone gives two, the filter alone two');
+      final blank = await dao.filterBy(query: '  ', muscleId: 'chest').first;
+      expect(blank.map((s) => s.exercise.id).toSet(), <String>{'bench', 'fly'});
+      final none =
+          await dao.filterBy(query: 'bench', equipmentId: 'cable').first;
+      expect(none, isEmpty);
+    });
+
     test('filterBy equipmentId and movement pattern combine as AND', () async {
       await seedExercise(
         id: 'squat',

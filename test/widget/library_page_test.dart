@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/equipment_dao.dart';
@@ -6,6 +7,7 @@ import 'package:ironyx/core/database/daos/exercise_dao.dart';
 import 'package:ironyx/core/database/daos/muscle_dao.dart';
 import 'package:ironyx/core/database/database_providers.dart';
 import 'package:ironyx/core/theme/app_spacing.dart';
+import 'package:ironyx/core/widgets/app_card.dart';
 
 import '../helpers/pump_app.dart';
 import '../helpers/stub_seeders.dart';
@@ -136,14 +138,23 @@ void main() {
       await database.close();
     }
 
-    Future<void> pumpLibrary(WidgetTester tester) => pumpApp(
+    Future<void> pumpLibrary(
+      WidgetTester tester, {
+      String? locale,
+      List<dynamic> overrides = const <dynamic>[],
+    }) =>
+        pumpApp(
           tester,
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             ...stubSeeders(),
+            ...overrides,
           ],
           initialLocation: '/library',
-          prefs: seededPrefs,
+          prefs: <String, Object>{
+            ...seededPrefs,
+            if (locale != null) 'app_locale': locale,
+          },
           surfaceSize: surface,
           // This screen is entirely Drift-stream driven.
           awaitDatabase: true,
@@ -157,6 +168,41 @@ void main() {
       expect(find.text('Back Squat'), findsOneWidget);
       expect(find.text('Push-Up'), findsOneWidget);
       expect(find.text('Pull-Up'), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('an Arabic search finds exercises by their Arabic name',
+        (tester) async {
+      // A slug the Arabic catalogue knows: "ضغط بار على مقعد مستوٍ".
+      await ExerciseDao(database).upsertExercises([
+        ExercisesTableCompanion.insert(
+          id: 'barbell-bench-press',
+          slug: 'barbell-bench-press',
+          name: 'Barbell Bench Press (catalogue)',
+          category: 'strength',
+          difficulty: 'intermediate',
+          movementPattern: 'horizontalPush',
+          seedVersion: 1,
+        ),
+      ]);
+      await pumpLibrary(tester, locale: 'ar');
+
+      // Without diacritics, with a plain alef: as a keyboard types it.
+      await tester.enterText(find.byType(TextField), 'ضغط بار مستو');
+      await tester.pump(AppDuration.inputDebounce);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ضغط بار على مقعد مستوٍ'), findsOneWidget);
+      // The others have no Arabic name and do not match.
+      expect(find.text('Back Squat'), findsNothing);
+      expect(find.text('Push-Up'), findsNothing);
+
+      // Something no name holds: nothing, and the empty state.
+      await tester.enterText(find.byType(TextField), 'سباحة');
+      await tester.pump(AppDuration.inputDebounce);
+      await tester.pumpAndSettle();
+      expect(find.text('ضغط بار على مقعد مستوٍ'), findsNothing);
 
       await disposeApp(tester);
     });
@@ -198,6 +244,161 @@ void main() {
       expect(find.text('Push-Up'), findsOneWidget);
       expect(find.text('Back Squat'), findsNothing);
       expect(find.text('Pull-Up'), findsNothing);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('in Arabic the list is in the order of the Arabic names',
+        (tester) async {
+      // English order: Back Squat, Pull-Up, Push-Up. Arabic: سكوات خلفي,
+      // العقلة, تمرين الضغط, which sort as ا, ت, س.
+      for (final (String slug, String name) in <(String, String)>[
+        ('back-squat', 'Back Squat (catalogue)'),
+        ('pull-up', 'Pull-Up (catalogue)'),
+        ('push-up', 'Push-Up (catalogue)'),
+      ]) {
+        await ExerciseDao(database).upsertExercises([
+          ExercisesTableCompanion.insert(
+            id: slug,
+            slug: slug,
+            name: name,
+            category: 'strength',
+            difficulty: 'intermediate',
+            movementPattern: 'horizontalPush',
+            seedVersion: 1,
+          ),
+        ]);
+      }
+      await pumpLibrary(tester, locale: 'ar');
+
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(top('العقلة'), lessThan(top('تمرين الضغط')));
+      expect(top('تمرين الضغط'), lessThan(top('سكوات خلفي')),
+          reason: 'by the English names, سكوات خلفي came first');
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('a row shows its equipment icon', (tester) async {
+      await pumpLibrary(tester);
+
+      // Push-Up is bodyweight; its name was looked up as an icon id and
+      // always fell through to the generic "more" icon.
+      final Finder pushUp = find.ancestor(
+        of: find.text('Push-Up'),
+        matching: find.byType(AppCard),
+      );
+      expect(
+        find.descendant(
+            of: pushUp, matching: find.byIcon(Icons.accessibility_new)),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.more_horiz), findsNothing);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('in Arabic equipment is translated, in rows and the filter',
+        (tester) async {
+      await pumpLibrary(tester, locale: 'ar');
+
+      // Back Squat: legs, barbell. "بار" is barbell in Arabic.
+      // The detail line under a name is "muscle · equipment · pattern".
+      expect(find.textContaining(' · بار · '), findsWidgets);
+      expect(find.textContaining(' · Barbell'), findsNothing,
+          reason: 'equipment was looked up by name and stayed English');
+      expect(find.textContaining('Bodyweight'), findsNothing);
+
+      await tester.tap(find.text('المعدّات'));
+      await tester.pumpAndSettle();
+      expect(find.text('وزن الجسم'), findsWidgets);
+      expect(find.text('Bodyweight'), findsNothing);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('Retry reloads the search that failed', (tester) async {
+      int tries = 0;
+      await pumpLibrary(
+        tester,
+        overrides: [
+          exercisesFilteredStreamProvider(query: 'boom').overrideWith((ref) {
+            tries++;
+            return Stream<List<ExerciseSummary>>.error(Exception('boom'));
+          }),
+        ],
+      );
+      await tester.enterText(find.byType(TextField), 'boom');
+      await tester.pump(AppDuration.inputDebounce);
+      // Riverpod retries a failure before showing it (about 38 s).
+      for (int i = 0; i < 45; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(find.text('Try again'), findsOneWidget);
+
+      final int before = tries;
+      await tester.tap(find.text('Try again'));
+      await tester.pump();
+      expect(tries, greaterThan(before),
+          reason: 'Retry reloaded the full list, not the failed search');
+
+      await disposeApp(tester);
+    });
+
+    test('a search no longer shown is released', () async {
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          ...stubSeeders().cast(),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = exercisesFilteredStreamProvider(query: 'squat');
+      final sub = container.listen(provider, (_, __) {});
+      expect(container.exists(provider), isTrue);
+
+      sub.close();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(container.exists(provider), isFalse,
+          reason: 'kept alive, every search stayed a live query');
+    });
+
+    testWidgets("an active chip's × clears its filter", (tester) async {
+      await pumpLibrary(tester);
+      await tester.tap(find.text('Muscle'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chest').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Back Squat'), findsNothing);
+
+      await tester.tap(find.byTooltip('Clear Muscle filter'));
+      await tester.pumpAndSettle();
+
+      // No menu opened, and the filter is gone.
+      expect(find.text('All Muscle'), findsNothing);
+      expect(find.byType(PopupMenuItem<Object?>), findsNothing);
+      expect(find.text('Back Squat'), findsOneWidget);
+      expect(find.text('Muscle'), findsOneWidget);
+
+      await disposeApp(tester);
+    });
+
+    testWidgets('a search keeps the filters chosen', (tester) async {
+      await pumpLibrary(tester);
+
+      await tester.tap(find.text('Muscle'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chest').last);
+      await tester.pumpAndSettle();
+      // "pu" is in Push-Up and Pull-Up; only Push-Up is chest.
+      await tester.enterText(find.byType(TextField), 'pu');
+      await tester.pump(AppDuration.inputDebounce);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Push-Up'), findsOneWidget);
+      expect(find.text('Pull-Up'), findsNothing,
+          reason: 'the search used to drop the muscle filter');
+      expect(find.text('Barbell Bench Press'), findsNothing);
 
       await disposeApp(tester);
     });

@@ -36,6 +36,8 @@ extension TimerPresetL10n on TimerPreset {
     // but a row from a future version might be. Fall back rather than render
     // "0s work".
     if (work == 0 || rounds == 0) return description;
+    // A work-only timer: "30s work × 8", not "… / 0s rest × 8".
+    if (rest == 0) return l10n.timerPresetFormulaNoRest(work, rounds);
     return l10n.timerPresetFormula(work, rest, rounds);
   }
 

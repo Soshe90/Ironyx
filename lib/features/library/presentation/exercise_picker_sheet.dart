@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +14,7 @@ import '../../../core/widgets/filter_chip_group.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/sheet_handle.dart';
 import '../domain/exercise_catalogue_l10n.dart';
+import 'exercise_search.dart';
 
 /// Placeholder rows shown while the catalogue query resolves.
 const int _skeletonRows = 6;
@@ -32,46 +31,15 @@ class ExercisePickerSheet extends ConsumerStatefulWidget {
       _ExercisePickerSheetState();
 }
 
-class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
-  final TextEditingController _searchController = TextEditingController();
+class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet>
+    with DebouncedSearch<ExercisePickerSheet> {
   String? _selectedMuscleId;
-
-  /// Committed search term — see [LibraryPage] for why this is held apart
-  /// from the controller's text.
-  String _query = '';
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    setState(() {});
-    _debounce?.cancel();
-    _debounce = Timer(AppDuration.inputDebounce, () {
-      if (mounted) setState(() => _query = value.trim());
-    });
-  }
-
-  void _commitSearch(String value) {
-    _debounce?.cancel();
-    setState(() => _query = value.trim());
-  }
 
   @override
   Widget build(BuildContext context) {
-    final searchQuery = _query;
-
-    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      searchQuery.isNotEmpty
-          ? exercisesSearchStreamProvider(searchQuery)
-          : _selectedMuscleId != null
-              ? exercisesFilteredStreamProvider(muscleId: _selectedMuscleId)
-              : allExercisesStreamProvider,
-    );
+    // As on the Library page (see exerciseSource).
+    final source = exerciseSource(query: query, muscleId: _selectedMuscleId);
+    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(source);
     final muscles = ref.watch(musclesStreamProvider).value ?? const <Muscle>[];
 
     return DraggableScrollableSheet(
@@ -97,24 +65,24 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: TextField(
-              controller: _searchController,
+              controller: searchController,
               autofocus: true,
               decoration: InputDecoration(
                 hintText: context.l10n.librarySearchHint,
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
+                suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         tooltip: context.l10n.libraryClearSearch,
                         onPressed: () {
-                          _searchController.clear();
-                          _commitSearch('');
+                          searchController.clear();
+                          commitSearch('');
                         },
                       )
                     : null,
               ),
-              onChanged: _onSearchChanged,
-              onSubmitted: _commitSearch,
+              onChanged: onSearchChanged,
+              onSubmitted: commitSearch,
             ),
           ),
           Padding(
@@ -136,7 +104,9 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
           const SizedBox(height: AppSpacing.sm),
           Expanded(
             child: exercisesAsync.when(
-              data: (exercises) {
+              data: (all) {
+                final List<ExerciseSummary> exercises =
+                    shownExercises(context, all, query);
                 if (exercises.isEmpty) {
                   return EmptyState(
                     icon: Icons.search_off,
@@ -152,15 +122,11 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                   itemCount: exercises.length,
                   itemBuilder: (context, index) {
                     final summary = exercises[index];
-                    final subtitle = [
-                      if (summary.primaryMuscle != null)
-                        summary.primaryMuscle!.localizedName(context),
-                      if (summary.equipmentNames.isNotEmpty)
-                        summary.equipmentNames
-                            .map((String e) =>
-                                localizedEquipmentName(context, e))
-                            .join(context.l10n.listSeparator),
-                    ].join(' · ');
+                    final subtitle = exerciseDetailLine(
+                      context,
+                      summary,
+                      withPattern: false,
+                    );
                     return ListTile(
                       title: Text(summary.exercise.displayName(context)),
                       subtitle: subtitle.isEmpty ? null : Text(subtitle),
@@ -197,6 +163,8 @@ class _ExercisePickerSheetState extends ConsumerState<ExercisePickerSheet> {
                 title: context.l10n.libraryLoadFailed,
                 details: error.toString(),
                 compact: true,
+                // It had none: a failure in the sheet could only be closed.
+                onRetry: () => ref.invalidate(source),
               ),
             ),
           ),

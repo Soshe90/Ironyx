@@ -1,35 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ironyx/core/formatters/search_fold.dart';
 import 'package:ironyx/features/progress/presentation/widgets/lift_picker.dart';
 
 import '../helpers/pump_app.dart';
 
 void main() {
-  group('liftMatchesQuery', () {
+  group('matchesSearch', () {
     test('every word, in any order, ignoring case', () {
       const List<String> names = <String>['Barbell Bench Press'];
-      expect(liftMatchesQuery('bench', names), isTrue);
-      expect(liftMatchesQuery('BENCH barbell', names), isTrue);
-      expect(liftMatchesQuery('  press  ', names), isTrue);
-      expect(liftMatchesQuery('bench squat', names), isFalse);
+      expect(matchesSearch('bench', names), isTrue);
+      expect(matchesSearch('BENCH barbell', names), isTrue);
+      expect(matchesSearch('  press  ', names), isTrue);
+      expect(matchesSearch('bench squat', names), isFalse);
     });
 
     test('an empty query matches everything', () {
-      expect(liftMatchesQuery('', <String>['Row']), isTrue);
-      expect(liftMatchesQuery('   ', <String>['Row']), isTrue);
+      expect(matchesSearch('', <String>['Row']), isTrue);
+      expect(matchesSearch('   ', <String>['Row']), isTrue);
     });
 
     test('searches the shown name and the stored one', () {
       const List<String> names = <String>['ضغط البنش بالبار', 'Bench Press'];
-      expect(liftMatchesQuery('bench', names), isTrue);
-      expect(liftMatchesQuery('البنش', names), isTrue);
+      expect(matchesSearch('bench', names), isTrue);
+      expect(matchesSearch('البنش', names), isTrue);
     });
 
     test('Arabic: alef forms, teh marbuta, diacritics and tatweel fold', () {
       // Typed without the hamza, the teh marbuta as heh, no diacritics.
-      expect(liftMatchesQuery('اماميه', <String>['رفرفة أماميّة']), isTrue);
-      expect(liftMatchesQuery('رفرفـة', <String>['رفرفة أمامية']), isTrue);
-      expect(liftMatchesQuery('إمالة', <String>['امالة']), isTrue);
+      expect(matchesSearch('اماميه', <String>['رفرفة أماميّة']), isTrue);
+      expect(matchesSearch('رفرفـة', <String>['رفرفة أمامية']), isTrue);
+      expect(matchesSearch('إمالة', <String>['امالة']), isTrue);
     });
   });
 

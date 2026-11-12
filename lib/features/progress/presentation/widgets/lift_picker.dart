@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/formatters/search_fold.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -30,31 +31,6 @@ class LiftOption {
 
   /// "24 sessions", already localized.
   final String sessions;
-}
-
-/// [text] reduced to what a search should compare: lower case, and for
-/// Arabic without diacritics or tatweel, with the alef, yeh, waw and teh
-/// marbuta variants a keyboard may or may not produce folded together.
-String foldForSearch(String text) => text
-    .toLowerCase()
-    .replaceAll(RegExp('[ً-ٰٟـ]'), '')
-    .replaceAll(RegExp('[آأإٱ]'), 'ا')
-    .replaceAll('ى', 'ي')
-    .replaceAll('ئ', 'ي')
-    .replaceAll('ؤ', 'و')
-    .replaceAll('ة', 'ه');
-
-/// Whether every word of [query] appears in one of [names], after
-/// [foldForSearch]. Words may come in any order ("bench barbell" finds
-/// "Barbell Bench Press"); an empty query matches everything.
-bool liftMatchesQuery(String query, Iterable<String> names) {
-  final List<String> words = foldForSearch(query)
-      .split(RegExp(r'\s+'))
-      .where((String w) => w.isNotEmpty)
-      .toList();
-  if (words.isEmpty) return true;
-  final List<String> folded = <String>[for (final n in names) foldForSearch(n)];
-  return folded.any((String name) => words.every(name.contains));
 }
 
 /// The lift field on the lift chart's card. Looks like the form field it
@@ -153,7 +129,7 @@ class _LiftPickerSheetState extends State<LiftPickerSheet> {
     // is a translation the database does not hold.
     final List<LiftOption> shown = <LiftOption>[
       for (final LiftOption o in widget.options)
-        if (liftMatchesQuery(_search.text, <String>[o.name, o.storedName])) o,
+        if (matchesSearch(_search.text, <String>[o.name, o.storedName])) o,
     ];
 
     final Widget title = Padding(

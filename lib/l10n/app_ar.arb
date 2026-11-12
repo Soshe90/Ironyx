@@ -594,6 +594,12 @@
   "timerCustomTitle": "مخصّص",
   "timerCustomSubtitle": "أنشئ فترة زمنية ثم ابدأها أو احفظها",
   "timerPresetSaved": "تم حفظ الإعداد.",
+  "timerPresetSaveFailed": "تعذّر حفظ الإعداد.",
+  "timerStartFailed": "تعذّر بدء المؤقّت.",
+  "timerPresetNameTitle": "سمِّ هذا الإعداد",
+  "timerPresetNameLabel": "الاسم",
+  "timerPresetDeleted": "حُذف الإعداد",
+  "timerPresetOptions": "خيارات الإعداد",
   "timerPresetsLoadFailed": "تعذّر تحميل الإعدادات المحفوظة",
   "timerPresetSemantic": "ابدأ {name}، {duration} إجمالًا",
   "@timerPresetSemantic": {
@@ -608,7 +614,10 @@
       "count": { "type": "int" }
     }
   },
-  "timerPositiveValuesRequired": "يجب أن تكون قيم العمل والراحة والجولات موجبة.",
+  "timerFieldAtLeast": "لا يقل عن {min}",
+  "timerFieldAtMost": "لا يزيد على {max}",
+  "timerBuilderTotal": "المجموع {duration} · {intervals}",
+  "timerPresetFormulaNoRest": "{work} ث عمل × {rounds}",
   "timerFieldWork": "مدة العمل (ث)",
   "timerFieldRest": "الراحة (ث)",
   "timerFieldRounds": "الجولات",
@@ -978,6 +987,7 @@
 
   "libraryTitle": "مكتبة التمارين",
   "libraryClearFilters": "مسح عوامل التصفية",
+  "libraryClearFilterOf": "إلغاء تصفية {filter}",
   "librarySearchHint": "البحث عن تمارين",
   "libraryClearSearch": "مسح البحث",
   "libraryLoadFailed": "تعذّر تحميل التمارين",

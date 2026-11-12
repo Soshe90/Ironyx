@@ -52,12 +52,22 @@ class ExerciseThumbnail extends StatefulWidget {
     required this.url,
     required this.fallbackIcon,
     this.fallbackUrl,
+    this.decodeWidth,
     super.key,
   });
 
   final String url;
   final String? fallbackUrl;
   final IconData fallbackIcon;
+
+  /// Width, in logical pixels, to decode a bundled picture at; null for
+  /// its full size. The pictures are 600×400 (about 1 MB each decoded) and
+  /// a phone row shows them in a 56 dp square, so decoded in full a scroll
+  /// through the catalogue filled the image cache many times over.
+  ///
+  /// Remote pictures are left at their own size: a missing YouTube
+  /// thumbnail is told by its exact 120×90, which a resize would change.
+  final double? decodeWidth;
 
   @override
   State<ExerciseThumbnail> createState() => _ExerciseThumbnailState();
@@ -73,11 +83,19 @@ class _ExerciseThumbnailState extends State<ExerciseThumbnail> {
   _ThumbState _state = _ThumbState.loading;
   bool _usingFallback = false;
 
+  /// Device pixels per logical pixel, read once the widget has a context.
+  double _pixelRatio = 1;
+  bool _resolved = false;
+
   ImageProvider _providerFor(String source) {
     final uri = Uri.tryParse(source);
     final isRemote =
         uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
-    return isRemote ? NetworkImage(source) : AssetImage(source);
+    if (isRemote) return NetworkImage(source);
+    final double? width = widget.decodeWidth;
+    final AssetImage asset = AssetImage(source);
+    if (width == null || width <= 0 || !width.isFinite) return asset;
+    return ResizeImage(asset, width: (width * _pixelRatio).round());
   }
 
   void _listenToProvider(String source) {
@@ -88,8 +106,13 @@ class _ExerciseThumbnailState extends State<ExerciseThumbnail> {
   }
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Here rather than in initState: the decode size needs the screen's
+    // pixel ratio, which needs a context.
+    _pixelRatio = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
+    if (_resolved) return;
+    _resolved = true;
     _listenToProvider(widget.url);
   }
 
@@ -97,7 +120,8 @@ class _ExerciseThumbnailState extends State<ExerciseThumbnail> {
   void didUpdateWidget(covariant ExerciseThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url == widget.url &&
-        oldWidget.fallbackUrl == widget.fallbackUrl) {
+        oldWidget.fallbackUrl == widget.fallbackUrl &&
+        oldWidget.decodeWidth == widget.decodeWidth) {
       return;
     }
 

@@ -50,4 +50,56 @@ void main() {
       expect(preset.totalIntervals, 8);
     });
   });
+
+  group('custom timer limits', () {
+    test('values within the limits pass, the limits themselves included', () {
+      expect(
+        checkCustomTimer(workSeconds: 30, restSeconds: 10, rounds: 8),
+        isNull,
+      );
+      expect(
+        checkCustomTimer(
+          workSeconds: kMaxTimerPhaseSeconds,
+          restSeconds: kMaxTimerPhaseSeconds,
+          rounds: kMaxTimerRounds,
+          warmupSeconds: kMaxTimerPhaseSeconds,
+          cooldownSeconds: kMaxTimerPhaseSeconds,
+        ),
+        isNull,
+      );
+    });
+
+    test('one past a limit is refused, naming which', () {
+      expect(
+        checkCustomTimer(workSeconds: 30, restSeconds: 10, rounds: 100),
+        CustomTimerProblem.tooManyRounds,
+      );
+      expect(
+        checkCustomTimer(workSeconds: 3601, restSeconds: 10, rounds: 8),
+        CustomTimerProblem.phaseTooLong,
+      );
+      expect(
+        checkCustomTimer(
+            workSeconds: 30, restSeconds: 10, rounds: 8, cooldownSeconds: 3601),
+        CustomTimerProblem.phaseTooLong,
+      );
+      expect(
+        checkCustomTimer(workSeconds: 0, restSeconds: 10, rounds: 8),
+        CustomTimerProblem.notPositive,
+      );
+    });
+
+    test('the factory refuses what the check refuses', () {
+      expect(
+        () => TimerPresets.custom(
+            workSeconds: 30, restSeconds: 10, rounds: 80000),
+        throwsArgumentError,
+      );
+      expect(
+        TimerPresets.custom(workSeconds: 30, restSeconds: 10, rounds: 99)
+            .totalIntervals,
+        198,
+      );
+    });
+  });
 }

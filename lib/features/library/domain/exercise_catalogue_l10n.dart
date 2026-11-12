@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../core/database/daos/exercise_dao.dart';
 import '../../../core/database/tables/equipment.dart';
 import '../../../core/database/tables/exercises.dart';
 import '../../../core/database/tables/muscles.dart';
+import '../../../core/formatters/search_fold.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import 'exercise_catalogue_ar.dart';
 import 'exercise_instructions_ar_1.dart';
@@ -49,13 +51,24 @@ String localizedMuscleName(
 ) =>
     _lookup(context, kMuscleNamesAr, muscleId) ?? fallbackName;
 
-/// Translates an equipment name as `ExerciseSummary` carries it.
+/// An exercise summary's equipment, translated: each name looked up by
+/// its id (`kEquipmentNamesAr` is keyed by id), the English name where
+/// there is no translation. In the order the summary lists them.
 ///
-/// That list holds `EquipmentTable.name`, which the seed keeps equal to the
-/// row's id — so the same table serves both. Falls back to [name] itself,
-/// which is what the English UI already shows.
-String localizedEquipmentName(BuildContext context, String name) =>
-    _lookup(context, kEquipmentNamesAr, name) ?? name;
+/// Looked up by name before, on the claim that the seed keeps each name
+/// equal to its id; it does not ("Barbell" against "barbell"), so in Arabic
+/// every Library row showed English equipment.
+List<String> localizedEquipmentNames(
+  BuildContext context,
+  ExerciseSummary summary,
+) =>
+    <String>[
+      for (int i = 0; i < summary.equipmentNames.length; i++)
+        (i < summary.equipmentIds.length
+                ? _lookup(context, kEquipmentNamesAr, summary.equipmentIds[i])
+                : null) ??
+            summary.equipmentNames[i],
+    ];
 
 /// Translates an exercise name for a query result that denormalized it
 /// (e.g. `StrengthChange.exerciseName`, `LoggedExercise.exerciseName`)
@@ -171,4 +184,47 @@ String? _lookup(BuildContext context, Map<String, String> table, String key) {
     return null;
   }
   return table[key];
+}
+
+/// The exercises whose shown name, or stored English name, holds every
+/// word of [query] (see `matchesSearch`): the Library's search for a query
+/// in Arabic, which the SQL search cannot answer because the Arabic names
+/// are not in the database.
+List<ExerciseSummary> matchingDisplayedName(
+  BuildContext context,
+  List<ExerciseSummary> exercises,
+  String query,
+) =>
+    <ExerciseSummary>[
+      for (final ExerciseSummary s in exercises)
+        if (matchesSearch(
+          query,
+          <String>[s.exercise.displayName(context), s.exercise.name],
+        ))
+          s,
+    ];
+
+/// [exercises] in the order of the name shown: folded the way a search is
+/// (see `foldForSearch`), ties broken by the stored name so the order is
+/// the same on every build.
+///
+/// The queries order by the stored English name, so in Arabic the list
+/// was in no order a reader could see. Sorted here, not in SQL, because
+/// the shown name is a translation the database does not hold; a few
+/// hundred names take no time.
+List<ExerciseSummary> sortedByDisplayedName(
+  BuildContext context,
+  List<ExerciseSummary> exercises,
+) {
+  final List<(ExerciseSummary, String)> keyed = <(ExerciseSummary, String)>[
+    for (final ExerciseSummary s in exercises)
+      (s, foldForSearch(s.exercise.displayName(context))),
+  ];
+  keyed.sort(((ExerciseSummary, String) a, (ExerciseSummary, String) b) {
+    final int byShown = a.$2.compareTo(b.$2);
+    return byShown != 0
+        ? byShown
+        : a.$1.exercise.name.compareTo(b.$1.exercise.name);
+  });
+  return <ExerciseSummary>[for (final (ExerciseSummary s, _) in keyed) s];
 }

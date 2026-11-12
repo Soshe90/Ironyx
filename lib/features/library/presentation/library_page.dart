@@ -18,6 +18,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/responsive.dart';
 import '../domain/exercise_catalogue_l10n.dart';
+import 'exercise_search.dart';
 import 'widgets/exercise_detail_sheet.dart';
 import 'widgets/exercise_media.dart';
 
@@ -29,57 +30,23 @@ class LibraryPage extends ConsumerStatefulWidget {
   ConsumerState<LibraryPage> createState() => _LibraryPageState();
 }
 
-class _LibraryPageState extends ConsumerState<LibraryPage> {
-  final TextEditingController _searchController = TextEditingController();
+class _LibraryPageState extends ConsumerState<LibraryPage>
+    with DebouncedSearch<LibraryPage> {
   String? _selectedMuscleId;
   String? _selectedEquipmentId;
   MovementPattern? _selectedPattern;
 
-  /// Committed search term. Separate from the controller's text so that
-  /// typing does not re-run the query on every keystroke — each one would
-  /// otherwise swap the watched provider and start a new database stream.
-  String _query = '';
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    // Rebuild immediately so the clear affordance tracks the field, but
-    // hold the query itself until typing settles.
-    setState(() {});
-    _debounce?.cancel();
-    _debounce = Timer(AppDuration.inputDebounce, () {
-      if (mounted) setState(() => _query = value.trim());
-    });
-  }
-
-  void _commitSearch(String value) {
-    _debounce?.cancel();
-    setState(() => _query = value.trim());
-  }
-
   @override
   Widget build(BuildContext context) {
-    final searchQuery = _query;
-
-    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(
-      searchQuery.isNotEmpty
-          ? exercisesSearchStreamProvider(searchQuery)
-          : (_selectedMuscleId != null ||
-                  _selectedEquipmentId != null ||
-                  _selectedPattern != null)
-              ? exercisesFilteredStreamProvider(
-                  muscleId: _selectedMuscleId,
-                  equipmentId: _selectedEquipmentId,
-                  pattern: _selectedPattern,
-                )
-              : allExercisesStreamProvider,
+    // The search and the filters narrow one query together; an Arabic
+    // search is matched in memory (see exerciseSource).
+    final source = exerciseSource(
+      query: query,
+      muscleId: _selectedMuscleId,
+      equipmentId: _selectedEquipmentId,
+      pattern: _selectedPattern,
     );
+    final AsyncValue<List<ExerciseSummary>> exercisesAsync = ref.watch(source);
 
     return Scaffold(
       appBar: AppBar(
@@ -103,23 +70,23 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               AppSpacing.sm,
             ),
             child: TextField(
-              controller: _searchController,
+              controller: searchController,
               decoration: InputDecoration(
                 hintText: context.l10n.librarySearchHint,
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
+                suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         tooltip: context.l10n.libraryClearSearch,
                         onPressed: () {
-                          _searchController.clear();
-                          _commitSearch('');
+                          searchController.clear();
+                          commitSearch('');
                         },
                       )
                     : null,
               ),
-              onChanged: _onSearchChanged,
-              onSubmitted: _commitSearch,
+              onChanged: onSearchChanged,
+              onSubmitted: commitSearch,
             ),
           ),
 
@@ -130,7 +97,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           Expanded(
             child: exercisesAsync.when(
               data: (exercises) => _ExerciseList(
-                exercises: exercises,
+                exercises: shownExercises(context, exercises, query),
                 onExerciseTap: _showExerciseDetail,
                 hasActiveFilters: _hasActiveFilters,
                 onClearFilters: _clearFilters,
@@ -139,7 +106,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               error: (error, _) => ErrorView(
                 title: context.l10n.libraryLoadFailed,
                 details: error.toString(),
-                onRetry: () => ref.invalidate(allExercisesStreamProvider),
+                // The query on screen; it reloaded the full list, so a
+                // failed search or filter could not be retried.
+                onRetry: () => ref.invalidate(source),
               ),
             ),
           ),
@@ -152,13 +121,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       _selectedMuscleId != null ||
       _selectedEquipmentId != null ||
       _selectedPattern != null ||
-      _query.isNotEmpty;
+      query.isNotEmpty;
 
   void _clearFilters() {
-    _debounce?.cancel();
     setState(() {
-      _searchController.clear();
-      _query = '';
+      resetSearch();
       _selectedMuscleId = null;
       _selectedEquipmentId = null;
       _selectedPattern = null;
@@ -197,7 +164,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 .where((e) => e.id == _selectedEquipmentId)
                 .firstOrNull,
             options: equipment,
-            getLabel: (e) => e.name,
+            // Translated, as the rows under it are.
+            getLabel: (e) => e.localizedName(context),
             onChanged: (v) => setState(() => _selectedEquipmentId = v?.id),
           ),
           _FilterMenuChip<MovementPattern>(
@@ -274,7 +242,10 @@ class _FilterMenuChip<T extends Object> extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
     final bool active = value != null;
 
-    return PopupMenuButton<T?>(
+    final Color ink =
+        active ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
+
+    final Widget menu = PopupMenuButton<T?>(
       tooltip: context.l10n.libraryFilterBy(label.toLowerCase()),
       initialValue: value,
       onSelected: onChanged,
@@ -287,20 +258,12 @@ class _FilterMenuChip<T extends Object> extends StatelessWidget {
         for (final T option in options)
           PopupMenuItem<T?>(value: option, child: Text(getLabel(option))),
       ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        constraints: const BoxConstraints(
-          minHeight: AppSpacing.minTapTarget,
-        ),
-        decoration: BoxDecoration(
-          color: active ? scheme.secondaryContainer : scheme.surface,
-          border: Border.all(
-            color: active ? scheme.secondary : scheme.outlineVariant,
-          ),
-          borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: Padding(
+        padding: EdgeInsetsDirectional.only(
+          start: AppSpacing.md,
+          end: active ? AppSpacing.xs : AppSpacing.md,
+          top: AppSpacing.sm,
+          bottom: AppSpacing.sm,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -308,22 +271,47 @@ class _FilterMenuChip<T extends Object> extends StatelessWidget {
             Text(
               active ? getLabel(value as T) : label,
               style: theme.textTheme.labelLarge?.copyWith(
-                color: active
-                    ? scheme.onSecondaryContainer
-                    : scheme.onSurfaceVariant,
+                color: ink,
                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
-            Icon(
-              active ? Icons.close : Icons.arrow_drop_down,
-              size: 18,
-              color: active
-                  ? scheme.onSecondaryContainer
-                  : scheme.onSurfaceVariant,
-            ),
+            if (!active) ...<Widget>[
+              const SizedBox(width: AppSpacing.xs),
+              Icon(Icons.arrow_drop_down, size: 18, color: ink),
+            ],
           ],
         ),
+      ),
+    );
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: AppSpacing.minTapTarget),
+      decoration: BoxDecoration(
+        color: active ? scheme.secondaryContainer : scheme.surface,
+        border: Border.all(
+          color: active ? scheme.secondary : scheme.outlineVariant,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          menu,
+          // The "×" clears this filter. It sat inside the menu's button, so
+          // a tap on it only opened the menu again.
+          if (active)
+            IconButton(
+              tooltip: context.l10n.libraryClearFilterOf(label),
+              onPressed: () => onChanged(null),
+              icon: Icon(Icons.close, size: 18, color: ink),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: AppSpacing.minTapTarget - AppSpacing.sm,
+                minHeight: AppSpacing.minTapTarget,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -439,20 +427,12 @@ class _ExerciseRow extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final exercise = summary.exercise;
-    final String equipmentLabel = summary.equipmentNames
-        .map((String e) => localizedEquipmentName(context, e))
-        .join(context.l10n.listSeparator);
-    final String? muscle = summary.primaryMuscle?.localizedName(context);
     final String? thumbnailUrl = exercisePictureUrl(summary.media);
-    final IconData fallbackIcon = summary.equipmentNames.isEmpty
+    final IconData fallbackIcon = summary.equipmentIds.isEmpty
         ? Icons.fitness_center
-        : equipmentIcon(summary.equipmentNames.first);
+        : equipmentIcon(summary.equipmentIds.first);
 
-    final String meta = <String>[
-      if (muscle != null) muscle,
-      if (equipmentLabel.isNotEmpty) equipmentLabel,
-      exercise.movementPattern.localizedLabel(context.l10n),
-    ].join(' · ');
+    final String meta = exerciseDetailLine(context, summary);
 
     return AppCard(
       onTap: onTap,
@@ -477,6 +457,10 @@ class _ExerciseRow extends StatelessWidget {
                       url: thumbnailUrl,
                       fallbackUrl: exercisePictureUrl(summary.fallbackMedia),
                       fallbackIcon: fallbackIcon,
+                      // Cropped to fill a square: half again the width, so
+                      // a 3:2 picture is still as tall as the square, and a
+                      // 2:3 one as wide.
+                      decodeWidth: _rowThumbnailSize * 1.5,
                     ),
             ),
           ),
@@ -533,8 +517,7 @@ class _ExerciseCard extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final exercise = summary.exercise;
-    final equipmentLabel = summary.equipmentNames
-        .map((String e) => localizedEquipmentName(context, e))
+    final equipmentLabel = localizedEquipmentNames(context, summary)
         .join(context.l10n.listSeparator);
 
     return AppCard(
@@ -550,12 +533,18 @@ class _ExerciseCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.sm),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: ExerciseThumbnail(
-                  url: url,
-                  fallbackUrl: exercisePictureUrl(summary.fallbackMedia),
-                  fallbackIcon: summary.equipmentNames.isEmpty
-                      ? Icons.fitness_center
-                      : equipmentIcon(summary.equipmentNames.first),
+                child: LayoutBuilder(
+                  // Decoded at the card's own width: a 16:9 box is wider
+                  // than the pictures, so its width is what has to be met.
+                  builder: (BuildContext context, BoxConstraints box) =>
+                      ExerciseThumbnail(
+                    url: url,
+                    fallbackUrl: exercisePictureUrl(summary.fallbackMedia),
+                    fallbackIcon: summary.equipmentIds.isEmpty
+                        ? Icons.fitness_center
+                        : equipmentIcon(summary.equipmentIds.first),
+                    decodeWidth: box.maxWidth,
+                  ),
                 ),
               ),
             ),
@@ -596,7 +585,9 @@ class _ExerciseCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  equipmentIcon(summary.equipmentNames.first),
+                  summary.equipmentIds.isEmpty
+                      ? Icons.fitness_center
+                      : equipmentIcon(summary.equipmentIds.first),
                   size: 14,
                   color: scheme.onSurfaceVariant,
                 ),
