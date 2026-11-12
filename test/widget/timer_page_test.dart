@@ -152,7 +152,8 @@ void main() {
       await tester.tap(find.text('Start custom'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Rounds can be at most 99.'), findsOneWidget);
+      // Said under the field at fault, not at the foot of the screen.
+      expect(find.text('At most 99'), findsOneWidget);
       expect(find.text('Start custom'), findsOneWidget,
           reason: 'still on the Timer tab, nothing started');
     });
@@ -298,6 +299,62 @@ void main() {
         await frames(tester);
 
         expect(find.text("Couldn't save the preset."), findsOneWidget);
+      });
+    });
+    group('the custom builder', () {
+      Future<void> openBuilder(WidgetTester tester) => pumpApp(
+            tester,
+            overrides: [appDatabaseProvider.overrideWithValue(database)],
+            initialLocation: '/timer',
+            prefs: const {'exercise_seed_version': 999999},
+            surfaceSize: const Size(400, 1800),
+          );
+      Finder field(int i) => find.byType(TextField).at(i);
+
+      testWidgets('shows the total as it is typed', (tester) async {
+        await openBuilder(tester);
+        // 30 s work, 10 s rest, 8 rounds: 16 intervals, 5:20.
+        expect(find.text('Total 05:20 · 16 intervals'), findsOneWidget);
+
+        await tester.enterText(field(2), '4');
+        await tester.pump();
+        expect(find.text('Total 02:40 · 8 intervals'), findsOneWidget);
+      });
+
+      testWidgets('marks a field only after Start, then follows the typing',
+          (tester) async {
+        await openBuilder(tester);
+        await tester.enterText(field(0), '0');
+        await tester.pump();
+        expect(find.text('At least 1'), findsNothing,
+            reason: 'not while it is still being typed');
+        expect(find.textContaining('Total'), findsNothing);
+
+        await tester.tap(find.text('Start custom'));
+        await tester.pump();
+        expect(find.text('At least 1'), findsOneWidget);
+
+        await tester.enterText(field(0), '45');
+        await tester.pump();
+        expect(find.text('At least 1'), findsNothing);
+      });
+
+      testWidgets('allows a work-only timer', (tester) async {
+        await openBuilder(tester);
+        await tester.enterText(field(1), '0');
+        await tester.pump();
+
+        // 8 rounds of 30 s, no rest phases.
+        expect(find.text('Total 04:00 · 8 intervals'), findsOneWidget);
+        await tester.tap(find.text('Save preset'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).last)
+              .controller!
+              .text,
+          '30s work × 8',
+        );
       });
     });
   });

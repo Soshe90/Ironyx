@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,149 passed, 2 skipped, 0 failed** (2026-11-11; was
+- `flutter test`: **1,152 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -158,8 +158,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     second and the controller tried to schedule a notification for, one
     each. Now at most 99 rounds (`kMaxTimerRounds`) and 3,600 s per phase
     (`kMaxTimerPhaseSeconds`), checked by `checkCustomTimer` in the domain;
-    the builder shows which limit was passed (two new strings, en/ar) and
-    starts or saves nothing, and `TimerPresets.custom` throws past them, so
+    the builder shows which limit was passed (two new strings, en/ar; since
+    replaced by errors under the field, below) and starts or saves nothing, and `TimerPresets.custom` throws past them, so
     no caller can build one. **Not covered:** presets read back from the
     database (`decodeTimerPhases`) are not re-checked, so a restored backup
     could still hold one made before this. **Tested:** the limits
@@ -262,6 +262,19 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     `shownExercises` (Arabic match, then order) and `exerciseDetailLine`.
     No behaviour change: every existing Library, picker and editor test
     passes unchanged; four new tests cover the shared functions.
+  - **Changed: the custom timer builder.** It now shows how long the timer
+    runs as it is typed ("Total 05:20 · 16 intervals"), where that was
+    known only once it had started. A value out of range is marked under
+    its own field ("At least 1", "At most 99") instead of in a snack bar
+    that did not say which field it meant; errors show once Start or Save
+    has been pressed, then follow the typing, so a half-typed value is not
+    marked. Rest may be 0, a work-only timer, which the engine always ran
+    and the builder refused; its formula reads "30s work × 8", not "… /
+    0s rest × 8". Four new strings, en/ar; the three the snack bar used are
+    removed (`timerPositiveValuesRequired`, `timerRoundsTooMany`,
+    `timerPhaseTooLong`). **Tested:** the total follows the rounds; a field
+    is marked only after Start and clears as it is fixed; zero rest gives a
+    work-only timer and its formula. All three fail on the old code.
 - Changed 2026-11-11, Workouts tab (reviewed like Home and Progress, then
   fixed one item at a time, on `workouts/review-2026-11-11`, branched from
   `home/review-2026-11-11`). **Not in the 1.0.5+6 bundle.**
