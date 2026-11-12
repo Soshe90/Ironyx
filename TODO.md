@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,158 passed, 2 skipped, 0 failed** (2026-11-12; was
+- `flutter test`: **1,159 passed, 2 skipped, 0 failed** (2026-11-12; was
   1,041 on 2026-11-10 and 876 on 2026-11-05).
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
@@ -162,6 +162,15 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     account-conflict erase test now also checks the old account's snapshot
     is gone. **Not checked:** on the phone. **Open:** the account-conflict
     erase has no error handling of its own (as before this change).
+  - **Fixed: restoring a snapshot could lose the current data for good.**
+    An import and a cloud restore save a snapshot of what they replace;
+    Restore snapshot did not, so picking the wrong one was final. It does
+    now (`restoreSnapshot` with `createSnapshot: true`). The new snapshot
+    is the newest and is kept; past three, the oldest goes, which may be
+    the one just restored, whose data is the live data by then.
+    **Tested:** restoring an empty snapshot over a history, then the
+    snapshot saved by that restore, brings the history back (on the old
+    code there was no second snapshot).
 - Changed 2026-11-11, Library and Timer tabs (reviewed together, then
   fixed one item at a time, on `library-timer/review-2026-11-11` from
   `main` after #4 and #5 merged). **Not in the 1.0.5+6 bundle.**

@@ -489,6 +489,13 @@ class DataExportService {
         preserveCatalogue: false,
       );
 
+  /// Replaces everything with [snapshotFile], first saving a snapshot of
+  /// what it replaces, as an import and a cloud restore do.
+  ///
+  /// It saved none, so restoring the wrong snapshot lost the current data
+  /// for good. The new snapshot is the newest, so it is kept; the oldest
+  /// past three goes, which may be the one just restored, whose data is
+  /// now the live data anyway.
   Future<void> restoreSnapshot(
     AppDatabase db,
     File snapshotFile, {
@@ -500,7 +507,7 @@ class DataExportService {
       envelope,
       mode: ImportMode.replace,
       snapshotDirPath: snapshotDirPath,
-      createSnapshot: false,
+      createSnapshot: true,
       preserveCatalogue: false,
     );
   }
