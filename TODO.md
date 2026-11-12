@@ -288,6 +288,20 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     are two points; both beat the history before them and are both PRs on
     the chart and in the PR ids (both fail on the old queries); the
     existing strength, analytics and 3,000-workout benchmark tests pass.
+  - **Fixed: deleting a program left its days behind.** `deleteProgram`
+    said it cascaded to the day templates, but the cascade runs from
+    template to link, so each delete left the program's day templates and
+    their exercise rows unreachable, carried in every export and holding
+    references to exercises. It now deletes, in one transaction, the
+    templates linked to that program and to no other. A template another
+    program links to stays, and so does one no program links to (the app
+    never creates one, but a backup could hold one). **Not done, at the
+    owner's default:** templates already left behind on a phone are not
+    cleaned up; they are invisible, and telling them from a standalone
+    template is the same rule, so a later clean-up is one query if wanted.
+    **Tested:** the program's templates and exercises go and another
+    program's stay (fails on the old code); a shared template stays; a
+    standalone one stays; an unknown id deletes nothing.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**

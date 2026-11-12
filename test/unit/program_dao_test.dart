@@ -110,6 +110,79 @@ void main() {
     ];
   }
 
+  group('deleteProgram (production review 2026-11-12, finding 9)', () {
+    Future<List<String>> templateIds() async =>
+        (await database.select(database.templatesTable).get())
+            .map((t) => t.id)
+            .toList()
+          ..sort();
+
+    test('removes the program\'s day templates and their exercises', () async {
+      // It left both behind: the cascade runs from template to link, not
+      // from program to template.
+      await programDao.insertProgram(programCompanion(id: 'p1'), twoDays('p1'));
+      await programDao.insertProgram(
+        programCompanion(id: 'p2', name: 'Other'),
+        twoDays('p2'),
+      );
+
+      await programDao.deleteProgram('p1');
+
+      expect(await templateIds(), ['p2_tpl_a', 'p2_tpl_b']);
+      final exercises =
+          await database.select(database.templateExercisesTable).get();
+      expect(
+          exercises.map((e) => e.templateId).toSet(), {'p2_tpl_a', 'p2_tpl_b'});
+      expect(await programDao.getDetail('p2'), isNotNull);
+    });
+
+    test('keeps a template another program still links to', () async {
+      await programDao.insertProgram(programCompanion(id: 'p1'), twoDays('p1'));
+      await programDao.insertProgram(
+        programCompanion(id: 'p2', name: 'Other'),
+        const [],
+      );
+      await database.into(database.programTemplatesTable).insert(
+            ProgramTemplatesTableCompanion.insert(
+              id: 'p2_link',
+              programId: 'p2',
+              templateId: 'p1_tpl_a',
+              dayName: 'Shared',
+              orderIndex: 0,
+            ),
+          );
+
+      await programDao.deleteProgram('p1');
+
+      expect(await templateIds(), ['p1_tpl_a']);
+    });
+
+    test('keeps a template no program links to', () async {
+      final now = DateTime.now().toUtc();
+      await database.into(database.templatesTable).insert(
+            TemplatesTableCompanion.insert(
+              id: 'standalone',
+              name: 'Standalone',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await programDao.insertProgram(programCompanion(id: 'p1'), twoDays('p1'));
+
+      await programDao.deleteProgram('p1');
+
+      expect(await templateIds(), ['standalone']);
+    });
+
+    test('an unknown program deletes nothing', () async {
+      await programDao.insertProgram(programCompanion(id: 'p1'), twoDays('p1'));
+
+      await programDao.deleteProgram('nope');
+
+      expect(await templateIds(), ['p1_tpl_a', 'p1_tpl_b']);
+    });
+  });
+
   test('insertProgram and getDetail round-trips days and exercises', () async {
     await programDao.insertProgram(
       programCompanion(id: 'p1'),

@@ -210,9 +210,37 @@ class ProgramDao extends DatabaseAccessor<AppDatabase> with _$ProgramDaoMixin {
     return rows.map((r) => r.read(programsTable.name)!).toSet();
   }
 
-  /// Delete a program. Cascades to its day-templates and their exercises.
-  Future<void> deleteProgram(String programId) =>
-      (delete(programsTable)..where((t) => t.id.equals(programId))).go();
+  /// Deletes a program, its day links, and the day templates (with their
+  /// exercises) that no other program links to, in one transaction.
+  ///
+  /// It said it cascaded to the templates, but the cascade runs the other
+  /// way (deleting a template removes its link): every delete left the
+  /// days' templates and exercise rows behind, unreachable, carried in
+  /// every export. A template another program still links to stays, and
+  /// so does one no program links to, which this did not create.
+  Future<void> deleteProgram(String programId) {
+    return transaction(() async {
+      final Set<String> templateIds = (await (select(programTemplatesTable)
+                ..where((t) => t.programId.equals(programId)))
+              .get())
+          .map((link) => link.templateId)
+          .toSet();
+      await (delete(programsTable)..where((t) => t.id.equals(programId))).go();
+      if (templateIds.isEmpty) return;
+      // The program's own links went with it, so a link left now is
+      // another program's.
+      await (delete(templatesTable)
+            ..where(
+              (t) =>
+                  t.id.isIn(templateIds) &
+                  t.id.isNotInQuery(
+                    selectOnly(programTemplatesTable)
+                      ..addColumns([programTemplatesTable.templateId]),
+                  ),
+            ))
+          .go();
+    });
+  }
 
   /// Deletes all built-in programs and their day-templates, leaving
   /// user-created programs untouched. Used by the seeder when the built-in
