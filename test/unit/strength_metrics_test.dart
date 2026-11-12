@@ -461,6 +461,48 @@ void main() {
       expect(prIds, {'c'});
     });
 
+    test('two workouts that started at the same moment are two points',
+        () async {
+      // Production review 2026-11-12, finding 8: the best set was picked
+      // per start time, and an XLSX import gives every session of a date
+      // the same noon timestamp, so one of the two vanished from the chart.
+      final DateTime noon = DateTime.utc(2026, 3, 1, 12);
+      await addWorkout('am', noon, [('bench', 100, 5)]);
+      await addWorkout('pm', noon, [('bench', 80, 5)]);
+
+      final points = await dao.watchOneRMSeries('bench').first;
+
+      expect(points, hasLength(2));
+      expect(
+        points.map((p) => p.estimated1RM.round()).toSet(),
+        {(100 * (1 + 5 / 30)).round(), (80 * (1 + 5 / 30)).round()},
+      );
+    });
+
+    test(
+        'of two workouts at the same moment, neither is earlier than the '
+        'other, on the chart and in the PR ids', () async {
+      // ROWS ... 1 PRECEDING compared them in whatever order SQLite
+      // produced; "strictly earlier" means both are judged against the
+      // history before them only.
+      await addWorkout('before', DateTime.utc(2026, 2, 1), [('bench', 90, 5)]);
+      final DateTime noon = DateTime.utc(2026, 3, 1, 12);
+      await addWorkout('am', noon, [('bench', 100, 5)]);
+      await addWorkout('pm', noon, [('bench', 95, 5)]);
+
+      final points = await dao.watchOneRMSeries('bench').first;
+      final Set<String> prIds = await dao.watchPersonalRecordWorkoutIds().first;
+
+      expect(
+        points.where((p) => p.date.isAtSameMomentAs(noon)).map(
+              (p) => p.isPersonalRecord,
+            ),
+        [true, true],
+        reason: 'both beat everything before that moment',
+      );
+      expect(prIds, {'before', 'am', 'pm'});
+    });
+
     test('returns every session in the window by default', () async {
       // More than the 50 the chart used to keep without saying so.
       final DateTime start = DateTime(2024, 1, 1);

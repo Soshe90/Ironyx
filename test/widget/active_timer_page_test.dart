@@ -37,6 +37,16 @@ class _FakeTimerController extends TimerController {
   /// The last interval running out on its own.
   void finish() => state = null;
 
+  /// What [takeSaveFailure] reports once.
+  bool saveFailed = false;
+
+  @override
+  bool takeSaveFailure() {
+    final bool failed = saveFailed;
+    saveFailed = false;
+    return failed;
+  }
+
   void show(TimerSnapshot snapshot) => state = snapshot;
 }
 
@@ -149,6 +159,32 @@ void main() {
     expect(find.text('End this timer?'), findsNothing);
     expect(find.byType(ActiveTimerPage), findsNothing);
     expect(controller.stops, 0);
+  });
+
+  testWidgets('a session that could not be saved says so as the screen closes',
+      (tester) async {
+    await openActiveTimer(tester);
+    controller.saveFailed = true;
+    controller.finish();
+    await settle(tester);
+
+    expect(find.byType(ActiveTimerPage), findsNothing);
+    expect(
+      find.text(
+        "The timer finished, but this session couldn't be saved to your "
+        'history.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a saved session closes without that message', (tester) async {
+    await openActiveTimer(tester);
+    controller.finish();
+    await settle(tester);
+
+    expect(find.byType(ActiveTimerPage), findsNothing);
+    expect(find.textContaining("couldn't be saved"), findsNothing);
   });
 
   testWidgets('the countdown ring stays a circle on a phone', (tester) async {

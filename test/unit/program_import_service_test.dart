@@ -82,6 +82,42 @@ void main() {
     );
   });
 
+  test('a CSV over 1 MB is refused before it is split into rows', () async {
+    // Production review 2026-11-12, finding 7: any size was read and split
+    // on the UI isolate.
+    final String huge = 'program,day,exercise\n${'x' * kMaxProgramCsvBytes}';
+
+    await expectLater(
+      service.parse(huge, database),
+      throwsA(isA<ProgramCsvTooLargeException>()),
+    );
+  });
+
+  test('a large CSV under the limit is split on another isolate and read',
+      () async {
+    // Over the 64 KB threshold: this one goes through `compute`.
+    final StringBuffer csv = StringBuffer('program,day,exercise,sets\n');
+    for (int i = 0; i < 3000; i++) {
+      csv.writeln('Big Block,Day ${i % 7},Back Squat,3');
+    }
+    expect(csv.length, greaterThan(64 * 1024));
+
+    final result = await service.parse(csv.toString(), database);
+
+    expect(result.programs.single.name, 'Big Block');
+    expect(result.programs.single.days, hasLength(7));
+  });
+
+  test('the split handles quotes, commas, CRLF and the byte-order mark', () {
+    expect(
+      parseProgramCsv('\uFEFFprogram,day\r\n"A, ""b""",Day 1\r\n'),
+      <List<String>>[
+        <String>['program', 'day'],
+        <String>['A, "b"', 'Day 1'],
+      ],
+    );
+  });
+
   test('apply inserts parsed programs into the database', () async {
     const csv = 'program,day,exercise,sets,reps\n'
         'Full Body,Workout A,Back Squat,3,6-8\n'

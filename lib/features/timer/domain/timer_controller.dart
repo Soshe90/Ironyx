@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/daos/timer_dao.dart';
+import '../../../core/error_reporting.dart';
 import '../../../core/formatters/unit_formatters.dart';
 import '../../../core/l10n/l10n_extension.dart';
 import '../../../core/l10n/l10n_provider.dart';
@@ -43,6 +44,10 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
   bool _notificationGranted = false;
   bool _disposed = false;
 
+  /// Set when a finished session could not be written; read once by the
+  /// screen that closes with it ([takeSaveFailure]).
+  bool _saveFailed = false;
+
   /// The app's clock (`clockProvider`): the device clock, or a test's.
   DateTime Function() _now = DateTime.now;
   late final NotificationService _notifications;
@@ -71,6 +76,15 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
 
   bool get isActive => _engine != null;
 
+  /// Whether the last session to finish could not be saved to the history,
+  /// cleared by reading it. The timer screen closes when a session ends,
+  /// for whatever reason, and asks this so it can say so.
+  bool takeSaveFailure() {
+    final bool failed = _saveFailed;
+    _saveFailed = false;
+    return failed;
+  }
+
   /// Whether the user denied notification permission for this session. The
   /// timer still works; the UI shows a one-time banner (ADR-4).
   bool get notificationDenied => _notificationDenied;
@@ -83,6 +97,9 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     required bool notificationGranted,
   }) async {
     _preset = preset;
+    // A failure no screen was open to report belongs to that session, not
+    // to this one.
+    _saveFailed = false;
     _notificationDenied = !notificationGranted;
     _notificationGranted = notificationGranted;
     _startedAt = _now().toUtc();
@@ -90,9 +107,14 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     _lastCountdownSecond = -1;
 
     _engine = TimerEngine(phases: preset.phases, clock: _now)..start();
-    await _wakelock.enable();
+    // Keeping the screen on and the sounds are capabilities: when one
+    // fails, the timer still runs without it (ADR-4, ADR-6). A wakelock
+    // failure threw out of here with the engine already set and no ticker,
+    // so the timer counted as active, showed nothing moving, and the
+    // caller said it could not start.
+    await _bestEffort('wakelock.enable', _wakelock.enable);
     if (_disposed) return;
-    await _audio.preload();
+    await _bestEffort('audio.preload', _audio.preload);
 
     _ticker?.cancel();
     _ticker = Timer.periodic(_tickInterval, (_) => _tick());
@@ -102,7 +124,7 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
 
   Future<void> pause() async {
     _engine?.pause();
-    await _notifications.cancelAll();
+    await _bestEffort('notifications.cancelAll', _notifications.cancelAll);
     if (!_disposed) _tick();
   }
 
@@ -129,7 +151,8 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     state = snapshot;
 
     if (snapshot.isComplete) {
-      _finish();
+      // `_finish` handles its own failures; nothing awaits a tick.
+      unawaited(_finish());
       return;
     }
 
@@ -182,8 +205,19 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     // silently never get written.
     final TimerDao dao = ref.read(timerDaoProvider);
 
-    await _wakelock.disable();
-    await _notifications.cancelAll();
+    // The record first, then the effects, each on its own. The effects ran
+    // first and a wakelock failure skipped the write; with the engine
+    // already cleared, nothing could retry it, and the session was lost
+    // without a word.
+    try {
+      await _writeSession(dao, engine);
+    } catch (error, stackTrace) {
+      reportError(error, stackTrace, context: 'TimerController.writeSession');
+      _saveFailed = true;
+    }
+
+    await _bestEffort('wakelock.disable', _wakelock.disable);
+    await _bestEffort('notifications.cancelAll', _notifications.cancelAll);
 
     // `ref.mounted`, not `_disposed`: this flag is set from an `onDispose`
     // callback and is not guaranteed to have landed yet at this exact point
@@ -193,20 +227,31 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     if (ref.mounted) {
       final TimerSettings settings = ref.read(timerSettingsControllerProvider);
       if (settings.hapticsEnabled) {
-        await ref.read(hapticsServiceProvider).heavy();
+        final HapticsService haptics = ref.read(hapticsServiceProvider);
+        await _bestEffort('haptics.heavy', haptics.heavy);
       }
-      if (settings.soundEnabled) {
-        await ref.read(timerAudioServiceProvider).cue(TimerCue.complete);
+      if (settings.soundEnabled && ref.mounted) {
+        final TimerAudioService audio = ref.read(timerAudioServiceProvider);
+        await _bestEffort('audio.complete', () => audio.cue(TimerCue.complete));
       }
     }
 
-    await _writeSession(dao, engine);
-    await _audio.dispose();
+    await _bestEffort('audio.dispose', _audio.dispose);
 
     // Same reasoning as the `ref.mounted` check above: `_disposed` can still
     // read false here even though the element has already been torn down,
     // which throws on the assignment below rather than on a read.
     if (ref.mounted) state = null;
+  }
+
+  /// Runs a side effect whose failure must not stop the timer: it is
+  /// logged and the caller carries on.
+  Future<void> _bestEffort(String what, Future<void> Function() run) async {
+    try {
+      await run();
+    } catch (error, stackTrace) {
+      reportError(error, stackTrace, context: 'TimerController.$what');
+    }
   }
 
   Future<void> _writeSession(TimerDao dao, TimerEngine? engine) async {
@@ -256,7 +301,14 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _rescheduleBoundaries() async {
+  /// Schedules the phase alerts. A failure is logged, not thrown: the
+  /// alerts are a capability, and a timer that is running must not be
+  /// reported as failed to start, pause or skip because one could not be
+  /// scheduled.
+  Future<void> _rescheduleBoundaries() =>
+      _bestEffort('notifications.schedule', _scheduleBoundaries);
+
+  Future<void> _scheduleBoundaries() async {
     final TimerEngine? engine = _engine;
     if (engine == null ||
         _disposed ||
@@ -315,8 +367,8 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     _ticker?.cancel();
     _ticker = null;
     _engine = null;
-    unawaited(_notifications.cancelAll());
-    unawaited(_wakelock.disable());
-    unawaited(_audio.dispose());
+    unawaited(_bestEffort('notifications.cancelAll', _notifications.cancelAll));
+    unawaited(_bestEffort('wakelock.disable', _wakelock.disable));
+    unawaited(_bestEffort('audio.dispose', _audio.dispose));
   }
 }

@@ -111,6 +111,22 @@ void main() {
     database = AppDatabase.forTesting();
   });
 
+  test('one snapshot that cannot be deleted does not keep the others',
+      () async {
+    // Production review 2026-11-12, finding 3: the loop stopped at the
+    // first failure, leaving every later copy of the data behind.
+    final _OneMissingSnapshot failing = _OneMissingSnapshot();
+
+    await expectLater(
+      failing.deleteSnapshots(snapshotDir.path),
+      throwsA(isA<FileSystemException>()),
+    );
+    expect(
+      snapshotDir.listSync().map((e) => e.uri.pathSegments.last),
+      <String>['unrelated.txt'],
+    );
+  });
+
   test("a snapshot's time is read from its name", () {
     expect(
       DataExportService.snapshotTakenAt(
@@ -123,4 +139,14 @@ void main() {
       isNull,
     );
   });
+}
+
+/// Lists a snapshot that does not exist first, so its delete fails before
+/// the real ones are reached.
+class _OneMissingSnapshot extends DataExportService {
+  @override
+  Future<List<File>> listSnapshots(String snapshotDirPath) async => <File>[
+        File('$snapshotDirPath/pre_import_snapshot_9999999999999.json'),
+        ...await super.listSnapshots(snapshotDirPath),
+      ];
 }

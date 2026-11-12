@@ -246,6 +246,35 @@ void main() {
     await database.close();
   });
 
+  test(
+      'an import that committed is not reported as failed when pruning old '
+      'snapshots fails', () async {
+    // Production review 2026-11-12, finding 4: the pruning ran after the
+    // commit and its error reached the caller, so Settings said "Import
+    // failed" over data that had already been replaced.
+    const _PruningFails service = _PruningFails();
+    final source = AppDatabase.forTesting();
+    await seed(source);
+    final String exportedJson = await service.buildJsonExport(source);
+    await source.close();
+
+    final destination = AppDatabase.forTesting();
+    addTearDown(destination.close);
+    await service.applyImport(
+      destination,
+      service.parseImport(exportedJson),
+      mode: ImportMode.replace,
+      snapshotDirPath: snapshotDir.path,
+    );
+
+    expect(await WorkoutDao(destination).getWithDetails('w1'), isNotNull);
+    expect(
+      snapshotDir.listSync(),
+      hasLength(1),
+      reason: 'the pre-import snapshot is still written',
+    );
+  });
+
   test('restoring a snapshot keeps one of what it replaced', () async {
     const service = DataExportService();
     final database = AppDatabase.forTesting();
@@ -875,6 +904,52 @@ void main() {
       );
     });
 
+    // Production review 2026-11-12, the review of its own fixes: before
+    // that date the XLSX import stored negative weights, so a phone that
+    // imported such a workbook writes them into every export, cloud backup
+    // and snapshot. Refusing them broke restore and undo for that phone;
+    // a restore takes back exactly what the app wrote.
+    test('restores a negative set weight and volume as they were', () async {
+      const service = DataExportService();
+      final tables = await exportedTables();
+      firstRow(tables, 'workout_sets_table')['weight_kg'] = -10.0;
+      firstRow(tables, 'workouts_table')['total_volume_kg'] = -50.0;
+      final database = AppDatabase.forTesting();
+      addTearDown(database.close);
+      await service.applyImport(
+        database,
+        ImportEnvelope(
+          formatVersion: DataExportService.formatVersion,
+          dbSchemaVersion: database.schemaVersion,
+          appVersion: '0.1.0',
+          exportedAt: DateTime.utc(2026),
+          tables: tables.map(
+            (key, value) => MapEntry(
+              key,
+              (value as List<dynamic>)
+                  .map((row) =>
+                      (row as Map<String, dynamic>).cast<String, Object?>())
+                  .toList(),
+            ),
+          ),
+        ),
+        mode: ImportMode.replace,
+        snapshotDirPath: snapshotDir.path,
+      );
+      expect(
+        (await database.select(database.workoutSetsTable).get())
+            .single
+            .weightKg,
+        -10,
+      );
+      expect(
+        (await database.select(database.workoutsTable).get())
+            .single
+            .totalVolumeKg,
+        -50,
+      );
+    });
+
     test('rejects a null in a required column', () async {
       await expectRejected(
         (tables) => firstRow(tables, 'workout_sets_table')['reps'] = null,
@@ -981,4 +1056,14 @@ void main() {
       await subscription.cancel();
     });
   });
+}
+
+/// Writes the pre-import snapshot as usual, then cannot list the folder
+/// when pruning old ones.
+class _PruningFails extends DataExportService {
+  const _PruningFails();
+
+  @override
+  Future<List<File>> listSnapshots(String snapshotDirPath) async =>
+      throw const FileSystemException('cannot list');
 }

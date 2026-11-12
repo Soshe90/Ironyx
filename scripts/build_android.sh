@@ -67,6 +67,44 @@ verify_stripped() {
   "$py" "$REPO_ROOT/scripts/check_release_stripped.py" "$artifact"
 }
 
+# A release built without android/key.properties is signed with the debug
+# key: Gradle falls back to it so CI and `flutter run --release` still build.
+# Play refuses such a bundle, and nothing said it had happened until the
+# upload. Release targets refuse to build without the upload key unless
+# ALLOW_DEBUG_SIGNING=1 says that is what you want (a local smoke build).
+require_release_signing() {
+  if [[ "${ALLOW_DEBUG_SIGNING:-}" == "1" ]]; then
+    echo "warning: ALLOW_DEBUG_SIGNING=1, this release is signed with the debug key and cannot go to Play." >&2
+    return 0
+  fi
+  local props="android/key.properties"
+  if [[ ! -f "$props" ]]; then
+    echo "error: $props not found, so this release would be signed with the debug key." >&2
+    echo "       Restore it and the keystore (SETUP.md section 5), or rerun with" >&2
+    echo "       ALLOW_DEBUG_SIGNING=1 for a build that will not go to Play." >&2
+    exit 1
+  fi
+  local store
+  # Java properties syntax: optional leading spaces, "=" or ":" between key
+  # and value, and "\\" for one backslash (a Windows path), which Gradle
+  # unescapes when it reads the file.
+  store="$(sed -n 's/^[[:space:]]*storeFile[[:space:]]*[=:][[:space:]]*//p' "$props" | tr -d '\r' | head -n 1)"
+  store="${store//\\\\/\\}"
+  if [[ -z "$store" ]]; then
+    echo "error: $props has no storeFile line." >&2
+    exit 1
+  fi
+  # Relative paths are relative to android/, as Gradle's rootProject.file reads them.
+  local path="$store"
+  if [[ "$store" != /* && ! "$store" =~ ^[A-Za-z]: ]]; then
+    path="android/$store"
+  fi
+  if [[ ! -f "$path" ]]; then
+    echo "error: the keystore $props names ($path) is not there." >&2
+    exit 1
+  fi
+}
+
 TARGET="${1:-apk}"
 [[ $# -gt 0 ]] && shift
 
@@ -81,16 +119,19 @@ OBFUSCATE_ARGS=(--obfuscate "--split-debug-info=$SYMBOLS_DIR")
 
 case "$TARGET" in
   apk)
+    require_release_signing
     flutter build apk --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
     verify_stripped build/app/outputs/flutter-apk/app-release.apk
     echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;
   bundle | aab | appbundle)
+    require_release_signing
     flutter build appbundle --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
     verify_stripped build/app/outputs/bundle/release/app-release.aab
     echo "Symbols for symbolication: $SYMBOLS_DIR (archive this)"
     ;;
   install)
+    require_release_signing
     flutter build apk --release "$DEFINE_ARG" "${OBFUSCATE_ARGS[@]}" "$@"
     verify_stripped build/app/outputs/flutter-apk/app-release.apk
     flutter install --release "$@"

@@ -171,11 +171,36 @@ class _CloudBackupSectionState extends ConsumerState<CloudBackupSection> {
 
   Future<void> _restore(BuildContext context, WidgetRef ref) async {
     final AppLocalizations l10n = context.l10n;
+    final DateFormatters dates = DateFormatters.of(context);
+    final CloudBackupInfo? backup = ref.read(cloudBackupStatusProvider).value;
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.backupRestoreConfirmTitle),
-        content: Text(l10n.backupRestoreConfirmBody),
+        // Which backup replaces the data, before it does (ADR-7 asks for a
+        // preview before a replace). It said only that "your backup" would
+        // replace everything; a stale one looked the same as yesterday's.
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (backup != null) ...<Widget>[
+                Text(
+                  l10n.backupRestoreConfirmWhich(
+                    l10n.backupStatusLine(
+                      dates.full(backup.updatedAt),
+                      dates.time(backup.updatedAt),
+                      _readableSize(context, backup.sizeBytes),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+              Text(l10n.backupRestoreConfirmBody),
+            ],
+          ),
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),

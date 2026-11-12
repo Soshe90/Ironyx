@@ -15,6 +15,7 @@ import 'core/theme/theme_mode_controller.dart';
 import 'features/auth/domain/auth_controller.dart';
 import 'features/auth/domain/auth_service.dart';
 import 'features/onboarding/domain/onboarding_controller.dart';
+import 'features/tracker/domain/active_workout_notifier.dart';
 import 'l10n/app_localizations.dart';
 
 class IronyxApp extends ConsumerStatefulWidget {
@@ -57,6 +58,10 @@ class _IronyxAppState extends ConsumerState<IronyxApp> {
         (_) => _openPasswordReset(),
       );
     }
+    // A workout saved just before the app stopped can come back as an open
+    // one (the draft is removed after the commit). Only a restored draft is
+    // checked, so an ordinary launch reads nothing.
+    unawaited(ref.read(activeWorkoutProvider.notifier).dropIfAlreadySaved());
   }
 
   void _openPasswordReset() {

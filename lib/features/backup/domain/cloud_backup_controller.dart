@@ -91,17 +91,19 @@ class CloudBackupController extends _$CloudBackupController {
     // screen. Uploading here regardless would write this device's data —
     // possibly still a *different* account's, never wiped — into whichever
     // account the live session now belongs to.
-    final AuthUser? user = ref.read(authControllerProvider);
-    if (user != null &&
-        await ref.read(profileDaoProvider).hasConflictingAccount(user.id)) {
-      throw const CloudBackupFailure(CloudBackupFailureKind.accountMismatch);
-    }
+    //
+    // The account checked here is the one the upload is bound to
+    // (`forUserId`): the service refuses if the session has changed by the
+    // time the request is made, so a sign-out or deep link during the
+    // export cannot redirect this device's data to another account's slot.
+    final String userId = await _accountForThisDevice();
     final String payload = await service
         .buildJsonExport(database, indent: false)
         .timeout(const Duration(seconds: 45));
 
     final CloudBackupInfo info = await cloud
         .upload(
+          forUserId: userId,
           payload: payload,
           appVersion: kAppVersion,
           dbSchemaVersion: database.schemaVersion,
@@ -125,18 +127,25 @@ class CloudBackupController extends _$CloudBackupController {
     // switched underneath the app (a deep link), restoring would replace
     // another account's data on this device without the conflict dialog
     // ever asking. Checked before downloading anything.
-    final AuthUser? user = ref.read(authControllerProvider);
-    if (user != null &&
-        await ref.read(profileDaoProvider).hasConflictingAccount(user.id)) {
-      throw const CloudBackupFailure(CloudBackupFailureKind.accountMismatch);
-    }
+    final String userId = await _accountForThisDevice();
     final String snapshotDir = await ref.read(snapshotDirectoryProvider.future);
-    final String payload = await cloud.download();
+    final String payload = await cloud.download(forUserId: userId);
     const DataExportService service = DataExportService();
 
     try {
       final ImportEnvelope envelope =
           await service.parseImportInBackground(payload);
+      // Checked again after the download and the decode, the last awaits
+      // before local data is replaced: if the account changed meanwhile,
+      // this is the previous account's backup and must not be applied.
+      //
+      // The service's live session, as the upload and download check it,
+      // not `authControllerProvider`, which follows the auth stream and can
+      // be a beat behind it.
+      ensureSameAccount(
+        currentUserId: ref.read(authServiceProvider).currentUser?.id,
+        expectedUserId: userId,
+      );
       // `applyImport` validates too — schema version and every row — and
       // throws the same exception before it touches the database. The
       // realistic trigger is a backup taken before an app update migrated
@@ -156,5 +165,18 @@ class CloudBackupController extends _$CloudBackupController {
         detail: error.message,
       );
     }
+  }
+
+  /// The signed-in account's id, refused when there is none or when this
+  /// device's data is linked to a different account.
+  Future<String> _accountForThisDevice() async {
+    final AuthUser? user = ref.read(authControllerProvider);
+    if (user == null) {
+      throw const CloudBackupFailure(CloudBackupFailureKind.notSignedIn);
+    }
+    if (await ref.read(profileDaoProvider).hasConflictingAccount(user.id)) {
+      throw const CloudBackupFailure(CloudBackupFailureKind.accountMismatch);
+    }
+    return user.id;
   }
 }

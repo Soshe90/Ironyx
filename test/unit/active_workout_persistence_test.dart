@@ -398,6 +398,63 @@ void main() {
     });
   });
 
+  group('a saved workout whose draft was not removed', () {
+    // Production review 2026-11-12, finding 5: the workout is committed to
+    // the database, then the draft is removed from preferences. An app
+    // stopped between the two came back with the saved workout open, and
+    // every Finish failed on its id.
+
+    /// Saves a workout, then puts its draft back as a stopped app leaves
+    /// it, and relaunches.
+    Future<ProviderContainer> savedButDraftLeft() async {
+      await insertExercise('bench');
+      final ProviderContainer first = await containerWith({});
+      final ActiveWorkoutNotifier notifier =
+          first.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      await notifier.addExercise(exerciseId: 'bench', name: 'Bench');
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String stored = prefs.getString(_draftKey)!;
+      await notifier.save();
+      await prefs.setString(_draftKey, stored);
+      first.dispose();
+      return relaunch();
+    }
+
+    test('the launch check drops it, and the saved workout stays', () async {
+      final ProviderContainer container = await savedButDraftLeft();
+      expect(container.read(activeWorkoutProvider), isNotNull);
+
+      await container.read(activeWorkoutProvider.notifier).dropIfAlreadySaved();
+
+      expect(container.read(activeWorkoutProvider), isNull);
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey(_draftKey), isFalse);
+      expect(await db.select(db.workoutsTable).get(), hasLength(1));
+    });
+
+    test('Finish clears it instead of failing on the taken id', () async {
+      final ProviderContainer container = await savedButDraftLeft();
+
+      await container.read(activeWorkoutProvider.notifier).save();
+
+      expect(container.read(activeWorkoutProvider), isNull);
+      expect(await db.select(db.workoutsTable).get(), hasLength(1));
+    });
+
+    test('the launch check keeps a draft that is not saved', () async {
+      final ProviderContainer container = await containerWith({});
+      final ActiveWorkoutNotifier notifier =
+          container.read(activeWorkoutProvider.notifier);
+      await notifier.start();
+      final WorkoutDraft draft = container.read(activeWorkoutProvider)!;
+
+      await notifier.dropIfAlreadySaved();
+
+      expect(container.read(activeWorkoutProvider), draft);
+    });
+  });
+
   group('edits addressed to things that are not there', () {
     late ProviderContainer container;
     late ActiveWorkoutNotifier notifier;

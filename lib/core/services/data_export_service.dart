@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 
 import '../../features/settings/domain/export_envelope.dart';
 import '../database/app_database.dart';
@@ -177,7 +177,7 @@ class DataExportService {
       ..writeln('date,exercise,set,weight_kg,reps,completed,warmup');
     for (final row in rows) {
       final DateTime startedAt = row.read<DateTime>('started_at');
-      final String exerciseName = _csvField(row.read<String>('exercise_name'));
+      final String exerciseName = csvField(row.read<String>('exercise_name'));
       final int setIndex = row.read<int>('set_index');
       final double weightKg = row.read<double>('weight_kg');
       final int reps = row.read<int>('reps');
@@ -191,11 +191,25 @@ class DataExportService {
     return buffer.toString();
   }
 
-  String _csvField(String value) {
-    if (value.contains(',') || value.contains('"') || value.contains('\n')) {
-      return '"${value.replaceAll('"', '""')}"';
+  /// A text cell for the CSV. Escapes commas, quotes and line breaks, and
+  /// puts an apostrophe before text a spreadsheet would run as a formula
+  /// (starting with `=`, `+`, `-`, `@`, a tab or a carriage return).
+  ///
+  /// Exercise names are user text, and an XLSX import makes them from
+  /// whatever a workbook holds: a name like `=HYPERLINK(...)` was written
+  /// as it was and ran when the export was opened. The apostrophe makes
+  /// the spreadsheet show it as text; the stored name is unchanged.
+  @visibleForTesting
+  static String csvField(String value) {
+    final String text =
+        value.isNotEmpty && '=+-@\t\r'.contains(value[0]) ? "'$value" : value;
+    if (text.contains(',') ||
+        text.contains('"') ||
+        text.contains('\n') ||
+        text.contains('\r')) {
+      return '"${text.replaceAll('"', '""')}"';
     }
-    return value;
+    return text;
   }
 
   /// Parses and validates an export file's contents. Throws
@@ -400,8 +414,20 @@ class DataExportService {
     // changed inside the transaction above.
     db.markTablesUpdated(db.allTables);
 
+    // Housekeeping after the import has committed, so it must not decide
+    // the outcome: a failure here was reported as "Import failed" although
+    // the data had already been replaced, and a retry imported it again.
+    // An extra old snapshot is harmless and the next import prunes it.
     if (createSnapshot) {
-      await _cleanupSnapshots(snapshotDirPath);
+      try {
+        await _cleanupSnapshots(snapshotDirPath);
+      } catch (error, stackTrace) {
+        reportError(
+          error,
+          stackTrace,
+          context: 'DataExportService.cleanupSnapshots',
+        );
+      }
     }
   }
 
@@ -832,9 +858,23 @@ class DataExportService {
   }
 
   /// Deletes every import snapshot in [snapshotDirPath].
+  ///
+  /// Tries every file even when one cannot be deleted, then rethrows the
+  /// first failure: each snapshot is a full copy of the data, so one locked
+  /// file must not leave the others behind.
   Future<void> deleteSnapshots(String snapshotDirPath) async {
+    Object? firstError;
+    StackTrace? firstStack;
     for (final File file in await listSnapshots(snapshotDirPath)) {
-      await file.delete();
+      try {
+        await file.delete();
+      } catch (error, stackTrace) {
+        firstError ??= error;
+        firstStack ??= stackTrace;
+      }
+    }
+    if (firstError != null) {
+      Error.throwWithStackTrace(firstError, firstStack!);
     }
   }
 

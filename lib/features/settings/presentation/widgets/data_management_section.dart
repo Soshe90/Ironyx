@@ -494,9 +494,20 @@ class DataManagementSection extends ConsumerWidget {
     if (choice != _DeleteChoice.delete) return;
 
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    final bool done = await _withProgress(context, () => eraseLocalData(ref));
+    // Partly done is its own outcome: the data is gone, a copy or the open
+    // workout is not. Each step is logged where it failed.
+    bool incomplete = false;
+    final bool done = await _withProgress(context, () async {
+      try {
+        await eraseLocalData(ref);
+      } on EraseIncompleteException {
+        incomplete = true;
+      }
+    });
     if (!context.mounted) return;
-    if (done) {
+    if (done && incomplete) {
+      await _showError(context, l10n.dataDeleteIncomplete);
+    } else if (done) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.dataAllDeleted)));
     } else {
       await _showError(context, l10n.dataDeleteFailed);

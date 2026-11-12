@@ -67,6 +67,13 @@ enum CloudBackupFailureKind {
   /// normal flow, which resolves the conflict explicitly.
   accountMismatch,
 
+  /// The signed-in account changed (sign-out, or a deep link signing in
+  /// someone else) while a backup or restore was running. The operation is
+  /// bound to the account it started with, so it stopped before writing
+  /// anything: an upload never reaches another account's slot, and a
+  /// restore never applies one account's backup under another.
+  accountChanged,
+
   /// The compressed backup exceeds [kMaxBackupPayloadBytes]. The user can
   /// still export to a file, which has no such limit.
   tooLarge,
@@ -123,15 +130,42 @@ abstract interface class CloudBackupService {
   /// Does not download the payload.
   Future<CloudBackupInfo?> head();
 
-  /// Uploads [payload], replacing whatever was stored.
+  /// Uploads [payload] to [forUserId]'s slot, replacing whatever was stored.
+  ///
+  /// [forUserId] is the account the caller checked before it started
+  /// building the payload. If the live session belongs to anyone else by
+  /// the time the request is made, this throws
+  /// [CloudBackupFailureKind.accountChanged] and sends nothing: the payload
+  /// is the device's data, approved for that account only.
   Future<CloudBackupInfo> upload({
+    required String forUserId,
     required String payload,
     required String appVersion,
     required int dbSchemaVersion,
   });
 
-  /// Downloads the stored export envelope.
-  Future<String> download();
+  /// Downloads [forUserId]'s stored export envelope; throws
+  /// [CloudBackupFailureKind.accountChanged] if the live session is no
+  /// longer that account.
+  Future<String> download({required String forUserId});
+}
+
+/// Throws [CloudBackupFailureKind.accountChanged] unless the live session
+/// ([currentUserId]) is still [expectedUserId], and
+/// [CloudBackupFailureKind.notSignedIn] if there is none.
+///
+/// Shared by every implementation so the rule is tested once, without the
+/// network.
+void ensureSameAccount({
+  required String? currentUserId,
+  required String expectedUserId,
+}) {
+  if (currentUserId == null) {
+    throw const CloudBackupFailure(CloudBackupFailureKind.notSignedIn);
+  }
+  if (currentUserId != expectedUserId) {
+    throw const CloudBackupFailure(CloudBackupFailureKind.accountChanged);
+  }
 }
 
 /// Used when the build carries no credentials. ADR-6: a capability that
@@ -148,6 +182,7 @@ class DisabledCloudBackupService implements CloudBackupService {
 
   @override
   Future<CloudBackupInfo> upload({
+    required String forUserId,
     required String payload,
     required String appVersion,
     required int dbSchemaVersion,
@@ -155,6 +190,6 @@ class DisabledCloudBackupService implements CloudBackupService {
       throw const CloudBackupFailure(CloudBackupFailureKind.notConfigured);
 
   @override
-  Future<String> download() async =>
+  Future<String> download({required String forUserId}) async =>
       throw const CloudBackupFailure(CloudBackupFailureKind.notConfigured);
 }

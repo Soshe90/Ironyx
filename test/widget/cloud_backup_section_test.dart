@@ -33,6 +33,7 @@ class _FakeBackupService implements CloudBackupService {
 
   @override
   Future<CloudBackupInfo> upload({
+    required String forUserId,
     required String payload,
     required String appVersion,
     required int dbSchemaVersion,
@@ -40,7 +41,7 @@ class _FakeBackupService implements CloudBackupService {
       throw UnimplementedError();
 
   @override
-  Future<String> download() {
+  Future<String> download({required String forUserId}) {
     downloads++;
     return _download();
   }
@@ -109,6 +110,29 @@ void main() {
     auth.dispose();
     await database.close();
   }
+
+  testWidgets('the restore confirmation says which backup it restores',
+      (tester) async {
+    // Production review 2026-11-12: it said only that "your backup" would
+    // replace everything, so a months-old backup looked like yesterday's.
+    final _FakeBackupService cloud =
+        _FakeBackupService(() async => throw StateError('unused'));
+    await pumpSettings(tester, cloud);
+
+    await tester.tap(find.text('Restore from my account'));
+    await tester.pumpAndSettle();
+
+    final Finder which = find.textContaining('This restores the backup from');
+    expect(which, findsOneWidget);
+    final String text = tester.widget<Text>(which).data!;
+    expect(text, contains('1 Sep 2026'));
+    expect(text, contains('2 KB'));
+    expect(cloud.downloads, 0, reason: 'nothing is downloaded to say so');
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    await disposeApp(tester);
+  });
 
   testWidgets(
       'a restore that fails unexpectedly tells the user instead of leaving '

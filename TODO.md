@@ -30,8 +30,10 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,172 passed, 2 skipped, 0 failed** (2026-11-12; was
-  1,041 on 2026-11-10 and 876 on 2026-11-05).
+- `flutter test`: **1,222 passed, 2 skipped, 0 failed** (2026-11-12, on
+  `review/production-2026-11-12`; 1,172 earlier that day, 1,041 on
+  2026-11-10 and 876 on 2026-11-05). Format, analyze and the asset-licence
+  check pass; the calendar and week tests pass under `TZ=PST8PDT`.
 - Fixed 2026-11-05: a debug build sometimes showed a full-screen
   `'_dependents.isEmpty': is not true` after pressing Save in a set's "RPE
   and rest time" dialog. The dialog disposed its text controllers while it
@@ -128,6 +130,282 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- Changed 2026-11-12, production review (an outside review of the whole
+  app, ten findings; each re-checked against the code, all ten real, three
+  rated lower than the review did; fixed one item at a time on
+  `review/production-2026-11-12`). **Not in the 1.0.5+6 bundle.**
+  - **Fixed: a backup could land in another account's slot.** The upload
+    took its destination from the live session after the export was
+    built, and a restore never re-checked before replacing local data, so
+    a sign-out or a deep link signing in someone else during the operation
+    wrote this device's data over that account's backup, or applied the
+    previous account's backup under the new one. Not a row-level-security
+    bypass: the write was made as the new account. Now the account checked
+    at the start is passed to `upload` and `download` (`forUserId`); the
+    Supabase service refuses if the session is no longer that account
+    (`ensureSameAccount`) and writes the row under the bound id, so a later
+    switch is refused by RLS rather than redirected; and restore checks
+    again after the download and decode, just before applying. A new
+    failure kind, `accountChanged`, says "the account changed while this
+    was running, nothing was changed" (en/ar), since the existing mismatch
+    message advises signing out and in, which is wrong here. Signed out,
+    Back up now now refuses before building the export (it built it, then
+    the service refused). **Tested:** a session switch during the backup
+    uploads nothing and the upload was bound to the first account; a
+    switch after the download leaves local data and the snapshot folder
+    untouched (fails with the re-check removed); signed out refuses
+    without uploading; `ensureSameAccount`'s three cases. **Not checked:**
+    the Supabase service itself (no test client; the check is the shared
+    function), and on the phone.
+  - **Fixed: an erase stopped at the first failed step.** "Delete all
+    data" and the account-conflict "erase and continue" delete the
+    database, then the snapshots, the open workout, and reseed the built-in
+    programs; a snapshot that could not be deleted stopped it there, so the
+    open workout stayed on the phone and the message was "Something went
+    wrong… try again" although the data was gone. Now the database step
+    still comes first and, if it fails, nothing else is touched (the
+    snapshots stay as a way back to data that is still there); after it,
+    each step runs whatever happened to the one before, each failure is
+    logged, and `EraseIncompleteException` names what is left. Settings
+    then says "Your data was deleted, but some of it could not be cleared
+    from this device. Delete all data again to finish" (new string, en/ar);
+    each step is safe to repeat. `deleteSnapshots` tries every file before
+    rethrowing the first failure. **Also fixed, the open item from the
+    Settings review:** the account-conflict erase had no error handling, so
+    a failure escaped the sign-in form (which catches only `AuthFailure`)
+    and left the new account signed in, unlinked, over the old account's
+    data, with nothing on screen. A failed erase now signs back out, as
+    "Keep my data" does, and says the delete failed; a partial one links
+    the account (the database is erased) and says what the Settings one
+    says. *Corrected the same day after the branch review:* linking after
+    a partial erase put what was left of the old account (its open
+    workout, saved and backed up under the new one; its snapshots, full
+    copies of its data) under the new account. Now a partial erase links
+    only when the built-in programs were the one step to fail; otherwise
+    it signs back out and says to delete all data again, after which the
+    next sign-in finds no conflict (tested: a failed snapshot step leaves
+    the new account signed out and unlinked). **Tested:** a snapshot failure after the database delete still
+    removes the open workout and shows the new message; one undeletable
+    snapshot no longer keeps the others; a failed conflict erase signs out
+    and leaves the old profile (fails on the old code). The Settings test
+    does not compile against the old code, so it was not seen to fail
+    there. **Not checked:** on the phone.
+  - **Fixed: an import could say "Import failed" after it succeeded.**
+    Pruning old snapshots (keep three) ran after the import had committed,
+    and its error reached Settings as "Import failed" over data already
+    replaced; a retry imported again. The same path serves cloud restore
+    and Restore snapshot. Pruning is now logged and ignored: an extra old
+    snapshot is harmless and the next import prunes it. **Tested:** an
+    import whose pruning fails completes, its data is in and its snapshot
+    written (fails on the old code). **Not checked:** on the phone.
+  - **Fixed: a saved workout could come back as an open one that could
+    not be finished.** Finish commits the workout to the database, then
+    removes the draft from preferences; two stores, no shared transaction.
+    An app stopped between the two relaunched with the saved workout open,
+    and every Finish failed on its id (the primary key kept it from being
+    saved twice, which was right). Now a restored draft whose id is
+    already a saved workout is dropped at launch
+    (`ActiveWorkoutNotifier.dropIfAlreadySaved`, from `app.dart`; only when
+    a draft was restored, so an ordinary launch reads nothing), and Finish
+    makes the same check (`WorkoutDao.workoutExists`) and clears the draft
+    instead of failing. Edits made to such a draft in the moment before
+    the launch check runs are not kept; the saved version stands. Moving
+    the draft into SQLite would close the window entirely, but is an ADR-1
+    change and was not made. **Tested:** the launch check drops it and
+    keeps the saved workout; Finish clears it (fails on the old code with
+    the UNIQUE constraint); an unsaved draft is kept. **Not checked:** on
+    the phone; a real kill in that window cannot be staged on a device.
+  - **Fixed: the timer could lose a session, or look started when it was
+    not.** Finishing released the wakelock, cancelled the alerts and
+    played the completion cues before writing the session, with the
+    engine already cleared; the wakelock call passes its failures on, so a
+    failure there skipped the write and nothing could retry it. Starting
+    set the engine, then held the wakelock, then made the ticker; a
+    wakelock failure left the timer counting as active with nothing
+    moving, and the Timer tab said "Couldn't start the timer". Now the
+    session is written first, and the wakelock, alerts, cues and audio
+    each run on their own (`_bestEffort`, logged), at start, finish, and
+    when the provider is disposed; alert scheduling no longer fails a
+    start, pause or skip. A write that fails is logged and the timer
+    screen, closing, says "The timer finished, but this session couldn't
+    be saved to your history" (new string, en/ar;
+    `TimerController.takeSaveFailure`). The session is not kept for a
+    retry: it is one history row, and a retry queue was not worth its
+    weight. **Tested:** a wakelock that cannot be held still starts and
+    ticks (fails with the guard removed); failing alert scheduling does
+    not fail the start; a wakelock that cannot be released still saves the
+    session and plays the cue; a failed write still ends the session,
+    releases and cancels, and is reported once; the screen shows the
+    message for a failed save and not for a saved one. **Not checked:** on
+    the phone.
+  - **Fixed: imports accepted negative weights.** The XLSX workout import
+    refused reps of zero or less but took any weight, and a JSON import
+    checked only that numbers are finite; a negative weight was stored
+    with a negative volume that skewed every total and chart it reached.
+    No screen in the app can enter one (the number fields drop "-" and the
+    set row refuses it), so a JSON import now refuses a negative set
+    weight, reps, rest or duration, or workout volume, as a damaged file;
+    a backup the app wrote cannot hold one. Not the workout's own
+    duration: it is end minus start, and a clock set back mid-workout can
+    make it negative. The XLSX import leaves such a set out and the
+    preview says how many ("Sets left out because their weight is below
+    zero: N", new string, en/ar). Zero stays allowed (a bodyweight set).
+    No database CHECK constraint: that is a schema migration, and the
+    import checks are where outside data enters. **Tested:** each of the
+    five columns refused when negative; a zero weight imported; real
+    exports from the schema 5, 7 and 9 builds still restore; an XLSX set
+    at -10 kg left out and counted, at 0 kg kept; the preview shows the
+    count only when there is one. **Not checked:** on the phone. The
+    XLSX import already has a 10 MB size limit.
+    *Corrected the same day, after an independent review of this branch:
+    the JSON refusal was wrong and is removed.* "A backup the app wrote
+    cannot hold one" was false: until this change the XLSX import itself
+    stored negative weights, so a phone that imported such a workbook
+    writes them into every export, cloud backup and snapshot, and
+    refusing them broke restore and Restore snapshot for that phone. A
+    restore now takes back what the app wrote, negative or not (tested:
+    a backup with a -10 kg set and -50 kg volume restores as it was). Only
+    the XLSX import keeps new ones out. Also from the review: re-importing
+    a workbook imported before this change matched no stored session (the
+    stored copy still had its negative sets) and imported every such
+    session again; the duplicate check now compares as a parse of today
+    would have stored it (tested); and an unknown exercise whose sets
+    were all left out is no longer listed as one to create (tested).
+    **Open, owner's decision:** whether to clean negative sets already on
+    phones (a migration that changes stored data). *Approved by the owner
+    the same day, then held by me, before any code:* the catalogue has
+    assisted exercises (Band Assisted Pull-Up and others), and many lifters
+    log assistance as a negative weight, so a "-20" in a workbook may be
+    real history rather than an error. Deleting it would lose that for
+    good. The same question applies to the XLSX import now leaving such
+    sets out. Needs the owner's answer on how assisted work should be
+    recorded before either is changed further.
+  - **Fixed: a program CSV of any size was read and split on the UI
+    thread.** Now a file over 1 MB (`kMaxProgramCsvBytes`; five programs
+    of six days are about 15 KB) is refused before it is read, and again
+    in `ProgramImportService.parse`, with "This file is too large to be a
+    program sheet (over 1 MB)" (new string, en/ar); a file over 64 KB is
+    split into rows on another isolate (`parseProgramCsv`), a smaller one
+    in place, where it takes less time than starting an isolate. The limit
+    is what bounds the memory; the isolate keeps the screen moving. **Found
+    while testing:** the first version always used the isolate, and the
+    widget tests that import a small CSV hung the whole suite (an
+    isolate's reply never arrives under a widget test's fake clock); the
+    threshold fixed it, and is the better design regardless. **Tested:**
+    a CSV over the limit is refused; the action says so; a 70 KB CSV is
+    read through the isolate; the split still handles quotes, commas, CRLF
+    and the byte-order mark. **Not checked:** on the phone; the picker's
+    size check is not reachable in a test (no picker channel).
+  - **Fixed: the CSV export wrote formula-like names as formulas.**
+    Exercise names are user text, and an XLSX import makes them from
+    whatever the workbook holds; a name such as `=1+1` was written as it
+    was, and a spreadsheet opening the export ran it. Text starting with
+    `=`, `+`, `-`, `@`, a tab or a carriage return now gets a leading
+    apostrophe (OWASP's advice for CSV injection), so the spreadsheet shows
+    it as text; a carriage return anywhere is now quoted too. The stored
+    name is unchanged, and the JSON export is not affected (nothing opens
+    it as a sheet). **Tested:** first tests of the CSV export: plain,
+    quoted, each of the six starts, a formula with commas, a "-" or "@"
+    later in a name left alone, and an export end to end. **Not checked:**
+    opening the file in Excel or Google Sheets.
+  - **Fixed: the strength chart merged workouts that started at the same
+    moment.** It picked each session's best set per start time, and an
+    XLSX import gives every session of a date the same noon timestamp, so
+    of two sessions with the lift on one date, one vanished from the chart
+    (history itself was intact). It picks per workout now. With it, a
+    record is judged against *strictly* earlier sessions on both the chart
+    and the PR badge (`watchPersonalRecordWorkoutIds`), as their comments
+    already said: `ROWS … 1 PRECEDING` compared two workouts at one moment
+    in whatever order SQLite produced; `RANGE … EXCLUDE GROUP` leaves
+    same-moment peers out, so neither is "earlier" (rather than ordering
+    the tie by id, which would be arbitrary). `EXCLUDE GROUP` needs SQLite
+    3.28; the tests run 3.53.4, and the app bundles its own SQLite through
+    the `sqlite3` packages, so the phone should have the same (**assumed,
+    not checked on the phone**). **Tested:** two workouts at one moment
+    are two points; both beat the history before them and are both PRs on
+    the chart and in the PR ids (both fail on the old queries); the
+    existing strength, analytics and 3,000-workout benchmark tests pass.
+  - **Fixed: deleting a program left its days behind.** `deleteProgram`
+    said it cascaded to the day templates, but the cascade runs from
+    template to link, so each delete left the program's day templates and
+    their exercise rows unreachable, carried in every export and holding
+    references to exercises. It now deletes, in one transaction, the
+    templates linked to that program and to no other. A template another
+    program links to stays, and so does one no program links to (the app
+    never creates one, but a backup could hold one). **Not done, at the
+    owner's default:** templates already left behind on a phone are not
+    cleaned up; they are invisible, and telling them from a standalone
+    template is the same rule, so a later clean-up is one query if wanted.
+    *Done the same day at the owner's go-ahead: schema 11 → 12.* The
+    upgrade deletes day templates no program links to, and their exercise
+    rows (explicitly: foreign keys are switched on only after the
+    migration). Safe because no build has ever made a template outside a
+    program: `TemplateDao.insertTemplate` has had no caller since the first
+    commit (checked in git history). The matching export step (ADR-7)
+    removes them from an older backup too. Consequence of any schema bump,
+    as before: a backup or export from this build is refused by 1.0.5 and
+    older as "made by a newer version"; restoring into an older app is not
+    supported. **Tested:** a real database file stamped v11 upgrades with
+    the orphan gone and the linked template, its exercises and its program
+    kept (fails with the step disabled); the export step removes the same
+    rows and leaves a backup without templates alone; the schema 5, 7 and
+    9 fixtures still restore. **Not checked:** the upgrade on the phone.
+    **Tested:** the program's templates and exercises go and another
+    program's stay (fails on the old code); a shared template stays; a
+    standalone one stays; an unknown id deletes nothing.
+  - **Changed: a release build without the upload key now stops.**
+    Without `android/key.properties`, Gradle signs a release with the
+    debug key (so CI and `flutter run --release` build), and nothing said
+    so before the Play upload; `key.properties.txt` from another machine
+    did exactly that once. `scripts/build_android.sh` now refuses `apk`,
+    `bundle` and `install` when `key.properties` is missing, has no
+    `storeFile`, or names a keystore that is not there;
+    `ALLOW_DEBUG_SIGNING=1` builds one debug-signed on purpose. CI calls
+    `flutter build` itself and is unaffected. It checks that a key is
+    configured, not which: the `keytool -printcert` step in SETUP.md §5
+    still confirms the upload key. **Checked:** in a scratch copy with a
+    stand-in `flutter`, the five cases (missing file, missing keystore, a
+    good CRLF `key.properties`, the override, and `run` untouched). **Not
+    checked:** a real release build.
+  - **Changed: the cloud-restore confirmation names the backup.** It said
+    only that "your backup" would replace everything, so a months-old
+    backup read the same as yesterday's. It now opens with "This restores
+    the backup from 12 Nov 2026 at 9:01 · 40 KB" (new string, en/ar), from
+    the metadata Settings already shows; nothing is downloaded for it.
+    **Tested:** the dialog shows the date and size and downloads nothing.
+  - **ADR amendments (docs/ADR.md), where the code and the ADRs
+    disagreed and the code is right:** ADR-1, the open workout draft lives
+    in preferences, why, and the cross-store window finding 5 closed;
+    ADR-4, alerts are scheduled for the whole session (a phone can lock
+    without warning), not only on backgrounding, plus the best-effort
+    capabilities from finding 2; ADR-7, a cloud restore previews date and
+    size rather than entity counts. **Open, found writing the ADR-4 one:**
+    both notification channels are high importance, so a timer watched
+    on screen most likely also gets the system notification and its sound
+    at each boundary, beside the in-app cue. Read from the code, **not
+    checked on the phone**; if it doubles up, cancel on resume and
+    schedule on pause as well as at start.
+  - **Independent review of this branch (same day).** A fresh reviewer
+    read the whole diff without these notes. Its findings and what became
+    of them: restore refused negative weights the old XLSX import had
+    stored (High; fixed, see the negative-weights entry); re-importing an
+    old workbook doubled sessions (fixed, same entry); a partial conflict
+    erase linked the new account over the old account's leftovers (fixed,
+    see the erase entry); the timer's "not saved" flag could outlive its
+    session when no screen read it (fixed: cleared on start, tested);
+    `pause()` still let an alert-cancel failure through (fixed, tested);
+    the restore re-check read the auth controller, which follows the auth
+    stream and can lag, rather than the live session the service checks
+    (fixed: `AuthService.currentUser`); an unknown exercise whose sets were
+    all left out was listed as one to create (fixed, tested); the build
+    script read only `storeFile=` (now also leading spaces, `:`, and an
+    escaped Windows path; checked in scratch copies); the Arabic restore
+    line said "في" twice (reworded). **Not fixed, known limits:** the
+    backup-binding tests mostly prove the controller passes the right
+    account; the Supabase service's own check after compression is not
+    reachable without a test client. The restore dialog describes the
+    backup Settings last loaded; a newer upload from another phone in the
+    meantime restores under the older date and size.
 - Changed 2026-11-12, Settings (reviewed, the review re-checked at the
   owner's request, then fixed one item at a time, on
   `settings/review-2026-11-12`). **Not in the 1.0.5+6 bundle.**
@@ -162,6 +440,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     account-conflict erase test now also checks the old account's snapshot
     is gone. **Not checked:** on the phone. **Open:** the account-conflict
     erase has no error handling of its own (as before this change).
+    *Closed 2026-11-12 by the production review: it does now, see above.*
   - **Fixed: restoring a snapshot could lose the current data for good.**
     An import and a cloud restore save a snapshot of what they replace;
     Restore snapshot did not, so picking the wrong one was final. It does

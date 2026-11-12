@@ -1,7 +1,9 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
 import 'package:ironyx/core/database/daos/exercise_dao.dart';
+import 'package:ironyx/core/database/daos/workout_dao.dart';
 import 'package:ironyx/core/formatters/unit_formatters.dart';
 import 'package:ironyx/core/services/workout_xlsx_import_service.dart';
 
@@ -375,6 +377,122 @@ void main() {
         await service.parse(workbook(7), database, sourceUnit: WeightUnit.kg);
     expect(third.duplicateCount, 0);
     await database.close();
+  });
+
+  test(
+      'a set with a negative weight is left out and counted; a zero weight '
+      'is kept', () async {
+    // Production review 2026-11-12, finding 6: a negative weight was
+    // imported, and its negative volume skewed every total.
+    final database = AppDatabase.forTesting();
+    addTearDown(database.close);
+    await seedExercise(database, 'bench');
+
+    final negative = await service.parse(
+      buildWorkbook(
+        date: DateTime(2026, 3, 1),
+        exerciseName: 'bench',
+        reps: 5,
+        weight: -10,
+      ),
+      database,
+      sourceUnit: WeightUnit.kg,
+    );
+    expect(negative.negativeWeightSetsSkipped, 1);
+    expect(negative.totalSets, 0);
+    expect(negative.workouts, isEmpty,
+        reason: 'its only set was left out, so nothing is left to import');
+
+    final zero = await service.parse(
+      buildWorkbook(
+        date: DateTime(2026, 3, 1),
+        exerciseName: 'bench',
+        reps: 12,
+        weight: 0,
+      ),
+      database,
+      sourceUnit: WeightUnit.kg,
+    );
+    expect(zero.negativeWeightSetsSkipped, 0);
+    expect(zero.totalSets, 1);
+  });
+
+  test(
+      'a session imported before negative weights were left out is still '
+      'recognised as already imported', () async {
+    // The negative set was stored then and is left out of a parse now;
+    // compared as stored, the session no longer matched and was imported
+    // a second time.
+    final database = AppDatabase.forTesting();
+    addTearDown(database.close);
+    await seedExercise(database, 'bench');
+    await WorkoutDao(database).insertWorkout(
+      WorkoutsTableCompanion.insert(
+        id: 'old',
+        startedAt: DateTime.utc(2026, 3, 1, 12),
+        endedAt: Value(DateTime.utc(2026, 3, 1, 13)),
+      ),
+      [
+        WorkoutExercisesTableCompanion.insert(
+          id: 'old_we',
+          workoutId: 'old',
+          exerciseId: 'bench',
+          orderIndex: 0,
+        ),
+      ],
+      [
+        WorkoutSetsTableCompanion.insert(
+          id: 'old_s0',
+          workoutExerciseId: 'old_we',
+          setIndex: 0,
+          weightKg: 60,
+          reps: 5,
+          isCompleted: const Value(true),
+        ),
+        WorkoutSetsTableCompanion.insert(
+          id: 'old_s1',
+          workoutExerciseId: 'old_we',
+          setIndex: 1,
+          weightKg: -10,
+          reps: 5,
+          isCompleted: const Value(true),
+        ),
+      ],
+    );
+
+    final result = await service.parse(
+      buildWorkbook(
+        date: DateTime(2026, 3, 1),
+        exerciseName: 'bench',
+        reps: 5,
+        weight: 60,
+      ),
+      database,
+      sourceUnit: WeightUnit.kg,
+    );
+
+    expect(result.workouts.single.isDuplicate, isTrue);
+  });
+
+  test('an unknown exercise whose sets were all left out is not listed',
+      () async {
+    final database = AppDatabase.forTesting();
+    addTearDown(database.close);
+
+    final result = await service.parse(
+      buildWorkbook(
+        date: DateTime(2026, 3, 1),
+        exerciseName: 'Mystery Lift',
+        reps: 5,
+        weight: -10,
+      ),
+      database,
+      sourceUnit: WeightUnit.kg,
+    );
+
+    expect(result.unknownExercises, isEmpty,
+        reason: 'the preview would promise a custom exercise never created');
+    expect(result.negativeWeightSetsSkipped, 1);
   });
 
   test('a workbook over the size limit is refused before it is read', () async {

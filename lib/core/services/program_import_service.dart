@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
@@ -7,6 +8,27 @@ import '../database/daos/program_dao.dart';
 import '../database/tables/templates.dart' show kMaxTargetSets;
 
 const _uuid = Uuid();
+
+/// Largest program CSV the importer reads: 1 MB. Five programs of six days
+/// and eight exercises are about 15 KB; past this the file is not a program
+/// sheet, and splitting it into rows would hold all of it in memory several
+/// times over. Checked before the file is read and again in
+/// [ProgramImportService.parse].
+const int kMaxProgramCsvBytes = 1024 * 1024;
+
+/// Above this many characters the CSV is split on another isolate.
+const int _parseInBackgroundAbove = 64 * 1024;
+
+/// The CSV is larger than [kMaxProgramCsvBytes].
+class ProgramCsvTooLargeException implements Exception {
+  const ProgramCsvTooLargeException(this.size);
+
+  final int size;
+
+  @override
+  String toString() =>
+      'ProgramCsvTooLargeException: $size (limit $kMaxProgramCsvBytes)';
+}
 
 /// Parses a spreadsheet (CSV) into training programs and applies them to the
 /// database. Excel can export/save `.csv`, which keeps the import format
@@ -35,7 +57,15 @@ class ProgramImportService {
   /// Throws [ProgramImportException] when the file has no header row with
   /// `program`, `day` and `exercise` columns.
   Future<ProgramImportResult> parse(String csvText, AppDatabase db) async {
-    final rows = _parseCsv(_withoutByteOrderMark(csvText));
+    if (csvText.length > kMaxProgramCsvBytes) {
+      throw ProgramCsvTooLargeException(csvText.length);
+    }
+    // A large file is split off the UI isolate: it walks every character.
+    // A typical sheet (a few KB) is split here, where it takes less time
+    // than starting an isolate would.
+    final rows = csvText.length > _parseInBackgroundAbove
+        ? await compute(parseProgramCsv, csvText)
+        : parseProgramCsv(csvText);
     if (rows.isEmpty) throw const ProgramImportException();
 
     final header = rows.first.map((c) => c.trim().toLowerCase()).toList();
@@ -218,55 +248,6 @@ class ProgramImportService {
     final value = _cell(row, index);
     return value.isEmpty ? null : value;
   }
-
-  /// Minimal RFC-4180 CSV parser (handles quoted fields and embedded
-  /// commas/newlines). Deliberately small — the import format is simple.
-  /// Excel's "CSV UTF-8" starts the file with a byte-order mark, which would
-  /// otherwise stick to the first header cell and hide the `program` column.
-  String _withoutByteOrderMark(String text) =>
-      text.startsWith('﻿') ? text.substring(1) : text;
-
-  List<List<String>> _parseCsv(String text) {
-    final rows = <List<String>>[];
-    var row = <String>[];
-    var field = StringBuffer();
-    var inQuotes = false;
-
-    for (var i = 0; i < text.length; i++) {
-      final char = text[i];
-      if (inQuotes) {
-        if (char == '"') {
-          if (i + 1 < text.length && text[i + 1] == '"') {
-            field.write('"');
-            i++;
-          } else {
-            inQuotes = false;
-          }
-        } else {
-          field.write(char);
-        }
-      } else if (char == '"') {
-        inQuotes = true;
-      } else if (char == ',') {
-        row.add(field.toString());
-        field = StringBuffer();
-      } else if (char == '\n') {
-        row.add(field.toString());
-        rows.add(row);
-        row = <String>[];
-        field = StringBuffer();
-      } else if (char == '\r') {
-        // ignore — \r\n handled by the \n branch
-      } else {
-        field.write(char);
-      }
-    }
-    if (field.isNotEmpty || row.isNotEmpty) {
-      row.add(field.toString());
-      rows.add(row);
-    }
-    return rows;
-  }
 }
 
 /// Thrown when a spreadsheet is empty or missing the required header columns.
@@ -347,4 +328,60 @@ class ImportedExercise {
   final String exerciseName;
   final int sets;
   final String? reps;
+}
+
+/// Splits a program CSV into rows of cells, without the byte-order mark
+/// Excel's "CSV UTF-8" puts first. Top level so `compute` can run it on
+/// another isolate.
+@visibleForTesting
+List<List<String>> parseProgramCsv(String text) =>
+    _parseCsv(_withoutByteOrderMark(text));
+
+/// Excel's "CSV UTF-8" starts the file with a byte-order mark, which would
+/// otherwise stick to the first header cell and hide the `program` column.
+String _withoutByteOrderMark(String text) =>
+    text.startsWith('﻿') ? text.substring(1) : text;
+
+/// Minimal RFC-4180 CSV parser (handles quoted fields and embedded
+/// commas/newlines). Deliberately small — the import format is simple.
+List<List<String>> _parseCsv(String text) {
+  final rows = <List<String>>[];
+  var row = <String>[];
+  var field = StringBuffer();
+  var inQuotes = false;
+
+  for (var i = 0; i < text.length; i++) {
+    final char = text[i];
+    if (inQuotes) {
+      if (char == '"') {
+        if (i + 1 < text.length && text[i + 1] == '"') {
+          field.write('"');
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field.write(char);
+      }
+    } else if (char == '"') {
+      inQuotes = true;
+    } else if (char == ',') {
+      row.add(field.toString());
+      field = StringBuffer();
+    } else if (char == '\n') {
+      row.add(field.toString());
+      rows.add(row);
+      row = <String>[];
+      field = StringBuffer();
+    } else if (char == '\r') {
+      // ignore — \r\n handled by the \n branch
+    } else {
+      field.write(char);
+    }
+  }
+  if (field.isNotEmpty || row.isNotEmpty) {
+    row.add(field.toString());
+    rows.add(row);
+  }
+  return rows;
 }

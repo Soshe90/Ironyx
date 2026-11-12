@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/error_reporting.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/providers.dart';
 import '../../../settings/domain/erase_local_data.dart';
@@ -76,14 +77,59 @@ Future<bool> resolveAccountConflict(
 
   // The same erase as Settings' "Delete all data": the database, the
   // import snapshots, an open workout, then the built-in programs back.
-  await eraseLocalData(ref);
+  //
+  // A failure escaped to the sign-in form, which catches only
+  // `AuthFailure`: the new session stayed signed in, unlinked, with the old
+  // account's data possibly still here and nothing on screen.
+  final ScaffoldMessengerState? messenger =
+      context.mounted ? ScaffoldMessenger.of(context) : null;
 
-  if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.authAccountConflictErasedMessage(user.email)),
-      ),
-    );
+  // Undoes the sign-in, as "Keep my data" does, so the new account is not
+  // left signed in over what is left of the old account's data.
+  Future<void> signBackOut() async {
+    try {
+      await ref.read(authControllerProvider.notifier).signOut();
+    } catch (signOutError, signOutStack) {
+      reportError(
+        signOutError,
+        signOutStack,
+        context: 'resolveAccountConflict.signOut',
+      );
+    }
   }
+
+  try {
+    await eraseLocalData(ref);
+  } on EraseIncompleteException catch (incomplete) {
+    // The database is erased. Linking is safe only if what is left is not
+    // the old account's: its open workout would be saved, and backed up,
+    // under the new account, and a snapshot is a full copy of its data.
+    // The built-in programs are the app's, so that step alone failing
+    // still links. Otherwise sign back out: Delete all data in Settings
+    // finishes the job, and the next sign-in finds no conflict.
+    final bool oldDataLeft = incomplete.failed.any(
+      (step) => step != EraseStep.builtInPrograms,
+    );
+    if (oldDataLeft) {
+      await signBackOut();
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l10n.dataDeleteIncomplete)),
+      );
+      return false;
+    }
+  } catch (error, stackTrace) {
+    // Nothing was erased (the database delete is the first thing that can
+    // change anything).
+    reportError(error, stackTrace, context: 'resolveAccountConflict.erase');
+    await signBackOut();
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.dataDeleteFailed)));
+    return false;
+  }
+
+  messenger?.showSnackBar(
+    SnackBar(
+      content: Text(l10n.authAccountConflictErasedMessage(user.email)),
+    ),
+  );
   return true;
 }

@@ -97,6 +97,7 @@
   "backupErrorOffline": "Couldn't reach the server. Check your connection and try again.",
   "backupErrorCorrupt": "That backup couldn't be read. It may have been made by a newer version of the app.",
   "backupErrorAccountMismatch": "This device's local data is linked to a different account. Sign out, then sign back in with that account first.",
+  "backupErrorAccountChanged": "The account changed while this was running, so it stopped and nothing was changed. Try again.",
   "backupErrorTooLarge": "This backup is too large to store with your account. Use Settings → Data → Export data to save it as a file instead.",
   "backupErrorUnknown": "Something went wrong. Try again.",
 
@@ -132,6 +133,12 @@
   "backupRestoreTitle": "Restore from my account",
   "backupRestoreSubtitle": "Replaces the data on this device with your backup",
   "backupRestoreConfirmTitle": "Restore from your account?",
+  "backupRestoreConfirmWhich": "This restores the backup from {backup}.",
+  "@backupRestoreConfirmWhich": {
+    "placeholders": {
+      "backup": { "type": "String" }
+    }
+  },
   "backupRestoreConfirmBody": "Everything currently on this device — workouts, programs, templates, body metrics — is replaced by your backup.\n\nA snapshot of the current data is saved first, so you can undo this from Data management.",
   "backupRestoreAction": "Restore",
   "backupRestoring": "Restoring…",
@@ -373,6 +380,7 @@
   "programImportTooltip": "Import programs from CSV",
   "programImportPickerTitle": "Choose a program spreadsheet",
   "programImportInvalidHeader": "The first row must contain \"program\", \"day\", and \"exercise\" columns.",
+  "programImportTooLarge": "This file is too large to be a program sheet (over 1 MB).",
   "programImportDone": "Programs imported.",
   "programImportConfirmTitle": "Import programs?",
   "programImportSummary": "{programs} programs \u00b7 {days} days \u00b7 {exercises} exercises",
@@ -421,6 +429,8 @@
   },
   "dataDeleteEverything": "Delete everything",
   "dataDeleteExportFirst": "Export first",
+  "dataDeleteIncomplete": "Your data was deleted, but some of it could not be cleared from this device. Delete all data again to finish.",
+  "@dataDeleteIncomplete": {"description": "Delete all data removed the database, but a snapshot, the open workout or the built-in programs step failed."},
   "dataDeleteFailed": "Something went wrong while deleting your data. Please try again.",
   "@dataDeleteFailed": {"description": "Shown when Delete all data failed."},
   "@dataDeleteExportFirst": {"description": "Button in the delete-all dialog: export a backup instead of deleting now."},
@@ -594,6 +604,12 @@
       "total": { "type": "int" }
     }
   },
+  "importXlsxNegativeWeightNote": "Sets left out because their weight is below zero: {count}",
+  "@importXlsxNegativeWeightNote": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "importXlsxUnknownExercises": "These exercises are not in the catalogue and will be added as custom exercises:",
   "importXlsxConfirmAction": "Import",
 
@@ -653,6 +669,8 @@
   "timerCustomSubtitle": "Build an interval and start or save it",
   "timerPresetSaved": "Preset saved.",
   "timerPresetSaveFailed": "Couldn't save the preset.",
+  "timerSessionNotSaved": "The timer finished, but this session couldn't be saved to your history.",
+  "@timerSessionNotSaved": {"description": "Snack bar when a finished timer session could not be written to the database."},
   "timerStartFailed": "Couldn't start the timer.",
   "@timerStartFailed": {"description": "Snack bar when a timer session failed to start."},
   "@timerPresetSaveFailed": {"description": "Snack bar when saving a timer preset failed."},

@@ -124,6 +124,7 @@ class SupabaseCloudBackupService implements CloudBackupService {
 
   @override
   Future<CloudBackupInfo> upload({
+    required String forUserId,
     required String payload,
     required String appVersion,
     required int dbSchemaVersion,
@@ -135,10 +136,18 @@ class SupabaseCloudBackupService implements CloudBackupService {
         // rows. That is the difference between a backup a tester will run
         // on mobile data and one they won't.
         final String encoded = await compute(encodeBackupPayload, payload);
+        // Checked after the compression, the last await before the request.
+        // The row is written under [forUserId], never the live session's id:
+        // if the session changes after this check, row-level security
+        // refuses the write rather than it landing in the new account's slot.
+        ensureSameAccount(
+          currentUserId: _client.auth.currentUser?.id,
+          expectedUserId: forUserId,
+        );
         final Map<String, dynamic> row = await _client
             .from(_table)
             .upsert(<String, dynamic>{
-              'user_id': _userId,
+              'user_id': forUserId,
               'payload': encoded,
               'size_bytes': encoded.length,
               'app_version': appVersion,
@@ -152,11 +161,15 @@ class SupabaseCloudBackupService implements CloudBackupService {
       });
 
   @override
-  Future<String> download() => _guard(() async {
+  Future<String> download({required String forUserId}) => _guard(() async {
+        ensureSameAccount(
+          currentUserId: _client.auth.currentUser?.id,
+          expectedUserId: forUserId,
+        );
         final Map<String, dynamic>? row = await _client
             .from(_table)
             .select('payload')
-            .eq('user_id', _userId)
+            .eq('user_id', forUserId)
             .maybeSingle()
             .timeout(_operationTimeout);
         if (row == null) {

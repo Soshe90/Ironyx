@@ -7,8 +7,9 @@ How to get from `git clone` to a running, testable, releasable Ironyx.
 Last verified end to end on Windows 11 with **Flutter 3.47.5 / Dart 3.13.4
 (stable)** on 2026-09-20. Re-checked on 2026-11-12 with the same Flutter:
 `flutter analyze --fatal-infos --fatal-warnings` clean, `dart format` clean,
-the asset-licence check passes, and `flutter test` reports 1,172 passed,
-2 skipped, 0 failed.
+the asset-licence check passes, and `flutter test` reports 1,222 passed,
+2 skipped, 0 failed (on `review/production-2026-11-12`; 1,172 on `main`
+before it), and the calendar and week tests pass under `TZ=PST8PDT`.
 `pubspec.yaml` declares `sdk: '>=3.6.0 <4.0.0'`.
 
 ## 1. Prerequisites
@@ -95,7 +96,12 @@ silently ships with accounts off.
 
 `android/app/build.gradle.kts` signs `release` with a real key **only if
 `android/key.properties` exists**; otherwise it silently falls back to the
-debug key. A debug-signed bundle is not uploadable to Play. Both files below
+debug key. A debug-signed bundle is not uploadable to Play.
+`scripts/build_android.sh` refuses its release targets (`apk`, `bundle`,
+`install`) when `key.properties` is missing or the keystore it names is not
+there (since 2026-11-12); `ALLOW_DEBUG_SIGNING=1` builds one debug-signed on
+purpose, for a local smoke test only. The `keytool` check below still
+confirms *which* key signed it. Both files below
 are gitignored and are **not backed up by the repository** — losing the
 upload key means never updating the listing.
 

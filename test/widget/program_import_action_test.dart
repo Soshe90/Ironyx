@@ -133,6 +133,22 @@ void main() {
     expect(service.applyCalls, 0);
   });
 
+  testWidgets('a CSV over the size limit says so', (tester) async {
+    await _pumpImporter(
+      tester,
+      _FakeImportService(
+        parseError: const ProgramCsvTooLargeException(kMaxProgramCsvBytes + 1),
+      ),
+    );
+    await tester.tap(find.text('go'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('This file is too large to be a program sheet (over 1 MB).'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a parse failure other than a bad header still shows a message',
       (tester) async {
     final service = _FakeImportService(parseError: StateError('db closed'));
