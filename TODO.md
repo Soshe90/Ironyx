@@ -258,6 +258,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     screen moves. **Tested:** all four gates; the existing import tests
     find the button by the same words. No new test: nothing behaves
     differently.
+  - **Phone check, 2026-11-12** (debug build on the owner's SM-N970F, in
+    Arabic, signed out; looked and cancelled only, no data changed):
+    **Verified** the Preferences card (language, appearance, units, week
+    start as rows of one card, the week start fitting); the Delete all
+    dialog with the keyboard up (fits, "Export first" shown, the delete
+    button disabled until the word is typed), cancelled; the snapshot list
+    showing date and time ("11 نوفمبر 2026, 3:09 م"), closed with Back.
+    **Not checked on the phone:** actually deleting, exporting, importing,
+    restoring, and the account actions (signed out, and each would change
+    the owner's data).
 - Changed 2026-11-12, CI: **Flutter pinned to 3.47.9.** CI used whatever
   stable was current, and Flutter 3.50.0 (released 2026-11-11/12) deprecates
   `package:flutter/material.dart`, moved into the separate `material_ui`
