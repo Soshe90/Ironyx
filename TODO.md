@@ -171,7 +171,9 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     Downloads. Its two old import snapshots are gone (deleted by the
     Delete all test, as intended). Evidence:
     `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-13`.
-- **Release bundle 1.0.6+7, built 2026-11-12** from commit `2156a2d`
+- **Release bundle 1.0.6+7, rebuilt 2026-11-13** from commit `2bd9108`
+  (first built 2026-11-12 from `2156a2d`; rebuilt after the timer alert
+  fix, never uploaded in between)
   (branch `assisted-weights/2026-11-12`, PR #10) with
   `scripts/build_android.sh bundle`. It contains everything below dated up
   to 2026-11-12: the Home, Workouts, Library and Timer, Settings and
@@ -181,15 +183,16 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   key 1.0.3 went to Play with); all 15 native libraries stripped; built
   with `supabase.json` through the script. Archived outside the repo, with
   its Dart symbols, in `C:\Users\musta\Projects\ironyx-releases\1.0.6+7`
-  (AAB SHA-256 `aa3c919c…d4ed5e`, in `SHA256SUMS`); copy that folder
-  somewhere durable. **Not checked:** the bundle running anywhere.
-  **Owner:** upload it to a Play testing track (internal or closed),
-  install from Play on the SM N970F (it updates the 1.0.3 install in
-  place, data kept, and runs the schema 11 → 13 upgrade), then run the
-  phone checks: the upgrade with real data, the timer on screen (does each
-  phase change also sound the system notification), export / import /
-  restore, and an assisted set from a workbook. If PR #10 changes before
-  it merges, rebuild.
+  (AAB SHA-256 `975ef0bb…9d4065`, in `SHA256SUMS`); copy that folder
+  somewhere durable. **Not checked:** the bundle running anywhere; the same code was
+  checked as a debug build on the phone (entry above).
+  **Owner:** upload it to a Play testing track (internal or closed) and
+  install from Play on the SM N970F (it updates the 1.0.5 install in
+  place, data kept, and runs the schema 11 → 13 upgrade on the real data).
+  Then check what the debug copy could not: locking the phone during a
+  timer (alerts should arrive, and stop on unlock), the alert sound with
+  the phone unmuted, and cloud backup and restore signed in. If PR #10
+  changes again before it merges, rebuild.
 - Changed 2026-11-12 (evening), assisted sets: **a negative weight is
   assisted work, kept, and adds no volume** (owner chose "apply
   recommended"; branch `assisted-weights/2026-11-12`). **Not in the
