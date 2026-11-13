@@ -44,6 +44,15 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
   bool _notificationGranted = false;
   bool _disposed = false;
 
+  /// Whether the app is in front of the user. Alerts are scheduled only
+  /// while it is not: on screen, the in-app sound and haptic mark each
+  /// phase change, and a scheduled notification on top of them alerted
+  /// twice (seen on the SM N970F, 2026-11-13: both posted at every
+  /// boundary of a timer being watched). Unknown counts as not on screen,
+  /// so the alerts are scheduled: a silent locked phone is the worse
+  /// mistake.
+  bool _onScreen = false;
+
   /// Set when a finished session could not be written; read once by the
   /// screen that closes with it ([takeSaveFailure]).
   bool _saveFailed = false;
@@ -61,13 +70,28 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     _wakelock = ref.read(wakelockServiceProvider);
     _audio = ref.read(timerAudioServiceProvider);
     WidgetsBinding.instance.addObserver(this);
+    _onScreen =
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
     ref.onDispose(_dispose);
     return null;
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _engine != null) {
+    final bool wasOnScreen = _onScreen;
+    _onScreen = state == AppLifecycleState.resumed;
+    if (_engine == null || _onScreen == wasOnScreen) return;
+    if (_onScreen) {
+      // Back in front: the in-app cues take over, and pending alerts would
+      // sound on top of them.
+      unawaited(
+        _bestEffort('notifications.cancelAll', _notifications.cancelAll),
+      );
+      if (!_disposed) _tick();
+    } else {
+      // Leaving the screen (lock, home, another app): from here only the
+      // system can announce a phase change. Scheduled on the first state
+      // that is not `resumed`, which arrives before the app is suspended.
       unawaited(_rescheduleBoundaries());
     }
   }
@@ -312,6 +336,7 @@ class TimerController extends _$TimerController with WidgetsBindingObserver {
     final TimerEngine? engine = _engine;
     if (engine == null ||
         _disposed ||
+        _onScreen ||
         !_notificationGranted ||
         !engine.isRunning) {
       return;
