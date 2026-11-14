@@ -12,6 +12,7 @@ import '../../../../core/formatters/unit_formatters.dart';
 import '../../../../core/formatters/weight_unit_controller.dart';
 import '../../../../core/l10n/l10n_extension.dart';
 import '../../../../core/services/haptics_service.dart';
+import '../../../../core/set_volume.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -104,7 +105,8 @@ class ExerciseDraftCard extends ConsumerWidget {
     final double volumeKg = exercise.sets
         .where(
             (DraftSet s) => s.isCompleted && !s.isWarmup && !exercise.isWarmup)
-        .fold<double>(0, (double t, DraftSet s) => t + s.weightKg * s.reps);
+        .fold<double>(
+            0, (double t, DraftSet s) => t + setVolumeKg(s.weightKg, s.reps));
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),

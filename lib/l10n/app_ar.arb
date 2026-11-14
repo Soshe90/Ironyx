@@ -557,7 +557,6 @@
       "total": { "type": "int" }
     }
   },
-  "importXlsxNegativeWeightNote": "مجموعات لن تُستورد لأن وزنها أقل من الصفر: {count}",
   "importXlsxUnknownExercises": "هذه التمارين غير موجودة في الفهرس وستُضاف كتمارين مخصّصة:",
   "importXlsxConfirmAction": "استيراد",
 

@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/daos/workout_dao.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/tables/workout_sets.dart';
+import '../../../core/set_volume.dart';
 import '../../../core/theme/app_spacing.dart';
 import 'draft_editor_controller.dart';
 import 'workout_draft.dart';
@@ -379,7 +379,7 @@ class EditWorkoutNotifier extends _$EditWorkoutNotifier
           ),
         );
         if (set.isCompleted && !set.isWarmup && !exercise.isWarmup) {
-          totalVolumeKg += set.weightKg * set.reps;
+          totalVolumeKg += setVolumeKg(set.weightKg, set.reps);
         }
       }
     }

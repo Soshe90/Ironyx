@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironyx/core/database/app_database.dart';
@@ -249,6 +250,85 @@ void main() {
       verify(() => mockHaptics.heavy()).called(1);
       verify(() => mockAudio.cue(TimerCue.complete)).called(1);
       expect(await timerDao.watchAll().first, hasLength(1));
+    });
+
+    group('alerts only while the app is off screen', () {
+      // Seen on the SM N970F, 2026-11-13: with the timer on screen, the
+      // system notification posted at every phase change on top of the
+      // in-app sound and haptic.
+      void verifyNothingScheduled() {
+        verifyNever(() => mockNotifications.scheduleBoundary(
+              id: any(named: 'id'),
+              at: any(named: 'at'),
+              title: any(named: 'title'),
+              body: any(named: 'body'),
+            ));
+        verifyNever(() => mockNotifications.scheduleCompletion(
+              at: any(named: 'at'),
+              title: any(named: 'title'),
+              body: any(named: 'body'),
+            ));
+      }
+
+      test('on screen, starting and skipping schedule nothing', () async {
+        controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+        await controller.skip();
+
+        verifyNothingScheduled();
+      });
+
+      test('leaving the screen schedules them, once, for the rest', () async {
+        controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+
+        // What Android sends when the phone is locked.
+        controller
+          ..didChangeAppLifecycleState(AppLifecycleState.inactive)
+          ..didChangeAppLifecycleState(AppLifecycleState.hidden)
+          ..didChangeAppLifecycleState(AppLifecycleState.paused);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        verify(() => mockNotifications.scheduleCompletion(
+              at: any(named: 'at'),
+              title: any(named: 'title'),
+              body: any(named: 'body'),
+            )).called(1);
+        // Tabata has 16 phases: 15 boundaries, each scheduled once.
+        verify(() => mockNotifications.scheduleBoundary(
+              id: any(named: 'id'),
+              at: any(named: 'at'),
+              title: any(named: 'title'),
+              body: any(named: 'body'),
+            )).called(15);
+      });
+
+      test('coming back cancels what was scheduled', () async {
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+        clearInteractions(mockNotifications);
+
+        controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        verify(() => mockNotifications.cancelAll()).called(1);
+        verifyNothingScheduled();
+      });
+
+      test('paused on screen, then locked: nothing is scheduled', () async {
+        controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        await controller.start(TimerPresets.tabata(),
+            notificationGranted: true);
+        await controller.pause();
+
+        controller.didChangeAppLifecycleState(AppLifecycleState.paused);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        verifyNothingScheduled();
+      });
     });
 
     group('failures (production review 2026-11-12, finding 2)', () {

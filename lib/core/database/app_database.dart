@@ -4,6 +4,8 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
 
+import '../set_volume.dart';
+
 import 'tables/body_metrics.dart';
 import 'tables/equipment.dart';
 import 'tables/exercise_aliases.dart';
@@ -68,7 +70,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   Future<void> _createIndexes() async {
     const indexes = [
@@ -286,6 +288,59 @@ class AppDatabase extends _$AppDatabase {
               await customStatement(
                 'DELETE FROM templates_table WHERE id IN ($orphans)',
               );
+            }
+          }
+          if (from < 13) {
+            // Data only: a set with a negative weight is assisted work and
+            // adds no volume (`setVolumeKg`, 2026-11-12). Workouts imported
+            // with one stored a total that subtracted it. Only those
+            // workouts are recomputed, by the session-volume rule (ADR:
+            // completed, non-warm-up sets); every other stored total is
+            // left exactly as it was written. Nothing else changes: the
+            // sets themselves are kept.
+            final tables = await customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN "
+              "('workouts_table', 'workout_exercises_table', "
+              "'workout_sets_table')",
+            ).get();
+            Future<bool> hasColumn(String table, String column) async =>
+                (await customSelect('PRAGMA table_info($table)').get())
+                    .any((row) => row.read<String>('name') == column);
+            // Guarded column by column, as the steps above are, so a
+            // simulated older database without a warm-up flag still opens.
+            final bool hasEverything = tables.length == 3 &&
+                await hasColumn('workouts_table', 'total_volume_kg') &&
+                await hasColumn('workout_sets_table', 'weight_kg') &&
+                await hasColumn('workout_sets_table', 'is_completed') &&
+                await hasColumn('workout_exercises_table', 'workout_id');
+            if (hasEverything) {
+              final String setWarmup =
+                  await hasColumn('workout_sets_table', 'is_warmup')
+                      ? 'AND ws.is_warmup = 0'
+                      : '';
+              final String exerciseWarmup =
+                  await hasColumn('workout_exercises_table', 'is_warmup')
+                      ? 'AND we.is_warmup = 0'
+                      : '';
+              await customStatement('''
+                UPDATE workouts_table SET total_volume_kg = (
+                  SELECT COALESCE(SUM($kSqlSetVolume), 0)
+                  FROM workout_sets_table ws
+                  JOIN workout_exercises_table we
+                    ON ws.workout_exercise_id = we.id
+                  WHERE we.workout_id = workouts_table.id
+                    AND ws.is_completed = 1
+                    $setWarmup
+                    $exerciseWarmup
+                )
+                WHERE id IN (
+                  SELECT we.workout_id
+                  FROM workout_sets_table ws
+                  JOIN workout_exercises_table we
+                    ON ws.workout_exercise_id = we.id
+                  WHERE ws.weight_kg < 0
+                )
+              ''');
             }
           }
         },

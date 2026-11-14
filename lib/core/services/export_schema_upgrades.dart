@@ -17,6 +17,7 @@ library;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../features/settings/domain/export_envelope.dart';
+import '../set_volume.dart';
 
 /// The oldest schema any build of the app has exported. Every version this
 /// repository has shipped is 5 or later; anything older predates it and is
@@ -68,6 +69,41 @@ final Map<int, void Function(ExportTables tables)> exportSchemaUpgrades = {
     templates.removeWhere((row) => orphans.contains(row['id']));
     tables['template_exercises_table']
         ?.removeWhere((row) => orphans.contains(row['template_id']));
+  },
+  // v12 -> v13: a workout holding an assisted set (negative weight) has its
+  // stored total recomputed, as the database migration does, so restoring
+  // an older backup does not bring the reduced total back.
+  12: (tables) {
+    final Map<Object?, Map<String, Object?>> exerciseById = {
+      for (final Map<String, Object?> row
+          in tables['workout_exercises_table'] ?? const [])
+        row['id']: row,
+    };
+    final Map<Object?, double> volumeByWorkout = {};
+    final Set<Object?> withAssisted = {};
+    for (final Map<String, Object?> set
+        in tables['workout_sets_table'] ?? const []) {
+      final Map<String, Object?>? exercise =
+          exerciseById[set['workout_exercise_id']];
+      if (exercise == null) continue;
+      final Object? workoutId = exercise['workout_id'];
+      final double weight = (set['weight_kg'] as num?)?.toDouble() ?? 0;
+      final int reps = (set['reps'] as num?)?.toInt() ?? 0;
+      if (weight < 0) withAssisted.add(workoutId);
+      final bool counted = set['is_completed'] == 1 &&
+          (set['is_warmup'] ?? 0) == 0 &&
+          (exercise['is_warmup'] ?? 0) == 0;
+      if (counted) {
+        volumeByWorkout[workoutId] =
+            (volumeByWorkout[workoutId] ?? 0) + setVolumeKg(weight, reps);
+      }
+    }
+    for (final Map<String, Object?> workout
+        in tables['workouts_table'] ?? const []) {
+      if (withAssisted.contains(workout['id'])) {
+        workout['total_volume_kg'] = volumeByWorkout[workout['id']] ?? 0.0;
+      }
+    }
   },
 };
 

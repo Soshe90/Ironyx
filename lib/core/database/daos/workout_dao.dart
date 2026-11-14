@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../../formatters/date_formatters.dart';
 import '../../formatters/week_start.dart';
+import '../../set_volume.dart';
 import '../app_database.dart';
 import '../tables/exercise_muscles.dart';
 import '../tables/exercises.dart';
@@ -591,7 +592,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       SELECT
         m.id as muscle_id,
         m.display_name as muscle_name,
-        SUM(ws.weight_kg * ws.reps) as total_volume_kg
+        SUM($kSqlSetVolume) as total_volume_kg
       FROM workout_sets_table ws
       JOIN workout_exercises_table we ON ws.workout_exercise_id = we.id
       JOIN workouts_table w ON we.workout_id = w.id
@@ -644,7 +645,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       SELECT w.id AS workout_id, w.started_at AS date,
         AVG(ws.rpe_times10) AS average_rpe_times_10,
         COUNT(ws.rpe_times10) AS rated_set_count,
-        SUM(ws.weight_kg * ws.reps) AS volume_kg
+        SUM($kSqlSetVolume) AS volume_kg
       FROM workout_sets_table ws
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
       JOIN workouts_table w ON w.id = we.workout_id
@@ -703,10 +704,10 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     return customSelect(
             '''
       SELECT
-        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPush','verticalPush') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS push_volume,
-        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPull','verticalPull') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS pull_volume,
-        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPush','verticalPush','horizontalPull','verticalPull') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS upper_volume,
-        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('kneeDominant','hipDominant') THEN ws.weight_kg * ws.reps ELSE 0 END), 0) AS lower_volume
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPush','verticalPush') THEN $kSqlSetVolume ELSE 0 END), 0) AS push_volume,
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPull','verticalPull') THEN $kSqlSetVolume ELSE 0 END), 0) AS pull_volume,
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('horizontalPush','verticalPush','horizontalPull','verticalPull') THEN $kSqlSetVolume ELSE 0 END), 0) AS upper_volume,
+        COALESCE(SUM(CASE WHEN e.movement_pattern IN ('kneeDominant','hipDominant') THEN $kSqlSetVolume ELSE 0 END), 0) AS lower_volume
       FROM workout_sets_table ws
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
       JOIN workouts_table w ON w.id = we.workout_id
@@ -738,7 +739,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
         '''
       SELECT ${_weekBucket('w.started_at', weekStart, utcOffset)} AS week_start,
         m.id AS muscle_id, m.display_name AS muscle_name,
-        SUM(ws.weight_kg * ws.reps) AS total_volume_kg
+        SUM($kSqlSetVolume) AS total_volume_kg
       FROM workout_sets_table ws
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
       JOIN workouts_table w ON w.id = we.workout_id
@@ -774,7 +775,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
       SELECT CASE WHEN ws.reps BETWEEN 1 AND 5 THEN 'oneToFive'
                   WHEN ws.reps BETWEEN 6 AND 12 THEN 'sixToTwelve'
                   ELSE 'thirteenPlus' END AS rep_range,
-        COUNT(*) AS set_count, COALESCE(SUM(ws.weight_kg * ws.reps), 0) AS volume_kg
+        COUNT(*) AS set_count, COALESCE(SUM($kSqlSetVolume), 0) AS volume_kg
       FROM workout_sets_table ws
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
       JOIN workouts_table w ON w.id = we.workout_id
@@ -1059,7 +1060,7 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
     final sinceClause = since == null ? '' : 'AND w.started_at >= ?';
     return customSelect('''
       SELECT w.id AS workout_id, w.started_at AS date,
-        SUM(ws.weight_kg * ws.reps) AS volume_kg
+        SUM($kSqlSetVolume) AS volume_kg
       FROM workout_sets_table ws
       JOIN workout_exercises_table we ON we.id = ws.workout_exercise_id
       JOIN workouts_table w ON w.id = we.workout_id

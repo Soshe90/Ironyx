@@ -30,7 +30,7 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   found no visible difference.
 - Upload keystore and `key.properties`: backed up to the owner's Google Drive
   (owner-reported 2026-11-03).
-- `flutter test`: **1,222 passed, 2 skipped, 0 failed** (2026-11-12, on
+- `flutter test`: **1,227 passed, 2 skipped, 0 failed** (2026-11-12, on
   `review/production-2026-11-12`; 1,172 earlier that day, 1,041 on
   2026-11-10 and 876 on 2026-11-05). Format, analyze and the asset-licence
   check pass; the calendar and week tests pass under `TZ=PST8PDT`.
@@ -130,6 +130,103 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
   (owner's decision). The exercise sheet shows every picture of an exercise
   (start and end), swiped between. **Open:** the owner has to read the
   ChatGPT and Gemini terms before a release ships the images.
+- **Phone check, 2026-11-13, SM N970F, debug copy only** (the Play app,
+  1.0.5, was not opened or changed). Today's code installed over the
+  debug copy from 2026-11-12 (schema 11, 13 workouts, 285 sets); the
+  database was copied off before and after each step and compared.
+  - **Upgrade 11 → 13: checked.** Integrity OK; every table's row count
+    and the total volume identical (this data had no orphaned templates or
+    negative sets, so it shows the steps do no harm, not that they clean).
+  - **The new SQL runs on the phone: checked.** Progress shows its records
+    count and totals with no error, so the bundled SQLite supports
+    `EXCLUDE GROUP`.
+  - **Timer: checked, and one fault found and fixed.** Stop saved the
+    session (Tabata, 82 s, 5 of 16) and left no alarm pending. **Found:**
+    with the timer on screen, Android posted the phase-change notification
+    at every boundary on top of the in-app cue (two were posted by
+    interval 3). **Fixed:** alerts are scheduled when the app leaves the
+    screen and cancelled when it returns (ADR-4 amended, 2026-11-13).
+    Re-checked on the phone with the fix: 0 alarms through two boundaries
+    on screen; 14 scheduled 3 s after Home; 2 delivered 25 s later; 0 after
+    coming back, timer still counting correctly. **Tested** in unit tests
+    too (three of four fail on the old code). **Not checked:** locking
+    with the power button (same lifecycle states as Home; not done because
+    the phone could not be unlocked again from here), and the sound
+    itself (the phone was muted).
+  - **Export → Delete all data → Import (Replace): checked.** The export
+    saved through the system screen (schema 13, app 1.0.6, right counts).
+    Delete all removed the workouts, sets, body metrics, timer sessions,
+    profile and both old snapshots, kept the 304 exercises and brought the
+    built-in programs back. The import preview showed the right counts and
+    the result matched the original row for row in count and volume; a
+    pre-import snapshot was written.
+  - **Assisted set from a workbook: checked.** Band Assisted Pull-Up, 8 at
+    −20 kg and 6 at 10 kg: both sets kept, the workout's volume 60 kg, the
+    month's total up by exactly 60.
+  - **Not checked:** cloud backup and restore, sign-in, and the
+    account-conflict erase (the debug copy is signed out); Restore
+    snapshot; the release bundle itself (not on Play yet).
+  - Left as found: the debug copy's database restored from the post-
+    upgrade copy, language back to Arabic, test files removed from
+    Downloads. Its two old import snapshots are gone (deleted by the
+    Delete all test, as intended). Evidence:
+    `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-13`.
+- **Release bundle 1.0.6+7, rebuilt 2026-11-13** from commit `2bd9108`
+  (first built 2026-11-12 from `2156a2d`; rebuilt after the timer alert
+  fix, never uploaded in between)
+  (branch `assisted-weights/2026-11-12`, PR #10) with
+  `scripts/build_android.sh bundle`. It contains everything below dated up
+  to 2026-11-12: the Home, Workouts, Library and Timer, Settings and
+  production-review series, and assisted sets; the "Not in the 1.0.5+6
+  bundle" lines below are in this one. **Verified:** signed with the upload
+  key (`keytool -printcert`: CN=FitTrack, SHA-256 `57:08:11:C8…7D:90`, the
+  key 1.0.3 went to Play with); all 15 native libraries stripped; built
+  with `supabase.json` through the script. Archived outside the repo, with
+  its Dart symbols, in `C:\Users\musta\Projects\ironyx-releases\1.0.6+7`
+  (AAB SHA-256 `975ef0bb…9d4065`, in `SHA256SUMS`); copy that folder
+  somewhere durable. **Not checked:** the bundle running anywhere; the same code was
+  checked as a debug build on the phone (entry above).
+  **Owner:** upload it to a Play testing track (internal or closed) and
+  install from Play on the SM N970F (it updates the 1.0.5 install in
+  place, data kept, and runs the schema 11 → 13 upgrade on the real data).
+  Then check what the debug copy could not: locking the phone during a
+  timer (alerts should arrive, and stop on unlock), the alert sound with
+  the phone unmuted, and cloud backup and restore signed in. If PR #10
+  changes again before it merges, rebuild.
+- Changed 2026-11-12 (evening), assisted sets: **a negative weight is
+  assisted work, kept, and adds no volume** (owner chose "apply
+  recommended"; branch `assisted-weights/2026-11-12`). **Not in the
+  1.0.5+6 bundle.** Earlier the same day the XLSX import was made to leave
+  negative-weight sets out and a clean-up of stored ones was approved;
+  both were held because a training log's "-20" on an assisted pull-up is
+  history, not an error. Now:
+  - The XLSX import keeps them again, as it did before today; the preview
+    note about left-out sets and its string are gone, and duplicate
+    detection compares every set again.
+  - Volume treats load below zero as none, everywhere, through one rule:
+    `setVolumeKg` and its SQL form `kSqlSetVolume` in
+    `core/set_volume.dart` (the progress module's own copy moved there).
+    Summed as weight × reps, an assisted set *lowered* the totals it was
+    counted in. Covers a saved workout's total, the live session, history,
+    the workout detail, and the nine SQL volume queries (balance, muscle
+    groups, rep ranges, session load and the rest). Est. 1RM already
+    skipped weights at or below zero. ADR "Session volume" amended.
+  - Schema 12 → 13 (data only): workouts holding an assisted set have
+    their stored total recomputed by the session-volume rule; every other
+    stored total is left as written, and no set is changed. The matching
+    export step does the same for older backups. As with schema 12, a
+    backup from this build is refused by older builds.
+  - **Tested:** the rule (assisted set → 0); an assisted set imported from
+    a workbook, kept at -20 kg with volume 0; re-importing that workbook
+    adds nothing; balance and muscle-group volume count an assisted set as
+    0 (fails on the old queries); a real database file stamped v12 gets
+    the assisted workout's total recomputed, warm-up excluded, another
+    workout's total untouched and every set kept (fails with the step
+    disabled); the export step does the same.
+  - **Open:** the app has no way to *enter* assisted work: the number
+    fields drop "-", so editing an imported assisted set's weight makes it
+    a positive load. Logging assisted exercises in the app (a "-" key, or
+    an "assisted" toggle) is a product decision for the owner.
 - Changed 2026-11-12, production review (an outside review of the whole
   app, ten findings; each re-checked against the code, all ten real, three
   rated lower than the review did; fixed one item at a time on
@@ -280,6 +377,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
     good. The same question applies to the XLSX import now leaving such
     sets out. Needs the owner's answer on how assisted work should be
     recorded before either is changed further.
+    *Settled the same evening: negative = assisted, kept, no volume; see
+    the assisted-sets entry above.*
   - **Fixed: a program CSV of any size was read and split on the UI
     thread.** Now a file over 1 MB (`kMaxProgramCsvBytes`; five programs
     of six days are about 15 KB) is refused before it is read, and again
