@@ -43,9 +43,27 @@ an L-with-barbell. Commits `75a196a` (icon) and `04ec7da` (1.0.8+9).
   `C:\Users\musta\Projects\ironyx-releases\1.0.8+9` (AAB SHA-256
   `1a78f6e4…862ca0`). Version 1.0.8 rather than a rebuilt 1.0.7, in
   case 1.0.7+8 was already uploaded: Play refuses a reused version code.
-- **Not checked:** the icon on a phone (launcher, themed icon, splash,
-  notification). Owner: upload 1.0.8+9 instead of 1.0.7+8, and set the
-  Play listing icon to `assets/branding/liftanium-icon-512-opaque.png`.
+- **Phone check (owner-approved), SM N970F, Android 12 (API 31), debug
+  copy built from `75a196a`; the Play app, 1.0.5, was not opened or
+  changed.**
+  - **Launcher: checked.** The new icon shows on the home screen, inside
+    the frame the owner's Samsung "Purplenote" theme draws around every
+    app.
+  - **Splash: checked.** Opened from the home-screen icon, the hexagon
+    shows centred on navy. Opened with `adb shell monkey`, the splash is
+    plain navy, no icon: Android shows icon-less splashes for launches
+    that do not come from the launcher, and Game Launcher showed its icon
+    the same way, so this is the system, not the app (**reasoned**).
+  - **Notification: checked.** Tabata started, app sent to the
+    background: the status bar showed the white hexagon with the L cut
+    out, and the shade listed "Work phase" and "Rest phase" with it.
+    Ended from the app, the timer left 0 alarms and 0 notifications.
+  - **Not checked:** the themed (monochrome) icon, which needs Android 13
+    and this phone runs 12; the release bundle on a device. Game Launcher
+    was opened once by a mistaken tap and closed. Evidence:
+    `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-15-icon`.
+- **Owner:** upload 1.0.8+9 instead of 1.0.7+8, and set the Play listing
+  icon to `assets/branding/liftanium-icon-512-opaque.png`.
 
 **Rename to Liftanium, 2026-11-15, branch `rename/liftanium-2026-11-15`.**
 The owner chose the name "Liftanium" (lift + titanium). Their own check on
