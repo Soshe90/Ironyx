@@ -10,6 +10,37 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 
 ## Where the app really stands
 
+**Phone check, 2026-11-15, SM N970F, debug copy of `main` at `c4f83e2`**
+(owner-approved; the Play app, 1.0.5, was not opened or changed). The
+debug copy had been uninstalled since 2026-11-13, so this was a fresh
+install with no data. Tabata preset (16 intervals, 4:00), started on screen:
+
+- **On screen: checked.** 0 alarms scheduled and 0 notifications through
+  the first two phase changes, as the 2026-11-13 fix intends.
+- **Locked with the power button: checked** (the case left open on
+  2026-11-13). 14 alarms were scheduled within 4 s of locking (the
+  phone went to Dozing). After that a notification was posted at each
+  phase change, and the count matched the boundaries elapsed at every
+  reading (3 at 83 s, 9 at 169 s). Waking the screen to the lock
+  screen kept them scheduled, as it should, since the app is not back on
+  screen.
+- **Unlocked: checked.** The owner unlocked the phone (it needs a PIN).
+  3 s later there were 0 alarms pending and the posted notifications
+  were cleared. At 184 s the timer showed interval 13 at 00:17, which is
+  the right phase and within the second of tap latency.
+- **Finish: checked.** The timer ran to the end on screen and closed,
+  with 0 alarms left. The session is in the database (240 of 240 s,
+  16 of 16 intervals), and the database passes `integrity_check`.
+- **Not checked: the alert sound.** The phone was in vibrate mode, and
+  I left the owner's ringer alone. The `timer_boundaries` channel is
+  importance 4 with the default notification sound and vibration on, so
+  with the ringer on it should sound (**reasoned**). The in-app cue
+  was not listened to either.
+- **Not checked:** the release bundle (this was the same code as a
+  debug build), cloud backup and sign-in. The debug copy is left
+  installed, signed out, with this one timer session. Evidence:
+  `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-15`.
+
 **Update 2026-11-14.** Status as of today; the detail is in the dated
 entries below.
 
