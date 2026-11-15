@@ -104,7 +104,7 @@ def create_feature_graphic() -> None:
     draw.ellipse((690, -230, 1190, 270), fill=(15, 54, 67, 255))
     draw.ellipse((-170, 350, 230, 750), fill=(13, 42, 58, 255))
 
-    icon = Image.open(ROOT / "assets/branding/ironyx-icon-512-opaque.png").convert("RGB")
+    icon = Image.open(ROOT / "assets/branding/liftanium-icon-512-opaque.png").convert("RGB")
     icon = icon.resize((118, 118), Image.Resampling.LANCZOS)
     canvas.paste(icon, (66, 65))
     draw = ImageDraw.Draw(canvas)
