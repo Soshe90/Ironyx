@@ -8,14 +8,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Ironyx (debug)",
+      "name": "Liftanium (debug)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
       "toolArgs": ["--dart-define-from-file=supabase.json"]
     },
     {
-      "name": "Ironyx (profile)",
+      "name": "Liftanium (profile)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
@@ -23,7 +23,7 @@
       "toolArgs": ["--dart-define-from-file=supabase.json"]
     },
     {
-      "name": "Ironyx (release)",
+      "name": "Liftanium (release)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
@@ -31,7 +31,7 @@
       "toolArgs": ["--dart-define-from-file=supabase.json"]
     },
     {
-      "name": "Ironyx (debug, no accounts)",
+      "name": "Liftanium (debug, no accounts)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart"

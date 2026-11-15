@@ -1,4 +1,4 @@
-# Play Store listing — Ironyx
+# Play Store listing — Liftanium
 
 Draft copy. Character counts noted so it drops straight into Play Console.
 Swap wording freely — the positioning (offline-first, private, no forced
@@ -25,9 +25,9 @@ them against the live consoles.
 ## App name (30 char max)
 
 ```
-Ironyx: Offline Workout Log
+Liftanium: Offline Workout Log
 ```
-(27 characters)
+(30 characters: exactly the limit)
 
 ## Short description (80 char max)
 
@@ -49,7 +49,7 @@ Log every set, follow your training plan, and see your progress — offline.
 ### English
 
 ```
-Make every workout count with Ironyx, a workout tracker that keeps your training log on your device and works offline.
+Make every workout count with Liftanium, a workout tracker that keeps your training log on your device and works offline.
 
 LOG YOUR WORKOUTS
 Record exercises, sets, reps, and weights as you train. Check your workout history whenever you need it, and use the built-in rest timer to stay focused between sets.
@@ -61,7 +61,7 @@ SEE HOW YOU’RE PROGRESSING
 Follow your training over time with charts for workout volume, estimated one-rep max, and consistency. Your history helps you see the work behind your progress.
 
 YOUR TRAINING, YOUR CHOICE
-No account is needed to use the core workout tracker. Your workouts are stored on your device, and Ironyx does not show ads or use analytics. If you choose to create an account, you can manually back up your data to the cloud. Nothing is backed up until you choose “Back up now.”
+No account is needed to use the core workout tracker. Your workouts are stored on your device, and Liftanium does not show ads or use analytics. If you choose to create an account, you can manually back up your data to the cloud. Nothing is backed up until you choose “Back up now.”
 
 TRAIN OFFLINE
 No internet at the gym? Keep logging workouts, using your programs and timer, and viewing your progress offline.
@@ -74,7 +74,7 @@ Questions or feedback: mustafa.salih15@gmail.com
 ### Arabic
 
 ```
-اجعل لكل تمرين قيمة مع Ironyx، تطبيق يساعدك على تسجيل تدريباتك ومتابعة تقدمك، مع حفظ سجلّك على جهازك وإمكانية استخدام الميزات الأساسية دون إنترنت.
+اجعل لكل تمرين قيمة مع Liftanium، تطبيق يساعدك على تسجيل تدريباتك ومتابعة تقدمك، مع حفظ سجلّك على جهازك وإمكانية استخدام الميزات الأساسية دون إنترنت.
 
 سجّل تمارينك
 دوّن التمارين والمجموعات والتكرارات والأوزان أثناء التدريب، وارجع إلى سجل تمارينك متى احتجت. استخدم مؤقّت الراحة المدمج لتنظيم فترات الراحة بين المجموعات.
@@ -86,7 +86,7 @@ Questions or feedback: mustafa.salih15@gmail.com
 استخدم الرسوم البيانية لمتابعة حجم التدريب، والقوة التقديرية لتكرار واحد، وانتظامك في التمرين بمرور الوقت. راجع سجلّك لترى كيف يتراكم جهدك.
 
 تدريبك وبياناتك تحت اختيارك
-لا تحتاج إلى حساب لاستخدام الميزات الأساسية. تُحفظ تمارينك على جهازك، ولا يعرض Ironyx إعلانات ولا يستخدم أدوات التحليلات. إذا رغبت، يمكنك إنشاء حساب وعمل نسخة احتياطية من بياناتك على السحابة يدويًا. لا تُرفع بياناتك حتى تختار «النسخ الاحتياطي الآن».
+لا تحتاج إلى حساب لاستخدام الميزات الأساسية. تُحفظ تمارينك على جهازك، ولا يعرض Liftanium إعلانات ولا يستخدم أدوات التحليلات. إذا رغبت، يمكنك إنشاء حساب وعمل نسخة احتياطية من بياناتك على السحابة يدويًا. لا تُرفع بياناتك حتى تختار «النسخ الاحتياطي الآن».
 
 تدرّب دون إنترنت
 لا يوجد اتصال بالإنترنت في النادي؟ واصل تسجيل تمارينك واستخدام برامجك والمؤقّت والاطلاع على تقدمك دون اتصال.
@@ -196,7 +196,7 @@ build does not support just because a row here says so.
 
 | Play Console form | Answer |
 |---|---|
-| App details | Name `Ironyx: Offline Workout Log`; **App**, **Free**; category **Health & Fitness**; contact `mustafa.salih15@gmail.com` |
+| App details | Name `Liftanium: Offline Workout Log`; **App**, **Free**; category **Health & Fitness**; contact `mustafa.salih15@gmail.com` |
 | Store listing | Short and full description from above; icon `assets/branding/ironyx-icon-512-opaque.png`; feature graphic (S2); the screenshots (S1) |
 | App access | **All functionality is available without special access.** Accounts are optional and unlock only cloud backup, so no test login is needed |
 | Ads | **No**, the app contains no ads |
@@ -223,7 +223,7 @@ subtitle and keywords.
 
 | Field | Draft | Length |
 |---|---|---|
-| Name | `Ironyx: Workout Log` | 19 |
+| Name | `Liftanium: Workout Log` | 22 |
 | Subtitle | `Offline. Private. No account.` | 29 |
 | Keywords | `gym,lifting,strength,training,tracker,routine,progress,1RM,program,rest timer,exercise,fitness` | 94 |
 
@@ -240,7 +240,7 @@ questionnaire (same answers as Data Safety above).
 | "No account required. No internet required." | True — auth is optional and everything core is local |
 | "Pick from a library of 300+ exercises" | True — 304, seed v18 (the earlier plan said 150) |
 | "A built-in rest timer **with sound** and haptics" | **True on Android** as of 2026-09-20: three bundled cues (countdown, phase change, completion) play through `just_audio`, ducking other audio — confirmed in logcat on an Android 15 emulator's release build. Not yet heard on a physical device, and not checked on iOS at all. Re-verify both before claiming it for iOS |
-| "Ironyx does not run ads or analytics" | True today (no such SDK in `pubspec.yaml`). **Breaks if D2 adds Sentry** — crash reporting is not "analytics", but the privacy policy currently says "no crash-reporting service" too |
+| "Liftanium does not run ads or analytics" | True today (no such SDK in `pubspec.yaml`). **Breaks if D2 adds Sentry** — crash reporting is not "analytics", but the privacy policy currently says "no crash-reporting service" too |
 | "Your local training log stays on your device unless you explicitly enable cloud backup" | True. Nothing uploads without tapping "Back up now" |
 | "Charts show volume, estimated one-rep max, and consistency" | True — Progress phases 0–4 shipped |
 | "Available in English and Arabic" | True |

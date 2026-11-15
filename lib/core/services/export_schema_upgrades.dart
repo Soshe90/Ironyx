@@ -121,7 +121,7 @@ ImportEnvelope upgradeEnvelope(
   if (from == toSchemaVersion) return envelope;
   if (from > toSchemaVersion) {
     throw ImportValidationException(
-      'This backup was made by a newer version of Ironyx (database schema '
+      'This backup was made by a newer version of Liftanium (database schema '
       '$from; this app uses $toSchemaVersion). Update the app before '
       'importing it.',
       problem: ImportProblem.madeByNewerApp,

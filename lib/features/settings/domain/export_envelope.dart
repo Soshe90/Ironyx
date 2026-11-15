@@ -8,7 +8,7 @@ enum ImportMode { merge, replace }
 /// translated sentence (see `ImportValidationL10n`), where the 22 refusals
 /// each had their own English message, shown as they were in any language.
 enum ImportProblem {
-  /// The file is not an Ironyx export at all.
+  /// The file is not a Liftanium export at all.
   notAnExport,
 
   /// Made by a newer version of the app: updating the app fixes it.
@@ -82,29 +82,32 @@ class ImportEnvelope {
 
   /// Parses and validates the envelope header. Throws
   /// [ImportValidationException] with a user-facing message if the file
-  /// isn't a Ironyx export or carries an unrecognized [formatVersion].
+  /// isn't a Liftanium export or carries an unrecognized [formatVersion].
   factory ImportEnvelope.parse(String jsonContent,
       {required int currentFormatVersion}) {
     final Object? decoded;
     try {
       decoded = jsonDecode(jsonContent);
     } on FormatException {
-      throw ImportValidationException('This file is not a valid Ironyx export.',
+      throw ImportValidationException(
+          'This file is not a valid Liftanium export.',
           problem: ImportProblem.notAnExport);
     }
     if (decoded is! Map<String, dynamic>) {
-      throw ImportValidationException('This file is not a valid Ironyx export.',
+      throw ImportValidationException(
+          'This file is not a valid Liftanium export.',
           problem: ImportProblem.notAnExport);
     }
 
     final Object? rawFormatVersion = decoded['formatVersion'];
     if (rawFormatVersion is! int) {
-      throw ImportValidationException('This file is not a valid Ironyx export.',
+      throw ImportValidationException(
+          'This file is not a valid Liftanium export.',
           problem: ImportProblem.notAnExport);
     }
     if (rawFormatVersion > currentFormatVersion) {
       throw ImportValidationException(
-        'This backup was made with a newer version of Ironyx '
+        'This backup was made with a newer version of Liftanium '
         '(format $rawFormatVersion). Update the app before importing.',
         problem: ImportProblem.madeByNewerApp,
       );
@@ -125,13 +128,15 @@ class ImportEnvelope {
         rawAppVersion.trim().isEmpty ||
         rawExportedAt is! String ||
         DateTime.tryParse(rawExportedAt) == null) {
-      throw ImportValidationException('This file is not a valid Ironyx export.',
+      throw ImportValidationException(
+          'This file is not a valid Liftanium export.',
           problem: ImportProblem.notAnExport);
     }
 
     final Object? rawTables = decoded['tables'];
     if (rawTables is! Map<String, dynamic>) {
-      throw ImportValidationException('This file is not a valid Ironyx export.',
+      throw ImportValidationException(
+          'This file is not a valid Liftanium export.',
           problem: ImportProblem.notAnExport);
     }
     final Map<String, List<Map<String, Object?>>> tables;
@@ -144,7 +149,8 @@ class ImportEnvelope {
               .toList(),
       };
     } on TypeError {
-      throw ImportValidationException('This file is not a valid Ironyx export.',
+      throw ImportValidationException(
+          'This file is not a valid Liftanium export.',
           problem: ImportProblem.notAnExport);
     }
 

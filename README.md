@@ -1,4 +1,4 @@
-# Ironyx
+# Liftanium
 
 Offline-first workout tracker. Flutter — Android first; iOS and Web build but
 are not launch targets (see `TODO.md` decisions D1 and D5). English and
@@ -14,11 +14,14 @@ application is about 2026-11-18, and public availability follows Google's
 review after that. What is still open is tracked in `TODO.md`.
 The earlier 12-week plan is archived in `docs/archive/TODO-full-plan.md`.
 
-Latest check, 2026-11-14, on `main` after PR #10: `dart format` and
+Latest check, 2026-11-15, on branch `rename/liftanium-2026-11-15` (the
+rename to Liftanium): `dart format` and
 `flutter analyze --fatal-infos --fatal-warnings` are clean, the asset-licence
-check passes and `flutter test` reports **1,227 passed, 2 skipped, 0 failed**.
-Version 1.0.6+7 is the current release bundle (rebuilt 2026-11-13, on `main`
-since 2026-11-14, not yet uploaded); 1.0.5 is the build from Play on the
+check passes and `flutter test` reports **1,228 passed, 2 skipped, 0 failed**
+(1,227 on `main` after PR #10, 2026-11-14).
+Version 1.0.7+8 is the current release bundle (built 2026-11-15 on this
+branch: 1.0.6+7, which was never uploaded, plus the rename; not yet
+uploaded); 1.0.5 is the build from Play on the
 owner's Samsung (SM N970F), where debug builds
 are checked side by side with it (`TODO.md` has what was checked and what
 was not). Nothing has been run on iOS at all. (Checked 2026-09-20: 438
@@ -71,7 +74,7 @@ project URL and anon/publishable key, then use any of:
     scripts/build_android.sh bundle    # release AAB for Play
     scripts/build_android.sh install   # release APK, installed on the device
 
-VS Code users can pick the **Ironyx (debug)** launch configuration instead;
+VS Code users can pick the **Liftanium (debug)** launch configuration instead;
 `.vscode/launch.json` passes the same flag. Never hand out a bare
 `flutter build apk` — it silently has accounts off.
 

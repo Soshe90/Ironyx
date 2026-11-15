@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
 
-  "appTitle": "Ironyx",
+  "appTitle": "Liftanium",
   "@appTitle": {
     "description": "The application name, shown in the OS task switcher."
   },
@@ -65,7 +65,7 @@
   "settingsHaptics": "Haptics",
   "settingsHapticsSubtitle": "Vibrate on phase change and when a set is logged",
   "settingsDataTitle": "Data",
-  "settingsDataSubtitle": "Ironyx stores everything on this device",
+  "settingsDataSubtitle": "Liftanium stores everything on this device",
   "settingsStorageNote": "Your training data never leaves this device unless you export it yourself.",
   "settingsAboutTitle": "About",
   "settingsAboutSubtitle": "Version, licenses, and where the exercise data comes from",
@@ -75,7 +75,7 @@
   "settingsExerciseCreditsViewSource": "View source on GitHub",
   "settingsExerciseCreditsOpenFailed": "Could not open the link",
   "settingsLicensesTitle": "Open-source licenses",
-  "settingsLicensesSubtitle": "Third-party software used to build Ironyx",
+  "settingsLicensesSubtitle": "Third-party software used to build Liftanium",
 
   "authErrorWrongCredentials": "That email and password don't match an account.",
   "authErrorEmailAlreadyRegistered": "There's already an account with that email. Try signing in.",
@@ -321,7 +321,7 @@
   "@dataExportFailed": {"description": "Shown when building or saving an export failed."},
   "dataImportTitle": "Import data",
   "dataImportSubtitle": "Restore from a backup file",
-  "dataImportPickerTitle": "Choose a Ironyx backup",
+  "dataImportPickerTitle": "Choose a Liftanium backup",
   "dataImportUnreadable": "Could not read the selected file.",
   "dataImportTooLarge": "This file is too large to be a backup (over {max} MB).",
   "@dataImportTooLarge": {"description": "Shown when the file picked for import is over the size limit.", "placeholders": {"max": {"type": "int"}}},
@@ -335,9 +335,9 @@
   "dataImportModeReplaceSubtitle": "Erase everything currently on this device first",
   "dataImportComplete": "Import complete",
   "dataImportFailed": "Couldn't complete the import. Nothing on this device was changed — try again.",
-  "dataImportNotAnExport": "This file isn't an Ironyx backup.",
-  "dataImportMadeByNewerApp": "This backup was made by a newer version of Ironyx. Update the app, then import it again.",
-  "dataImportTooOld": "This backup was made by a version of Ironyx too old for this app to read.",
+  "dataImportNotAnExport": "This file isn't a Liftanium backup.",
+  "dataImportMadeByNewerApp": "This backup was made by a newer version of Liftanium. Update the app, then import it again.",
+  "dataImportTooOld": "This backup was made by a version of Liftanium too old for this app to read.",
   "dataImportIncomplete": "This backup is incomplete. Replacing your data with it would delete some of it, so nothing was changed. Try Merge, or a complete backup.",
   "dataImportExerciseConflict": "This backup has an exercise \"{name}\" that is already on this device as a different exercise, so it cannot be imported. Rename one of them, then try again.",
   "dataImportDamaged": "This backup is damaged or was edited, so it cannot be imported. Nothing was changed.",
@@ -857,7 +857,7 @@
     "description": "Height unit suffix. Left Latin in every locale, matching the kg/lb abbreviations used throughout the app."
   },
 
-  "profileIntro": "To tailor your program and progress tracking, Ironyx uses a few personal details. They stay on this device.",
+  "profileIntro": "To tailor your program and progress tracking, Liftanium uses a few personal details. They stay on this device.",
   "profileLoadFailed": "Failed to load your details",
   "profileName": "Name",
   "profileDateOfBirth": "Date of birth",

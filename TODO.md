@@ -10,6 +10,113 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 
 ## Where the app really stands
 
+**Rename to Liftanium, 2026-11-15, branch `rename/liftanium-2026-11-15`.**
+The owner chose the name "Liftanium" (lift + titanium). Their own check on
+2026-11-15 found no exact match on Google Play US, in the first five
+Apple US results or on DuckDuckGo. **Not checked:** trademark registers,
+domains, social handles, similar-sounding brands and other countries'
+stores.
+
+- **Changed (what users read):** Android launcher label, iOS
+  `CFBundleDisplayName`/`CFBundleName`, `appTitle` and the 7 other
+  English and Arabic strings that named the app (Arabic keeps the Latin
+  spelling, as it did for Ironyx), import-refusal messages, export file
+  names (`liftanium_backup_*.json`, `liftanium_export_*.csv`), the Linux
+  window title, the VS Code launch names, the Pages site (`docs/index.md`,
+  `delete-account.md`, the privacy policy, now "Last updated November 15,
+  2026"), `docs/STORE_LISTING.md` (Play name `Liftanium: Offline Workout
+  Log` is exactly 30 characters, the limit), and the feature graphic and
+  `09-store-overview.png`, regenerated with `scripts/create_store_overview.py`.
+- **Kept on purpose (identifiers, not names):** application/bundle id
+  `com.soshe90.ironyx` (Play binds the listing to it permanently; a new id
+  would be a new app and restart the closed test), the auth deep-link
+  scheme (on the Supabase redirect allow-list), the Dart package
+  `ironyx`, the database file `ironyx` (renaming it would strand every
+  user's data), the seed source id and licence text in
+  `exercises_seed.json` (provenance records the UI does not show; changing
+  them needs a seed bump), asset file names, the `ironyx_navy` colour,
+  `IronyxApp`, the keystore alias, and the GitHub repo and Pages URLs
+  (`soshe90.github.io/Ironyx/...`, already entered in Play Console).
+  Old backups import as before: the envelope never held the app name.
+- **Test added:** `android_manifest_test.dart` pins the Android label and
+  iOS display name to `appTitle`, and the store id and scheme to
+  `com.soshe90.ironyx`. Two widget tests now expect "Liftanium".
+- **Gates (tested):** format and analyze clean, asset licences OK,
+  `flutter test` 1,228 passed, 2 skipped, 0 failed.
+- **Release bundle 1.0.7+8, built 2026-11-15** from commit `89fdd59`
+  with `scripts/build_android.sh bundle`. It is 1.0.6+7 (never uploaded)
+  plus the rename, so it replaces that bundle as the one to upload.
+  **Verified:** signed with the upload key (`keytool -printcert`:
+  CN=FitTrack, SHA-256 `57:08:11:C8…7D:90`); all 15 native libraries
+  stripped; the bundle's manifest carries the label "Liftanium", the id
+  `com.soshe90.ironyx` with no debug suffix, and 1.0.7. Archived with
+  its Dart symbols in `C:\Users\musta\Projects\ironyx-releases\1.0.7+8`
+  (AAB SHA-256 `ac081f5c…efb15f`, in `SHA256SUMS`). The full gates ran
+  on the rename commit `362374f`; after the version bump only the
+  version and manifest tests were re-run. **Not checked:** the bundle
+  running anywhere.
+- **Name checks, 2026-11-15 (verified, by registry lookup):**
+  `liftanium` is unregistered as .com, .net, .org, .io, .app and .dev
+  (RDAP 404; `ironyx.com` as a control returned 200), there is no
+  `github.com/liftanium`, Google Play search returns "No results" in GB,
+  DE, SA, AE and IN, and Apple's search API returns no app with the name
+  in US, GB, DE, SA, AE or IN. Web search finds no use of the exact
+  name. **Similar names found:** Liftium (a workout tracker from 2009,
+  listed as shut down; also a lithium supplement), Lifthium Energy
+  (lithium refining), Liftomania (US apparel trademark). **Not checked:
+  trademark registers** (the USPTO and TMview lookups could not be run
+  from here) and Instagram, X, TikTok and Facebook handles. Owner: search
+  "Liftanium" and "Liftium" at tmsearch.uspto.gov, tmdn.org/tmview and
+  branddb.wipo.int, classes 9 and 41.
+- **Still open, owner:** (1) upload 1.0.7+8 to the closed-test track;
+  (2) in Play Console change the app name to `Liftanium: Offline Workout
+  Log`, paste the short and full descriptions (en, ar) from
+  `docs/STORE_LISTING.md`, and replace the feature graphic with
+  `assets/branding/store-screenshots/feature-graphic.png`, and
+  screenshot 08 if it is in the listing. A name change goes through Play
+  review like any listing change.
+- **Screenshot `08-settings-theme.png` retaken, 2026-11-15**
+  (owner-approved phone use; SM N970F, debug copy 1.0.7 built from
+  `d963a43`, installed over this morning's debug copy; the Play app,
+  1.0.5, was not opened or changed). **Checked on the phone:** Settings
+  reads "Liftanium stores everything on this device". The new file is
+  1080×2280, where the other captures are 1276×2848 from an earlier
+  phone, and it shows today's Settings (it has "Week starts on").
+  **Not checked on the phone:** the launcher label, the welcome page,
+  the About box and export file names. The debug copy is left installed.
+  Evidence: `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-15-rename`.
+
+**Phone check, 2026-11-15, SM N970F, debug copy of `main` at `c4f83e2`**
+(owner-approved; the Play app, 1.0.5, was not opened or changed). The
+debug copy had been uninstalled since 2026-11-13, so this was a fresh
+install with no data. Tabata preset (16 intervals, 4:00), started on screen:
+
+- **On screen: checked.** 0 alarms scheduled and 0 notifications through
+  the first two phase changes, as the 2026-11-13 fix intends.
+- **Locked with the power button: checked** (the case left open on
+  2026-11-13). 14 alarms were scheduled within 4 s of locking (the
+  phone went to Dozing). After that a notification was posted at each
+  phase change, and the count matched the boundaries elapsed at every
+  reading (3 at 83 s, 9 at 169 s). Waking the screen to the lock
+  screen kept them scheduled, as it should, since the app is not back on
+  screen.
+- **Unlocked: checked.** The owner unlocked the phone (it needs a PIN).
+  3 s later there were 0 alarms pending and the posted notifications
+  were cleared. At 184 s the timer showed interval 13 at 00:17, which is
+  the right phase and within the second of tap latency.
+- **Finish: checked.** The timer ran to the end on screen and closed,
+  with 0 alarms left. The session is in the database (240 of 240 s,
+  16 of 16 intervals), and the database passes `integrity_check`.
+- **Not checked: the alert sound.** The phone was in vibrate mode, and
+  I left the owner's ringer alone. The `timer_boundaries` channel is
+  importance 4 with the default notification sound and vibration on, so
+  with the ringer on it should sound (**reasoned**). The in-app cue
+  was not listened to either.
+- **Not checked:** the release bundle (this was the same code as a
+  debug build), cloud backup and sign-in. The debug copy is left
+  installed, signed out, with this one timer session. Evidence:
+  `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-15`.
+
 **Update 2026-11-14.** Status as of today; the detail is in the dated
 entries below.
 
@@ -25,7 +132,9 @@ entries below.
   machine, Flutter 3.47.5:** format clean, analyze no issues, asset
   licences OK, `flutter test` 1,227 passed, 2 skipped, 0 failed. The
   time-zone runs were not repeated (no code changed).
-- **The 1.0.6+7 bundle is still not uploaded.** It was built from
+- **The 1.0.6+7 bundle is still not uploaded.** (Superseded 2026-11-15:
+  upload 1.0.7+8 instead, the same code plus the rename to Liftanium;
+  entry above.) It was built from
   `2bd9108`; only `TODO.md` changed between that commit and `main`, so it
   does not need rebuilding. **Verified today:** the archived file's
   SHA-256 is the recorded `975ef0bb…9d4065`. Uploading it to the closed

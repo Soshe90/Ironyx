@@ -12,7 +12,7 @@ import 'export_schema_upgrades.dart';
 /// constant rather than pulling in `package_info_plus` — the app has no
 /// other use for a runtime version lookup yet. Keep in step with the
 /// `version:` line in pubspec.yaml.
-const String kAppVersion = '1.0.6';
+const String kAppVersion = '1.0.7';
 
 /// Plain data handed to [_encodeExportEnvelope] on a background isolate via
 /// [compute]. Has to be a top-level function, not a closure, so this is a
@@ -214,7 +214,7 @@ class DataExportService {
 
   /// Parses and validates an export file's contents. Throws
   /// [ImportValidationException] (safe to show directly to the user) if the
-  /// file isn't a valid, current-version Ironyx export.
+  /// file isn't a valid, current-version Liftanium export.
   ImportEnvelope parseImport(String jsonContent) =>
       _parseExportEnvelope(jsonContent);
 
