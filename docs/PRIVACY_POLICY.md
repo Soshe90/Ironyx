@@ -2,24 +2,24 @@
 title: Privacy Policy
 permalink: /privacy/
 ---
-# Privacy Policy — Ironyx
+# Privacy Policy — Liftanium
 
-**Last updated: September 21, 2026**
+**Last updated: November 15, 2026**
 
-Ironyx ("the app") is an offline-first workout and fitness log. This policy
+Liftanium ("the app") is an offline-first workout and fitness log. This policy
 explains what data the app collects, where it goes, how it is used, and what
-choices you have. Ironyx is not a medical device and is not a substitute for
+choices you have. Liftanium is not a medical device and is not a substitute for
 professional medical advice, diagnosis, or treatment. If anything here is
 unclear, contact mustafa.salih15@gmail.com.
 
 ## The short version
 
-- You can use Ironyx completely without an account. In that mode, nothing
+- You can use Liftanium completely without an account. In that mode, nothing
   you enter ever leaves your device.
 - Creating an account is optional and exists only to enable an opt-in
   cloud backup feature. It does not unlock any other functionality.
 - We do not run ads, analytics, or trackers of any kind. We do not sell your
-  data. The only service provider that receives data from Ironyx is Supabase,
+  data. The only service provider that receives data from Liftanium is Supabase,
   and only when you use the account or optional cloud-backup features.
 
 ## Data stored only on your device
@@ -37,7 +37,7 @@ explicitly use the cloud backup feature described below:
   session target
 - App settings (units, sound, haptics, language)
 
-Ironyx does not connect to Google Fit, Health Connect, Apple Health, or other
+Liftanium does not connect to Google Fit, Health Connect, Apple Health, or other
 health platforms, and it does not collect location, heart rate, steps, or
 other sensor data.
 
@@ -46,7 +46,7 @@ copy unless you have used cloud backup (below). You can also export your
 data to a file at any time from Settings, and delete all local data from
 Settings without uninstalling.
 
-On Android, Ironyx opts out of the operating system's automatic app backup
+On Android, Liftanium opts out of the operating system's automatic app backup
 to Google Drive, so neither your local database nor your sign-in session is
 copied there by Android. Use the export file or the optional cloud backup
 if you want a copy that survives a reinstall.
@@ -108,19 +108,19 @@ other permission not listed here.
 
 ## Analytics, advertising, and third parties
 
-Ironyx contains no analytics SDK, no advertising SDK, and no crash-reporting
+Liftanium contains no analytics SDK, no advertising SDK, and no crash-reporting
 service. The only third-party service the app talks to is Supabase. Supabase
 provides email/password authentication and stores the optional cloud backup
 when you explicitly use that feature. Supabase may process this information
 as our service provider under its own terms and privacy policy. Supabase
 sends the sign-up and password-reset emails through the email-sending service
-described above. Ironyx does not sell data or use it for advertising or
+described above. Liftanium does not sell data or use it for advertising or
 behavioral tracking.
 
 ## Data deletion and your choices
 
 - **Local data:** Settings → Data Management → Delete everything. You can
-  also uninstall Ironyx or export your data before deleting it. Local data is
+  also uninstall Liftanium or export your data before deleting it. Local data is
   not recoverable after deletion unless you previously made a cloud backup or
   export.
 - **Account and cloud backup:** If you use an account, Settings → Account →
@@ -136,7 +136,7 @@ behavioral tracking.
 
 ## Children's privacy
 
-Ironyx is not directed at children under 13, and we do not knowingly collect
+Liftanium is not directed at children under 13, and we do not knowingly collect
 data from children under 13. If you believe a child has provided personal
 data, contact us so we can investigate and delete it where appropriate.
 

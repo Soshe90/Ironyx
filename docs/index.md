@@ -1,10 +1,10 @@
 ---
-title: Ironyx
+title: Liftanium
 ---
 
-# Ironyx
+# Liftanium
 
-Ironyx is an offline-first workout tracker: log sets, build programs, use an
+Liftanium is an offline-first workout tracker: log sets, build programs, use an
 interval timer and track progress, with no account required. Available in
 English and Arabic.
 

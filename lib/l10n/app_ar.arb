@@ -1,7 +1,7 @@
 {
   "@@locale": "ar",
 
-  "appTitle": "Ironyx",
+  "appTitle": "Liftanium",
   "@appTitle": {
     "description": "Left in Latin script on purpose: it is the product name, and a transliteration would not match the store listing or the icon."
   },
@@ -70,7 +70,7 @@
   "settingsExerciseCreditsViewSource": "عرض المصدر على GitHub",
   "settingsExerciseCreditsOpenFailed": "تعذّر فتح الرابط",
   "settingsLicensesTitle": "تراخيص البرمجيات مفتوحة المصدر",
-  "settingsLicensesSubtitle": "البرمجيات الخارجية المستخدمة في بناء Ironyx",
+  "settingsLicensesSubtitle": "البرمجيات الخارجية المستخدمة في بناء Liftanium",
 
   "authErrorWrongCredentials": "لا يطابق هذا البريد الإلكتروني وكلمة المرور أي حساب.",
   "authErrorEmailAlreadyRegistered": "يوجد حساب مسجَّل بهذا البريد الإلكتروني. جرّب تسجيل الدخول.",
@@ -113,7 +113,7 @@
     }
   },
   "backupNowTitle": "أنشئ نسخة احتياطية الآن",
-  "backupNowSubtitle": "يرفع بيانات Ironyx المحفوظة على هذا الجهاز إلى حسابك.",
+  "backupNowSubtitle": "يرفع بيانات Liftanium المحفوظة على هذا الجهاز إلى حسابك.",
   "backupInProgress": "جارٍ النسخ الاحتياطي…",
   "backupInProgressSubtitle": "جارٍ تجهيز بياناتك ورفعها",
   "backupFailed": "تعذّر إكمال النسخ الاحتياطي.",
@@ -297,7 +297,7 @@
   "dataExportFailed": "تعذّر تصدير بياناتك. حاول مرة أخرى.",
   "dataImportTitle": "استيراد البيانات",
   "dataImportSubtitle": "استعادة من ملف نسخة احتياطية",
-  "dataImportPickerTitle": "اختر نسخة احتياطية من Ironyx",
+  "dataImportPickerTitle": "اختر نسخة احتياطية من Liftanium",
   "dataImportUnreadable": "تعذّرت قراءة الملف المحدَّد.",
   "dataImportTooLarge": "هذا الملف أكبر من أن يكون نسخة احتياطية (أكثر من {max} ميغابايت).",
   "dataImportBackupTitle": "استيراد نسخة احتياطية",
@@ -309,9 +309,9 @@
   "dataImportModeReplaceSubtitle": "استبدال بياناتك الحالية ببيانات النسخة الاحتياطية مع الإبقاء على مكتبة التمارين",
   "dataImportComplete": "اكتمل الاستيراد",
   "dataImportFailed": "تعذّر إكمال الاستيراد. لم يتغيّر شيء على هذا الجهاز — حاول مرة أخرى.",
-  "dataImportNotAnExport": "هذا الملف ليس نسخة احتياطية من Ironyx.",
-  "dataImportMadeByNewerApp": "أُنشئت هذه النسخة الاحتياطية بإصدار أحدث من Ironyx. حدّث التطبيق ثم استوردها مرة أخرى.",
-  "dataImportTooOld": "أُنشئت هذه النسخة الاحتياطية بإصدار قديم جدًا من Ironyx لا يستطيع هذا التطبيق قراءته.",
+  "dataImportNotAnExport": "هذا الملف ليس نسخة احتياطية من Liftanium.",
+  "dataImportMadeByNewerApp": "أُنشئت هذه النسخة الاحتياطية بإصدار أحدث من Liftanium. حدّث التطبيق ثم استوردها مرة أخرى.",
+  "dataImportTooOld": "أُنشئت هذه النسخة الاحتياطية بإصدار قديم جدًا من Liftanium لا يستطيع هذا التطبيق قراءته.",
   "dataImportIncomplete": "هذه النسخة الاحتياطية ناقصة. استبدال بياناتك بها سيحذف بعضها، لذا لم يتغيّر شيء. جرّب الدمج، أو نسخة احتياطية كاملة.",
   "dataImportExerciseConflict": "تحتوي هذه النسخة الاحتياطية على تمرين \"{name}\" موجود على هذا الجهاز كتمرين مختلف، لذا لا يمكن استيرادها. غيّر اسم أحدهما ثم حاول مرة أخرى.",
   "dataImportDamaged": "هذه النسخة الاحتياطية تالفة أو عُدّلت، لذا لا يمكن استيرادها. لم يتغيّر شيء.",
@@ -777,7 +777,7 @@
 
   "unitCentimetres": "سم",
 
-  "profileIntro": "لتخصيص برنامجك وتتبّع تقدّمك، يستخدم Ironyx بعض البيانات الشخصية. تبقى هذه البيانات على هذا الجهاز.",
+  "profileIntro": "لتخصيص برنامجك وتتبّع تقدّمك، يستخدم Liftanium بعض البيانات الشخصية. تبقى هذه البيانات على هذا الجهاز.",
   "profileLoadFailed": "تعذّر تحميل بياناتك",
   "profileName": "الاسم",
   "profileDateOfBirth": "تاريخ الميلاد",

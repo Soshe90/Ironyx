@@ -264,7 +264,7 @@ void main() {
       // to confirm the tile actually navigates there, without coupling this
       // test to Flutter's internal LicensePage implementation or to
       // `LicenseRegistry`'s global, test-run-wide registration state.
-      expect(find.text('Ironyx'), findsWidgets);
+      expect(find.text('Liftanium'), findsWidgets);
     });
 
     testWidgets(

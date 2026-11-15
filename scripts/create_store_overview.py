@@ -108,7 +108,7 @@ def create_feature_graphic() -> None:
     icon = icon.resize((118, 118), Image.Resampling.LANCZOS)
     canvas.paste(icon, (66, 65))
     draw = ImageDraw.Draw(canvas)
-    draw.text((207, 69), "IRONYX", font=font("Barlow-Bold.ttf", 61), fill=(245, 248, 250))
+    draw.text((207, 69), "LIFTANIUM", font=font("Barlow-Bold.ttf", 61), fill=(245, 248, 250))
     draw.text((72, 226), "Your training, tracked.", font=font("Barlow-SemiBold.ttf", 41), fill=(56, 214, 192))
     draw.text((76, 293), "Log. Plan. Progress. Offline.", font=font("Barlow-Medium.ttf", 27), fill=(191, 207, 215))
     draw.rounded_rectangle((72, 365, 486, 424), radius=29, fill=(20, 54, 62), outline=(56, 214, 192), width=2)
@@ -128,7 +128,7 @@ def main() -> None:
     draw.ellipse((790, -230, 1320, 300), fill=(15, 54, 67))
     draw.ellipse((-260, 1500, 300, 2060), fill=(13, 42, 58))
 
-    draw.text((76, 64), "IRONYX  /  WORKOUT TRACKER", font=font("Barlow-Bold.ttf", 25), fill=(56, 214, 192))
+    draw.text((76, 64), "LIFTANIUM  /  WORKOUT TRACKER", font=font("Barlow-Bold.ttf", 25), fill=(56, 214, 192))
     draw.text((72, 123), "Your training,", font=font("Barlow-SemiBold.ttf", 87), fill=(245, 248, 250))
     draw.text((72, 218), "tracked.", font=font("Barlow-SemiBold.ttf", 87), fill=(56, 214, 192))
     draw.text((78, 331), "Plan sessions. Log every set. Keep progressing.", font=font("Barlow-Medium.ttf", 34), fill=(191, 207, 215))

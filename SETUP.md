@@ -1,11 +1,12 @@
 # Setup — a working checkout
 
-How to get from `git clone` to a running, testable, releasable Ironyx.
+How to get from `git clone` to a running, testable, releasable Liftanium.
 (This file used to describe turning a source overlay into a project. The
 `android/`, `ios/` and `web/` folders are now committed, so that is over.)
 
 Last verified end to end on Windows 11 with **Flutter 3.47.5 / Dart 3.13.4
-(stable)** on 2026-09-20. Re-checked on 2026-11-14 on `main` after PR #10
+(stable)** on 2026-09-20. Re-checked on 2026-11-15 on `rename/liftanium-2026-11-15`
+(same four results, 1,228 passed, 2 skipped), on 2026-11-14 on `main` after PR #10
 (same four results, same counts) and on 2026-11-12, with the same Flutter:
 `flutter analyze --fatal-infos --fatal-warnings` clean, `dart format` clean,
 the asset-licence check passes, and `flutter test` reports 1,227 passed,

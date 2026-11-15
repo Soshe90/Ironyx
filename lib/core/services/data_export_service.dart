@@ -214,7 +214,7 @@ class DataExportService {
 
   /// Parses and validates an export file's contents. Throws
   /// [ImportValidationException] (safe to show directly to the user) if the
-  /// file isn't a valid, current-version Ironyx export.
+  /// file isn't a valid, current-version Liftanium export.
   ImportEnvelope parseImport(String jsonContent) =>
       _parseExportEnvelope(jsonContent);
 

@@ -28,7 +28,7 @@
          Drive is not a place either of those should end up. The app already
          has its own export file and cloud-restore feature for this. -->
     <application
-        android:label="Ironyx"
+        android:label="Liftanium"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false">

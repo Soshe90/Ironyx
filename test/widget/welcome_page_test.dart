@@ -58,7 +58,7 @@ void main() {
       (tester) async {
     await pumpWelcome(tester);
 
-    expect(find.text('Ironyx'), findsOneWidget);
+    expect(find.text('Liftanium'), findsOneWidget);
     expect(find.text('Your training, tracked.'), findsOneWidget);
     expect(find.text('Log every set and rep'), findsOneWidget);
     expect(find.text('Charts that show progress'), findsOneWidget);

@@ -104,4 +104,30 @@ void main() {
         RegExp(r'release\s*\{.*', dotAll: true).firstMatch(gradle)!.group(0)!;
     expect(release, isNot(contains('applicationIdSuffix')));
   });
+
+  // The 2026-11-15 rename to Liftanium changed only what users read. The
+  // launcher label is set outside Dart, so nothing else notices if it drifts
+  // from the in-app title. The ids must NOT follow the name: Play ties the
+  // listing to the application id for good, and the auth deep-link scheme
+  // is on the Supabase redirect allow-list.
+  test('launcher names match the app title; store ids and scheme do not move',
+      () {
+    final Map<String, dynamic> arb =
+        jsonDecode(File('lib/l10n/app_en.arb').readAsStringSync())
+            as Map<String, dynamic>;
+    final String title = arb['appTitle'] as String;
+    expect(title, 'Liftanium');
+
+    expect(manifest, contains('android:label="$title"'));
+    expect(manifest, contains('android:scheme="com.soshe90.ironyx"'));
+
+    final String plist = File('ios/Runner/Info.plist').readAsStringSync();
+    expect(
+      RegExp('<key>CFBundleDisplayName</key>\\s*<string>$title</string>')
+          .hasMatch(plist),
+      isTrue,
+      reason: 'iOS CFBundleDisplayName must match appTitle',
+    );
+    expect(plist, contains('<string>com.soshe90.ironyx</string>'));
+  });
 }

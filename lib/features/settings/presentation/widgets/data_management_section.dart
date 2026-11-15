@@ -91,10 +91,10 @@ class DataManagementSection extends ConsumerWidget {
         DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
     final (String fileName, String mimeType) = switch (format) {
       _ExportFormat.json => (
-          'ironyx_backup_$timestamp.json',
+          'liftanium_backup_$timestamp.json',
           'application/json'
         ),
-      _ExportFormat.csv => ('ironyx_export_$timestamp.csv', 'text/csv'),
+      _ExportFormat.csv => ('liftanium_export_$timestamp.csv', 'text/csv'),
     };
 
     // Built behind a progress dialog: it reads every table, and the tile

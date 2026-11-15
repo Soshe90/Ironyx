@@ -10,6 +10,46 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 
 ## Where the app really stands
 
+**Rename to Liftanium, 2026-11-15, branch `rename/liftanium-2026-11-15`.**
+The owner chose the name "Liftanium" (lift + titanium). Their own check on
+2026-11-15 found no exact match on Google Play US, in the first five
+Apple US results or on DuckDuckGo. **Not checked:** trademark registers,
+domains, social handles, similar-sounding brands and other countries'
+stores.
+
+- **Changed (what users read):** Android launcher label, iOS
+  `CFBundleDisplayName`/`CFBundleName`, `appTitle` and the 7 other
+  English and Arabic strings that named the app (Arabic keeps the Latin
+  spelling, as it did for Ironyx), import-refusal messages, export file
+  names (`liftanium_backup_*.json`, `liftanium_export_*.csv`), the Linux
+  window title, the VS Code launch names, the Pages site (`docs/index.md`,
+  `delete-account.md`, the privacy policy, now "Last updated November 15,
+  2026"), `docs/STORE_LISTING.md` (Play name `Liftanium: Offline Workout
+  Log` is exactly 30 characters, the limit), and the feature graphic and
+  `09-store-overview.png`, regenerated with `scripts/create_store_overview.py`.
+- **Kept on purpose (identifiers, not names):** application/bundle id
+  `com.soshe90.ironyx` (Play binds the listing to it permanently; a new id
+  would be a new app and restart the closed test), the auth deep-link
+  scheme (on the Supabase redirect allow-list), the Dart package
+  `ironyx`, the database file `ironyx` (renaming it would strand every
+  user's data), the seed source id and licence text in
+  `exercises_seed.json` (provenance records the UI does not show; changing
+  them needs a seed bump), asset file names, the `ironyx_navy` colour,
+  `IronyxApp`, the keystore alias, and the GitHub repo and Pages URLs
+  (`soshe90.github.io/Ironyx/...`, already entered in Play Console).
+  Old backups import as before: the envelope never held the app name.
+- **Test added:** `android_manifest_test.dart` pins the Android label and
+  iOS display name to `appTitle`, and the store id and scheme to
+  `com.soshe90.ironyx`. Two widget tests now expect "Liftanium".
+- **Gates (tested):** format and analyze clean, asset licences OK,
+  `flutter test` 1,228 passed, 2 skipped, 0 failed.
+- **Not done:** store screenshot `08-settings-theme.png` still shows
+  "Ironyx stores everything on this device" and needs a new capture
+  (phone use needs the owner's approval). Play Console's app name, store
+  listing text and graphics must be changed by hand. No build was made:
+  **not in any release bundle**; 1.0.6+7 still says Ironyx, so the next
+  bundle needs a version bump. Not run on a device.
+
 **Phone check, 2026-11-15, SM N970F, debug copy of `main` at `c4f83e2`**
 (owner-approved; the Play app, 1.0.5, was not opened or changed). The
 debug copy had been uninstalled since 2026-11-13, so this was a fresh
