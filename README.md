@@ -19,8 +19,9 @@ rename to Liftanium): `dart format` and
 `flutter analyze --fatal-infos --fatal-warnings` are clean, the asset-licence
 check passes and `flutter test` reports **1,228 passed, 2 skipped, 0 failed**
 (1,227 on `main` after PR #10, 2026-11-14).
-Version 1.0.6+7 is the current release bundle (rebuilt 2026-11-13, on `main`
-since 2026-11-14, not yet uploaded); 1.0.5 is the build from Play on the
+Version 1.0.7+8 is the current release bundle (built 2026-11-15 on this
+branch: 1.0.6+7, which was never uploaded, plus the rename; not yet
+uploaded); 1.0.5 is the build from Play on the
 owner's Samsung (SM N970F), where debug builds
 are checked side by side with it (`TODO.md` has what was checked and what
 was not). Nothing has been run on iOS at all. (Checked 2026-09-20: 438

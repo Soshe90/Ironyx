@@ -43,12 +43,40 @@ stores.
   `com.soshe90.ironyx`. Two widget tests now expect "Liftanium".
 - **Gates (tested):** format and analyze clean, asset licences OK,
   `flutter test` 1,228 passed, 2 skipped, 0 failed.
-- **Not done:** store screenshot `08-settings-theme.png` still shows
-  "Ironyx stores everything on this device" and needs a new capture
-  (phone use needs the owner's approval). Play Console's app name, store
-  listing text and graphics must be changed by hand. No build was made:
-  **not in any release bundle**; 1.0.6+7 still says Ironyx, so the next
-  bundle needs a version bump. Not run on a device.
+- **Release bundle 1.0.7+8, built 2026-11-15** from commit `89fdd59`
+  with `scripts/build_android.sh bundle`. It is 1.0.6+7 (never uploaded)
+  plus the rename, so it replaces that bundle as the one to upload.
+  **Verified:** signed with the upload key (`keytool -printcert`:
+  CN=FitTrack, SHA-256 `57:08:11:C8…7D:90`); all 15 native libraries
+  stripped; the bundle's manifest carries the label "Liftanium", the id
+  `com.soshe90.ironyx` with no debug suffix, and 1.0.7. Archived with
+  its Dart symbols in `C:\Users\musta\Projects\ironyx-releases\1.0.7+8`
+  (AAB SHA-256 `ac081f5c…efb15f`, in `SHA256SUMS`). The full gates ran
+  on the rename commit `362374f`; after the version bump only the
+  version and manifest tests were re-run. **Not checked:** the bundle
+  running anywhere.
+- **Name checks, 2026-11-15 (verified, by registry lookup):**
+  `liftanium` is unregistered as .com, .net, .org, .io, .app and .dev
+  (RDAP 404; `ironyx.com` as a control returned 200), there is no
+  `github.com/liftanium`, Google Play search returns "No results" in GB,
+  DE, SA, AE and IN, and Apple's search API returns no app with the name
+  in US, GB, DE, SA, AE or IN. Web search finds no use of the exact
+  name. **Similar names found:** Liftium (a workout tracker from 2009,
+  listed as shut down; also a lithium supplement), Lifthium Energy
+  (lithium refining), Liftomania (US apparel trademark). **Not checked:
+  trademark registers** (the USPTO and TMview lookups could not be run
+  from here) and Instagram, X, TikTok and Facebook handles. Owner: search
+  "Liftanium" and "Liftium" at tmsearch.uspto.gov, tmdn.org/tmview and
+  branddb.wipo.int, classes 9 and 41.
+- **Still open, owner:** (1) upload 1.0.7+8 to the closed-test track;
+  (2) in Play Console change the app name to `Liftanium: Offline Workout
+  Log`, paste the short and full descriptions (en, ar) from
+  `docs/STORE_LISTING.md`, and replace the feature graphic with
+  `assets/branding/store-screenshots/feature-graphic.png`; (3) store
+  screenshot `08-settings-theme.png` still shows "Ironyx stores
+  everything on this device" and needs a new capture (phone use needs
+  the owner's approval), so leave it out of the listing until then. A
+  name change goes through Play review like any listing change.
 
 **Phone check, 2026-11-15, SM N970F, debug copy of `main` at `c4f83e2`**
 (owner-approved; the Play app, 1.0.5, was not opened or changed). The
@@ -96,7 +124,9 @@ entries below.
   machine, Flutter 3.47.5:** format clean, analyze no issues, asset
   licences OK, `flutter test` 1,227 passed, 2 skipped, 0 failed. The
   time-zone runs were not repeated (no code changed).
-- **The 1.0.6+7 bundle is still not uploaded.** It was built from
+- **The 1.0.6+7 bundle is still not uploaded.** (Superseded 2026-11-15:
+  upload 1.0.7+8 instead, the same code plus the rename to Liftanium;
+  entry above.) It was built from
   `2bd9108`; only `TODO.md` changed between that commit and `main`, so it
   does not need rebuilding. **Verified today:** the archived file's
   SHA-256 is the recorded `975ef0bb…9d4065`. Uploading it to the closed
