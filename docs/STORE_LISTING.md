@@ -5,6 +5,13 @@ Swap wording freely — the positioning (offline-first, private, no forced
 account) is the one thing worth keeping, since it's the app's actual point
 of difference in a saturated category.
 
+**Status, 2026-11-14:** the Play developer account and the app exist, and a
+closed test is running (day 10 of 14, owner-reported). Which parts of this
+file have been entered into Play Console, and whether the screenshots and
+feature graphic were made, is not recorded here: compare the console with
+this file before applying for production. Nothing is in App Store Connect.
+The 2026-09-21 status below is kept as history.
+
 **Status, 2026-09-21:** nothing here has been entered into Play Console or
 App Store Connect yet (no developer account exists). Character counts were
 re-measured 2026-09-20 and the description again after the deletion sentence

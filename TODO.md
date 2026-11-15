@@ -10,8 +10,43 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 
 ## Where the app really stands
 
-**Update 2026-11-03 (after the drive failure).** This section below is from
-2026-09-20; these are the current facts:
+**Update 2026-11-14.** Status as of today; the detail is in the dated
+entries below.
+
+- **The Play closed test is running: day 10 of 14 today** (owner-reported
+  2026-11-14; not seen in Play Console by me). The earliest application
+  for production access is when day 14 completes, about 2026-11-18,
+  provided at least 12 testers have stayed opted in for the whole time.
+  **Not recorded here:** the tester count, and which version the testers
+  have (the owner's phone had 1.0.5 from Play on 2026-11-13).
+- **PR #10 is merged** (`6008061`, 2026-11-14): assisted sets, the timer
+  alert fix and version 1.0.6+7 are on `main`. CI passed on the pull
+  request before the merge. **Run today on the merged `main`, this
+  machine, Flutter 3.47.5:** format clean, analyze no issues, asset
+  licences OK, `flutter test` 1,227 passed, 2 skipped, 0 failed. The
+  time-zone runs were not repeated (no code changed).
+- **The 1.0.6+7 bundle is still not uploaded.** It was built from
+  `2bd9108`; only `TODO.md` changed between that commit and `main`, so it
+  does not need rebuilding. **Verified today:** the archived file's
+  SHA-256 is the recorded `975ef0bb…9d4065`. Uploading it to the closed
+  track is the next owner step (entry below). **Assumed, not checked
+  against Play Console Help:** a new build on the same track does not
+  restart the 14 days, which count testers staying opted in.
+- **The policy pages are live.** `https://soshe90.github.io/Ironyx/privacy/`
+  and `…/delete-account/` both answered 200 today (**verified** by
+  request; the rendered pages were not read).
+- Docs corrected today, no code changed: `README.md` and
+  `docs/STORE_LISTING.md` still said the app was unpublished and that no
+  developer account existed; A1, C2 and S4 in the plan below are ticked,
+  each with what the tick rests on.
+- **Still open from the launch plan:** C4 (accounts end to end, including
+  `delete_my_account()` and custom SMTP), the rest of C6 on a build
+  installed from Play (locked-screen timer alerts, the alert sound, cloud
+  backup and restore signed in), and the owner reading the ChatGPT and
+  Gemini terms for the three exercise pictures.
+
+**Update 2026-11-03 (after the drive failure).** The older part of this
+section is from 2026-09-20; these were the facts on 2026-11-03:
 
 - The original drive failed. Work from Oct 5 to 22 that had never been pushed was rebuilt from
   recovered files as commit `a27f910` on `recovery/2026-10-22`. The audit
@@ -174,7 +209,8 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 - **Release bundle 1.0.6+7, rebuilt 2026-11-13** from commit `2bd9108`
   (first built 2026-11-12 from `2156a2d`; rebuilt after the timer alert
   fix, never uploaded in between)
-  (branch `assisted-weights/2026-11-12`, PR #10) with
+  (branch `assisted-weights/2026-11-12`, PR #10, merged to `main`
+  2026-11-14) with
   `scripts/build_android.sh bundle`. It contains everything below dated up
   to 2026-11-12: the Home, Workouts, Library and Timer, Settings and
   production-review series, and assisted sets; the "Not in the 1.0.5+6
@@ -1448,12 +1484,17 @@ Lead-time items first; they cost calendar time, not effort.
       here (the properties file needed renaming from `.txt`). Still open:
       the `git status` / `git log origin/main..HEAD` check on the server, and
       backing up the keystore and `key.properties` to two places.*
-- [ ] **me** **A1** Create the Play developer account ($25) and start identity
+- [x] **me** **A1** Create the Play developer account ($25) and start identity
       verification. This can take days. Everything in Day 2 that uses the
       Console waits on it.
+      *Done, noted 2026-11-14: the account exists; builds have been on a
+      Play track since 1.0.3 (installed from Play on 2026-10-24).*
 - [ ] **me** **A2** Line up **15+ testers** with Gmail addresses (12 must stay
       opted in for 14 days; 3+ spare for drop-outs). Ask today so they can opt
       in on Day 2.
+      *2026-11-14: the closed test is on day 10 (owner-reported). How many
+      testers are opted in is not recorded here; the box stays open until it
+      is.*
 - [x] **me + dev** **A3** *Not needed: A0 found the original keystore
       (2026-09-21).* Only if A0 did not find the original keystore:
       generate a new upload key: `keytool` from
@@ -1476,7 +1517,7 @@ Code and configuration:
       `test/unit/timer_controller_test.dart`; four fail against the old
       controller. Analyze clean. **Still emulator/device-unverified:** the
       alarm actually firing while backgrounded is part of C6.
-- [ ] **dev + me** **C2** Host the privacy policy and a delete-account page.
+- [x] **dev + me** **C2** Host the privacy policy and a delete-account page.
       **dev, done 2026-09-20 (commit `d3f36a9`):** `docs/_config.yml` (theme, and
       hides the internal docs), `docs/index.md`, `docs/delete-account.md`, and
       front matter on `docs/PRIVACY_POLICY.md`. **me, still to do, after the
@@ -1485,6 +1526,9 @@ Code and configuration:
       and `https://soshe90.github.io/Ironyx/delete-account/`. Open both in a
       browser before pasting them into Play Console; I could not render Jekyll
       locally, so the first load is the real test.
+      *Done, checked 2026-11-14: both URLs answer 200 and GitHub's Pages
+      deployment ran on the last push to `main`. The rendered pages were not
+      read today.*
 - [ ] **me** **C3** Supabase project, all four:
       1. Confirm the `backups` table and `delete_my_account()` exist (run
          `docs/cloud_backup_setup.sql` if unsure).
@@ -1635,9 +1679,15 @@ Day 1 exit: a release-signed AAB that passed C4 and C6, and testers lined up.
         required.
       - **Exact alarm declaration:** core function is the interval/rest timer
         firing phase-change alerts while the app is backgrounded.
-- [ ] **me** **S4** Upload the signed AAB to a **Closed testing** track, add
+      *2026-11-14: the app exists in Play Console and a closed test is
+      running, so at least part of this is done. Which forms are complete is
+      not recorded here; the box stays open until it is.*
+- [x] **me** **S4** Upload the signed AAB to a **Closed testing** track, add
       the tester list, roll out, and send the opt-in link. Testers must opt in
       *and* install; the 14-day clock needs 12 of them staying opted in.
+      *Done, noted 2026-11-14: the closed test is running and reached day
+      10 today (owner-reported). The 12-tester count is the owner's to
+      confirm in Play Console.*
 - [ ] **dev** **S5** Docs: update `README.md` (status, 438 tests, pointer to
       this file), `docs/STORE_LISTING.md` status line, and commit.
       *2026-09-21: README, STORE_LISTING, SETUP and the privacy policy are
