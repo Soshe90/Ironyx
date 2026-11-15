@@ -72,11 +72,19 @@ stores.
   (2) in Play Console change the app name to `Liftanium: Offline Workout
   Log`, paste the short and full descriptions (en, ar) from
   `docs/STORE_LISTING.md`, and replace the feature graphic with
-  `assets/branding/store-screenshots/feature-graphic.png`; (3) store
-  screenshot `08-settings-theme.png` still shows "Ironyx stores
-  everything on this device" and needs a new capture (phone use needs
-  the owner's approval), so leave it out of the listing until then. A
-  name change goes through Play review like any listing change.
+  `assets/branding/store-screenshots/feature-graphic.png`, and
+  screenshot 08 if it is in the listing. A name change goes through Play
+  review like any listing change.
+- **Screenshot `08-settings-theme.png` retaken, 2026-11-15**
+  (owner-approved phone use; SM N970F, debug copy 1.0.7 built from
+  `d963a43`, installed over this morning's debug copy; the Play app,
+  1.0.5, was not opened or changed). **Checked on the phone:** Settings
+  reads "Liftanium stores everything on this device". The new file is
+  1080×2280, where the other captures are 1276×2848 from an earlier
+  phone, and it shows today's Settings (it has "Week starts on").
+  **Not checked on the phone:** the launcher label, the welcome page,
+  the About box and export file names. The debug copy is left installed.
+  Evidence: `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-15-rename`.
 
 **Phone check, 2026-11-15, SM N970F, debug copy of `main` at `c4f83e2`**
 (owner-approved; the Play app, 1.0.5, was not opened or changed). The
