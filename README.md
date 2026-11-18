@@ -14,14 +14,13 @@ application is about 2026-11-18, and public availability follows Google's
 review after that. What is still open is tracked in `TODO.md`.
 The earlier 12-week plan is archived in `docs/archive/TODO-full-plan.md`.
 
-Latest check, 2026-11-15, on branch `rename/liftanium-2026-11-15` (the
-rename to Liftanium): `dart format` and
+Latest check, 2026-11-15, on branch `brand/liftanium-icon-2026-11-15` (the
+new icon): `dart format` and
 `flutter analyze --fatal-infos --fatal-warnings` are clean, the asset-licence
-check passes and `flutter test` reports **1,228 passed, 2 skipped, 0 failed**
-(1,227 on `main` after PR #10, 2026-11-14).
-Version 1.0.7+8 is the current release bundle (built 2026-11-15 on this
-branch: 1.0.6+7, which was never uploaded, plus the rename; not yet
-uploaded); 1.0.5 is the build from Play on the
+check passes and `flutter test` reports **1,229 passed, 2 skipped, 0 failed**
+(1,228 for the rename, PR #12, earlier the same day).
+Version 1.0.8+9 is the current release bundle (built 2026-11-15: the
+rename and the new icon; it supersedes 1.0.7+8; not yet uploaded); 1.0.5 is the build from Play on the
 owner's Samsung (SM N970F), where debug builds
 are checked side by side with it (`TODO.md` has what was checked and what
 was not). Nothing has been run on iOS at all. (Checked 2026-09-20: 438

@@ -132,18 +132,24 @@ ships with the operating system, not with us.
 
 ## App icon, splash and brand artwork
 
-`assets/branding/` (`ironyx-icon-1024.png`, `ironyx-icon-512.png`,
-`ironyx-mark.svg`) and everything derived from it: the Android launcher
+`assets/branding/` (`liftanium-mark.svg`, `liftanium-icon-1024.png`,
+`liftanium-icon-512.png`, `liftanium-icon-512-opaque.png`) and everything
+derived from it: the Android launcher
 icons (legacy PNGs, adaptive foreground/background/monochrome vectors), the
 Android and iOS splash marks, the iOS `AppIcon` set, the notification small
 icon and the web icons. `assets/branding/` is source material and is not
 bundled as a Flutter asset.
 
-**Provenance is not recorded in the repository.** How the mark was made
-(own design, commissioned, or generated with a tool) decides what can be
-claimed about it and whether it can be trademarked, so the account holder
-should add a line here saying which. Tracked in `TODO.md`, Week 0
-("clearance").
+**Provenance (the Liftanium mark, 2026-11-15):** a hexagon with an L cut
+through it, in flat facet colours. The account holder chose it from three
+concepts that an AI coding assistant (Claude) drew for this project at
+their request. It is drawn by code, `scripts/build_app_icons.py`, which
+holds its geometry and colours and writes every file listed above; no
+image, font or template from elsewhere went into it. Whether a mark made
+this way can be registered as a trademark has not been checked.
+
+The Ironyx mark it replaced (removed 2026-11-15) had no recorded
+provenance; it is no longer shipped.
 
 ---
 

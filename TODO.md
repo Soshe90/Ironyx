@@ -10,6 +10,61 @@ Owner tags: **me** = you, the account holder (consoles, passwords, devices);
 
 ## Where the app really stands
 
+**New icon, 2026-11-15, branch `brand/liftanium-icon-2026-11-15`.** The
+owner chose concept C of three (a faceted teal hexagon, for titanium,
+with an L cut through it, on the existing navy) over an L-with-arrow and
+an L-with-barbell. Commits `75a196a` (icon) and `04ec7da` (1.0.8+9).
+
+- **What changed:** new `scripts/build_app_icons.py` holds the mark's
+  geometry and colours and writes every icon file: the brand masters
+  (now `assets/branding/liftanium-*`; the `ironyx-*` masters are
+  deleted), the Android adaptive foreground (which is also the splash on
+  every Android version), the themed-icon monochrome, the notification
+  glyph, the legacy mipmaps, the iOS AppIcon set and launch image, and
+  the web icons. Facets are flat colours so the Android vector and the
+  PNGs match exactly. The web maskable icons are now full-bleed (they had
+  transparent corners, which the maskable spec does not want). The feature
+  graphic and store overview were redrawn with it. The web build's title
+  and manifest now say Liftanium (missed in the rename: its search
+  skipped `web/`). `ASSETS-LICENSE.md` records how the mark was made: an
+  AI assistant drew the concepts and the script at the owner's request.
+- **Test added:** the monochrome and notification vectors must be
+  single-colour with the L as a hole, and all three vectors must carry
+  the GENERATED header.
+- **Gates (tested, on `75a196a`):** format and analyze clean, asset
+  licences OK, `flutter test` 1,229 passed, 2 skipped, 0 failed. A debug
+  APK builds, so the vectors compile.
+- **Release bundle 1.0.8+9, built 2026-11-15** from `04ec7da` with
+  `scripts/build_android.sh bundle`; it **supersedes 1.0.7+8** (same
+  code plus the icon). **Verified:** upload key (`57:08:11:C8…7D:90`),
+  libraries stripped, manifest label "Liftanium", id
+  `com.soshe90.ironyx`, version 1.0.8, and the packaged mdpi icon is
+  byte-identical to the generated one. Archived with symbols in
+  `C:\Users\musta\Projects\ironyx-releases\1.0.8+9` (AAB SHA-256
+  `1a78f6e4…862ca0`). Version 1.0.8 rather than a rebuilt 1.0.7, in
+  case 1.0.7+8 was already uploaded: Play refuses a reused version code.
+- **Phone check (owner-approved), SM N970F, Android 12 (API 31), debug
+  copy built from `75a196a`; the Play app, 1.0.5, was not opened or
+  changed.**
+  - **Launcher: checked.** The new icon shows on the home screen, inside
+    the frame the owner's Samsung "Purplenote" theme draws around every
+    app.
+  - **Splash: checked.** Opened from the home-screen icon, the hexagon
+    shows centred on navy. Opened with `adb shell monkey`, the splash is
+    plain navy, no icon: Android shows icon-less splashes for launches
+    that do not come from the launcher, and Game Launcher showed its icon
+    the same way, so this is the system, not the app (**reasoned**).
+  - **Notification: checked.** Tabata started, app sent to the
+    background: the status bar showed the white hexagon with the L cut
+    out, and the shade listed "Work phase" and "Rest phase" with it.
+    Ended from the app, the timer left 0 alarms and 0 notifications.
+  - **Not checked:** the themed (monochrome) icon, which needs Android 13
+    and this phone runs 12; the release bundle on a device. Game Launcher
+    was opened once by a mistaken tap and closed. Evidence:
+    `C:\Users\musta\Projects\ironyx-phone-audit\2026-11-15-icon`.
+- **Owner:** upload 1.0.8+9 instead of 1.0.7+8, and set the Play listing
+  icon to `assets/branding/liftanium-icon-512-opaque.png`.
+
 **Rename to Liftanium, 2026-11-15, branch `rename/liftanium-2026-11-15`.**
 The owner chose the name "Liftanium" (lift + titanium). Their own check on
 2026-11-15 found no exact match on Google Play US, in the first five
@@ -43,7 +98,8 @@ stores.
   `com.soshe90.ironyx`. Two widget tests now expect "Liftanium".
 - **Gates (tested):** format and analyze clean, asset licences OK,
   `flutter test` 1,228 passed, 2 skipped, 0 failed.
-- **Release bundle 1.0.7+8, built 2026-11-15** from commit `89fdd59`
+- **Release bundle 1.0.7+8, built 2026-11-15** (superseded the same day
+  by 1.0.8+9, which adds the new icon; entry above) from commit `89fdd59`
   with `scripts/build_android.sh bundle`. It is 1.0.6+7 (never uploaded)
   plus the rename, so it replaces that bundle as the one to upload.
   **Verified:** signed with the upload key (`keytool -printcert`:
@@ -68,7 +124,7 @@ stores.
   from here) and Instagram, X, TikTok and Facebook handles. Owner: search
   "Liftanium" and "Liftium" at tmsearch.uspto.gov, tmdn.org/tmview and
   branddb.wipo.int, classes 9 and 41.
-- **Still open, owner:** (1) upload 1.0.7+8 to the closed-test track;
+- **Still open, owner:** (1) upload 1.0.7+8 (now 1.0.8+9) to the closed-test track;
   (2) in Play Console change the app name to `Liftanium: Offline Workout
   Log`, paste the short and full descriptions (en, ar) from
   `docs/STORE_LISTING.md`, and replace the feature graphic with
